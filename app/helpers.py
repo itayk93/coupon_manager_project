@@ -78,6 +78,7 @@ import traceback
 import pandas as pd
 import logging
 from datetime import datetime, date
+from dotenv import load_dotenv
 
 # טעינת משתני סביבה
 load_dotenv()
