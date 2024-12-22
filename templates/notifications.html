@@ -1,0 +1,121 @@
+<!-- templates/notifications.html -->
+{% extends 'base.html' %}
+
+{% block title %}התראות{% endblock %}
+
+{% block content %}
+<div class="notifications-page">
+    <h2>התראות</h2>
+
+    <!-- כפתור מחיקת כל ההתראות -->
+    {% if notifications %}
+        <button id="delete-all-btn" class="delete-all-btn">מחק את כל ההתראות</button>
+    {% endif %}
+
+    <!-- רשימת ההתראות -->
+    <div class="notifications-list">
+        {% if notifications %}
+            {% for notification in notifications %}
+                <div class="notification-card" id="notification-{{ notification.id }}">
+                    <div class="notification-message">
+                        <p>{{ notification.message }}</p>
+                        {% if notification.link %}
+                            <a href="{{ notification.link }}" class="notification-link">פרטים</a>
+                        {% endif %}
+                        <!-- הצגת התאריך בפורמט ISO 8601 -->
+                        <div class="notification-timestamp">{{ notification.timestamp.isoformat() }}</div>
+                    </div>
+                    <button class="notification-close" data-id="{{ notification.id }}" title="מחק התראה">
+                        &times;
+                    </button>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="no-notifications">אין התראות להצגה.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // מחיקת התראה בודדת
+        const closeButtons = document.querySelectorAll('.notification-close');
+        closeButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const notificationId = this.getAttribute('data-id');
+                if (confirm('האם אתה בטוח שברצונך למחוק את ההתראה הזו?')) {
+                    fetch(`/delete_notification/${notificationId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({})
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // הסרת ההתראה מהדף
+                            const notificationCard = document.getElementById(`notification-${notificationId}`);
+                            if (notificationCard) {
+                                notificationCard.remove();
+                            }
+                            // בדיקה אם אין התראות נוספות
+                            if (document.querySelectorAll('.notification-card').length === 0) {
+                                const notificationsList = document.querySelector('.notifications-list');
+                                notificationsList.innerHTML = '<p class="no-notifications">אין התראות להצגה.</p>';
+                                // הסתרת כפתור מחיקת כל ההתראות
+                                const deleteAllBtn = document.getElementById('delete-all-btn');
+                                if (deleteAllBtn) {
+                                    deleteAllBtn.style.display = 'none';
+                                }
+                            }
+                        } else {
+                            alert('שגיאה במחיקת ההתראה.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('שגיאה במחיקת ההתראה.');
+                    });
+                }
+            });
+        });
+
+        // מחיקת כל ההתראות
+        const deleteAllBtn = document.getElementById('delete-all-btn');
+        if (deleteAllBtn) {
+            deleteAllBtn.addEventListener('click', function() {
+                if (confirm('האם אתה בטוח שברצונך למחוק את כל ההתראות?')) {
+                    fetch(`/delete_all_notifications`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({})
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // הסרת כל ההתראות מהדף
+                            const notificationsList = document.querySelector('.notifications-list');
+                            notificationsList.innerHTML = '<p class="no-notifications">אין התראות להצגה.</p>';
+                            // הסתרת כפתור מחיקת כל ההתראות
+                            deleteAllBtn.style.display = 'none';
+                        } else {
+                            alert('שגיאה במחיקת כל ההתראות.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('שגיאה במחיקת כל ההתראות.');
+                    });
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

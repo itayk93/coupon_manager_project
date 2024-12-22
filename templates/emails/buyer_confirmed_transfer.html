@@ -1,0 +1,126 @@
+<!-- templates/emails/buyer_confirmed_transfer.html -->
+<!DOCTYPE html>
+<html lang="he" dir="rtl" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>הקונה אישר העברה כספית</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+        }
+        .email-container {
+            width: 100%;
+            background-color: #f9f9f9;
+            padding: 20px 0;
+        }
+        .email-content {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            background-color: #2E86C1;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .body {
+            padding: 20px;
+            color: #2C3E50;
+            text-align: right;
+        }
+        .body p {
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        .highlight {
+            color: #2E86C1;
+            font-weight: bold;
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .button {
+            background-color: #2E86C1;
+            color: #ffffff;
+            padding: 15px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #A9CCE3;
+        }
+        .footer {
+            background-color: #f0f0f0;
+            color: #7f8c8d;
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+        }
+        .footer p {
+            margin: 0;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .email-content {
+                width: 100% !important;
+            }
+            .button {
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body dir="rtl">
+    <div class="email-container">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+                <td align="center">
+                    <div class="email-content">
+                        <!-- Header -->
+                        <div class="header">
+                            <h1>הקונה אישר העברה כספית</h1>
+                        </div>
+                        <!-- Body -->
+                        <div class="body">
+                            <p>שלום {{ seller.first_name }},</p>
+                            <p>הקונה <strong class="highlight">{{ buyer.first_name }} {{ buyer.last_name }}</strong> אישר שהעברה כספית בוצעה עבור הקופון <strong style="color: #2E86C1;">{{ coupon.code }}</strong> של <span class="highlight">{{ coupon.company }}</span>.</p>
+                            <p>כעת נותר רק עבורך לאשר את ההעברה. לאחר שתאשר זאת, הקופון יעבור לקונה באופן מלא.</p>
+                            <div class="button-container">
+                                <a href="{{ url_for('my_transactions', _external=True) }}" class="button" style="color: #ffffff; font-weight: bold;">צפה בעסקה</a>
+                            </div>
+                            <p>אם יש לך שאלות או צורך בעזרה נוספת, אל תהסס ליצור איתנו קשר.</p>
+                            <p>בברכה,<br>MaCoupon</p>
+                        </div>
+                        <!-- Footer -->
+                        <div class="footer">
+                            <p>© 2024 MaCoupon. כל הזכויות שמורות.</p>
+                            <p>כתובת: רחוב הדוגמא 123, תל אביב</p>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

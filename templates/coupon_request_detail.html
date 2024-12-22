@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}פרטי בקשת קופון{% endblock %}
+
+{% block content %}
+<section class="coupon-detail">
+    <h2>פרטי בקשת קופון</h2>
+
+    <!-- Company Logo and Name -->
+    <div class="company-info">
+        {% set company_name = company.name %}
+        {% set company_image = company.image_path %}
+        <img src="{{ url_for('static', filename=company_image) }}" alt="{{ company_name }} Logo" class="company-logo">
+        <h3>{{ company_name }}</h3>
+    </div>
+
+    <!-- Request Details -->
+    <div class="info-box">
+        <span class="info-title">ערך:</span>
+        <span class="info-value">{{ '%.2f'|format(coupon_request.value) }} ש"ח</span>
+    </div>
+    <div class="info-box">
+        <span class="info-title">עלות:</span>
+        <span class="info-value">{{ '%.2f'|format(coupon_request.cost) }} ש"ח</span>
+    </div>
+    <div class="info-box">
+        <span class="info-title">סטטוס הבקשה:</span>
+        <span class="info-value">{{ coupon_request.status }}</span>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        {% if coupon_request.user_id == current_user.id %}
+            <div class="your-request">
+                זו הבקשה שלך
+            </div>
+            <a href="{{ url_for('marketplace.marketplace') }}" class="action-button">חזרה לשוק הקופונים</a>
+
+            <!-- Delete Button -->
+            <form action="{{ url_for('coupons.coupon_request_detail', id=coupon_request.id) }}" method="POST" onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את בקשת הקופון הזו?');" style="display: inline;">
+                {{ delete_form.hidden_tag() }}
+                <button type="submit" class="action-button delete-button">מחק בקשת קופון</button>
+            </form>
+        {% else %}
+            <a href="{{ url_for('marketplace.offer_coupon', request_id=coupon_request.id) }}" class="action-button">הצע קופון</a>
+            <a href="{{ url_for('marketplace.marketplace') }}" class="action-button">חזרה לשוק הקופונים</a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .coupon-detail {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+
+    .coupon-detail h2 {
+        text-align: center;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+    }
+
+    .company-info {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .company-logo {
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+        margin-bottom: 10px;
+    }
+
+    .info-box {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .info-title {
+        font-weight: bold;
+        color: var(--text-color);
+    }
+
+    .info-value {
+        color: var(--text-color);
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .action-button {
+        display: inline-block;
+        padding: 10px 20px;
+        margin: 5px;
+        background-color: var(--primary-color);
+        color: var(--white);
+        text-decoration: none;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color var(--transition-speed);
+    }
+
+    .action-button:hover {
+        background-color: #2980b9;
+    }
+
+    .delete-button {
+        background-color: #e74c3c;
+    }
+
+    .delete-button:hover {
+        background-color: #c0392b;
+    }
+</style>
+{% endblock %}

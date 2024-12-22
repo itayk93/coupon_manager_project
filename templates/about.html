@@ -1,0 +1,112 @@
+<!-- about.html -->
+{% extends 'base.html' %}
+
+{% block title %}אודות האפליקציה{% endblock %}
+
+{% block content %}
+<section class="about-section">
+    <h2>אודות האפליקציה</h2>
+    <p>ברוכים הבאים לאפליקציית ניהול הקופונים המתקדמת שלנו!</p>
+    <p>
+        אפליקציה זו נוצרה כדי לסייע לך לנהל בקלות וביעילות את כל הקופונים שלך במקום אחד.
+        בין אם אתה רוכש קופונים באינטרנט, מקבלם בדוא"ל, או אפילו גוזר אותם מעיתונים, האפליקציה שלנו מאפשרת לך לעקוב אחר כולם.
+    </p>
+    <h3>מה האפליקציה שלנו מציעה?</h3>
+    <ul>
+        <li><strong>ניהול קופונים אישי:</strong> הוסף, ערוך ומחק קופונים בקלות.</li>
+        <li><strong>מעקב אחר ערך נותר:</strong> עקוב אחר הסכום שנותר לך לנצל בכל קופון.</li>
+        <li><strong>התראות והתראות:</strong> קבל התראות על קופונים שמתקרבים לפקיעת תוקף.</li>
+        <li><strong>ייצוא נתונים:</strong> ייצא את רשימת הקופונים שלך ל-Excel או PDF.</li>
+        <li><strong>שיתוף ומכירה:</strong> שתף או מכור קופונים עם קהילת המשתמשים שלנו.</li>
+    </ul>
+    <h3>המשימה שלנו</h3>
+    <p>
+        המשימה שלנו היא לעזור לך לחסוך כסף ולהפיק את המירב מהקופונים שלך.
+        אנו מאמינים שניהול נכון של קופונים יכול לסייע לך לחסוך מאות ואף אלפי שקלים בשנה.
+    </p>
+    <h3>צור קשר</h3>
+    <p>
+        אם יש לך שאלות, הערות או הצעות, אל תהסס לפנות אלינו בכתובת הדוא"ל: <a href="mailto:support@couponapp.com">support@couponapp.com</a>.
+    </p>
+    <h3>שאלות ותשובות (Q&A)</h3>
+    <div class="qa-section">
+        <div class="question">
+            <h4>איך אני מוסיף קופון חדש?</h4>
+            <p>ניתן להוסיף קופון חדש על ידי לחיצה על כפתור "הוסף קופון" בתפריט הראשי ומילוי הפרטים הנדרשים.</p>
+        </div>
+        <div class="question">
+            <h4>האם ניתן לייבא קופונים מקובץ?</h4>
+            <p>כן, באפשרותך לייבא קופונים מקובץ Excel באמצעות אפשרות "העלה קופונים" בתפריט.</p>
+        </div>
+        <div class="question">
+            <h4>איך אני מוכר קופון למשתמש אחר?</h4>
+            <p>ניתן לסמן קופון כ"זמין למכירה" בדף העריכה של הקופון. משתמשים אחרים יוכלו לראות את הקופון בשוק הקופונים ולרכוש אותו ממך.</p>
+        </div>
+        <div class="question">
+            <h4>האם האפליקציה בטוחה לשימוש?</h4>
+            <p>אנו שמים דגש רב על אבטחת המידע שלך ומשתמשים בטכנולוגיות המתקדמות ביותר כדי להגן על הנתונים שלך.</p>
+        </div>
+        <div class="question">
+            <h4>איך אני מקבל התראות על קופונים שפג תוקפם?</h4>
+            <p>האפליקציה תשלח לך התראות כאשר קופון מתקרב לפקיעת תוקף. ודא שההתראות מופעלות בהגדרות הפרופיל שלך.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .about-section {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        text-align: right;
+    }
+
+    .about-section h2 {
+        color: var(--primary-color);
+        margin-bottom: 20px;
+    }
+
+    .about-section h3 {
+        color: var(--secondary-color);
+        margin-top: 30px;
+        margin-bottom: 15px;
+    }
+
+    .about-section p {
+        margin-bottom: 20px;
+        line-height: 1.6;
+        font-size: 1.1em;
+    }
+
+    .about-section ul {
+        list-style-type: disc;
+        padding-right: 20px;
+        text-align: right;
+    }
+
+    .about-section li {
+        margin-bottom: 10px;
+        line-height: 1.4;
+    }
+
+    .qa-section {
+        margin-top: 30px;
+    }
+
+    .qa-section .question {
+        margin-bottom: 20px;
+    }
+
+    .qa-section h4 {
+        color: var(--primary-color);
+        margin-bottom: 10px;
+    }
+
+    .qa-section p {
+        margin: 0;
+        line-height: 1.5;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,460 @@
+{% extends 'base.html' %}
+
+{% block title %}
+הוסף קופון
+{% endblock %}
+
+{% block content %}
+<section class="add-coupon">
+    <h2>הוסף קופון חדש</h2>
+    <!-- Existing buttons above the form -->
+    <div class="add-coupons-buttons">
+        <a href="{{ url_for('coupons.add_coupons_bulk') }}" class="secondary-button">
+            <i class="fa fa-plus-circle" aria-hidden="true"></i> הוסף קופונים מרובים
+        </a>
+        <a href="{{ url_for('coupons.upload_coupons') }}" class="secondary-button">
+            <i class="fa fa-upload" aria-hidden="true"></i> העלה קובץ קופונים
+        </a>
+        <a href="{{ url_for('coupons.add_coupon_with_image') }}" class="secondary-button">
+            <i class="fa fa-image" aria-hidden="true"></i> הוסף קופון מתמונה
+        </a>
+    </div>
+
+    <!-- הצגת הודעות flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if not show_coupon_form %}
+        {% if current_user.slots_automatic_coupons > 0 %}
+        <!-- Automatic SMS input form -->
+        <form method="post">
+            {{ sms_form.hidden_tag() }}
+            <!-- SMS Text Field -->
+            <div class="form-group center-text">
+                {{ sms_form.sms_text.label(class="form-label") }}
+                {{ sms_form.sms_text(class="input-field", placeholder="הכנס את תוכן הודעת ה-SMS שקיבלת") }}
+                {% for error in sms_form.sms_text.errors %}
+                    <div class="error">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <!-- Submit Button -->
+            <div class="form-group" style="position: relative;">
+                <!-- טקסט תומך במסכים קטנים -->
+                <div class="slots-info-mobile center-text">
+                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
+                </div>
+                {{ sms_form.submit_sms(class="submit-button") }}
+
+                <!-- Tooltip לדסקטופ -->
+                <div class="slots-tooltip" id="slotsTooltip">
+                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים להשתמש בהם למילוי הטופס באופן אוטומטי.
+                    <span class="close-tooltip" id="closeTooltip">×</span>
+                </div>
+            </div>
+        </form>
+        {% else %}
+        <div class="no-slots-message center-text">
+            <p>אין לך מספיק סלוטים להזנת קופונים אוטומטית. אנא רכש סלוטים נוספים או הזן קופון ידנית.</p>
+        </div>
+        {% endif %}
+        <!-- Manual entry option -->
+        <div class="manual-entry center-text">
+            <p>או שתזין באופן ידני את הפרטים של הקופון</p>
+            <a href="{{ url_for('coupons.add_coupon', manual='true') }}" class="secondary-button">
+                <i class="fa fa-edit" aria-hidden="true"></i> הזן פרטים ידנית
+            </a>
+        </div>
+    {% else %}
+    <!-- Manual coupon entry form -->
+    <form method="post" enctype="multipart/form-data">
+        {{ coupon_form.hidden_tag() }}
+
+        <!-- Image Upload Field -->
+        <div class="form-group">
+            <label for="coupon_image">העלה תמונה של הקופון</label>
+            <input type="file" name="coupon_image" id="coupon_image" accept="image/*" class="input-field">
+            {% for error in coupon_form.coupon_image.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Company Name -->
+        <div class="form-group">
+            {{ coupon_form.company_id.label(class="form-label") }}
+            {{ coupon_form.company_id(class="input-field", id="company_select", required=True) }}
+            {% for error in coupon_form.company_id.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="form-group" id="other_company_group" style="display: none;">
+            {{ coupon_form.other_company.label(class="form-label") }}
+            {{ coupon_form.other_company(class="input-field", id="other_company") }}
+            {% for error in coupon_form.other_company.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+<!--
+        Tags Field
+        <div class="form-group">
+            {{ coupon_form.tag_id.label(class="form-label") }}
+            {{ coupon_form.tag_id(class="input-field", id="tag_select", required=True) }}
+            {% for error in coupon_form.tag_id.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="form-group" id="other_tag_group" style="display: none;">
+            {{ coupon_form.other_tag.label(class="form-label") }}
+            {{ coupon_form.other_tag(class="input-field", id="other_tag") }}
+            {% for error in coupon_form.other_tag.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+-->
+
+
+        <!-- Code Field -->
+        <div class="form-group">
+            {{ coupon_form.code.label(class="form-label") }}
+            {{ coupon_form.code(class="input-field", id="code", required=True) }}
+            {% for error in coupon_form.code.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Coupon Cost Field -->
+        <div class="form-group">
+            {{ coupon_form.cost.label(class="form-label") }}
+            {{ coupon_form.cost(class="input-field", id="coupon_cost", required=True) }}
+            {% for error in coupon_form.cost.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Discount Percentage Field -->
+        <div class="form-group">
+            {{ coupon_form.discount_percentage.label(class="form-label") }}
+            {{ coupon_form.discount_percentage(class="input-field", id="discount_percentage_input") }}
+            {% for error in coupon_form.discount_percentage.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Desired Value Field -->
+        <div class="form-group">
+            {{ coupon_form.value.label(class="form-label") }}
+            {{ coupon_form.value(class="input-field", id="desired_value", required=True) }}
+            {% for error in coupon_form.value.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Expiration Field -->
+        <div class="form-group">
+            {{ coupon_form.expiration.label(class="form-label") }}
+            {{ coupon_form.expiration(class="input-field", id="expiration") }}
+            {% for error in coupon_form.expiration.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Description Field -->
+        <div class="form-group">
+            {{ coupon_form.description.label(class="form-label") }}
+            {{ coupon_form.description(class="input-field", id="description") }}
+            {% for error in coupon_form.description.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- One-Time Use Checkbox -->
+        <div class="form-group">
+            <label for="is_one_time">
+                {{ coupon_form.is_one_time() }}
+                {{ coupon_form.is_one_time.label }}
+            </label>
+            {% for error in coupon_form.is_one_time.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Purpose Field (Hidden by default) -->
+        <div class="form-group" id="purpose_group" style="display: none;">
+            {{ coupon_form.purpose.label(class="form-label") }}
+            {{ coupon_form.purpose(class="input-field", id="purpose") }}
+            {% for error in coupon_form.purpose.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Submit Button -->
+        <div class="form-group">
+            {{ coupon_form.submit_coupon(class="submit-button", id="submit_coupon_button", disabled=true) }}
+            <div id="validation_message" class="error" style="display:none; margin-top: 5px;">
+                יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה, בערך גדול מ-0.
+            </div>
+        </div>
+    </form>
+    <!-- Back to automatic entry button -->
+    <div class="manual-entry center-text">
+        <p>חזור להזנת קופון אוטומטית:</p>
+        <a href="{{ url_for('coupons.add_coupon') }}" class="secondary-button">
+            <i class="fa fa-arrow-left" aria-hidden="true"></i> חזור להזנת קופון אוטומטית
+        </a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.center-text {
+    text-align: center;
+}
+
+.slots-info-mobile {
+    display: none;
+    font-size: 12px;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+/* סגנון ל-tooltip בדסקטופ: */
+#slotsTooltip {
+    display: none;
+    position: absolute;
+    top: -5px;
+    left: 105%;
+    background-color: #333;
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    width: 250px;
+    font-size: 14px;
+    text-align: center;
+    z-index: 1000;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+    padding-right: 20px;
+}
+
+/* החץ הקטן של tooltip בדסקטופ: */
+#slotsTooltip:after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent #333 transparent transparent;
+}
+
+/* במכשיר נייד: במקום tooltip, נציג טקסט קבוע מעל הכפתור */
+@media (max-width: 768px) {
+    #slotsTooltip {
+        display: none !important; /* לא מציגים tooltip במסך קטן */
+    }
+    .slots-info-mobile {
+        display: block; /* מציגים טקסט קטן מעל הכפתור */
+    }
+    .no-slots-message {
+        text-align: center; /* מרכז את הטקסט במסרים שאין מספיק סלוטים */
+    }
+    .manual-entry p {
+        text-align: center; /* מרכז את הטקסט במסמך הכניסה הידנית */
+    }
+}
+
+/* כפתור הסגירה (X) ל-tooltip (משמש רק בדסקטופ) */
+.close-tooltip {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    background-color: transparent;
+    border: none;
+    color: #fff;
+}
+
+.close-tooltip:hover {
+    color: #ccc;
+}
+
+/* עיצוב עבור הכפתור בעת מעבר עכבר - בדסקטופ */
+@media (min-width: 769px) {
+    .form-group:hover #slotsTooltip {
+        display: block;
+    }
+}
+
+/* עיצוב נוסף למרכז טקסט בלייבלים במידת הצורך */
+.form-group.center-text .form-label {
+    display: block;
+    text-align: center;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    const tagSelect = document.getElementById('tag_select');
+    const otherTagGroup = document.getElementById('other_tag_group');
+    const otherTagInput = document.getElementById('other_tag');
+
+    function toggleOtherTagField() {
+        if (tagSelect && tagSelect.value === 'other') {
+            otherTagGroup.style.display = 'block';
+        } else {
+            otherTagGroup.style.display = 'none';
+            if (otherTagInput) otherTagInput.value = '';
+        }
+    }
+    if(tagSelect) {
+        toggleOtherTagField();
+        tagSelect.addEventListener('change', toggleOtherTagField);
+    }
+
+    const companySelect = document.getElementById('company_select');
+    const otherCompanyGroup = document.getElementById('other_company_group');
+    const otherCompanyInput = document.getElementById('other_company');
+
+    function toggleOtherCompanyField() {
+        if (companySelect && companySelect.value === 'other') {
+            otherCompanyGroup.style.display = 'block';
+        } else {
+            otherCompanyGroup.style.display = 'none';
+            if (otherCompanyInput) otherCompanyInput.value = '';
+        }
+    }
+    if(companySelect) {
+        toggleOtherCompanyField();
+        companySelect.addEventListener('change', toggleOtherCompanyField);
+    }
+
+    const checkbox = document.getElementById('is_one_time');
+    const purposeGroup = document.getElementById('purpose_group');
+    const purposeInput = document.getElementById('purpose');
+
+    function togglePurposeField() {
+        if (checkbox && checkbox.checked) {
+            purposeGroup.style.display = 'block';
+        } else {
+            purposeGroup.style.display = 'none';
+            if (purposeInput) {
+                purposeInput.value = '';
+            }
+        }
+    }
+    if(checkbox) {
+        togglePurposeField();
+        checkbox.addEventListener('change', togglePurposeField);
+    }
+
+    const desiredValueInput = document.getElementById('desired_value');
+    const couponCostInput = document.getElementById('coupon_cost');
+    const discountPercentageInput = document.getElementById('discount_percentage_input');
+    const submitButton = document.getElementById('submit_coupon_button');
+    const validationMessage = document.getElementById('validation_message');
+
+    function toFloat(value) {
+        const num = parseFloat(value);
+        return isNaN(num) ? null : num;
+    }
+
+    function updateFields(changedField) {
+        const cost = toFloat(couponCostInput.value);
+        const value = toFloat(desiredValueInput.value);
+        const discount = toFloat(discountPercentageInput.value);
+
+        let filledCount = 0;
+        // סופרים כמה שדות מלאים
+        if (cost !== null && cost > 0) filledCount++;
+        if (value !== null && value > 0) filledCount++;
+        if (discount !== null && discount > 0 && discount <= 100) filledCount++;
+
+        // אם פחות משני שדות מלאים – חוסמים שליחה
+        if (filledCount < 2) {
+            submitButton.disabled = true;
+            validationMessage.style.display = 'block';
+            return;
+        } else {
+            submitButton.disabled = false;
+            validationMessage.style.display = 'none';
+        }
+
+        // אם בדיוק שני שדות מלאים – מחשבים את השלישי
+        if (filledCount === 2) {
+            // cost + discount => value
+            if (cost > 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
+                desiredValueInput.value = (cost / (1 - discount / 100)).toFixed(2);
+
+            // cost + value => discount
+            } else if (cost > 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
+                discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+
+            // value + discount => cost
+            } else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost <= 0)) {
+                couponCostInput.value = (value * (1 - discount / 100)).toFixed(2);
+            }
+        }
+        // אם שלושת השדות מלאים – מעדכנים את הנוסחה הרלוונטית לשדה ששונה
+        else if (filledCount === 3) {
+            // שיניתי את cost - צריך לעדכן את discount (בהנחה ש-value ידוע)
+            if (changedField === 'cost' && discount > 0 && discount <= 100 && value > 0) {
+                discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+
+            // שיניתי את value - צריך לעדכן את discount (בהנחה ש-cost ידוע)
+            } else if (changedField === 'value' && cost > 0 && discount > 0 && discount <= 100) {
+                discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+
+            // שיניתי את discount - צריך לעדכן את discount שוב (כדי להישאר עקביים) או להשאיר
+            // אבל לרוב נרצה לעדכן את אחד מן האחרים. כאן בחרתי שוב discountPercentage כדי למנוע מצב סותר:
+            } else if (changedField === 'discount' && cost > 0 && value > 0) {
+                discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+            }
+        }
+    }
+
+    if (desiredValueInput && discountPercentageInput && couponCostInput && submitButton) {
+        desiredValueInput.addEventListener('change', function() {
+            updateFields('value');
+        });
+        discountPercentageInput.addEventListener('change', function() {
+            updateFields('discount');
+        });
+        couponCostInput.addEventListener('change', function() {
+            updateFields('cost');
+        });
+        updateFields(null);
+    }
+
+    const slotsTooltip = document.getElementById('slotsTooltip');
+    const closeTooltip = document.getElementById('closeTooltip');
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+    if (isMobile && slotsTooltip && closeTooltip) {
+        const submitButtonMobile = document.querySelector('.submit-button');
+        if (submitButtonMobile) {
+            submitButtonMobile.addEventListener('click', function(e) {
+                e.preventDefault();
+                slotsTooltip.style.display = 'block';
+            });
+        }
+
+        closeTooltip.addEventListener('click', function() {
+            slotsTooltip.style.display = 'none';
+        });
+    }
+
+});
+</script>
+{% endblock %}

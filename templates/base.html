@@ -1,0 +1,93 @@
+<!-- base.html -->
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}מנהל הקופונים{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- הוספת Font Awesome לסמלים -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css">
+
+    <!-- חיבור קובץ CSS חיצוני -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+    <!-- מטא טאג ל-CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- כפתור סגירת כל ההתראות -->
+    <button id="close-all-notifications" style="display: none;">סגור את כל ההתראות</button>
+
+    <!-- אזור ההתראות -->
+    <div id="notification-area"></div>
+
+    <header>
+        {% if current_user.is_authenticated %}
+        <div class="header-left">
+            <!-- אייקון הבית -->
+            <a href="{{ url_for('profile.index') }}" class="home-icon"><i class="fa fa-home"></i></a>
+            <span>ברוך הבא, {{ current_user.first_name }}</span>
+        </div>
+        {% endif %}
+        <div class="header-center">
+            <!-- החלפת הכותרת בתמונה -->
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="לוגו מנהל הקופונים" class="header-logo">
+        </div>
+        <div class="header-right">
+            <nav>
+                <!-- התפריט הרגיל -->
+                <div class="dropdown">
+                    <button class="dropbtn"><i class="fa fa-bars"></i></button>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('coupons.show_coupons') }}">הקופונים שלי</a>
+                        <a href="{{ url_for('coupons.add_coupon') }}">הוסף קופון</a>
+                        <!-- תפריטים נוספים -->
+                        <a href="{{ url_for('auth.logout') }}">התנתק</a>
+                    </div>
+                </div>
+                <!-- תפריט שוק הקופונים -->
+                <div class="dropdown">
+                    <button class="dropbtn"><i class="fa fa-shopping-cart"></i></button>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('marketplace.marketplace') }}">שוק הקופונים</a>
+                        <a href="{{ url_for('coupons.sell_coupon') }}">הוסף קופון למכירה</a>
+                        <a href="{{ url_for('requests.request_coupon') }}">הוסף בקשת קופון</a>
+                        <a href="{{ url_for('requests.buy_slots') }}">רכישת סלוטים</a>
+                        <a href="{{ url_for('transactions.my_transactions') }}">העסקאות שלי</a>
+                    </div>
+                </div>
+                <!-- קישור לעמוד ההתראות -->
+                <a href="{{ url_for('profile.notifications') }}" class="nav-icon">
+                    <i class="fa fa-bell"></i>
+                </a>
+            </nav>
+
+            <!-- אייקון המבורגר למובייל -->
+            <div class="hamburger">
+                <div class="bar1"></div>
+                <div class="bar2"></div>
+                <div class="bar3"></div>
+            </div>
+        </div>
+    </header>
+    <main>
+        <!-- הצגת הודעות פלאש -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- הכללת script.js -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

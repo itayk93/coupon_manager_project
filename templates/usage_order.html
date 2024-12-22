@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}הקופונים הקרובים לניצול{% endblock %}
+
+{% block content %}
+<section class="coupon-management">
+    <section class="coupons">
+        <h2>הקופונים הקרובים לניצול</h2>
+
+        {% if valid_coupons %}
+            <h3>קופונים פעילים</h3>
+            <div class="coupon-grid">
+                {% for coupon in valid_coupons %}
+                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
+                        <p class="company-name">{{ coupon.company }}</p>
+                        <p>קוד: {{ coupon.code }}</p>
+                        {% if coupon.tags %}
+                            <p>תגיות:
+                                {% for tag in coupon.tags %}
+                                    {{ tag.name }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                        {% endif %}
+                        <p>אחוז שימוש: {{ (coupon.used_value / coupon.value * 100)|round(2) }}%</p>
+                        <p class="remaining-value">ערך נותר: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח</p>
+                        <p class="status">סטטוס: {{ coupon.status }}</p>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="text-align: center; color: var(--gray);">אין קופונים פעילים להצגה.</p>
+        {% endif %}
+
+        {% if expired_coupons %}
+            <h3>קופונים שפג תוקפם</h3>
+            <div class="coupon-grid">
+                {% for coupon in expired_coupons %}
+                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
+                        <p class="company-name">{{ coupon.company }}</p>
+                        <p>קוד: {{ coupon.code }}</p>
+                        {% if coupon.tags %}
+                            <p>תגיות:
+                                {% for tag in coupon.tags %}
+                                    {{ tag.name }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                        {% endif %}
+                        <p>אחוז שימוש: {{ (coupon.used_value / coupon.value * 100)|round(2) }}%</p>
+                        <p class="remaining-value">ערך נותר: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח</p>
+                        <p class="status">סטטוס: {{ coupon.status }}</p>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="text-align: center; color: var(--gray);">אין קופונים שפג תוקפם.</p>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}

@@ -1,0 +1,159 @@
+<!-- delete_coupons.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}מחיקת קופונים{% endblock %}
+
+{% block content %}
+<section class="delete-coupons">
+    <h2>בחר קופונים למחיקה</h2>
+
+    <!-- כפתורי סימון וביטול סימון -->
+    <div class="select-buttons">
+        <button type="button" onclick="selectAll()" class="select-button">סמן הכל</button>
+        <button type="button" onclick="deselectAll()" class="select-button">בטל סימון</button>
+    </div>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <table class="coupon-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
+                    <th>חברה</th>
+                    <th>קוד קופון</th>
+                    <th>תאריך העלאת קופון</th> <!-- העמודה החדשה -->
+                    <th>סטטוס</th>
+                    <th>ערך נותר</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for coupon in coupons %}
+                <tr>
+                    <td>
+                        <!-- Render the checkbox for each coupon -->
+                        <input type="checkbox" name="coupon_ids" value="{{ coupon.id }}"
+                        {% if coupon.id in (form.coupon_ids.data or []) %} checked {% endif %}>
+                    </td>
+                    <td>{{ coupon.company }}</td>
+                    <td>{{ coupon.code }}</td>
+                    <td>{{ coupon.date_added.strftime('%Y-%m-%d %H:%M') }}</td> <!-- הצגת תאריך יצירה -->
+                    <td>{{ coupon.status }}</td>
+                    <td>{{ '%.2f'|format(coupon.remaining_value) }} ש"ח</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="delete-button">מחק קופונים</button>
+    </form>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* Delete Coupons Page Styles */
+    .delete-coupons {
+        padding: 20px;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .delete-coupons h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: var(--primary-color);
+    }
+
+    .select-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .select-button {
+        padding: 8px 12px;
+        background-color: var(--accent-color);
+        color: var(--white);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color var(--transition-speed);
+    }
+
+    .select-button:hover {
+        background-color: #e67e22;
+    }
+
+    .coupon-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    .coupon-table th, .coupon-table td {
+        border: 1px solid var(--light-gray);
+        padding: 10px;
+        text-align: center;
+    }
+
+    .coupon-table th {
+        background-color: var(--secondary-color);
+        color: var(--text-color);
+    }
+
+    .coupon-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    .coupon-table tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+
+    .delete-button {
+        display: block;
+        width: 200px;
+        margin: 0 auto;
+        padding: 12px 0;
+        background-color: var(--danger-color);
+        color: var(--white);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 1em;
+        transition: background-color var(--transition-speed);
+    }
+
+    .delete-button:hover {
+        background-color: #c0392b;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function selectAll() {
+        var checkboxes = document.querySelectorAll('input[name="coupon_ids"]');
+        checkboxes.forEach(function(checkbox) {
+            checkbox.checked = true;
+        });
+    }
+
+    function deselectAll() {
+        var checkboxes = document.querySelectorAll('input[name="coupon_ids"]');
+        checkboxes.forEach(function(checkbox) {
+            checkbox.checked = false;
+        });
+    }
+
+    function toggleSelectAll() {
+        var masterCheckbox = document.getElementById('select-all');
+        var checkboxes = document.querySelectorAll('input[name="coupon_ids"]');
+        checkboxes.forEach(function(checkbox) {
+            checkbox.checked = masterCheckbox.checked;
+        });
+    }
+</script>
+{% endblock %}

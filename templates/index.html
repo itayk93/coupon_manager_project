@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block title %}ניהול הקופונים שלך{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h2>היי, {{ current_user.first_name }}!</h2>
+    <p>איזה כיף לראות אותך כאן! בוא נבדוק כמה חסכת ומה נשאר לך להוציא.</p>
+    <div class="total-value">
+        <p>נשאר לך להוציא מתוך כל הקופונים שאינם חד פעמיים:</p>
+        <h1>{{ '%.2f'|format(total_value) }} ש"ח</h1>
+    </div>
+    <p class="total-savings-line">
+        סך הכל חסכת מתוך כל הקופונים שאינם חד פעמיים: {{ '%.2f'|format(total_savings) }} ש"ח
+        מתוך {{ '%.2f'|format(total_coupons_value) }} ש"ח
+        (חיסכון של {{ '%.2f'|format(percentage_savings) }}%)
+    </p>
+</section>
+
+<div class="export-buttons">
+    <a href="{{ url_for('export.export_excel') }}" class="export-button">
+        <i class="fa fa-file-excel-o" aria-hidden="true"></i> ייצא ל-Excel
+    </a>
+    <a href="{{ url_for('export.export_pdf') }}" class="export-button">
+        <i class="fa fa-file-pdf-o" aria-hidden="true"></i> ייצא ל-PDF
+    </a>
+</div>
+
+<section class="coupon-list">
+    <h2>הקופונים שלך</h2>
+
+    <!-- קופונים פעילים -->
+    {% if active_coupons %}
+        <h3 class="coupon-section-title">קופונים פעילים</h3>
+        <div class="coupon-container">
+            {% for coupon in active_coupons|sort(attribute='used_value') %}
+                <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
+                    {% set company_lower = coupon.company.lower() %}
+                    {% if company_lower in company_logo_mapping %}
+                        <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="company-logo">
+                    {% endif %}
+                    <p class="company-name">{{ coupon.company }}</p>
+                    <p>קוד קופון: {{ coupon.code }}</p>
+                    <p class="remaining-value">נשאר לך: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח</p>
+                    <p class="discount-percentage">כבר השתמשת ב: {{ (coupon.used_value / coupon.value * 100)|round(2) if coupon.value > 0 else 0 }}%</p>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="text-align: center; color: var(--gray);">אין לך קופונים פעילים כרגע.</p>
+    {% endif %}
+
+    <!-- קופונים חד פעמיים פעילים -->
+    {% if active_one_time_coupons %}
+        <h3 class="coupon-section-title">קופונים חד פעמיים</h3>
+        <div class="coupon-container">
+            {% for coupon in active_one_time_coupons %}
+                <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
+                    {% set company_lower = coupon.company.lower() %}
+                    {% if company_lower in company_logo_mapping %}
+                        <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="coupon-image">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Image" class="coupon-image">
+                    {% endif %}
+                    <p class="company-name">{{ coupon.company }}</p>
+                    <p>קוד קופון: {{ coupon.code }}</p>
+                    <p>מטרה: {{ coupon.purpose }}</p>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="text-align: center; color: var(--gray);">אין לך קופונים חד פעמיים כרגע.</p>
+    {% endif %}
+
+    <!-- קופונים למכירה -->
+    {% if coupons_for_sale %}
+        <h3 class="coupon-section-title">קופונים למכירה</h3>
+        <div class="coupon-container">
+            {% for coupon in coupons_for_sale %}
+                <a href="{{ url_for('coupon_detail', id=coupon.id) }}" class="coupon-card">
+                    {% set company_lower = coupon.company.lower() %}
+                    {% if company_lower in company_logo_mapping %}
+                        <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="coupon-image">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Image" class="coupon-image">
+                    {% endif %}
+                    <p class="company-name">{{ coupon.company }}</p>
+                    <p>קוד קופון: {{ coupon.code }}</p>
+                    {% if coupon.is_one_time %}
+                        <p>מטרה: {{ coupon.purpose }}</p>
+                    {% endif %}
+                    {% if not coupon.is_one_time %}
+                        <p class="remaining-value">נשאר לך: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח</p>
+                    {% endif %}
+                    <p style="color: var(--accent-color); font-weight: bold;">למכירה במחיר {{ '%.2f'|format(coupon.cost) }} ש"ח</p>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="text-align: center; color: var(--gray);">אין לך קופונים זמינים למכירה.</p>
+    {% endif %}
+</section>
+
+<!-- כפתור עדכון הקופונים בתחתית העמוד -->
+{% if current_user.is_admin %}
+    <form action="{{ url_for('coupons.update_all_active_coupons') }}" method="post" style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+        {{ form.hidden_tag() }}
+        <button type="submit" class="action-button small-button">
+            <i class="fa fa-refresh"></i> עדכן את כל הקופונים הפעילים מ-Multipass
+        </button>
+    </form>
+{% endif %}
+
+{% endblock %}
+
+{% block styles %}
+<style>
+    .coupon-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .coupon-card {
+        flex: 1 1 calc(20% - 20px);
+        max-width: calc(20% - 20px);
+        box-sizing: border-box;
+        padding: 15px 20px;
+        border: 1px solid var(--light-gray);
+        border-radius: 8px;
+        background-color: var(--white);
+        transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+        color: inherit;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .coupon-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .coupon-image, .company-logo {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 10px;
+        transition: transform var(--transition-speed);
+    }
+
+    .coupon-image:hover, .company-logo:hover {
+        transform: scale(1.05);
+    }
+
+    @media (max-width: 1200px) {
+        .coupon-card {
+            flex: 1 1 calc(25% - 20px);
+            max-width: calc(25% - 20px);
+        }
+    }
+
+    @media (max-width: 992px) {
+        .coupon-card {
+            flex: 1 1 calc(33.333% - 20px);
+            max-width: calc(33.333% - 20px);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .coupon-card {
+            flex: 1 1 calc(50% - 20px);
+            max-width: calc(50% - 20px);
+        }
+    }
+
+    @media (max-width: 500px) {
+        .coupon-card {
+            flex: 1 1 calc(100% - 20px);
+            max-width: calc(100% - 20px);
+        }
+    }
+
+    .coupon-section-title {
+        text-align: center;
+        color: var(--primary-color);
+        margin: 40px 0 20px 0;
+    }
+
+    .export-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin: 20px 0;
+    }
+
+    .export-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background-color: var(--accent-color);
+        color: var(--white);
+        text-decoration: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color var(--transition-speed);
+        font-size: 0.9em;
+    }
+
+    .export-button:hover {
+        background-color: #e67e22;
+    }
+
+    .export-button .fa {
+        font-size: 1.2em;
+    }
+</style>
+{% endblock %}

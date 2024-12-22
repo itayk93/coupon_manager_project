@@ -1,0 +1,411 @@
+<!-- add_coupons.html -->
+{% extends 'base.html' %}
+
+{% block title %}הוסף קופונים מרובים{% endblock %}
+
+{% block content %}
+<section class="add-coupon">
+    <h2>הוסף קופונים מרובים</h2>
+
+    <!-- הוספת כפתורים מעל הטופס -->
+    <div class="add-coupons-buttons">
+        <a href="{{ url_for('coupons.add_coupon') }}" class="secondary-button">
+            <i class="fa fa-plus-circle" aria-hidden="true"></i> הוסף קופון
+        </a>
+        <a href="{{ url_for('coupons.upload_coupons') }}" class="secondary-button">
+            <i class="fa fa-upload" aria-hidden="true"></i> העלה קובץ קופונים
+        </a>
+    </div>
+
+    <form method="post" id="coupons-form">
+        <!-- הוספת CSRF Token בצורה מוסתרת -->
+        {{ form.hidden_tag() }}
+
+        <div id="coupons-container">
+            {% for coupon_form in form.coupons %}
+            <fieldset class="coupon-fieldset" data-index="{{ loop.index0 }}">
+                <legend>קופון {{ loop.index }}</legend>
+
+                <!-- כפתורי פעולות לקופון -->
+                <div class="coupon-actions">
+                    <button type="button" class="duplicate-coupon-button"><i class="fa fa-clone"></i> שכפל קופון</button>
+                    {% if loop.index > 1 %}
+                    <button type="button" class="remove-coupon-button"><i class="fa fa-trash"></i> הסר קופון</button>
+                    {% endif %}
+                </div>
+
+                <!-- שם החברה -->
+                <div class="form-group">
+                    <label for="coupons-{{ loop.index0 }}-company_id">שם החברה:<span class="required">*</span></label>
+                    <select id="coupons-{{ loop.index0 }}-company_id" name="coupons-{{ loop.index0 }}-company_id" class="input-field company-select" required>
+                        <option value="" disabled {% if not coupon_form.company_id.data %}selected{% endif %}>בחר</option>
+                        {% for company in companies %}
+                            <option value="{{ company.id }}" {% if coupon_form.company_id.data == company.id|string %}selected{% endif %}>{{ company.name }}</option>
+                        {% endfor %}
+                        <option value="other" {% if coupon_form.company_id.data == 'other' %}selected{% endif %}>אחר</option>
+                    </select>
+                    {% for error in coupon_form.company_id.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group other-company-group" id="other_company_group_{{ loop.index0 }}" {% if coupon_form.company_id.data != 'other' %}style="display: none;"{% endif %}>
+                    <label for="coupons-{{ loop.index0 }}-other_company">שם חברה חדשה:</label>
+                    <input type="text" id="coupons-{{ loop.index0 }}-other_company" name="coupons-{{ loop.index0 }}-other_company" class="input-field" value="{{ coupon_form.other_company.data }}">
+                    {% for error in coupon_form.other_company.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- תגית -->
+                <div class="form-group">
+                    <label for="coupons-{{ loop.index0 }}-tag_id">תגית:<span class="required">*</span></label>
+                    <select id="coupons-{{ loop.index0 }}-tag_id" name="coupons-{{ loop.index0 }}-tag_id" class="input-field tag-select" required>
+                        <option value="" disabled {% if not coupon_form.tag_id.data %}selected{% endif %}>בחר</option>
+                        {% for tag in tags %}
+                            <option value="{{ tag.id }}" {% if coupon_form.tag_id.data == tag.id|string %}selected{% endif %}>{{ tag.name }}</option>
+                        {% endfor %}
+                        <option value="other" {% if coupon_form.tag_id.data == 'other' %}selected{% endif %}>אחר</option>
+                    </select>
+                    {% for error in coupon_form.tag_id.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group other-tag-group" id="other_tag_group_{{ loop.index0 }}" {% if coupon_form.tag_id.data != 'other' %}style="display: none;"{% endif %}>
+                    <label for="coupons-{{ loop.index0 }}-other_tag">תגית חדשה:</label>
+                    <input type="text" id="coupons-{{ loop.index0 }}-other_tag" name="coupons-{{ loop.index0 }}-other_tag" class="input-field" value="{{ coupon_form.other_tag.data }}">
+                    {% for error in coupon_form.other_tag.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- קוד קופון -->
+                <div class="form-group">
+                    {{ coupon_form.code.label }}
+                    {{ coupon_form.code(class="input-field") }}
+                    {% for error in coupon_form.code.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- ערך הקופון -->
+                <div class="form-group">
+                    {{ coupon_form.value.label }}
+                    {{ coupon_form.value(class="input-field") }}
+                    {% for error in coupon_form.value.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- עלות הקופון -->
+                <div class="form-group">
+                    {{ coupon_form.cost.label }}
+                    {{ coupon_form.cost(class="input-field") }}
+                    {% for error in coupon_form.cost.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- תאריך תפוגה -->
+                <div class="form-group">
+                    {{ coupon_form.expiration.label }}
+                    {{ coupon_form.expiration(class="input-field", type="date") }}
+                    {% for error in coupon_form.expiration.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- קוד לשימוש חד פעמי -->
+                <div class="form-group">
+                    {{ coupon_form.is_one_time() }}
+                    {{ coupon_form.is_one_time.label }}
+                    {% for error in coupon_form.is_one_time.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- מטרת הקופון -->
+                <div class="form-group purpose-field" id="purpose_group_{{ loop.index0 }}" {% if not coupon_form.is_one_time.data %}style="display: none;"{% endif %}>
+                    {{ coupon_form.purpose.label }}
+                    {{ coupon_form.purpose(class="input-field") }}
+                    {% for error in coupon_form.purpose.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            {% endfor %}
+        </div>
+
+        <!-- כפתור להוספת קופון נוסף -->
+        <button type="button" class="add-coupon-button"><i class="fa fa-plus-circle"></i> הוסף קופון נוסף</button>
+
+        <!-- כפתור שליחת הטופס -->
+        <button type="submit" class="submit-button">הוסף קופונים</button>
+    </form>
+</section>
+
+<!-- Template להוספת קופון חדש -->
+<template id="coupon-template">
+    <fieldset class="coupon-fieldset" data-index="__INDEX__">
+        <legend>קופון</legend>
+
+        <div class="coupon-actions">
+            <button type="button" class="duplicate-coupon-button"><i class="fa fa-clone"></i> שכפל קופון</button>
+            <button type="button" class="remove-coupon-button"><i class="fa fa-trash"></i> הסר קופון</button>
+        </div>
+
+        <!-- שם החברה -->
+        <div class="form-group">
+            <label for="coupons-__INDEX__-company_id">שם החברה:<span class="required">*</span></label>
+            <select id="coupons-__INDEX__-company_id" name="coupons-__INDEX__-company_id" class="input-field company-select" required>
+                <option value="" disabled selected>בחר</option>
+                {% for company in companies %}
+                    <option value="{{ company.id }}">{{ company.name }}</option>
+                {% endfor %}
+                <option value="other">אחר</option>
+            </select>
+        </div>
+
+        <div class="form-group other-company-group" id="other_company_group___INDEX__" style="display: none;">
+            <label for="coupons-__INDEX__-other_company">שם חברה חדשה:</label>
+            <input type="text" id="coupons-__INDEX__-other_company" name="coupons-__INDEX__-other_company" class="input-field">
+        </div>
+
+        <!-- תגית -->
+        <div class="form-group">
+            <label for="coupons-__INDEX__-tag_id">תגית:<span class="required">*</span></label>
+            <select id="coupons-__INDEX__-tag_id" name="coupons-__INDEX__-tag_id" class="input-field tag-select" required>
+                <option value="" disabled selected>בחר</option>
+                {% for tag in tags %}
+                    <option value="{{ tag.id }}">{{ tag.name }}</option>
+                {% endfor %}
+                <option value="other">אחר</option>
+            </select>
+        </div>
+
+        <div class="form-group other-tag-group" id="other_tag_group___INDEX__" style="display: none;">
+            <label for="coupons-__INDEX__-other_tag">תגית חדשה:</label>
+            <input type="text" id="coupons-__INDEX__-other_tag" name="coupons-__INDEX__-other_tag" class="input-field">
+        </div>
+
+        <!-- קוד קופון -->
+        <div class="form-group">
+            <label for="coupons-__INDEX__-code">קוד קופון:<span class="required">*</span></label>
+            <input type="text" id="coupons-__INDEX__-code" name="coupons-__INDEX__-code" class="input-field" required>
+        </div>
+
+        <!-- ערך הקופון -->
+        <div class="form-group">
+            <label for="coupons-__INDEX__-value">ערך הקופון:<span class="required">*</span></label>
+            <input type="number" step="0.01" id="coupons-__INDEX__-value" name="coupons-__INDEX__-value" class="input-field" required>
+        </div>
+
+        <!-- עלות הקופון -->
+        <div class="form-group">
+            <label for="coupons-__INDEX__-cost">עלות הקופון:<span class="required">*</span></label>
+            <input type="number" step="0.01" id="coupons-__INDEX__-cost" name="coupons-__INDEX__-cost" class="input-field" required>
+        </div>
+
+        <!-- תאריך תפוגה -->
+        <div class="form-group">
+            <label for="coupons-__INDEX__-expiration">תאריך תפוגה:</label>
+            <input type="date" id="coupons-__INDEX__-expiration" name="coupons-__INDEX__-expiration" class="input-field">
+        </div>
+
+        <!-- קוד לשימוש חד פעמי -->
+        <div class="form-group">
+            <input type="checkbox" id="coupons-__INDEX__-is_one_time" name="coupons-__INDEX__-is_one_time">
+            <label for="coupons-__INDEX__-is_one_time">קוד לשימוש חד פעמי</label>
+        </div>
+
+        <!-- מטרת הקופון -->
+        <div class="form-group purpose-field" id="purpose_group___INDEX__" style="display: none;">
+            <label for="coupons-__INDEX__-purpose">מטרת הקופון:</label>
+            <input type="text" id="coupons-__INDEX__-purpose" name="coupons-__INDEX__-purpose" class="input-field">
+        </div>
+    </fieldset>
+</template>
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* ... (סגנונות קיימים) ... */
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let index = {{ form.coupons|length }};
+
+        // פונקציה לאתחול אירועים עבור כל שדה קופון
+        function initializeCouponFieldset(fieldset, idx) {
+            fieldset.dataset.index = idx;
+
+            // טיפול בשדה החברה
+            const companySelect = fieldset.querySelector('.company-select');
+            const otherCompanyGroup = fieldset.querySelector('.other-company-group');
+
+            function toggleOtherCompanyField() {
+                if (companySelect.value === 'other') {
+                    otherCompanyGroup.style.display = 'block';
+                } else {
+                    otherCompanyGroup.style.display = 'none';
+                    const input = otherCompanyGroup.querySelector('input');
+                    if (input) input.value = '';
+                }
+            }
+
+            toggleOtherCompanyField();
+            companySelect.addEventListener('change', toggleOtherCompanyField);
+
+            // טיפול בשדה התגית
+            const tagSelect = fieldset.querySelector('.tag-select');
+            const otherTagGroup = fieldset.querySelector('.other-tag-group');
+
+            function toggleOtherTagField() {
+                if (tagSelect.value === 'other') {
+                    otherTagGroup.style.display = 'block';
+                } else {
+                    otherTagGroup.style.display = 'none';
+                    const input = otherTagGroup.querySelector('input');
+                    if (input) input.value = '';
+                }
+            }
+
+            toggleOtherTagField();
+            tagSelect.addEventListener('change', toggleOtherTagField);
+
+            // טיפול בשדה "מטרת הקופון"
+            const isOneTimeCheckbox = fieldset.querySelector('input[type="checkbox"][name$="-is_one_time"]');
+            const purposeGroup = fieldset.querySelector('.purpose-field');
+
+            function togglePurposeField() {
+                if (isOneTimeCheckbox.checked) {
+                    purposeGroup.style.display = 'block';
+                } else {
+                    purposeGroup.style.display = 'none';
+                    const input = purposeGroup.querySelector('input');
+                    if (input) input.value = '';
+                }
+            }
+
+            togglePurposeField();
+            isOneTimeCheckbox.addEventListener('change', togglePurposeField);
+
+            // טיפול בכפתור הסרת קופון
+            const removeButton = fieldset.querySelector('.remove-coupon-button');
+            if (removeButton) {
+                removeButton.addEventListener('click', function() {
+                    fieldset.remove();
+                    updateLegends();
+                });
+            }
+
+            // טיפול בכפתור שכפול קופון
+            const duplicateButton = fieldset.querySelector('.duplicate-coupon-button');
+            if (duplicateButton) {
+                duplicateButton.addEventListener('click', function() {
+                    duplicateCoupon(fieldset);
+                });
+            }
+        }
+
+        // אתחול הקופונים הקיימים
+        const fieldsets = document.querySelectorAll('.coupon-fieldset');
+        fieldsets.forEach(function(fieldset, idx) {
+            initializeCouponFieldset(fieldset, idx);
+        });
+
+        // פונקציה להוספת קופון חדש
+        function addCoupon() {
+            const container = document.getElementById('coupons-container');
+            const template = document.getElementById('coupon-template').content.cloneNode(true);
+            const newFieldset = template.querySelector('.coupon-fieldset');
+
+            // עדכון אינדקס
+            updateFieldsetIndex(newFieldset, index);
+
+            // אתחול אירועים עבור הקופון החדש
+            initializeCouponFieldset(newFieldset, index);
+
+            container.appendChild(newFieldset);
+            index++;
+            updateLegends();
+        }
+
+        // פונקציה לשכפול קופון
+        function duplicateCoupon(fieldset) {
+            const container = document.getElementById('coupons-container');
+            const clonedFieldset = fieldset.cloneNode(true);
+
+            // עדכון אינדקס
+            updateFieldsetIndex(clonedFieldset, index);
+
+            // העתקת הערכים של השדות
+            const originalInputs = fieldset.querySelectorAll('input, select, textarea');
+            const clonedInputs = clonedFieldset.querySelectorAll('input, select, textarea');
+
+            clonedInputs.forEach((input, i) => {
+                if (input.type === 'checkbox') {
+                    input.checked = originalInputs[i].checked;
+                } else {
+                    input.value = originalInputs[i].value;
+                }
+            });
+
+            // אתחול אירועים עבור הקופון המשוכפל
+            initializeCouponFieldset(clonedFieldset, index);
+
+            container.appendChild(clonedFieldset);
+            index++;
+            updateLegends();
+        }
+
+        // פונקציה לעדכון אינדקסים של השדות ב-fieldset
+        function updateFieldsetIndex(fieldset, newIndex) {
+            const oldIndex = fieldset.dataset.index || '__INDEX__';
+            fieldset.dataset.index = newIndex;
+
+            const regex = new RegExp(`(coupons-)(?:${oldIndex}|__INDEX__)(-)`, 'g');
+
+            // עדכון שמות, מזהים ו-for של כל השדות
+            fieldset.querySelectorAll('[name], [id], [for]').forEach(element => {
+                if (element.name) {
+                    element.name = element.name.replace(regex, `$1${newIndex}$2`);
+                }
+                if (element.id) {
+                    element.id = element.id.replace(regex, `$1${newIndex}$2`);
+                }
+                if (element.htmlFor) {
+                    element.htmlFor = element.htmlFor.replace(regex, `$1${newIndex}$2`);
+                }
+            });
+
+            // עדכון מזהי קבוצות
+            fieldset.querySelectorAll('[id^="other_company_group_"], [id^="other_tag_group_"], [id^="purpose_group_"]').forEach(element => {
+                element.id = element.id.replace(/_(?:\d+|__INDEX__)/, `_${newIndex}`);
+            });
+
+            // עדכון טקסט הקופון
+            const legend = fieldset.querySelector('legend');
+            legend.textContent = 'קופון ' + (newIndex + 1);
+        }
+
+        // פונקציה לעדכון מספרי הקופונים
+        function updateLegends() {
+            const fieldsets = document.querySelectorAll('.coupon-fieldset');
+            fieldsets.forEach(function(fieldset, idx) {
+                fieldset.dataset.index = idx;
+                updateFieldsetIndex(fieldset, idx);
+            });
+            index = fieldsets.length;
+        }
+
+        // הוספת מאזין לכפתור "הוסף קופון נוסף"
+        const addCouponButton = document.querySelector('.add-coupon-button');
+        addCouponButton.addEventListener('click', addCoupon);
+    });
+</script>
+{% endblock %}

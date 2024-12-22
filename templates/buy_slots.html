@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}רכישת סלוטים{% endblock %}
+
+{% block content %}
+<section class="buy-slots">
+    <div class="buy-slots-container">
+        <h2 class="buy-slots-title">רכישת סלוטים</h2>
+        <p class="slots-available">מספר הסלוטים הזמינים: {{ slots }}</p>
+        <div class="slot-card">
+            <p class="slot-description">בחר את מספר הסלוטים שברצונך לרכוש:</p>
+            <form method="post" class="slot-form">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.slot_amount() }}
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="action-button buy-slots-button" onclick="setSlotAmount(10)">רכוש 10 סלוטים - ב0 ש"ח</button>
+                    <button type="submit" class="action-button buy-slots-button" onclick="setSlotAmount(20)">רכוש 20 סלוטים - ב0 ש"ח</button>
+                    <button type="submit" class="action-button buy-slots-button" onclick="setSlotAmount(50)">רכוש 50 סלוטים - ב0 ש"ח</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function setSlotAmount(amount) {
+        document.querySelector('input[name="slot_amount"]').value = amount;
+    }
+</script>
+{% endblock %}

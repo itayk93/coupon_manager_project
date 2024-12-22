@@ -1,0 +1,222 @@
+<!-- templates/request_coupon.html -->
+{% extends 'base.html' %}
+
+{% block title %}בקשת קופון{% endblock %}
+
+{% block content %}
+<section class="add-coupon">
+    <h2>בקש קופון</h2>
+    <form method="post">
+        {{ form.hidden_tag() }}
+
+        <!-- Company Field -->
+        <div class="form-group">
+            <label for="company_select">שם החברה:<span class="required">*</span></label>
+            <select id="company_select" name="company" class="input-field" required>
+                <option value="" disabled selected>בחר</option>
+                {% for company in companies %}
+                    <option value="{{ company.id }}">{{ company.name }}</option>
+                {% endfor %}
+                <option value="other">אחר</option>
+            </select>
+            {% for error in form.company.errors %}
+                <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+
+        <!-- Other Company Field -->
+        <div class="form-group" id="other_company_group" style="display: none;">
+            <label for="other_company">שם חברה חדשה:</label>
+            {{ form.other_company(class="input-field") }}
+            {% for error in form.other_company.errors %}
+                <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+
+        <!-- Coupon Cost Field -->
+        <div class="form-group">
+            <label for="coupon_cost">מחיר קופון:<span class="required">*</span></label>
+            {{ form.cost(class="input-field", id="coupon_cost") }}
+            {% for error in form.cost.errors %}
+                <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+
+        <!-- Discount Percentage Field -->
+        <div class="form-group">
+            <label for="discount_percentage_input">אחוז הנחה מבוקש:</label>
+            {{ form.discount_percentage(class="input-field", id="discount_percentage_input") }}
+            {% for error in form.discount_percentage.errors %}
+                <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+
+        <!-- Desired Value Field -->
+        <div class="form-group">
+            <label for="desired_value">ערך מבוקש:</label>
+            {{ form.value(class="input-field", id="desired_value") }}
+            {% for error in form.value.errors %}
+                <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+
+        <!-- Submit Button -->
+        <div class="form-group">
+            <input type="submit" value="בקש קופון" class="submit-button">
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* סגנון לכותרת */
+.add-coupon h2 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+/* סגנון לטופס */
+.add-coupon form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+
+.form-group .error-message {
+    color: red;
+    font-size: 0.9em;
+}
+
+.input-field {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.submit-button {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color var(--transition-speed);
+}
+
+.submit-button:hover {
+    background-color: #2980b9;
+}
+
+/* התאמה לכפתורים במובייל */
+@media (max-width: 768px) {
+    .add-coupon form {
+        padding: 0 10px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle Company Field
+    const companySelect = document.getElementById('company_select');
+    const otherCompanyGroup = document.getElementById('other_company_group');
+    const otherCompanyInput = document.getElementById('{{ form.other_company.id }}');
+
+    function toggleOtherCompanyField() {
+        if (companySelect.value === 'other') {
+            otherCompanyGroup.style.display = 'block';
+        } else {
+            otherCompanyGroup.style.display = 'none';
+            otherCompanyInput.value = '';
+        }
+    }
+
+    companySelect.addEventListener('change', toggleOtherCompanyField);
+    toggleOtherCompanyField();
+
+    // Calculate Desired Value or Discount Percentage
+    const desiredValueInput = document.getElementById('desired_value');
+    const couponCostInput = document.getElementById('coupon_cost');
+    const discountPercentageInput = document.getElementById('discount_percentage_input');
+
+    let isUpdating = false;
+
+    function updateDesiredValue() {
+        if (isUpdating) return;
+        isUpdating = true;
+
+        const couponCost = parseFloat(couponCostInput.value);
+        const discountPercentage = parseFloat(discountPercentageInput.value);
+
+        if (!isNaN(couponCost) && !isNaN(discountPercentage) && discountPercentage >=0 && discountPercentage <=100) {
+            const desiredValue = couponCost - (discountPercentage / 100 * couponCost);
+            desiredValueInput.value = desiredValue.toFixed(2);
+        } else if (desiredValueInput.value !== '') {
+            desiredValueInput.value = '';
+        }
+
+        isUpdating = false;
+    }
+
+    function updateDiscountPercentage() {
+        if (isUpdating) return;
+        isUpdating = true;
+
+        const desiredValue = parseFloat(desiredValueInput.value);
+        const couponCost = parseFloat(couponCostInput.value);
+
+        if (!isNaN(couponCost) && !isNaN(desiredValue) && couponCost > 0) {
+            const discountPercentage = ((couponCost - desiredValue) / couponCost) * 100;
+            discountPercentageInput.value = discountPercentage.toFixed(2);
+        } else if (discountPercentageInput.value !== '') {
+            discountPercentageInput.value = '';
+        }
+
+        isUpdating = false;
+    }
+
+    desiredValueInput.addEventListener('input', function() {
+        if (desiredValueInput.value !== '') {
+            updateDiscountPercentage();
+        } else {
+            discountPercentageInput.value = '';
+        }
+    });
+
+    discountPercentageInput.addEventListener('input', function() {
+        if (discountPercentageInput.value !== '') {
+            updateDesiredValue();
+        } else {
+            desiredValueInput.value = '';
+        }
+    });
+
+    couponCostInput.addEventListener('input', function() {
+        if (desiredValueInput.value !== '') {
+            updateDiscountPercentage();
+        }
+        if (discountPercentageInput.value !== '') {
+            updateDesiredValue();
+        }
+    });
+});
+</script>
+{% endblock %}
+

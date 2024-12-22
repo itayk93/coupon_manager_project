@@ -1,0 +1,393 @@
+<!-- templates/add_coupon_with_image.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}
+הוסף קופון מתמונה
+{% endblock %}
+
+{% block content %}
+<section class="add-coupon">
+    <h2>העלה תמונה להוספת קופון</h2>
+
+    <!-- טופס להעלאת תמונה -->
+    {% if not show_coupon_form %}
+    <form method="POST" enctype="multipart/form-data">
+        {{ upload_image_form.hidden_tag() }}
+        <div class="form-group">
+            <label for="coupon_image">העלה תמונה של הקופון</label>
+            {{ upload_image_form.coupon_image(class="input-field", id="coupon_image") }}
+            {% for error in upload_image_form.coupon_image.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        {{ upload_image_form.submit_upload_image(class="submit-button") }}
+    </form>
+    {% endif %}
+
+    {% if show_coupon_form %}
+    <h3>פרטי הקופון</h3>
+    <!-- טופס למילוי קופון -->
+    <form method="POST">
+        {{ coupon_form.hidden_tag() }}
+
+        <!-- Company Name -->
+        <div class="form-group">
+            {{ coupon_form.company_id.label(class="form-label") }}
+            {{ coupon_form.company_id(class="input-field", id="company_select") }}
+            {% for error in coupon_form.company_id.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="form-group" id="other_company_group" style="display: none;">
+            {{ coupon_form.other_company.label(class="form-label") }}
+            {{ coupon_form.other_company(class="input-field", id="other_company") }}
+            {% for error in coupon_form.other_company.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Tags Field -->
+        <div class="form-group">
+            {{ coupon_form.tag_id.label(class="form-label") }}
+            {{ coupon_form.tag_id(class="input-field", id="tag_select") }}
+            {% for error in coupon_form.tag_id.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="form-group" id="other_tag_group" style="display: none;">
+            {{ coupon_form.other_tag.label(class="form-label") }}
+            {{ coupon_form.other_tag(class="input-field", id="other_tag") }}
+            {% for error in coupon_form.other_tag.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Code Field -->
+        <div class="form-group">
+            {{ coupon_form.code.label(class="form-label") }}
+            {{ coupon_form.code(class="input-field", id="code") }}
+            {% for error in coupon_form.code.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Coupon Cost Field -->
+        <div class="form-group">
+            {{ coupon_form.cost.label(class="form-label") }}
+            {{ coupon_form.cost(class="input-field", id="coupon_cost") }}
+            {% for error in coupon_form.cost.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Desired Value Field -->
+        <div class="form-group">
+            {{ coupon_form.value.label(class="form-label") }}
+            {{ coupon_form.value(class="input-field", id="desired_value") }}
+            {% for error in coupon_form.value.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Discount Percentage Field -->
+        <div class="form-group">
+            {{ coupon_form.discount_percentage.label(class="form-label") }}
+            {{ coupon_form.discount_percentage(class="input-field", id="discount_percentage_input") }}
+            {% for error in coupon_form.discount_percentage.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Expiration Field -->
+        <div class="form-group">
+            {{ coupon_form.expiration.label(class="form-label") }}
+            {{ coupon_form.expiration(class="input-field", id="expiration") }}
+            {% for error in coupon_form.expiration.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Description Field -->
+        <div class="form-group">
+            {{ coupon_form.description.label(class="form-label") }}
+            {{ coupon_form.description(class="input-field", id="description") }}
+            {% for error in coupon_form.description.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- One-Time Use Checkbox -->
+        <div class="form-group">
+            <label for="is_one_time">
+                {{ coupon_form.is_one_time() }}
+                {{ coupon_form.is_one_time.label }}
+            </label>
+            {% for error in coupon_form.is_one_time.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Purpose Field (Hidden by default) -->
+        <div class="form-group" id="purpose_group" style="display: none;">
+            {{ coupon_form.purpose.label(class="form-label") }}
+            {{ coupon_form.purpose(class="input-field", id="purpose") }}
+            {% for error in coupon_form.purpose.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Submit Button -->
+        <div class="form-group">
+            {{ coupon_form.submit_coupon(class="submit-button") }}
+        </div>
+    </form>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.center-text {
+    text-align: center;
+}
+
+.slots-info-mobile {
+    display: none;
+    font-size: 12px;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+/* סגנון ל-tooltip בדסקטופ: */
+#slotsTooltip {
+    display: none;
+    position: absolute;
+    top: -5px;
+    left: 105%;
+    background-color: #333;
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    width: 250px;
+    font-size: 14px;
+    text-align: center;
+    z-index: 1000;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+    padding-right: 20px;
+}
+
+/* החץ הקטן של tooltip בדסקטופ: */
+#slotsTooltip:after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent #333 transparent transparent;
+}
+
+/* במכשיר נייד: במקום tooltip, נציג טקסט קבוע מעל הכפתור */
+@media (max-width: 768px) {
+    #slotsTooltip {
+        display: none !important; /* לא מציגים tooltip במסך קטן */
+    }
+    .slots-info-mobile {
+        display: block; /* מציגים טקסט קטן מעל הכפתור */
+    }
+    .no-slots-message {
+        text-align: center; /* מרכז את הטקסט במסרים שאין מספיק סלוטים */
+    }
+    .manual-entry p {
+        text-align: center; /* מרכז את הטקסט במסמך הכניסה הידנית */
+    }
+}
+
+/* כפתור הסגירה (X) ל-tooltip (משמש רק בדסקטופ) */
+.close-tooltip {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    background-color: transparent;
+    border: none;
+    color: #fff;
+}
+
+.close-tooltip:hover {
+    color: #ccc;
+}
+
+/* עיצוב עבור הכפתור בעת מעבר עכבר - בדסקטופ */
+@media (min-width: 769px) {
+    .form-group:hover #slotsTooltip {
+        display: block;
+    }
+}
+
+/* עיצוב נוסף למרכז טקסט בלייבלים במידת הצורך */
+.form-group.center-text .form-label {
+    display: block;
+    text-align: center;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Handle Tags
+    const tagSelect = document.getElementById('tag_select');
+    const otherTagGroup = document.getElementById('other_tag_group');
+    const otherTagInput = document.getElementById('other_tag');
+
+    function toggleOtherTagField() {
+        if (tagSelect && tagSelect.value === 'other') {
+            otherTagGroup.style.display = 'block';
+        } else {
+            otherTagGroup.style.display = 'none';
+            if (otherTagInput) otherTagInput.value = '';
+        }
+    }
+    if(tagSelect) {
+        toggleOtherTagField();
+        tagSelect.addEventListener('change', toggleOtherTagField);
+    }
+
+    // Handle Company
+    const companySelect = document.getElementById('company_select');
+    const otherCompanyGroup = document.getElementById('other_company_group');
+    const otherCompanyInput = document.getElementById('other_company');
+
+    function toggleOtherCompanyField() {
+        if (companySelect && companySelect.value === 'other') {
+            otherCompanyGroup.style.display = 'block';
+        } else {
+            otherCompanyGroup.style.display = 'none';
+            if (otherCompanyInput) otherCompanyInput.value = '';
+        }
+    }
+    if(companySelect) {
+        toggleOtherCompanyField();
+        companySelect.addEventListener('change', toggleOtherCompanyField);
+    }
+
+    // Handle One-Time Use
+    const checkbox = document.getElementById('is_one_time');
+    const purposeGroup = document.getElementById('purpose_group');
+    const purposeInput = document.getElementById('purpose');
+
+    function togglePurposeField() {
+        if (checkbox && checkbox.checked) {
+            purposeGroup.style.display = 'block';
+        } else {
+            purposeGroup.style.display = 'none';
+            if (purposeInput) {
+                purposeInput.value = '';
+            }
+        }
+    }
+    if(checkbox) {
+        togglePurposeField();
+        checkbox.addEventListener('change', togglePurposeField);
+    }
+
+    // Variables
+    const desiredValueInput = document.getElementById('desired_value');
+    const couponCostInput = document.getElementById('coupon_cost');
+    const discountPercentageInput = document.getElementById('discount_percentage_input');
+    let isUpdating = false;
+
+    // פונקציית עזר: המרה ל-Float בטוח
+    function toFloat(value) {
+        const num = parseFloat(value);
+        return isNaN(num) ? null : num;
+    }
+
+    function updateFields(changedField) {
+        if (isUpdating) return;
+        isUpdating = true;
+
+        const cost = toFloat(couponCostInput.value);
+        const value = toFloat(desiredValueInput.value);
+        const discount = toFloat(discountPercentageInput.value);
+
+        // לוגיקה מתוקנת:
+        // כאשר משתמש משנה ערך בשדה אחד, אנו מחשבים רק את השדה הדרוש על פי ההיגיון הרצוי:
+        //
+        // קשר בין השדות:
+        // discount = ((cost - value) / cost) * 100  => אם cost ו value ידועים
+        // value = cost * (1 - discount/100)         => אם cost ו discount ידועים
+        // cost = value / (1 - discount/100)         => אם value ו discount ידועים (לא תמיד נשתמש)
+        //
+        // היגיון:
+        // 1. אם המשתמש שינה את ה-cost:
+        //    - במידה ויש לנו value תקין, נחשב discount בהתאם (לא ניגע ב-value).
+        // 2. אם המשתמש שינה את ה-value:
+        //    - במידה ויש לנו cost תקין, נחשב discount (לא ניגע ב-cost).
+        // 3. אם המשתמש שינה את ה-discount:
+        //    - במידה ויש לנו cost תקין, נחשב value (לא ניגע ב-cost).
+        //
+        // אין שינויים מיותרים לערכים שכבר קיימים.
+
+        if (changedField === 'cost' && cost !== null && value !== null && cost > 0) {
+            // מחשבים discount בלבד
+            const newDiscount = ((cost - value) / cost) * 100;
+            discountPercentageInput.value = newDiscount.toFixed(2);
+        }
+
+        if (changedField === 'value' && value !== null && cost !== null && cost > 0) {
+            // מחשבים discount בלבד
+            const newDiscount = ((cost - value) / cost) * 100;
+            discountPercentageInput.value = newDiscount.toFixed(2);
+        }
+
+        if (changedField === 'discount' && discount !== null && cost !== null && cost > 0) {
+            // מחשבים value בלבד
+            const newValue = cost * (1 - discount / 100);
+            desiredValueInput.value = newValue.toFixed(2);
+        }
+
+        isUpdating = false;
+    }
+
+    // מאזינים לכל קלט בשדות
+    if (desiredValueInput && discountPercentageInput && couponCostInput) {
+        desiredValueInput.addEventListener('input', function() {
+            updateFields('value');
+        });
+
+        discountPercentageInput.addEventListener('input', function() {
+            updateFields('discount');
+        });
+
+        couponCostInput.addEventListener('input', function() {
+            updateFields('cost');
+        });
+    }
+
+    // Tooltip behavior on mobile:
+    const slotsTooltip = document.getElementById('slotsTooltip');
+    const closeTooltip = document.getElementById('closeTooltip');
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+    if (isMobile && slotsTooltip && closeTooltip) {
+        const submitButton = document.querySelector('.submit-button');
+        if (submitButton) {
+            submitButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                slotsTooltip.style.display = 'block';
+            });
+        }
+
+        closeTooltip.addEventListener('click', function() {
+            slotsTooltip.style.display = 'none';
+        });
+    }
+
+});
+</script>
+{% endblock %}

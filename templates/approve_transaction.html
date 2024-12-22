@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}
+אשר עסקה
+{% endblock %}
+
+{% block content %}
+<section class="approve-transaction">
+    <h2>אשר עסקה</h2>
+    <p>הקונה: {{ transaction.buyer.first_name }} {{ transaction.buyer.last_name }}</p>
+    <form method="post" class="transaction-form" id="transaction-form">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.code.label }}<span class="required">*</span>
+            <input type="text"
+                   id="code-field"
+                   class="input-field"
+                   name="code"
+                   value="{{ transaction.coupon.code if transaction.coupon.code else '' }}"
+                   placeholder="הכנס קוד קופון">
+            <span class="error-message" id="code-error" style="display:none;">קוד קופון הוא שדה חובה</span>
+        </div>
+
+        <div class="form-group">
+            {{ form.seller_phone.label }}<span class="required">*</span>
+            {{ form.seller_phone(class="input-field") }}
+            {% for error in form.seller_phone.errors %}
+                <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="submit-button">אשר עסקה</button>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('transaction-form');
+    const codeField = document.getElementById('code-field');
+    const codeError = document.getElementById('code-error');
+
+    form.addEventListener('submit', function (event) {
+        // Reset error message
+        codeError.style.display = 'none';
+
+        // Check if the "code" field is empty
+        if (!codeField.value.trim()) {
+            codeError.style.display = 'block';
+            event.preventDefault(); // Prevent form submission
+        }
+    });
+
+    // Optionally: Add more interactive behaviors as needed.
+});
+</script>
+{% endblock %}

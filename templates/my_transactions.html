@@ -1,0 +1,166 @@
+<!-- templates/my_transactions.html -->
+{% extends 'base.html' %}
+
+{% block title %}העסקאות שלי{% endblock %}
+
+{% block content %}
+<section class="transactions">
+    <h2>העסקאות שלי כמוכר</h2>
+    {% if transactions_as_seller %}
+        <table class="transaction-table">
+            <thead>
+                <tr>
+                    <th>חברה</th> <!-- החלפתי את "קופון" ל"חברה" -->
+                    <th>לוגו</th> <!-- עמודה חדשה ללוגו -->
+                    <th>קונה</th>
+                    <th>סטטוס</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions_as_seller %}
+                <tr>
+                    <td>{{ transaction.coupon.company }}</td> <!-- הצגת שם החברה -->
+                    <td>
+                        {% set logo_path = company_logo_mapping.get(transaction.coupon.company.lower(), 'images/default_logo.png') %}
+                        <img src="{{ url_for('static', filename=logo_path) }}" alt="{{ transaction.coupon.company }}" width="50">
+                    </td> <!-- הצגת הלוגו -->
+                    <td>{{ transaction.buyer.first_name }} {{ transaction.buyer.last_name }}</td>
+                    <td>{{ transaction.status }}</td>
+                    <td>
+                        {% if transaction.status == 'ממתין לאישור המוכר' %}
+                            <a href="{{ url_for('approve_transaction.approve_transaction', transaction_id=transaction.id) }}" class="action-button">אשר</a>
+                            <a href="{{ url_for('approve_transaction.decline_transaction', transaction_id=transaction.id) }}" class="action-button danger">דחה</a>
+                        {% elif transaction.status == 'ממתין לאישור הקונה' %}
+                            <p>מספר טלפון של המוכר: {{ transaction.seller_phone }}</p>
+                            {% if not transaction.seller_confirmed %}
+                                <form method="post" action="{{ url_for('approve_transaction.seller_confirm_transfer', transaction_id=transaction.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="action-button">אשר שההעברה הכספית בוצעה</button>
+                                </form>
+                            {% else %}
+                                <p>ממתין לאישור המוכר.</p> <!-- עדכון הטקסט כאן -->
+                            {% endif %}
+                        {% else %}
+                            <p>{{ transaction.status }}</p>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>אין עסקאות כמוכר.</p>
+    {% endif %}
+
+    <h2>העסקאות שלי כקונה</h2>
+    {% if transactions_as_buyer %}
+        <table class="transaction-table">
+            <thead>
+                <tr>
+                    <th>חברה</th> <!-- החלפתי את "קופון" ל"חברה" -->
+                    <th>לוגו</th> <!-- עמודה חדשה ללוגו -->
+                    <th>מוכר</th>
+                    <th>סטטוס</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions_as_buyer %}
+                <tr>
+                    <td>{{ transaction.coupon.company }}</td> <!-- הצגת שם החברה -->
+                    <td>
+                        {% set logo_path = company_logo_mapping.get(transaction.coupon.company.lower(), 'images/default_logo.png') %}
+                        <img src="{{ url_for('static', filename=logo_path) }}" alt="{{ transaction.coupon.company }}" width="50">
+                    </td> <!-- הצגת הלוגו -->
+                    <td>{{ transaction.seller.first_name }} {{ transaction.seller.last_name }}</td>
+                    <td>{{ transaction.status }}</td>
+                    <td>
+                        {% if transaction.status == 'ממתין לאישור המוכר' %}
+                            <p>ממתין לאישור המוכר.</p> <!-- שינוי הטקסט כאן -->
+                            <a href="{{ url_for('approve_transaction.cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
+                        {% elif transaction.status == 'ממתין לאישור הקונה' %}
+                            <p>מספר טלפון של המוכר: {{ transaction.seller_phone }}</p>
+                            {% if not transaction.buyer_confirmed %}
+                                <form method="post" action="{{ url_for('approve_transaction.buyer_confirm_transfer', transaction_id=transaction.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="action-button">אשר שההעברה הכספית בוצעה</button>
+                                </form>
+                            {% else %}
+                                <p>ממתין לאישור המוכר.</p> <!-- שינוי הטקסט כאן -->
+                            {% endif %}
+                        {% else %}
+                            <p>{{ transaction.status }}</p>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>אין עסקאות כקונה.</p>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .transactions {
+        padding: 20px;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .transactions h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: var(--primary-color);
+    }
+
+    .transaction-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 40px;
+    }
+
+    .transaction-table th, .transaction-table td {
+        border: 1px solid var(--light-gray);
+        padding: 10px;
+        text-align: center;
+    }
+
+    .transaction-table th {
+        background-color: var(--secondary-color);
+        color: var(--text-color);
+    }
+
+    .action-button {
+        display: inline-block;
+        padding: 8px 12px;
+        background-color: var(--primary-color);
+        color: #fff;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 2px;
+        font-size: 0.9em;
+    }
+
+    .action-button:hover {
+        background-color: var(--accent-color);
+    }
+
+    .action-button.danger {
+        background-color: var(--danger-color);
+    }
+
+    .action-button.danger:hover {
+        background-color: darkred;
+    }
+
+    /* עיצוב תמונות הלוגו */
+    .transaction-table img {
+        max-width: 100px;
+        height: auto;
+    }
+</style>
+{% endblock %}

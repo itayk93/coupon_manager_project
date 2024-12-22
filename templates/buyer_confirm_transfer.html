@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}אישור העברה כספית{% endblock %}
+
+{% block content %}
+<section class="confirm-transfer">
+    <h2>אישור העברה כספית</h2>
+    <p>המוכר סיפק את מספר הטלפון שלו לצורך תיאום תשלום:</p>
+    <p><strong>מספר טלפון של המוכר:</strong> {{ transaction.seller_phone }}</p>
+    <p>אנא תאם את התשלום ולאחר מכן אשר שההעברה הכספית בוצעה.</p>
+    <form method="post">
+        <button type="submit" class="submit-button">אשר שההעברה הכספית בוצעה</button>
+    </form>
+</section>
+{% endblock %}

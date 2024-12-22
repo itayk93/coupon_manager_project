@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}אישור מחיקת קופון{% endblock %}
+
+{% block content %}
+<section class="confirm-delete">
+    <div class="content-wrapper">
+        <h2>אישור מחיקת קופון</h2>
+        <p>הקופון <strong>{{ coupon.code }}</strong> של חברת <strong>{{ coupon.company }}</strong> יש לו עסקאות קשורות. האם אתה בטוח שברצונך למחוק אותו?</p>
+
+        <form action="{{ url_for('coupons.confirm_delete_coupon', id=coupon.id) }}" method="post">
+            {{ form.hidden_tag() }}
+            <div class="confirm-buttons">
+                {{ form.submit(class="action-button danger") }}
+                {{ form.cancel(class="action-button secondary") }}
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block styles %}
+<!-- אין צורך בעיצוב פנימי, כל העיצובים נמצאים בקובץ CSS חיצוני -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // אין צורך בשינויים בסקריפטים כאן, אך ניתן להוסיף אנימציות או פונקציות נוספות במידת הצורך
+</script>
+{% endblock %}

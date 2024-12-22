@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}התחברות{% endblock %}
+
+{% block content %}
+<section class="auth-form">
+    <h2>התחברות</h2>
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+
+        <!-- שדה אימייל -->
+        <div class="form-group">
+            {{ form.email.label }}
+            {{ form.email(class="input-field") }}
+            {% for error in form.email.errors %}
+                <span class="error-message">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה סיסמה -->
+        <div class="form-group">
+            {{ form.password.label }}
+            <div class="input-with-button">
+                {{ form.password(id="password", class="input-field") }}
+                <button type="button" class="show-password-button" data-field-id="password">👁️</button>
+            </div>
+            {% for error in form.password.errors %}
+                <span class="error-message">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- כפתור התחברות -->
+        <div class="form-group">
+            {{ form.submit(class="submit-button") }}
+        </div>
+    </form>
+
+    <!-- הצגת הודעות פלאש -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <p style="text-align: center;">אין לך חשבון? <a href="{{ url_for('auth.register') }}">הירשם כאן</a>.</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // פונקציית הצגת/הסתרת סיסמה
+        const showPasswordButtons = document.querySelectorAll('.show-password-button');
+        showPasswordButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const fieldId = this.getAttribute('data-field-id');
+                const passwordField = document.getElementById(fieldId);
+                if (passwordField.type === 'password') {
+                    passwordField.type = 'text';
+                    this.textContent = '🙈'; // שינוי אייקון אם רוצים
+                } else {
+                    passwordField.type = 'password';
+                    this.textContent = '👁️';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

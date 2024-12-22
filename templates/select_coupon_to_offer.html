@@ -1,0 +1,65 @@
+<!-- select_coupon_to_offer.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}בחר קופון למכירה{% endblock %}
+
+{% block content %}
+<section class="select-coupon">
+    <h2>בחר קופון למכירה</h2>
+    <p>לקונה: {{ coupon_request.user.first_name }} {{ coupon_request.user.last_name }}</p>
+    <p>חברה מבוקשת: {{ coupon_request.company }}</p>
+    <form method="post">
+        {{ csrf_token() }}
+        {% for coupon in seller_coupons %}
+            <div class="coupon-option">
+                <input type="radio" id="coupon_{{ coupon.id }}" name="coupon_id" value="{{ coupon.id }}" required>
+                <label for="coupon_{{ coupon.id }}">
+                    קוד: {{ coupon.code }}, ערך: {{ coupon.value }}, תיאור: {{ coupon.description }}
+                </label>
+            </div>
+        {% endfor %}
+        <button type="submit" class="action-button">שלח הצעה</button>
+    </form>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* סגנונות לדף הבחירה */
+    .select-coupon h2 {
+        text-align: center;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+    }
+
+    .select-coupon form {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .coupon-option {
+        margin-bottom: 15px;
+    }
+
+    .coupon-option label {
+        margin-right: 10px;
+    }
+
+    .action-button {
+        width: 100%;
+        padding: 10px;
+        background-color: var(--primary-color);
+        color: var(--white);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background-color var(--transition-speed);
+    }
+
+    .action-button:hover {
+        background-color: #2980b9;
+    }
+</style>
+{% endblock %}

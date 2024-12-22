@@ -1,0 +1,289 @@
+<!-- sell_coupon.html -->
+{% extends 'base.html' %}
+
+{% block title %}
+הוסף קופון למכירה
+{% endblock %}
+
+{% block content %}
+<section class="add-coupon">
+    <h2>הוסף קופון למכירה</h2>
+    <form method="post">
+        {{ form.hidden_tag() }}
+        <!-- Company Field -->
+        <div class="form-group">
+            {{ form.company_select.label }}<span class="required">*</span>
+            {{ form.company_select(class="input-field") }}
+            {% for error in form.company_select.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <div class="form-group" id="other_company_group" style="display: none;">
+            {{ form.other_company.label }}
+            {{ form.other_company(class="input-field") }}
+            {% for error in form.other_company.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <!-- Code Field -->
+        <div class="form-group">
+            {{ form.code.label }}<span class="required">*</span>
+            {{ form.code(class="input-field") }}
+            {% for error in form.code.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <!-- Coupon Cost Field -->
+        <div class="form-group">
+            {{ form.cost.label }}<span class="required">*</span>
+            {{ form.cost(class="input-field") }}
+            {% for error in form.cost.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <!-- Discount Percentage Field -->
+        <div class="form-group">
+            {{ form.discount_percentage.label }}
+            {{ form.discount_percentage(class="input-field") }}
+            {% for error in form.discount_percentage.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <!-- Desired Value Field -->
+        <div class="form-group">
+            {{ form.value.label }}
+            {{ form.value(class="input-field") }}
+            {% for error in form.value.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <!-- Expiration Field -->
+        <div class="form-group">
+            {{ form.expiration.label }}
+            {{ form.expiration(class="input-field") }}
+            {% for error in form.expiration.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <!-- Tags Field -->
+        <div class="form-group">
+            {{ form.tag_select.label }}<span class="required">*</span>
+            {{ form.tag_select(class="input-field") }}
+            {% for error in form.tag_select.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <div class="form-group" id="other_tag_group" style="display: none;">
+            {{ form.other_tag.label }}
+            {{ form.other_tag(class="input-field") }}
+            {% for error in form.other_tag.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <!-- Description Field -->
+        <div class="form-group">
+            {{ form.description.label }}
+            {{ form.description(class="input-field") }}
+            {% for error in form.description.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <!-- One-Time Use Checkbox -->
+        <div class="form-group">
+            <label for="{{ form.is_one_time.id }}">
+                {{ form.is_one_time() }} {{ form.is_one_time.label.text }}
+            </label>
+        </div>
+        <!-- Purpose Field (Hidden by default) -->
+        <div class="form-group" id="purpose_group" style="display: none;">
+            {{ form.purpose.label }}
+            {{ form.purpose(class="input-field") }}
+            {% for error in form.purpose.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <!-- Submit Button -->
+        <div class="form-group">
+            {{ form.submit(class="submit-button") }}
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle Tags
+    const tagSelect = document.getElementById('{{ form.tag_select.id }}');
+    const otherTagGroup = document.getElementById('other_tag_group');
+    const otherTagInput = document.getElementById('{{ form.other_tag.id }}');
+
+    function toggleOtherTagField() {
+        if (tagSelect.value === 'other') {
+            otherTagGroup.style.display = 'block';
+        } else {
+            otherTagGroup.style.display = 'none';
+            otherTagInput.value = '';
+        }
+    }
+
+    tagSelect.addEventListener('change', toggleOtherTagField);
+    toggleOtherTagField();
+
+    // Handle Company
+    const companySelect = document.getElementById('{{ form.company_select.id }}');
+    const otherCompanyGroup = document.getElementById('other_company_group');
+    const otherCompanyInput = document.getElementById('{{ form.other_company.id }}');
+
+    function toggleOtherCompanyField() {
+        if (companySelect.value === 'other') {
+            otherCompanyGroup.style.display = 'block';
+        } else {
+            otherCompanyGroup.style.display = 'none';
+            otherCompanyInput.value = '';
+        }
+    }
+
+    companySelect.addEventListener('change', toggleOtherCompanyField);
+    toggleOtherCompanyField();
+
+    // Handle One-Time Use
+    const checkbox = document.getElementById('{{ form.is_one_time.id }}');
+    const purposeGroup = document.getElementById('purpose_group');
+
+    function togglePurposeField() {
+        if (checkbox.checked) {
+            purposeGroup.style.display = 'block';
+        } else {
+            purposeGroup.style.display = 'none';
+            document.getElementById('{{ form.purpose.id }}').value = '';
+        }
+    }
+
+    checkbox.addEventListener('change', togglePurposeField);
+    togglePurposeField();
+
+    // Calculate Desired Value or Discount Percentage
+    const desiredValueInput = document.getElementById('{{ form.value.id }}');
+    const couponCostInput = document.getElementById('{{ form.cost.id }}');
+    const discountPercentageInput = document.getElementById('{{ form.discount_percentage.id }}');
+    let isUpdating = false;
+
+    function updateDesiredValue() {
+        if (isUpdating) return;
+        isUpdating = true;
+        const couponCost = parseFloat(couponCostInput.value);
+        const discountPercentage = parseFloat(discountPercentageInput.value);
+        if (!isNaN(couponCost) && !isNaN(discountPercentage) && discountPercentage >=0 && discountPercentage <=100) {
+            const desiredValue = couponCost / (1 - (discountPercentage / 100));
+            desiredValueInput.value = desiredValue.toFixed(2);
+        } else if (desiredValueInput.value !== '') {
+            desiredValueInput.value = '';
+        }
+        isUpdating = false;
+    }
+
+    function updateDiscountPercentage() {
+        if (isUpdating) return;
+        isUpdating = true;
+        const desiredValue = parseFloat(desiredValueInput.value);
+        const couponCost = parseFloat(couponCostInput.value);
+        if (!isNaN(couponCost) && !isNaN(desiredValue) && desiredValue > 0) {
+            const discountPercentage = ((desiredValue - couponCost) / desiredValue) * 100;
+            discountPercentageInput.value = discountPercentage.toFixed(2);
+        } else if (discountPercentageInput.value !== '') {
+            discountPercentageInput.value = '';
+        }
+        isUpdating = false;
+    }
+
+    desiredValueInput.addEventListener('input', function() {
+        if (desiredValueInput.value !== '') {
+            updateDiscountPercentage();
+        } else {
+            discountPercentageInput.value = '';
+        }
+    });
+
+    discountPercentageInput.addEventListener('input', function() {
+        if (discountPercentageInput.value !== '') {
+            updateDesiredValue();
+        } else {
+            desiredValueInput.value = '';
+        }
+    });
+
+    couponCostInput.addEventListener('input', function() {
+        if (desiredValueInput.value !== '') {
+            updateDiscountPercentage();
+        }
+        if (discountPercentageInput.value !== '') {
+            updateDesiredValue();
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* סגנון לכותרת */
+.add-coupon h2 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+/* סגנון לטופס */
+.add-coupon form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+
+.form-group .error-message {
+    color: red;
+    font-size: 0.9em;
+}
+
+.input-field {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.submit-button {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color var(--transition-speed);
+}
+
+.submit-button:hover {
+    background-color: #2980b9;
+}
+
+/* התאמה לכפתורים במובייל */
+@media (max-width: 768px) {
+    .add-coupon form {
+        padding: 0 10px;
+    }
+}
+</style>
+{% endblock %}

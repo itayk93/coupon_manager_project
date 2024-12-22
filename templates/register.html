@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}הרשמה{% endblock %}
+
+{% block content %}
+<section class="auth-form">
+    <h2>הרשמה</h2>
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+
+        <!-- שדה שם פרטי -->
+        <div class="form-group">
+            {{ form.first_name.label }}
+            {{ form.first_name(class="input-field") }}
+            {% for error in form.first_name.errors %}
+                <span class="error-message">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה שם משפחה -->
+        <div class="form-group">
+            {{ form.last_name.label }}
+            {{ form.last_name(class="input-field") }}
+            {% for error in form.last_name.errors %}
+                <span class="error-message">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה אימייל -->
+        <div class="form-group">
+            {{ form.email.label }}
+            {{ form.email(class="input-field") }}
+            {% for error in form.email.errors %}
+                <span class="error-message">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה סיסמה -->
+        <div class="form-group">
+            {{ form.password.label }}
+            <div class="input-with-button">
+                {{ form.password(id="password", class="input-field") }}
+                <button type="button" class="show-password-button" data-field-id="password">👁️</button>
+            </div>
+            <div id="password-strength">
+                <div id="password-strength-bar"></div>
+            </div>
+            <div id="strength-message">חוזק סיסמה: N/A</div>
+            {% for error in form.password.errors %}
+                <span class="error-message">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה אישור סיסמה -->
+        <div class="form-group">
+            {{ form.confirm_password.label }}
+            <div class="input-with-button">
+                {{ form.confirm_password(id="confirm_password", class="input-field") }}
+                <button type="button" class="show-password-button" data-field-id="confirm_password">👁️</button>
+            </div>
+            {% for error in form.confirm_password.errors %}
+                <span class="error-message">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- כפתור הרשמה -->
+        <div class="form-group">
+            {{ form.submit(class="submit-button") }}
+        </div>
+    </form>
+
+    <!-- הצגת הודעות פלאש -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <p style="text-align: center;">כבר יש לך חשבון? <a href="{{ url_for('auth.login') }}">התחבר כאן</a>.</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // פונקציית מד חוזק סיסמה
+        const passwordField = document.getElementById('password');
+        const strengthBar = document.getElementById('password-strength-bar');
+        const strengthMessage = document.getElementById('strength-message');
+
+        passwordField.addEventListener('input', function() {
+            const password = passwordField.value;
+            let strength = 0;
+
+            // בדיקת חוזק הסיסמה
+            if (password.length >= 8) strength += 1;
+            if (password.match(/[a-z]/)) strength += 1;
+            if (password.match(/[A-Z]/)) strength += 1;
+            if (password.match(/[0-9]/)) strength += 1;
+            if (password.match(/[^a-zA-Z0-9]/)) strength += 1;
+
+            let strengthPercentage = (strength / 5) * 100;
+            strengthBar.style.width = strengthPercentage + '%';
+
+            if (strength <= 2) {
+                strengthBar.style.backgroundColor = 'var(--danger-color)';
+                strengthMessage.textContent = 'חוזק סיסמה: חלשה';
+            } else if (strength <= 4) {
+                strengthBar.style.backgroundColor = 'var(--warning-color)';
+                strengthMessage.textContent = 'חוזק סיסמה: בינונית';
+            } else {
+                strengthBar.style.backgroundColor = 'var(--success-color)';
+                strengthMessage.textContent = 'חוזק סיסמה: חזקה';
+            }
+        });
+
+        // פונקציית הצגת/הסתרת סיסמה
+        const showPasswordButtons = document.querySelectorAll('.show-password-button');
+        showPasswordButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const fieldId = this.getAttribute('data-field-id');
+                const passwordField = document.getElementById(fieldId);
+                if (passwordField.type === 'password') {
+                    passwordField.type = 'text';
+                    this.textContent = '🙈'; // שינוי אייקון אם רוצים
+                } else {
+                    passwordField.type = 'password';
+                    this.textContent = '👁️';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

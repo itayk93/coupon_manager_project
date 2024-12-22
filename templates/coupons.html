@@ -1,0 +1,233 @@
+<!-- coupons.html -->
+{% extends 'base.html' %}
+
+{% block title %}הקופונים שלי{% endblock %}
+
+{% block content %}
+<section class="coupon-management">
+    <!-- Section Header for "הקופונים שלך" -->
+    <div class="section-header">
+        <h2>הקופונים שלך</h2>
+    </div>
+
+    <section class="coupons">
+        <!-- קופונים פעילים -->
+        {% if active_coupons %}
+            <h3 class="coupon-section-title">קופונים פעילים</h3>
+            <div class="coupon-container">
+                {% for coupon in active_coupons %}
+                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
+                        {% set company_lower = coupon.company.lower() %}
+                        {% if company_lower in company_logo_mapping %}
+                            <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/default.png') }}" alt="Logo" class="logo">
+                        {% endif %}
+                        <p class="company-name">{{ coupon.company }}</p>
+                        <p>קוד: {{ coupon.code }}</p>
+                        {% if coupon.tags %}
+                            <p>תגיות:
+                                {% for tag in coupon.tags %}
+                                    {{ tag.name }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                        {% endif %}
+                        {% if not coupon.is_one_time %}
+                            <p class="remaining-value">ערך נותר: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח</p>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-data-message">אין קופונים פעילים.</p>
+        {% endif %}
+
+        <!-- קופונים חד פעמיים פעילים -->
+        {% if active_one_time_coupons %}
+            <h3 class="coupon-section-title">קופונים חד פעמיים פעילים</h3>
+            <div class="coupon-container">
+                {% for coupon in active_one_time_coupons %}
+                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
+                        {% set company_lower = coupon.company.lower() %}
+                        {% if company_lower in company_logo_mapping %}
+                            <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="company-logo">
+                        {% endif %}
+                        <p class="company-name">{{ coupon.company }}</p>
+                        <p>קוד: {{ coupon.code }}</p>
+                        <p>מטרה: {{ coupon.purpose }}</p>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-data-message">אין קופונים חד פעמיים פעילים.</p>
+        {% endif %}
+
+        <!-- קופונים למכירה -->
+        {% if coupons_for_sale %}
+            <h3 class="coupon-section-title">קופונים למכירה</h3>
+            <div class="coupon-container">
+                {% for coupon in coupons_for_sale %}
+                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
+                        {% set company_lower = coupon.company.lower() %}
+                        {% if company_lower in company_logo_mapping %}
+                            <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="coupon-logo">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="coupon-logo">
+                        {% endif %}
+                        <p class="company-name">{{ coupon.company }}</p>
+                        {% if coupon.is_one_time %}
+                            <p>מטרה: {{ coupon.purpose }}</p>
+                        {% endif %}
+                        {% if not coupon.is_one_time %}
+                            <p class="remaining-value">ערך נותר: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח</p>
+                        {% endif %}
+                        <p class="notification-link">הקופון עומד למכירה</p>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-data-message">אין קופונים למכירה.</p>
+        {% endif %}
+
+        <!-- סקשן לקופונים שנוצלו ולא פעילים -->
+        {% if inactive_coupons_with_usage %}
+            <h3 class="coupon-section-title">קופונים שנוצלו ולא פעילים</h3>
+            <div class="toggle-button-container">
+                <button id="toggle-inactive-coupons" class="action-button">
+                    <i class="fa fa-eye-slash" aria-hidden="true"></i> הסתר קופונים שנוצלו ולא פעילים
+                </button>
+            </div>
+                <table class="coupon-data-table" id="inactive-coupons-table">
+                    <thead>
+                        <tr>
+                            <th>שם החברה</th>
+                            <th>קוד קופון</th>
+                            <th>תגיות</th>
+                            <th>מטרה</th>
+                            <th>סטטוס</th>
+                            <th>תאריך ניצול אחרון</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for coupon, latest_usage in inactive_coupons_with_usage %}
+                            <tr class="clickable-row" data-href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}">
+                                <td>{{ coupon.company }}</td>
+                                <td>{{ coupon.code }}</td>
+                                <td>
+                                    {% if coupon.tags %}
+                                        {% for tag in coupon.tags %}
+                                            {{ tag.name }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if coupon.is_one_time %}
+                                        {{ coupon.purpose }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if coupon.status == 'פעיל' %}
+                                        פעיל
+                                    {% elif coupon.status == 'נוצל' %}
+                                        נוצל
+                                    {% elif coupon.status == 'פג תוקף' %}
+                                        פג תוקף
+                                    {% else %}
+                                        {{ coupon.status }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if latest_usage %}
+                                        {{ latest_usage.strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+        {% endif %}
+
+        <!-- כפתורי פעולה -->
+        <div class="action-buttons">
+            <a href="{{ url_for('export.export_excel') }}" class="export-button">
+                <i class="fa fa-file-excel-o" aria-hidden="true"></i> ייצא ל-Excel
+            </a>
+            <a href="{{ url_for('export.export_pdf') }}" class="export-button">
+                <i class="fa fa-file-pdf-o" aria-hidden="true"></i> ייצא ל-PDF
+            </a>
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('coupons.update_all_coupons') }}" class="export-button">
+                    <i class="fa fa-refresh" aria-hidden="true"></i> עדכן קופונים מ-Multipass
+                </a>
+            {% endif %}
+            <a href="{{ url_for('coupons.select_coupons_to_delete') }}" class="export-button">
+                <i class="fa fa-trash" aria-hidden="true"></i> בחר קופונים למחיקה
+            </a>
+        </div>
+    </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleButton = document.getElementById('toggle-inactive-coupons');
+        const table = document.getElementById('inactive-coupons-table');
+
+        if (toggleButton && table) {
+            toggleButton.addEventListener('click', function() {
+                if (table.style.display === 'none' || table.style.display === '') {
+                    table.style.display = 'table';
+                    toggleButton.innerHTML = '<i class="fa fa-eye-slash" aria-hidden="true"></i> הסתר קופונים שנוצלו ולא פעילים';
+                } else {
+                    table.style.display = 'none';
+                    toggleButton.innerHTML = '<i class="fa fa-eye" aria-hidden="true"></i> הצג קופונים שנוצלו ולא פעילים';
+                }
+            });
+
+            table.style.display = 'table';
+        }
+    });
+
+    function openTab(evt, tabName) {
+        var tabContents = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+        }
+
+        var tabButtons = document.getElementsByClassName("tab-button");
+        for (var i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove("active");
+        }
+
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        var defaultTab = document.querySelector(".tab-button.active");
+        if (defaultTab) {
+            defaultTab.click();
+        }
+    });
+        document.addEventListener('DOMContentLoaded', function () {
+        const rows = document.querySelectorAll('.clickable-row');
+        rows.forEach(row => {
+            row.addEventListener('click', function () {
+                const href = this.getAttribute('data-href');
+                if (href) {
+                    window.location.href = href;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

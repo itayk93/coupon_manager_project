@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+
+{% block title %}פרטי קופון{% endblock %}
+
+{% block content %}
+<section class="coupon-detail">
+    <h2>פרטי קופון</h2>
+
+    <!-- Company Logo and Name -->
+    <div class="company-info">
+        <img src="{{ url_for('static', filename=company_logo) }}" alt="{{ coupon.company }} Logo" class="company-logo">
+        <h3>{{ coupon.company }}</h3>
+    </div>
+
+    {% if coupon.is_for_sale %}
+        <div class="sale-message">
+            המשתמש {{ coupon.user.first_name }} {{ coupon.user.last_name }} מוכר קופון על סך {{ coupon.value|int }} ₪ ל{{ coupon.company }}<br>
+            ב-{{ coupon.cost|int }} ₪ ({{ discount_percentage }}% הנחה)
+        </div>
+
+        {% if not is_owner %}
+            <!-- "בקש קופון" Button for non-owners -->
+            <div class="request-coupon-button">
+                <a href="{{ url_for('request_coupon', id=coupon.id) }}" class="action-button">בקש קופון</a>
+            </div>
+        {% else %}
+            <!-- Message for owners of the coupon -->
+            <div class="your-coupon small-button-style">
+                זהו הקופון שלך שעומד למכירה
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <!-- Tabs Navigation -->
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'tab1')">פרטי קופון</button>
+        {% if not coupon.is_for_sale %}
+            <button class="tab-button" onclick="openTab(event, 'tab2')">ערכים כספיים</button>
+        {% endif %}
+        <button class="tab-button" onclick="openTab(event, 'tab3')">נתונים נוספים</button>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="tab1" class="tab-content active">
+        {% if not coupon.is_for_sale %}
+            <div class="info-box">
+                <span class="info-title">קוד מוצר:</span>
+                <span class="info-value">{{ coupon.code }}</span>
+            </div>
+        {% endif %}
+        <div class="info-box">
+            <span class="info-title">חברה:</span>
+            <span class="info-value">{{ coupon.company }}</span>
+        </div>
+        {% if coupon.is_one_time %}
+            <div class="info-box">
+                <span class="info-title">מטרת הקופון:</span>
+                <span class="info-value">{{ coupon.purpose }}</span>
+            </div>
+            <div class="info-box">
+                <span class="info-title">קוד לשימוש חד פעמי:</span>
+                <span class="info-value">כן</span>
+            </div>
+
+            {% if is_owner and coupon.status == 'פעיל' %}
+                <!-- כפתור "סמן כקופון שנוצל" -->
+                <div class="mark-as-used-container">
+                    <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
+                        {{ mark_form.hidden_tag() }}
+                        {{ mark_form.submit(class="action-button danger", onclick="return confirm('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');") }}
+                    </form>
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {% if coupon.is_for_sale %}
+            <div class="info-box">
+                <span class="info-title">ערך מקורי:</span>
+                <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
+            </div>
+            <div class="info-box">
+                <span class="info-title">עלות:</span>
+                <span class="info-value">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if not coupon.is_for_sale %}
+        <div id="tab2" class="tab-content">
+            <div class="info-box">
+                <span class="info-title">ערך מקורי:</span>
+                <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
+            </div>
+            <div class="info-box">
+                <span class="info-title">ערך שהשתמשת בו:</span>
+                <span class="info-value">
+                    {{ '%.2f'|format(coupon.used_value) }} ש"ח
+                </span>
+            </div>
+            {% if not coupon.is_one_time %}
+                <div class="info-box">
+                    <span class="info-title">ערך נותר:</span>
+                    <span class="info-value">
+                        {{ '%.2f'|format(coupon.value - coupon.used_value) }} ש"ח
+                    </span>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div id="tab3" class="tab-content">
+        {% if not coupon.is_for_sale %}
+            <div class="info-box">
+                <span class="info-title">אחוז שימוש:</span>
+                <span class="info-value">
+                    {% if coupon.cost > 0 %}
+                        {{ (coupon.used_value / coupon.cost * 100)|round(2) }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-box">
+                <span class="info-title">תאריך הזנה:</span>
+                <span class="info-value">{{ coupon.date_added.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+        {% endif %}
+
+        <!-- הוספת תגיות כאן -->
+        {% if coupon.tags %}
+            <div class="info-box">
+                <span class="info-title">תגיות:</span>
+                <span class="info-value">
+                    {% for tag in coupon.tags %}
+                        <span class="tag">{{ tag.name }}</span>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </span>
+            </div>
+        {% else %}
+            <div class="info-box">
+                <span class="info-title">תגיות:</span>
+                <span class="info-value">אין תגיות.</span>
+            </div>
+        {% endif %}
+
+        <div class="info-box">
+            <span class="info-title">כמה שילמת על הקופון:</span>
+            <span class="info-value">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
+        </div>
+        <div class="info-box">
+            <span class="info-title">כמה אחוז חסכת:</span>
+            <span class="info-value">
+                {% if coupon.value > 0 %}
+                    {{ ((coupon.value - coupon.cost) / coupon.value * 100)|round(2) }}%
+                {% else %}
+                    0%
+                {% endif %}
+            </span>
+        </div>
+        {% if coupon.expiration %}
+            <div class="info-box">
+                <span class="info-title">תוקף עד:</span>
+                <span class="info-value">{{ coupon.expiration }}</span>
+            </div>
+        {% endif %}
+        {% if coupon.description %}
+            <div class="info-box">
+                <span class="info-title">תיאור:</span>
+                <span class="info-value">{{ coupon.description }}</span>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Usage History -->
+    <h3 class="usage-history-title">היסטוריית שימוש</h3>
+    {% if transactions|length > 0 %}
+        <table class="transaction-table">
+            <thead>
+                <tr>
+                    <th>תאריך</th>
+                    <th>שימוש (₪)</th>
+                    <th>הטענה (₪)</th>
+                    <th>סה״כ שימוש מצטבר (₪)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set ns = namespace(total=0) %}
+                {% for transaction in transactions %}
+                    {% set usage_amount = transaction.usage_amount or 0.0 %}
+                    {% set recharge_amount = transaction.recharge_amount or 0.0 %}
+                    {% set ns.total = ns.total + usage_amount %}
+                    <tr>
+                        <td>{{ transaction.transaction_date.strftime('%H:%M %d/%m/%Y') if transaction.transaction_date else '' }}</td>
+                        <td>{{ '%.2f'|format(usage_amount) if usage_amount else '' }}</td>
+                        <td>{{ '%.2f'|format(recharge_amount) if recharge_amount else '' }}</td>
+                        <td>{{ '%.2f'|format(ns.total) }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="no-data-message">אין רשומות שימוש.</p>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    {% if is_owner %}
+    <div class="action-buttons">
+        <a href="{{ url_for('coupons.edit_coupon', id=coupon.id) }}" class="action-button">ערוך קופון</a>
+        <form action="{{ url_for('coupons.delete_coupon', id=coupon.id) }}" method="post" style="display: inline;">
+            {{ delete_form.hidden_tag() }}
+            {{ delete_form.submit(class="action-button danger", onclick="return confirm('האם אתה בטוח שברצונך למחוק קופון זה?');") }}
+        </form>
+        <a href="{{ url_for('coupons.show_coupons') }}" class="action-button">חזור לקופונים</a>
+    </div>
+    {% endif %}
+
+    <!-- Button: עדכן שימוש בקופון -->
+    {% if is_owner %}
+    <div class="update-usage-button" style="margin-top: 10px;">
+        <a href="{{ url_for('coupons.update_coupon_usage', id=coupon.id) }}" class="action-button">עדכן שימוש בקופון</a>
+    </div>
+    {% endif %}
+
+    <!-- Admin Actions -->
+    {% if current_user.is_admin %}
+    <div class="admin-actions">
+        <form action="{{ url_for('coupons.update_coupon_transactions') }}" method="POST" class="admin-actions-form">
+            <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
+            <input type="hidden" name="coupon_code" value="{{ coupon.code }}">
+            {{ update_form.hidden_tag() }}
+            {{ update_form.submit(class="action-button small-button") }}
+        </form>
+    </div>
+    {% endif %}
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openTab(evt, tabName) {
+        // Hide all tab contents
+        var tabContents = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+        }
+
+        // Remove 'active' class from all tab buttons
+        var tabButtons = document.getElementsByClassName("tab-button");
+        for (var i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove("active");
+        }
+
+        // Show the selected tab content and activate the button
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    // Open the default tab on page load
+    document.addEventListener("DOMContentLoaded", function() {
+        var defaultTab = document.querySelector(".tab-button.active");
+        if (defaultTab) {
+            // Ensure that the active tab is displayed
+            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
+            document.getElementById(tabName).classList.add("active");
+        }
+    });
+</script>
+{% endblock %}

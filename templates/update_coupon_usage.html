@@ -1,0 +1,286 @@
+<!-- templates/update_coupon_usage.html -->
+{% extends 'base.html' %}
+
+{% block title %}עדכון כמות שימוש בקופון{% endblock %}
+
+{% block content %}
+<section class="coupon-detail">
+    <h2>עדכון כמות שימוש בקופון</h2>
+
+    <!-- Company Info -->
+    <div class="company-info">
+        <!-- לוגו ברירת מחדל, בהיעדר company_logo_mapping -->
+        <img src="{{ url_for('static', filename='default_logo.png') }}" alt="{{ coupon.company }} Logo" class="company-logo">
+        <h3>{{ coupon.company }}</h3>
+    </div>
+
+    <!-- Coupon Details -->
+    <div class="coupon-details">
+        <div class="info-box">
+            <span class="info-title">קוד קופון:</span>
+            <span class="info-value">{{ coupon.code }}</span>
+        </div>
+        <div class="info-box">
+            <span class="info-title">ערך הקופון:</span>
+            <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
+        </div>
+        <div class="info-box">
+            <span class="info-title">תאריך תפוגה:</span>
+            <span class="info-value">{{ coupon.expiration if coupon.expiration else 'אין' }}</span>
+        </div>
+        <div class="info-box">
+            <span class="info-title">סטטוס:</span>
+            <span class="info-value">{{ coupon.status }}</span>
+        </div>
+        <div class="info-box">
+            <span class="info-title">כמות מנוצלת:</span>
+            <span class="info-value">{{ '%.2f'|format(coupon.used_value) }} ש"ח</span>
+        </div>
+        {% if not coupon.is_one_time %}
+            <div class="info-box">
+                <span class="info-title">ערך נותר:</span>
+                <span class="info-value">{{ '%.2f'|format(coupon.value - coupon.used_value) }} ש"ח</span>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Form to Update Usage -->
+    <div class="form-container">
+        <h3>עדכן שימוש</h3>
+        <form method="POST" action="{{ url_for('update_coupon_usage', id=coupon.id) }}" class="update-form">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.used_amount.label(class="form-label") }}
+                {{ form.used_amount(class="input-field", placeholder="הכנס את כמות השימוש") }}
+                {% for error in form.used_amount.errors %}
+                    <span class="error-message">{{ error }}</span>
+                {% endfor %}
+            </div>
+            <div class="form-group">
+                {{ form.submit(class="submit-button") }}
+            </div>
+        </form>
+    </div>
+
+    <!-- Mark as Fully Used Button -->
+    {% if is_owner and coupon.status == 'פעיל' and not coupon.is_one_time %}
+        <div class="mark-fully-used-container">
+            <form method="post" action="{{ url_for('mark_coupon_as_fully_used', id=coupon.id) }}">
+                {{ mark_fully_used_form.hidden_tag() }}
+                {{ mark_fully_used_form.submit(class="action-button danger", onclick="return confirm('האם אתה בטוח שברצונך לסמן קופון זה כנוצל לגמרי?');") }}
+            </form>
+        </div>
+    {% endif %}
+
+    <!-- Back to Coupon Detail -->
+    <div class="back-button-container">
+        <a href="{{ url_for('coupon_detail', id=coupon.id) }}" class="action-button secondary">חזור לפרטי הקופון</a>
+    </div>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    body {
+        background-color: #f7f7f7;
+    }
+
+    .coupon-detail {
+        max-width: 800px;
+        margin: 40px auto;
+        background-color: #ffffff;
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        text-align: center;
+        direction: rtl;
+    }
+
+    .coupon-detail h2 {
+        color: var(--primary-color);
+        font-size: 2em;
+        margin-bottom: 25px;
+        font-weight: 600;
+    }
+
+    .company-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .company-logo {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-bottom: 10px;
+        border: 2px solid var(--primary-color);
+    }
+
+    .company-info h3 {
+        color: #2c3e50;
+        font-size: 1.6em;
+        margin: 0;
+    }
+
+    .coupon-details {
+        background-color: #f9f9f9;
+        border: 1px solid #dcdcdc;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+        text-align: center;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .info-box {
+        margin: 10px 20px;
+        font-size: 1em;
+        color: #34495e;
+        text-align: center;
+    }
+
+    .info-title {
+        font-weight: bold;
+        color: var(--primary-color);
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .info-value {
+        color: #2c3e50;
+        display: block;
+    }
+
+    .form-container {
+        background-color: #eef2f5;
+        border: 1px solid #dcdcdc;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .form-container h3 {
+        color: var(--primary-color);
+        margin-bottom: 20px;
+        font-size: 1.4em;
+    }
+
+    .update-form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .form-group {
+        width: 100%;
+        margin-bottom: 20px;
+        text-align: right; /* RTL */
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 5px;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    .input-field {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #dcdcdc;
+        border-radius: 5px;
+        font-size: 1em;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+    .error-message {
+        display: block;
+        margin-top: 5px;
+        color: #e74c3c;
+        font-size: 0.9em;
+        text-align: right;
+    }
+
+    .submit-button {
+        width: 100%;
+        padding: 12px;
+        background-color: #3498db;
+        color: #ffffff;
+        border: none;
+        border-radius: 5px;
+        font-size: 1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        text-align: center;
+    }
+
+    .submit-button:hover {
+        background-color: #2980b9;
+    }
+
+    .mark-fully-used-container {
+        margin-top: 20px;
+    }
+
+    .action-button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: var(--primary-color);
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        transition: background-color var(--transition-speed);
+        font-size: 1em;
+        border: none;
+        cursor: pointer;
+        text-align: center;
+        margin: 5px;
+    }
+
+    .action-button.secondary {
+        background-color: #7f8c8d;
+    }
+
+    .action-button.secondary:hover {
+        background-color: #71848a;
+    }
+
+    .action-button.danger {
+        background-color: #e74c3c;
+    }
+
+    .action-button.danger:hover {
+        background-color: #c0392b;
+    }
+
+    .back-button-container {
+        margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+        .info-box {
+            margin: 10px 0;
+        }
+
+        .submit-button, .action-button {
+            width: 100%;
+            box-sizing: border-box;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- ניתן להוסיף סקריפטים נוספים במידת הצורך -->
+{% endblock %}

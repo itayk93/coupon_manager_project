@@ -1,0 +1,132 @@
+<!-- upload_coupons.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}העלה קובץ קופונים{% endblock %}
+
+{% block content %}
+<section class="add-coupon">
+    <h2>העלה קובץ קופונים</h2>
+
+    <!-- הוספת כפתורים מעל הטופס -->
+    <div class="add-coupons-buttons">
+        <a href="{{ url_for('coupons.add_coupon') }}" class="secondary-button">
+            <i class="fa fa-plus-circle" aria-hidden="true"></i> הוסף קופון
+        </a>
+        <a href="{{ url_for('coupons.add_coupons_bulk') }}" class="secondary-button">
+            <i class="fa fa-plus-circle" aria-hidden="true"></i> הוסף קופונים מרובים
+        </a>
+    </div>
+
+    <!-- כפתור להורדת התבנית מתחת לכפתורים הקיימים -->
+    <div class="download-template-button">
+        <a href="{{ url_for('uploads.download_template') }}" class="primary-button">
+            <i class="fa fa-download" aria-hidden="true"></i> הורד תבנית קופונים
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.file.label }}
+            {{ form.file(class="input-field") }}
+            {% for error in form.file.errors %}
+                <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <button type="submit" class="submit-button">העלה קובץ</button>
+    </form>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* סגנון לכפתורים המשניים */
+    .add-coupons-buttons {
+        display: flex;
+        justify-content: center; /* מרכז את הכפתורים */
+        gap: 15px; /* רווח בין הכפתורים */
+        margin-bottom: 25px; /* רווח מתחת לכפתורים */
+    }
+
+    .secondary-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background-color: var(--accent-color);
+        color: var(--white);
+        text-decoration: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color var(--transition-speed);
+        font-size: 0.9em; /* קונטור קטן יותר */
+    }
+
+    .secondary-button:hover {
+        background-color: #e67e22; /* שינוי ידני מכיוון ש-CSS לא תומך בפונקציית darken */
+    }
+
+    .secondary-button .fa {
+        font-size: 1.2em;
+    }
+
+    /* סגנון לכפתור ההורדה */
+    .download-template-button {
+        text-align: center; /* מרכז את הכפתור */
+        margin-bottom: 25px; /* רווח מתחת לכפתור */
+    }
+
+    .primary-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background-color: var(--primary-color);
+        color: var(--white);
+        text-decoration: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color var(--transition-speed);
+        font-size: 0.9em;
+    }
+
+    .primary-button:hover {
+        background-color: #2980b9; /* שינוי ידני לצבע שונה בעת מעבר העכבר */
+    }
+
+    .primary-button .fa {
+        font-size: 1.2em;
+    }
+
+    /* התאמה לכפתורים במובייל */
+    @media (max-width: 768px) {
+        .add-coupons-buttons {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .secondary-button {
+            width: 100%; /* מאפשר לכפתורים להתפרס על רוחב המסך במובייל */
+            justify-content: center;
+        }
+
+        .download-template-button {
+            margin-bottom: 15px; /* רווח קטן יותר במובייל */
+        }
+
+        .primary-button {
+            width: 100%; /* מאפשר לכפתור להתפרס על רוחב המסך במובייל */
+            justify-content: center;
+        }
+    }
+
+    /* סגנון לשגיאות */
+    .error-message {
+        color: red;
+        font-size: 0.8em;
+    }
+</style>
+{% endblock %}
