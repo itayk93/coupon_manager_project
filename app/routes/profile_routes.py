@@ -90,12 +90,14 @@ def index():
         form.region.data = current_user.region
         form.religiosity.data = current_user.religiosity
         form.income_level.data = current_user.income_level
+
     # חישוב סך הקופונים והחיסכון לאחר עדכון הסטטוס
     all_non_one_time_coupons = Coupon.query.filter(
         Coupon.user_id == current_user.id,
         Coupon.status == 'פעיל',  # רק קופונים פעילים
         Coupon.is_for_sale == False,
-        ~Coupon.is_one_time  # לא חד פעמיים
+        ~Coupon.is_one_time,  # לא חד פעמיים
+        Coupon.exclude_saving != True  # סינון קופונים מסומנים כ-excluded
     ).all()
 
     print("קופונים פעילים שנכנסו לחישוב:")
@@ -159,7 +161,8 @@ def index():
         Coupon.status == 'פעיל',
         Coupon.is_for_sale == False,
         ~Coupon.is_one_time,
-        Coupon.value > Coupon.used_value  # להחריג קופונים שנוצלו במלואם
+        Coupon.value > Coupon.used_value,  # להחריג קופונים שנוצלו במלואם
+        Coupon.exclude_saving != True  # סינון קופונים מסומנים כ-excluded
     ).all()
 
     # חישוב סך הקופונים
@@ -199,12 +202,13 @@ def index():
     # שליפת כל הקופונים שאינם חד-פעמיים (כל הסטטוסים)
     all_non_one_time_coupons_all_status = Coupon.query.filter(
         Coupon.user_id == current_user.id,
-        ~Coupon.is_one_time
+        Coupon.exclude_saving != True  # סינון קופונים מסומנים כ-excluded
     ).all()
 
     # חישוב סך ההפרשים בין value ל-cost רק אם value גדול מ-cost (חיסכון חיובי)
     total_savings_all = sum(
-        (coupon.value - coupon.cost) for coupon in all_non_one_time_coupons_all_status if coupon.value > coupon.cost)
+        (coupon.value - coupon.cost) for coupon in all_non_one_time_coupons_all_status if coupon.value > coupon.cost
+    )
 
     # סך כל הערך של הקופונים הלא חד-פעמיים
     total_coupons_value_all = sum(coupon.value for coupon in all_non_one_time_coupons_all_status)

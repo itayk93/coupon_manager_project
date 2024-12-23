@@ -133,6 +133,7 @@ class Coupon(db.Model):
     is_for_sale = db.Column(db.Boolean, default=False)
     is_one_time = db.Column(db.Boolean, default=False)
     purpose = db.Column(db.String(255), nullable=True)
+    exclude_saving = db.Column(db.Boolean, default=False, nullable=False)  # מציין אם להחריג מהחישוב
 
     # Relationships
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)

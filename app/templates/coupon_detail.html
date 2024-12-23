@@ -21,7 +21,7 @@
         {% if not is_owner %}
             <!-- "בקש קופון" Button for non-owners -->
             <div class="request-coupon-button">
-                <a href="{{ url_for('request_coupon', id=coupon.id) }}" class="action-button">בקש קופון</a>
+                <a href="{{ url_for('coupons.request_coupon', id=coupon.id) }}" class="action-button">בקש קופון</a>
             </div>
         {% else %}
             <!-- Message for owners of the coupon -->

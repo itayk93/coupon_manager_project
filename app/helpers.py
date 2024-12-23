@@ -893,7 +893,7 @@ def update_coupon_status(coupon):
                     notification = Notification(
                         user_id=coupon.user_id,
                         message=f"הקופון {coupon.code} פג תוקף.",
-                        link=url_for('coupon_detail', id=coupon.id)
+                        link=url_for('coupons.coupon_detail', id=coupon.id)
                     )
                     db.session.add(notification)
                     coupon.notification_sent_pagh_tokev = True
@@ -906,7 +906,7 @@ def update_coupon_status(coupon):
                 notification = Notification(
                     user_id=coupon.user_id,
                     message=f"הקופון {coupon.code} נוצל במלואו.",
-                    link=url_for('coupon_detail', id=coupon.id)
+                    link=url_for('coupons.coupon_detail', id=coupon.id)
                 )
                 db.session.add(notification)
                 coupon.notification_sent_nutzel = True
