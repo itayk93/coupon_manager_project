@@ -8,6 +8,7 @@ from app.extensions import db
 from app.models import User
 from app.forms import LoginForm, RegisterForm
 from app.helpers import generate_confirmation_token, confirm_token
+from app.helpers import send_coupon_purchase_request_email, send_email
 
 auth_bp = Blueprint('auth', __name__)
 
