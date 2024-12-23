@@ -1,7 +1,14 @@
 # wsgi.py
+from dotenv import load_dotenv
+import os
 from app import create_app
 
+# טוען את משתני הסביבה מה-.env
+load_dotenv()
+
+# יוצר מופע Flask מהפונקציה create_app שבקובץ app/__init__.py
 app = create_app()
 
 if __name__ == "__main__":
-    app.run()
+    # הרצה מקומית (Development) – אפשר להדליק debug=True
+    app.run(debug=True)

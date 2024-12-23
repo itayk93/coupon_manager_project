@@ -2,12 +2,10 @@
 import os
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY')
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+    SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///default.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    UPLOAD_FOLDER = 'uploads'
     WTF_CSRF_ENABLED = True
-    SECURITY_PASSWORD_SALT = os.getenv('SECURITY_PASSWORD_SALT')
-    # אפשר גם:
-    # SQLALCHEMY_ECHO = True
-    # ALLOWED_EXTENSIONS = {'xlsx'}
+    SECURITY_PASSWORD_SALT = os.getenv('SECURITY_PASSWORD_SALT', 'default_salt')
+    UPLOAD_FOLDER = 'uploads'
+    # ALLOWED_EXTENSIONS = {'xlsx'}  # אם תרצה
