@@ -1,16 +1,31 @@
-<!-- marketplace.html -->
+<!-- templates/marketplace.html -->
 {% extends 'base.html' %}
 
 {% block title %}שוק הקופונים{% endblock %}
 
 {% block content %}
 <section class="marketplace">
+
+    {% if pending_as_seller_count > 0 or pending_as_buyer_count > 0 %}
+    <div class="pending-transactions-box">
+        {% if pending_as_seller_count > 0 and pending_as_buyer_count > 0 %}
+            <p>יש לך {{ pending_as_seller_count }} עסקאות ממתינות כמוכר ו-{{ pending_as_buyer_count }} עסקאות ממתינות כקונה</p>
+        {% elif pending_as_seller_count > 0 %}
+            <p>יש לך {{ pending_as_seller_count }} עסקאות ממתינות כמוכר</p>
+        {% elif pending_as_buyer_count > 0 %}
+            <p>יש לך {{ pending_as_buyer_count }} עסקאות ממתינות כקונה</p>
+        {% endif %}
+        <button type="button" class="close-btn" onclick="closeNotification(this)">X</button>
+    </div>
+    {% endif %}
+
     <div class="marketplace-header">
         <h2>שוק הקופונים</h2>
     </div>
     <div class="slots-container">
         <p class="slots-available">מספר הסלוטים הזמינים: {{ current_user.slots }}</p>
     </div>
+
     {% if coupons %}
         <div class="coupon-container">
             {% for coupon in coupons %}
@@ -103,4 +118,16 @@
         {% endif %}
     </section>
 </section>
+
+<script>
+    function closeNotification(button) {
+        const notificationBox = button.parentElement;
+        notificationBox.style.transition = "opacity 0.3s ease, height 0.3s ease";
+        notificationBox.style.opacity = "0";
+        notificationBox.style.height = "0";
+        setTimeout(() => {
+            notificationBox.remove();
+        }, 300);
+    }
+</script>
 {% endblock %}

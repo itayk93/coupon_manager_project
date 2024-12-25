@@ -79,7 +79,7 @@
         <h3 class="coupon-section-title">קופונים למכירה</h3>
         <div class="coupon-container">
             {% for coupon in coupons_for_sale %}
-                <a href="{{ url_for('coupon_detail', id=coupon.id) }}" class="coupon-card">
+                <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
                     {% set company_lower = coupon.company.lower() %}
                     {% if company_lower in company_logo_mapping %}
                         <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="coupon-image">

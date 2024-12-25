@@ -148,12 +148,14 @@ def sell_coupon():
             description=form.description.data.strip() if form.description.data else '',
             expiration=expiration,
             user_id=current_user.id,
-            is_available=True,
-            is_for_sale=True,
+            is_available=True,  # הקופון מסומן כזמין
+            is_for_sale=True,  # הקופון מסומן למכירה
             is_one_time=form.is_one_time.data,
             purpose=purpose,
             discount_percentage=discount_percentage
         )
+        current_app.logger.info(
+            f"Coupon created: is_available={new_coupon.is_available}, is_for_sale={new_coupon.is_for_sale}")
 
         # הוספת התגית לקופון
         if tag:

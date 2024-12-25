@@ -29,6 +29,17 @@ def marketplace():
     company_logo_mapping_by_id = {company.id: company.image_path for company in companies}
     company_name_mapping_by_id = {company.id: company.name for company in companies}
 
+    # ------------------------------------------
+    # 1) שאילתות עבור עסקאות ממתינות
+    # ------------------------------------------
+    pending_as_seller_count = Transaction.query.filter_by(
+        seller_id=current_user.id, status='ממתין לאישור המוכר'
+    ).count()
+
+    pending_as_buyer_count = Transaction.query.filter_by(
+        buyer_id=current_user.id, status='ממתין לאישור המוכר'
+    ).count()
+
     return render_template(
         'marketplace.html',
         coupons=coupons,
@@ -36,7 +47,11 @@ def marketplace():
         coupon_requests=coupon_requests,
         company_logo_mapping=company_logo_mapping,
         company_logo_mapping_by_id=company_logo_mapping_by_id,
-        company_name_mapping_by_id=company_name_mapping_by_id
+        company_name_mapping_by_id=company_name_mapping_by_id,
+
+        # מעבירים את המספרים לתבנית
+        pending_as_seller_count=pending_as_seller_count,
+        pending_as_buyer_count=pending_as_buyer_count
     )
 
 @marketplace_bp.route('/marketplace/coupon/<int:id>')

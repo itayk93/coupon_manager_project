@@ -29,12 +29,12 @@
                     <td>{{ transaction.status }}</td>
                     <td>
                         {% if transaction.status == 'ממתין לאישור המוכר' %}
-                            <a href="{{ url_for('approve_transaction.approve_transaction', transaction_id=transaction.id) }}" class="action-button">אשר</a>
-                            <a href="{{ url_for('approve_transaction.decline_transaction', transaction_id=transaction.id) }}" class="action-button danger">דחה</a>
+                            <a href="{{ url_for('transactions.approve_transaction', transaction_id=transaction.id) }}" class="action-button">אשר</a>
+                            <a href="{{ url_for('transactions.decline_transaction', transaction_id=transaction.id) }}" class="action-button danger">דחה</a>
                         {% elif transaction.status == 'ממתין לאישור הקונה' %}
                             <p>מספר טלפון של המוכר: {{ transaction.seller_phone }}</p>
                             {% if not transaction.seller_confirmed %}
-                                <form method="post" action="{{ url_for('approve_transaction.seller_confirm_transfer', transaction_id=transaction.id) }}">
+                                <form method="post" action="{{ url_for('transactions.seller_confirm_transfer', transaction_id=transaction.id) }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="action-button">אשר שההעברה הכספית בוצעה</button>
                                 </form>
@@ -78,11 +78,11 @@
                     <td>
                         {% if transaction.status == 'ממתין לאישור המוכר' %}
                             <p>ממתין לאישור המוכר.</p> <!-- שינוי הטקסט כאן -->
-                            <a href="{{ url_for('approve_transaction.cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
+                            <a href="{{ url_for('transactions.cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
                         {% elif transaction.status == 'ממתין לאישור הקונה' %}
                             <p>מספר טלפון של המוכר: {{ transaction.seller_phone }}</p>
                             {% if not transaction.buyer_confirmed %}
-                                <form method="post" action="{{ url_for('approve_transaction.buyer_confirm_transfer', transaction_id=transaction.id) }}">
+                                <form method="post" action="{{ url_for('transactions.buyer_confirm_transfer', transaction_id=transaction.id) }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="action-button">אשר שההעברה הכספית בוצעה</button>
                                 </form>
