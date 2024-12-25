@@ -521,7 +521,7 @@ def send_html_email(
     send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
         to=[{"email": recipient_email, "name": recipient_name}],
         sender={"email": sender_email, "name": sender_name},
-        subject=f"{subject} - {datetime.now().strftime('%d\%m\%Y %H:%M')}",
+        subject=f"{subject} - {datetime.now().strftime('%d%m%Y %H:%M')}",
         html_content=html_content
     )
 
@@ -556,7 +556,7 @@ def send_email(sender_email, sender_name, recipient_email, recipient_name, subje
             sender_name=sender_name,
             recipient_email=recipient_email,
             recipient_name=recipient_name,
-            subject=f"{subject} - {datetime.now().strftime('%d\%m\%Y %H:%M')}",
+            subject=f"{subject} - {datetime.now().strftime('%d%m%Y %H:%M')}",
             html_content=html_content
         )
     except Exception as e:
@@ -957,7 +957,7 @@ def send_coupon_purchase_request_email(seller, buyer, coupon):
         sender_name=sender_name,
         recipient_email=recipient_email,
         recipient_name=recipient_name,
-        subject=f"{subject} - {datetime.now().strftime('%d\%m\%Y %H:%M')}",
+        subject=f"{subject} - {datetime.now().strftime('%d%m%Y %H:%M')}",
         html_content=html_content
     )
 
