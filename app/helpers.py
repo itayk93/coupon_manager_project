@@ -1,86 +1,28 @@
 import os
-import sys
-import time
-from datetime import datetime
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options  # Import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import pandas as pd
-import re
-from itsdangerous import URLSafeTimedSerializer
-from flask import current_app  # הוספת ייבוא של current_app
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
-from pprint import pprint
-from datetime import datetime, timezone
-
-# helpers.py
-# helpers.py
-
-import os
-import time
-from datetime import datetime
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import pandas as pd
-import re
-from itsdangerous import URLSafeTimedSerializer
-from flask import current_app
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
-from pprint import pprint
-from datetime import datetime, timezone
-from app.models import Coupon, CouponTransaction  # ייבוא המודלים החדשים
-from app.extensions import db  # ייבוא db מהרחבות
-import logging
-from app.models import Coupon, CouponTransaction
-from app.extensions import db
-
-# helpers.py
-# helpers.py
-
-import os
 import time
 import re
-import logging
-from datetime import datetime, timezone
-
-import pandas as pd
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
-from flask import url_for  # וודא שהייבוא כולל את url_for אם משמש
-from app.models import Coupon, CouponTransaction, Notification
-from app.extensions import db  # וודא שהייבוא כולל את db
-
-import os
-import time
-from datetime import datetime, timezone
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import pandas as pd
-import re
-from app.models import Coupon, CouponTransaction  # ייבוא המודלים החדשים
-from app.extensions import db  # ייבוא db מהרחבות
 import logging
 import traceback
+import requests
 import pandas as pd
-import logging
-from datetime import datetime, date
+from zoneinfo import ZoneInfo
+from datetime import datetime, timezone, date
 from dotenv import load_dotenv
+from flask import current_app, render_template, url_for, flash
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
+from pprint import pprint
+from app.extensions import db
+from app.models import (
+    Coupon, CouponTransaction, Notification,
+    Tag, coupon_tags, Transaction
+)
 
-# טעינת משתני סביבה
 load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 IMGUR_CLIENT_ID = os.getenv("IMGUR_CLIENT_ID")
@@ -88,6 +30,157 @@ SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 SENDER_NAME = "MaCoupon"
 
 logger = logging.getLogger(__name__)
+
+# ----------------------------------------------------------------
+#  פונקציית עזר ליצירת התראה
+# ----------------------------------------------------------------
+def create_notification(user_id, message, link):
+    """
+    יוצרת התראה חדשה ומוסיפה אותה ל-DB (לא שוכחת לבצע db.session.commit()
+    במקום שקורא לפונקציה זו, או בהמשך הזרימה).
+    """
+    tz_il = ZoneInfo('Asia/Jerusalem')
+    now_il = datetime.now(tz_il)
+
+    notification = Notification(
+        user_id=user_id,
+        message=message,
+        link=link,
+        timestamp=datetime.now(tz_il)  # שמור לפי שעון ישראל
+    )
+    db.session.add(notification)
+
+# ----------------------------------------------------------------
+#  פונקציית עזר לעדכון סטטוס קופון
+# ----------------------------------------------------------------
+def update_coupon_status(coupon):
+    """
+    מעדכנת את הסטטוס של הקופון (פעיל/נוצל/פג תוקף) לפי used_value ותאריך התפוגה.
+    כמו כן, שולחת התראה למשתמש אם זה עתה הפך לנוצל או לפג תוקף.
+    """
+    try:
+        current_date = datetime.now(timezone.utc).date()
+        old_status = coupon.status or 'פעיל'  # במקרה שאין עדיין סטטוס, נניח 'פעיל'
+        new_status = 'פעיל'
+
+        # בדיקת פג תוקף
+        if coupon.expiration:
+            if isinstance(coupon.expiration, date):
+                expiration_date = coupon.expiration
+            else:
+                try:
+                    expiration_date = datetime.strptime(coupon.expiration, '%Y-%m-%d').date()
+                except ValueError:
+                    logger.error(f"Invalid date format for coupon {coupon.id}: {coupon.expiration}")
+                    expiration_date = None
+
+            if expiration_date and current_date > expiration_date:
+                new_status = 'פג תוקף'
+
+        # בדיקת נוצל לגמרי
+        if coupon.used_value >= coupon.value:
+            new_status = 'נוצל'
+
+        # עדכון בפועל אם אכן יש שינוי
+        if old_status != new_status:
+            coupon.status = new_status
+            logger.info(f"Coupon {coupon.id} status updated from '{old_status}' to '{new_status}'")
+
+            # שליחת התראה רק אם שונה ל'נוצל' או 'פג תוקף'
+            if new_status == 'נוצל' and not coupon.notification_sent_nutzel:
+                create_notification(
+                    user_id=coupon.user_id,
+                    message=f"הקופון {coupon.code} נוצל במלואו.",
+                    link=url_for('coupons.coupon_detail', id=coupon.id)
+                )
+                coupon.notification_sent_nutzel = True
+
+            elif new_status == 'פג תוקף' and not coupon.notification_sent_pagh_tokev:
+                create_notification(
+                    user_id=coupon.user_id,
+                    message=f"הקופון {coupon.code} פג תוקף.",
+                    link=url_for('coupons.coupon_detail', id=coupon.id)
+                )
+                coupon.notification_sent_pagh_tokev = True
+
+    except Exception as e:
+        logger.error(f"Error in update_coupon_status for coupon {coupon.id}: {e}")
+
+# ----------------------------------------------------------------
+#  פונקציית עזר לעדכון כמות שימוש בקופון
+# ----------------------------------------------------------------
+def update_coupon_usage(coupon, usage_amount, details='עדכון שימוש'):
+    """
+    מעדכנת שימוש בקופון (מוסיפה ל-used_value), קוראת לעדכון סטטוס,
+    יוצרת רשומת שימוש, ושולחת התראה על העדכון.
+
+    :param coupon: אובייקט הקופון לעדכן
+    :param usage_amount: כמות השימוש להוסיף ל-used_value
+    :param details: תיאור הפעולה לרשומת השימוש
+    """
+    from app.models import CouponUsage
+    try:
+        # עדכון הערך שנוצל
+        coupon.used_value += usage_amount
+        update_coupon_status(coupon)
+
+        # יצירת רשומת שימוש
+        usage = CouponUsage(
+            coupon_id=coupon.id,
+            used_amount=usage_amount,
+            timestamp=datetime.now(timezone.utc),
+            action='שימוש',
+            details=details
+        )
+        db.session.add(usage)
+
+        # שליחת התראה למשתמש על העדכון
+        create_notification(
+            user_id=coupon.user_id,
+            message=f"השימוש בקופון {coupon.code} עודכן (+{usage_amount} ש\"ח).",
+            link=url_for('coupons.coupon_detail', id=coupon.id)
+        )
+
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating coupon usage for coupon {coupon.id}: {e}")
+        raise
+
+# ----------------------------------------------------------------
+#  פונקציית עזר לעדכון מרוכז של כל הקופונים הפעילים של משתמש
+# ----------------------------------------------------------------
+def update_all_active_coupons(user_id):
+    """
+    מעדכנת באופן מרוכז את כל הקופונים הפעילים (status='פעיל') של המשתמש user_id,
+    על-ידי קריאה ל-get_coupon_data והוספת סכום השימוש (usage_amount) מהטבלה שהתקבלה.
+
+    :param user_id: מזהה המשתמש
+    :return: (updated_coupons, failed_coupons) - רשימות של קודים שהצליחו/נכשלו
+    """
+    active_coupons = Coupon.query.filter_by(user_id=user_id, status='פעיל').all()
+    updated_coupons = []
+    failed_coupons = []
+
+    for coupon in active_coupons:
+        try:
+            df = get_coupon_data(coupon.code)
+            if df is not None and not df.empty:
+                total_usage = df['usage_amount'].sum()
+                # ההפרש בין total_usage הנוכחי ל-used_value הקיים
+                additional_usage = total_usage - coupon.used_value
+                if additional_usage > 0:
+                    update_coupon_usage(coupon, additional_usage, details='עדכון מרוכז')
+                updated_coupons.append(coupon.code)
+            else:
+                failed_coupons.append(coupon.code)
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error updating coupon {coupon.code}: {e}")
+            failed_coupons.append(coupon.code)
+
+    return updated_coupons, failed_coupons
 
 
 
@@ -428,7 +521,7 @@ def send_html_email(
     send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
         to=[{"email": recipient_email, "name": recipient_name}],
         sender={"email": sender_email, "name": sender_name},
-        subject=subject,
+        subject=f"{subject} - {datetime.now().strftime('%d\%m\%Y %H:%M')}",
         html_content=html_content
     )
 
@@ -463,7 +556,7 @@ def send_email(sender_email, sender_name, recipient_email, recipient_name, subje
             sender_name=sender_name,
             recipient_email=recipient_email,
             recipient_name=recipient_name,
-            subject=subject,
+            subject=f"{subject} - {datetime.now().strftime('%d\%m\%Y %H:%M')}",
             html_content=html_content
         )
     except Exception as e:
@@ -864,7 +957,7 @@ def send_coupon_purchase_request_email(seller, buyer, coupon):
         sender_name=sender_name,
         recipient_email=recipient_email,
         recipient_name=recipient_name,
-        subject=subject,
+        subject=f"{subject} - {datetime.now().strftime('%d\%m\%Y %H:%M')}",
         html_content=html_content
     )
 

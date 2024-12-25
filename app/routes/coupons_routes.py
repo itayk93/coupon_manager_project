@@ -41,6 +41,15 @@ from app.forms import DeleteCouponRequestForm
 from app.models import User
 from app.helpers import get_most_common_tag_for_company
 from app.models import coupon_tags
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask_login import login_required, current_user
+from app.extensions import db
+from app.helpers import (
+    update_coupon_status, get_coupon_data, process_coupons_excel,
+    extract_coupon_detail_sms, extract_coupon_detail_image_proccess,
+    create_notification, update_coupon_usage, update_all_active_coupons
+)
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -1681,6 +1690,17 @@ def update_all_coupons():
 
     return redirect(url_for('coupons.show_coupons'))
 
+@coupons_bp.route('/update_all_coupons/process', methods=['POST'])
+@login_required
+def update_all_coupons_route():
+    # עדכון מרוכז לכל הקופונים הפעילים של המשתמש
+    updated, failed = update_all_active_coupons(current_user.id)
+    if updated:
+        flash(f"הקופונים הבאים עודכנו: {', '.join(updated)}", "success")
+    if failed:
+        flash(f"הקופונים הבאים נכשלו: {', '.join(failed)}", "danger")
+    return redirect(url_for('coupons.show_coupons'))
+
 @coupons_bp.route('/get_tags')
 @login_required
 def get_tags():
@@ -1794,7 +1814,7 @@ def request_to_buy(coupon_id):
     notification = Notification(
         user_id=coupon.user_id,
         message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
-        link=url_for('transactions.my_transactions')
+        link=url_for('marketplace.my_transactions')
     )
     db.session.add(notification)
     db.session.commit()
@@ -1813,7 +1833,7 @@ def request_to_buy(coupon_id):
         current_app.logger.error(f'שגיאה בשליחת מייל למוכר: {e}')
         flash('הבקשה נשלחה אך לא הצלחנו לשלוח הודעה למוכר במייל.', 'warning')
 
-    return redirect(url_for('transactions.my_transactions'))
+    return redirect(url_for('marketplace.my_transactions'))
 
 @coupons_bp.route('/buy_coupon', methods=['POST'])
 @login_required
@@ -1854,7 +1874,7 @@ def buy_coupon():
     notification = Notification(
         user_id=coupon.user_id,
         message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
-        link=url_for('transactions.my_transactions')
+        link=url_for('marketplace.my_transactions')
     )
     db.session.add(notification)
 
@@ -1876,7 +1896,7 @@ def buy_coupon():
         current_app.logger.error(f'שגיאה בשליחת מייל למוכר: {e}')
         flash('הבקשה נשלחה אך לא הצלחנו לשלוח הודעה למוכר במייל.', 'warning')
 
-    return redirect(url_for('transactions.my_transactions'))
+    return redirect(url_for('marketplace.my_transactions'))
 
 @coupons_bp.route('/coupon_request/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -1943,23 +1963,6 @@ def delete_coupon_request(id):
 
     return redirect(url_for('coupons.marketplace'))
 
-@coupons_bp.route('/my_transactions')
-@login_required
-def my_transactions():
-    transactions_as_buyer = Transaction.query.filter_by(buyer_id=current_user.id).all()
-    transactions_as_seller = Transaction.query.filter_by(seller_id=current_user.id).all()
-
-    # שליפת כל החברות
-    companies = Company.query.all()
-    # יצירת מיפוי שם חברה -> נתיב תמונה (באות קטנות)
-    company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
-
-    return render_template(
-        'my_transactions.html',
-        transactions_as_buyer=transactions_as_buyer,
-        transactions_as_seller=transactions_as_seller,
-        company_logo_mapping=company_logo_mapping
-    )
 
 def complete_transaction(transaction):
     try:
@@ -1983,7 +1986,7 @@ def complete_transaction(transaction):
         notification_seller = Notification(
             user_id=transaction.seller_id,
             message='העסקה הושלמה והקופון הועבר לקונה.',
-            link=url_for('coupons.my_transactions')
+            link=url_for('marketplace.my_transactions')
         )
 
         db.session.add(notification_buyer)
@@ -2002,7 +2005,7 @@ def approve_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
-        return redirect(url_for('coupons.my_transactions'))
+        return redirect(url_for('marketplace.my_transactions'))
 
     form = ApproveTransactionForm()
     if form.validate_on_submit():
@@ -2033,7 +2036,7 @@ def approve_transaction(transaction_id):
             current_app.logger.error(f"Error sending seller approved email: {e}")
             flash('העסקה אושרה, אך לא הצלחנו לשלוח מייל לקונה.', 'warning')
 
-        return redirect(url_for('coupons.my_transactions'))
+        return redirect(url_for('marketplace.my_transactions'))
 
     return render_template('approve_transaction.html', form=form, transaction=transaction)
 
@@ -2043,7 +2046,7 @@ def decline_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
-        return redirect(url_for('coupons.my_transactions'))
+        return redirect(url_for('marketplace.my_transactions'))
 
     # החזרת הקופון לזמינות
     coupon = transaction.coupon
@@ -2051,7 +2054,7 @@ def decline_transaction(transaction_id):
     db.session.delete(transaction)
     db.session.commit()
     flash('דחית את העסקה.', 'info')
-    return redirect(url_for('coupons.my_transactions'))
+    return redirect(url_for('marketplace.my_transactions'))
 
 @coupons_bp.route('/confirm_transaction/<int:transaction_id>')
 @login_required
@@ -2059,7 +2062,7 @@ def confirm_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.buyer_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
-        return redirect(url_for('coupons.my_transactions'))
+        return redirect(url_for('marketplace.my_transactions'))
 
     transaction.status = 'הושלם'
     # העברת הבעלות על הקופון
@@ -2068,7 +2071,7 @@ def confirm_transaction(transaction_id):
     coupon.is_available = True
     db.session.commit()
     flash('אישרת את העסקה. הקופון הועבר לחשבונך.', 'success')
-    return redirect(url_for('coupons.my_transactions'))
+    return redirect(url_for('marketplace.my_transactions'))
 
 @coupons_bp.route('/cancel_transaction/<int:transaction_id>')
 @login_required
@@ -2076,7 +2079,7 @@ def cancel_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.buyer_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
-        return redirect(url_for('coupons.my_transactions'))
+        return redirect(url_for('marketplace.my_transactions'))
 
     # החזרת הקופון לזמינות
     coupon = transaction.coupon
@@ -2084,7 +2087,7 @@ def cancel_transaction(transaction_id):
     db.session.delete(transaction)
     db.session.commit()
     flash('ביטלת את העסקה.', 'info')
-    return redirect(url_for('coupons.my_transactions'))
+    return redirect(url_for('marketplace.my_transactions'))
 
 @coupons_bp.route('/send_coupon_expiration_warning/<int:coupon_id>')
 def send_coupon_expiration_warning(coupon_id):
@@ -2202,7 +2205,8 @@ def update_coupon_usage_from_multipass(id):
 
 @coupons_bp.route('/update_coupon_usage/<int:id>', methods=['GET', 'POST'])
 @login_required
-def update_coupon_usage(id):
+def update_coupon_usage_route(id):
+    from forms import UpdateCouponUsageForm, MarkCouponAsFullyUsedForm
     coupon = Coupon.query.get_or_404(id)
     is_owner = (current_user.id == coupon.user_id)
 
@@ -2210,8 +2214,9 @@ def update_coupon_usage(id):
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
 
+    # אם הקופון חד-פעמי ואין צורך להוסיף כמות שימוש (מסמנים כנוצל)
     if coupon.is_one_time:
-        coupon.status = "נוצל"
+        coupon.status = 'נוצל'
         try:
             db.session.commit()
             flash('סטטוס הקופון עודכן בהצלחה ל"נוצל".', 'success')
@@ -2221,7 +2226,6 @@ def update_coupon_usage(id):
             flash('אירעה שגיאה בעת עדכון סטטוס הקופון.', 'danger')
         return redirect(url_for('coupons.coupon_detail', id=id))
 
-    from forms import UpdateCouponUsageForm, MarkCouponAsFullyUsedForm
     form = UpdateCouponUsageForm()
     mark_fully_used_form = MarkCouponAsFullyUsedForm()
 
@@ -2236,46 +2240,18 @@ def update_coupon_usage(id):
             return redirect(url_for('coupons.update_coupon_usage', id=id))
 
         try:
-            coupon.used_value += new_used_amount
-            update_coupon_status(coupon)
-
-            usage = CouponUsage(
-                coupon_id=coupon.id,
-                used_amount=new_used_amount,
-                timestamp=datetime.utcnow(),
-                action='שימוש',
-                details=f'השתמשת ב-{new_used_amount} ש"ח מהקופון.'
-            )
-            db.session.add(usage)
-
-            transaction = CouponTransaction(
-                coupon_id=coupon.id,
-                card_number=coupon.code,
-                transaction_date=datetime.utcnow(),
-                location='שימוש ידני',
-                recharge_amount=0.0,
-                usage_amount=new_used_amount,
-                reference_number='ManualUsage',
-                source='User'
-            )
-            db.session.add(transaction)
-
-            notification = Notification(
-                user_id=coupon.user_id,
-                message=f"השתמשת ב-{new_used_amount} ש״ח בקופון {coupon.code}.",
-                link=url_for('coupons.coupon_detail', id=coupon.id)
-            )
-            db.session.add(notification)
-
-            db.session.commit()
+            update_coupon_usage(coupon, new_used_amount, details='שימוש ידני')
             flash('כמות השימוש עודכנה בהצלחה.', 'success')
-            return redirect(url_for('coupons.coupon_detail', id=id))
+            return redirect(url_for('coupons.coupon_detail', id=coupon.id))
         except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error updating coupon usage: {e}")
             flash('אירעה שגיאה בעת עדכון כמות השימוש.', 'danger')
+            logger.error(f"Error updating coupon usage: {e}")
 
-    return render_template('update_coupon_usage.html', form=form, coupon=coupon, is_owner=is_owner, mark_fully_used_form=mark_fully_used_form)
+    return render_template('update_coupon_usage.html',
+                           form=form,
+                           coupon=coupon,
+                           is_owner=is_owner,
+                           mark_fully_used_form=mark_fully_used_form)
 
 
 @coupons_bp.route('/update_all_active_coupons', methods=['POST'])

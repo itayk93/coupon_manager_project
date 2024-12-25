@@ -26,3 +26,4 @@ python-dotenv==1.0.0
 python-Levenshtein==0.21.0
 reportlab==4.2.5
 openai==0.28.1
+sib-api-v3-sdk

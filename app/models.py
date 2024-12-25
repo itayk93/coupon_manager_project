@@ -12,6 +12,7 @@ from flask import url_for
 from .extensions import db
 from flask_login import UserMixin
 from datetime import datetime
+from sqlalchemy.sql import func
 
 # Additional imports for encryption
 from sqlalchemy.types import TypeDecorator, String
@@ -243,6 +244,7 @@ class Transaction(db.Model):
     buyer_email_sent_at = db.Column(db.DateTime(timezone=True), nullable=True)
     buyer_confirmed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     seller_confirmed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    updated_at = db.Column(db.DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships
     coupon = db.relationship('Coupon',

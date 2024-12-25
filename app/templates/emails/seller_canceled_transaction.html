@@ -1,9 +1,9 @@
-<!-- templates/emails/seller_approved_transaction.html -->
+<!-- templates/emails/seller_canceled_transaction.html -->
 <!DOCTYPE html>
 <html lang="he" dir="rtl" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="UTF-8">
-    <title>המוכר אישר את העסקה</title>
+    <title>המוכר ביטל את העסקה</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style>
         body {
@@ -28,7 +28,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .header {
-            background-color: #2E86C1;
+            background-color: #C0392B;
             color: #ffffff;
             padding: 20px;
             text-align: center;
@@ -48,7 +48,7 @@
             line-height: 1.5;
         }
         .highlight {
-            color: #2E86C1;
+            color: #C0392B;
             font-weight: bold;
         }
         .button-container {
@@ -56,7 +56,7 @@
             margin: 30px 0;
         }
         .button {
-            background-color: #2E86C1;
+            background-color: #C0392B;
             color: #ffffff;
             padding: 15px 25px;
             text-decoration: none;
@@ -67,7 +67,7 @@
             transition: background-color 0.3s;
         }
         .button:hover {
-            background-color: #A9CCE3;
+            background-color: #F1948A;
         }
         .footer {
             background-color: #f0f0f0;
@@ -96,20 +96,26 @@
             <tr>
                 <td align="center">
                     <div class="email-content">
+                        <!-- Header -->
                         <div class="header">
-                            <h1>המוכר אישר את העסקה!</h1>
+                            <h1>המוכר ביטל את העסקה</h1>
                         </div>
+                        <!-- Body -->
                         <div class="body">
                             <p>שלום {{ buyer.first_name }},</p>
-                            <p>המוכר <strong>{{ seller.first_name }} {{ seller.last_name }}</strong> אישר את העסקה עבור הקופון:
-                            <strong class="highlight">{{ coupon.code }}</strong> מחברת <span class="highlight">{{ coupon.company }}</span> בעלות <span class="highlight">{{ coupon.cost }} ש״ח</span>.</p>
-                            <p>כדי להמשיך בתהליך ולאשר את ההעברה הכספית, אנא התחבר לחשבונך באמצעות הכפתור למטה.</p>
+                            <p>המוכר <strong class="highlight">{{ seller.first_name }} {{ seller.last_name }}</strong> החליט לבטל את העסקה עבור הקופון
+                            <strong style="color: #C0392B;">{{ coupon.code }}</strong> של
+                            <span class="highlight">{{ coupon.company }}</span>.</p>
+                            <p>הקופון לא עבר אליך, והעסקה בוטלה במערכת.</p>
                             <div class="button-container">
-                                <a href="{{ url_for('coupons.my_transactions', _external=True) }}" class="button">לחשבון שלי</a>
+                                <a href="{{ url_for('coupons.my_transactions', _external=True) }}" class="button">
+                                    בדוק את העסקאות שלך
+                                </a>
                             </div>
-                            <p>אם יש לך שאלות או צורך בעזרה נוספת, אל תהסס ליצור איתנו קשר.</p>
-                            <p>בברכה,<br>MaCoupon</p>
+                            <p>נשמח לעזור במידה ויש לך שאלות נוספות.</p>
+                            <p>בברכה,<br>צוות MaCoupon</p>
                         </div>
+                        <!-- Footer -->
                         <div class="footer">
                             <p>© 2024 MaCoupon. כל הזכויות שמורות.</p>
                             <p>כתובת: רחוב הדוגמא 123, תל אביב</p>

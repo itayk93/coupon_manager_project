@@ -10,8 +10,8 @@
         <table class="transaction-table">
             <thead>
                 <tr>
-                    <th>חברה</th> <!-- החלפתי את "קופון" ל"חברה" -->
-                    <th>לוגו</th> <!-- עמודה חדשה ללוגו -->
+                    <th>חברה</th>
+                    <th>לוגו</th>
                     <th>קונה</th>
                     <th>סטטוס</th>
                     <th>פעולות</th>
@@ -20,29 +20,32 @@
             <tbody>
                 {% for transaction in transactions_as_seller %}
                 <tr>
-                    <td>{{ transaction.coupon.company }}</td> <!-- הצגת שם החברה -->
+                    <td>{{ transaction.coupon.company }}</td>
                     <td>
                         {% set logo_path = company_logo_mapping.get(transaction.coupon.company.lower(), 'images/default_logo.png') %}
                         <img src="{{ url_for('static', filename=logo_path) }}" alt="{{ transaction.coupon.company }}" width="50">
-                    </td> <!-- הצגת הלוגו -->
+                    </td>
                     <td>{{ transaction.buyer.first_name }} {{ transaction.buyer.last_name }}</td>
                     <td>{{ transaction.status }}</td>
                     <td>
-                        {% if transaction.status == 'ממתין לאישור המוכר' %}
-                            <a href="{{ url_for('transactions.approve_transaction', transaction_id=transaction.id) }}" class="action-button">אשר</a>
-                            <a href="{{ url_for('transactions.decline_transaction', transaction_id=transaction.id) }}" class="action-button danger">דחה</a>
-                        {% elif transaction.status == 'ממתין לאישור הקונה' %}
-                            <p>מספר טלפון של המוכר: {{ transaction.seller_phone }}</p>
-                            {% if not transaction.seller_confirmed %}
-                                <form method="post" action="{{ url_for('transactions.seller_confirm_transfer', transaction_id=transaction.id) }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="action-button">אשר שההעברה הכספית בוצעה</button>
-                                </form>
-                            {% else %}
-                                <p>ממתין לאישור המוכר.</p> <!-- עדכון הטקסט כאן -->
-                            {% endif %}
+                        {% if transaction.status == 'ממתין לאישור המוכר' and not transaction.seller_approved %}
+                            <!-- המוכר עוד לא אישר -->
+                            <a href="{{ url_for('marketplace.approve_transaction', transaction_id=transaction.id) }}" class="action-button">אשר</a>
+                            <a href="{{ url_for('marketplace.decline_transaction', transaction_id=transaction.id) }}" class="action-button danger">דחה</a>
+                            <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
+                        {% elif transaction.status == 'ממתין לאישור הקונה' and not transaction.seller_approved %}
+                            <!-- המוכר לא סימן שאישר, אבל הסטטוס הוא "ממתין לאישור הקונה" -->
+                            <span class="text-muted">ממתין לאישור הקונה.</span>
+                            <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
+                        {% elif transaction.status == 'ממתין לאישור הקונה' or transaction.seller_approved %}
+                            <!-- המוכר כבר אישר או הסטטוס ממתין לקונה -->
+                            <div class="seller-confirmation">
+                                <p class="text-muted">כבר אישרת את העסקה והמייל נשלח לקונה.</p>
+                                <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger cancel-button">בטל</a>
+                            </div>
                         {% else %}
-                            <p>{{ transaction.status }}</p>
+                            <!-- אם הסטטוס משהו אחר (לדוגמה "הושלם" או "מבוטל") – אין פעולות -->
+                            <span class="text-muted">אין פעולות זמינות</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -58,8 +61,8 @@
         <table class="transaction-table">
             <thead>
                 <tr>
-                    <th>חברה</th> <!-- החלפתי את "קופון" ל"חברה" -->
-                    <th>לוגו</th> <!-- עמודה חדשה ללוגו -->
+                    <th>חברה</th>
+                    <th>לוגו</th>
                     <th>מוכר</th>
                     <th>סטטוס</th>
                     <th>פעולות</th>
@@ -68,29 +71,30 @@
             <tbody>
                 {% for transaction in transactions_as_buyer %}
                 <tr>
-                    <td>{{ transaction.coupon.company }}</td> <!-- הצגת שם החברה -->
+                    <td>{{ transaction.coupon.company }}</td>
                     <td>
                         {% set logo_path = company_logo_mapping.get(transaction.coupon.company.lower(), 'images/default_logo.png') %}
                         <img src="{{ url_for('static', filename=logo_path) }}" alt="{{ transaction.coupon.company }}" width="50">
-                    </td> <!-- הצגת הלוגו -->
+                    </td>
                     <td>{{ transaction.seller.first_name }} {{ transaction.seller.last_name }}</td>
                     <td>{{ transaction.status }}</td>
                     <td>
                         {% if transaction.status == 'ממתין לאישור המוכר' %}
-                            <p>ממתין לאישור המוכר.</p> <!-- שינוי הטקסט כאן -->
-                            <a href="{{ url_for('transactions.cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
+                            <p>ממתין לאישור המוכר.</p>
+                            <a href="{{ url_for('marketplace.cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
                         {% elif transaction.status == 'ממתין לאישור הקונה' %}
                             <p>מספר טלפון של המוכר: {{ transaction.seller_phone }}</p>
                             {% if not transaction.buyer_confirmed %}
-                                <form method="post" action="{{ url_for('transactions.buyer_confirm_transfer', transaction_id=transaction.id) }}">
+                                <form method="post" action="{{ url_for('marketplace.buyer_confirm_transfer', transaction_id=transaction.id) }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="action-button">אשר שההעברה הכספית בוצעה</button>
                                 </form>
                             {% else %}
-                                <p>ממתין לאישור המוכר.</p> <!-- שינוי הטקסט כאן -->
+                                <span class="text-muted">ממתין לאישור המוכר.</span>
                             {% endif %}
                         {% else %}
-                            <p>{{ transaction.status }}</p>
+                            <!-- למשל "הושלם" או "מבוטל" או כל דבר אחר – לא יוצג כחלק מהעסקאות הפעילות -->
+                            <span class="text-muted">אין פעולות זמינות</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -99,6 +103,56 @@
         </table>
     {% else %}
         <p>אין עסקאות כקונה.</p>
+    {% endif %}
+</section>
+
+<!-- טבלה חדשה להצגת עסקאות שהסתיימו (מבוטלות או הושלמו) -->
+<section class="transactions completed-transactions">
+    <h2>עסקאות שהסתיימו</h2>
+    {% if completed_transactions %}
+        <table class="transaction-table">
+            <thead>
+                <tr>
+                    <th>חברה</th>
+                    <th>לוגו</th>
+                    <th>קונה</th>
+                    <th>מוכר</th>
+                    <th>סטטוס</th>
+                    <th>תאריך עדכון</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in completed_transactions %}
+                <tr>
+                    <td>{{ transaction.coupon.company }}</td>
+                    <td>
+                        {% set logo_path = company_logo_mapping.get(transaction.coupon.company.lower(), 'images/default_logo.png') %}
+                        <img src="{{ url_for('static', filename=logo_path) }}" alt="{{ transaction.coupon.company }}" width="50">
+                    </td>
+                    <td>{{ transaction.buyer.first_name }} {{ transaction.buyer.last_name }}</td>
+                    <td>{{ transaction.seller.first_name }} {{ transaction.seller.last_name }}</td>
+                    <td>
+                        {% if transaction.status == 'מבוטל' %}
+                            <span class="text-danger">{{ transaction.status }}</span>
+                        {% elif transaction.status == 'הושלם' %}
+                            <span class="text-success">{{ transaction.status }}</span>
+                        {% else %}
+                            <span>{{ transaction.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if transaction.updated_at %}
+                            {{ transaction.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>אין עסקאות שהסתיימו.</p>
     {% endif %}
 </section>
 {% endblock %}
@@ -123,15 +177,22 @@
         margin-bottom: 40px;
     }
 
-    .transaction-table th, .transaction-table td {
+    .transaction-table th,
+    .transaction-table td {
         border: 1px solid var(--light-gray);
         padding: 10px;
         text-align: center;
+        vertical-align: middle;
     }
 
     .transaction-table th {
         background-color: var(--secondary-color);
         color: var(--text-color);
+    }
+
+    .transaction-table img {
+        max-width: 100px;
+        height: auto;
     }
 
     .action-button {
@@ -144,7 +205,6 @@
         margin: 2px;
         font-size: 0.9em;
     }
-
     .action-button:hover {
         background-color: var(--accent-color);
     }
@@ -152,15 +212,48 @@
     .action-button.danger {
         background-color: var(--danger-color);
     }
-
     .action-button.danger:hover {
         background-color: darkred;
     }
 
-    /* עיצוב תמונות הלוגו */
-    .transaction-table img {
-        max-width: 100px;
-        height: auto;
+    .seller-confirmation {
+        margin-bottom: 1em;
+    }
+    .seller-confirmation .text-muted {
+        margin-bottom: 0.5em;
+    }
+    .seller-confirmation .cancel-button {
+        display: inline-block;
+        padding: 8px 12px;
+        background-color: var(--danger-color);
+        color: #fff;
+        text-decoration: none;
+        border-radius: 5px;
+        font-size: 0.9em;
+    }
+    .seller-confirmation .cancel-button:hover {
+        background-color: darkred;
+    }
+
+    /* הטבלה של העסקאות שהסתיימו מעוצבת זהה, תחת אותו class transaction-table */
+    .completed-transactions {
+        padding: 20px;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    .completed-transactions h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: var(--primary-color);
+    }
+
+    .transaction-table .text-danger {
+        color: red;
+        font-weight: bold;
+    }
+    .transaction-table .text-success {
+        color: green;
+        font-weight: bold;
     }
 </style>
 {% endblock %}

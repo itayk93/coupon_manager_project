@@ -10,6 +10,7 @@ from app.extensions import db
 import logging
 from datetime import datetime, timezone
 import os
+from app.helpers import send_email
 
 marketplace_bp = Blueprint('marketplace', __name__)
 
@@ -139,7 +140,7 @@ def request_to_buy(coupon_id):
     notification = Notification(
         user_id=coupon.user_id,
         message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
-        link=url_for('marketplace.my_transactions')
+        link=url_for('coupons.my_transactions')
     )
     db.session.add(notification)
     db.session.commit()
@@ -158,7 +159,7 @@ def request_to_buy(coupon_id):
         logger.error(f'שגיאה בשליחת מייל למוכר: {e}')
         flash('הבקשה נשלחה אך לא הצלחנו לשלוח הודעה למוכר במייל.', 'warning')
 
-    return redirect(url_for('marketplace.my_transactions'))
+    return redirect(url_for('coupons.my_transactions'))
 
 @marketplace_bp.route('/buy_coupon', methods=['POST'])
 @login_required
@@ -199,7 +200,7 @@ def buy_coupon():
     notification = Notification(
         user_id=coupon.user_id,
         message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
-        link=url_for('marketplace.my_transactions')
+        link=url_for('coupons.my_transactions')
     )
     db.session.add(notification)
 
@@ -221,7 +222,7 @@ def buy_coupon():
         logger.error(f'שגיאה בשליחת מייל למוכר: {e}')
         flash('הבקשה נשלחה אך לא הצלחנו לשלוח הודעה למוכר במייל.', 'warning')
 
-    return redirect(url_for('marketplace.my_transactions'))
+    return redirect(url_for('coupons.my_transactions'))
 
 @marketplace_bp.route('/coupon_request/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -288,21 +289,39 @@ def delete_coupon_request(id):
 
     return redirect(url_for('marketplace.marketplace'))
 
+###
+# כאן מגיע השינוי המרכזי ב-my_transactions
+# נעדכן כך שיציג עסקאות פעילות בנפרד ו"עסקאות שהסתיימו" בנפרד.
+###
 @marketplace_bp.route('/my_transactions')
 @login_required
 def my_transactions():
-    transactions_as_buyer = Transaction.query.filter_by(buyer_id=current_user.id).all()
-    transactions_as_seller = Transaction.query.filter_by(seller_id=current_user.id).all()
+    # עסקאות פעילות
+    transactions_as_buyer = Transaction.query.filter(
+        Transaction.buyer_id == current_user.id,
+        Transaction.status.in_(['ממתין לאישור המוכר', 'ממתין לאישור הקונה'])
+    ).all()
 
-    # שליפת כל החברות
+    transactions_as_seller = Transaction.query.filter(
+        Transaction.seller_id == current_user.id,
+        Transaction.status.in_(['ממתין לאישור המוכר', 'ממתין לאישור הקונה'])
+    ).all()
+
+    # עסקאות שהסתיימו
+    completed_transactions = Transaction.query.filter(
+        Transaction.status.in_(['מבוטל', 'הושלם']),
+        ((Transaction.buyer_id == current_user.id) | (Transaction.seller_id == current_user.id))
+    ).all()
+
+    # מיפוי לוגו
     companies = Company.query.all()
-    # יצירת מיפוי שם חברה -> נתיב תמונה (באות קטנות)
-    company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
+    company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
 
     return render_template(
         'my_transactions.html',
         transactions_as_buyer=transactions_as_buyer,
         transactions_as_seller=transactions_as_seller,
+        completed_transactions=completed_transactions,
         company_logo_mapping=company_logo_mapping
     )
 
@@ -312,13 +331,19 @@ def approve_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
-        return redirect(url_for('marketplace.my_transactions'))
+        return redirect(url_for('coupons.my_transactions'))
+
+    # אם המוכר כבר אישר פעם אחת או שהסטטוס אינו "ממתין לאישור המוכר" – חסימה
+    if transaction.seller_approved or transaction.status == 'ממתין לאישור הקונה':
+        flash('כבר אישרת את העסקה. לא ניתן לאשר שוב.', 'warning')
+        return redirect(url_for('coupons.my_transactions'))
 
     form = ApproveTransactionForm()
     if form.validate_on_submit():
         transaction.seller_phone = form.seller_phone.data
         transaction.seller_approved = True
         transaction.coupon_code_entered = True
+        transaction.status = 'ממתין לאישור הקונה'
         db.session.commit()
 
         # לאחר שהמוכר אישר את העסקה, נשלח מייל לקונה
@@ -326,8 +351,12 @@ def approve_transaction(transaction_id):
         buyer = transaction.buyer
         coupon = transaction.coupon
 
-        html_content = render_template('emails/seller_approved_transaction.html',
-                                       seller=seller, buyer=buyer, coupon=coupon)
+        html_content = render_template(
+            'emails/seller_approved_transaction.html',
+            seller=seller,
+            buyer=buyer,
+            coupon=coupon
+        )
 
         try:
             send_email(
@@ -343,7 +372,7 @@ def approve_transaction(transaction_id):
             logger.error(f"Error sending seller approved email: {e}")
             flash('העסקה אושרה, אך לא הצלחנו לשלוח מייל לקונה.', 'warning')
 
-        return redirect(url_for('marketplace.my_transactions'))
+        return redirect(url_for('coupons.my_transactions'))
 
     return render_template('approve_transaction.html', form=form, transaction=transaction)
 
@@ -353,7 +382,7 @@ def decline_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
-        return redirect(url_for('marketplace.my_transactions'))
+        return redirect(url_for('coupons.my_transactions'))
 
     # החזרת הקופון לזמינות
     coupon = transaction.coupon
@@ -361,7 +390,7 @@ def decline_transaction(transaction_id):
     db.session.delete(transaction)
     db.session.commit()
     flash('דחית את העסקה.', 'info')
-    return redirect(url_for('marketplace.my_transactions'))
+    return redirect(url_for('coupons.my_transactions'))
 
 @marketplace_bp.route('/confirm_transaction/<int:transaction_id>')
 @login_required
@@ -369,7 +398,7 @@ def confirm_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.buyer_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
-        return redirect(url_for('marketplace.my_transactions'))
+        return redirect(url_for('coupons.my_transactions'))
 
     transaction.status = 'הושלם'
     # העברת הבעלות על הקופון
@@ -378,7 +407,7 @@ def confirm_transaction(transaction_id):
     coupon.is_available = True
     db.session.commit()
     flash('אישרת את העסקה. הקופון הועבר לחשבונך.', 'success')
-    return redirect(url_for('marketplace.my_transactions'))
+    return redirect(url_for('coupons.my_transactions'))
 
 @marketplace_bp.route('/cancel_transaction/<int:transaction_id>')
 @login_required
@@ -386,7 +415,7 @@ def cancel_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.buyer_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
-        return redirect(url_for('marketplace.my_transactions'))
+        return redirect(url_for('coupons.my_transactions'))
 
     # החזרת הקופון לזמינות
     coupon = transaction.coupon
@@ -394,7 +423,7 @@ def cancel_transaction(transaction_id):
     db.session.delete(transaction)
     db.session.commit()
     flash('ביטלת את העסקה.', 'info')
-    return redirect(url_for('marketplace.my_transactions'))
+    return redirect(url_for('coupons.my_transactions'))
 
 def complete_transaction(transaction):
     try:
@@ -413,12 +442,12 @@ def complete_transaction(transaction):
         notification_buyer = Notification(
             user_id=transaction.buyer_id,
             message='הקופון הועבר לחשבונך.',
-            link=url_for('marketplace.coupon_detail', id=coupon.id)
+            link=url_for('coupons.coupon_detail', id=coupon.id)
         )
         notification_seller = Notification(
             user_id=transaction.seller_id,
             message='העסקה הושלמה והקופון הועבר לקונה.',
-            link=url_for('marketplace.my_transactions')
+            link=url_for('coupons.my_transactions')
         )
 
         db.session.add(notification_buyer)
@@ -431,29 +460,31 @@ def complete_transaction(transaction):
         logger.error(f"Error completing transaction {transaction.id}: {e}")
         flash('אירעה שגיאה בעת השלמת העסקה. נא לנסות שוב.', 'danger')
 
-
 @marketplace_bp.route('/offer_coupon/<int:request_id>', methods=['GET', 'POST'])
 @login_required
 def offer_coupon(request_id):
     coupon_request = CouponRequest.query.get_or_404(request_id)
     if coupon_request.user_id == current_user.id:
         flash('אינך יכול למכור לעצמך.', 'warning')
-        return redirect(url_for('marketplace'))
+        return redirect(url_for('marketplace.marketplace'))
 
     # שליפת הקופונים של המוכר המתאימים לבקשה
-    seller_coupons = Coupon.query.filter_by(user_id=current_user.id, company=coupon_request.company,
-                                            is_for_sale=False).all()
+    seller_coupons = Coupon.query.filter_by(
+        user_id=current_user.id,
+        company=coupon_request.company,
+        is_for_sale=False
+    ).all()
 
     if not seller_coupons:
         flash('אין לך קופונים מתאימים למכירה.', 'warning')
-        return redirect(url_for('marketplace'))
+        return redirect(url_for('marketplace.marketplace'))
 
     if request.method == 'POST':
         coupon_id = request.form.get('coupon_id')
         coupon = Coupon.query.get(coupon_id)
         if coupon is None or coupon.user_id != current_user.id:
             flash('קופון לא תקין.', 'danger')
-            return redirect(url_for('marketplace'))
+            return redirect(url_for('marketplace.marketplace'))
 
         # יצירת עסקה
         transaction = Transaction(
@@ -471,12 +502,56 @@ def offer_coupon(request_id):
         notification = Notification(
             user_id=coupon_request.user_id,
             message=f"{current_user.first_name} {current_user.last_name} מציע לך קופון עבור {coupon_request.company}.",
-            link=url_for('my_transactions')
+            link=url_for('coupons.my_transactions')
         )
         db.session.add(notification)
         db.session.commit()
 
         flash('הצעתך נשלחה לקונה.', 'success')
-        return redirect(url_for('my_transactions'))
+        return redirect(url_for('coupons.my_transactions'))
 
     return render_template('select_coupon_to_offer.html', coupon_request=coupon_request, seller_coupons=seller_coupons)
+
+@marketplace_bp.route('/seller_cancel_transaction/<int:transaction_id>')
+@login_required
+def seller_cancel_transaction(transaction_id):
+    transaction = Transaction.query.get_or_404(transaction_id)
+    if transaction.seller_id != current_user.id:
+        flash('אין לך הרשאה לבטל עסקה זו.', 'danger')
+        return redirect(url_for('marketplace.my_transactions'))
+
+    seller = transaction.seller
+    buyer = transaction.buyer
+    coupon = transaction.coupon
+
+    # החזרת הקופון לזמינות (אם צריך)
+    coupon.is_available = True
+
+    # שליחת מייל לקונה שהמוכר ביטל
+    html_content = render_template(
+        'emails/seller_canceled_transaction.html',
+        seller=seller,
+        buyer=buyer,
+        coupon=coupon
+    )
+    try:
+        send_email(
+            sender_email='itayk93@gmail.com',
+            sender_name='MaCoupon',
+            recipient_email=buyer.email,
+            recipient_name=f'{buyer.first_name} {buyer.last_name}',
+            subject='המוכר ביטל את העסקה',
+            html_content=html_content
+        )
+        flash('ביטלת את העסקה ונשלח מייל לקונה.', 'info')
+    except Exception as e:
+        logger.error(f"Error sending cancellation email to buyer: {e}")
+        flash('ביטלת את העסקה, אך אירעה שגיאה בשליחת המייל.', 'warning')
+
+    # עדכון הסטטוס ל"מבוטל"
+    transaction.status = 'מבוטל'
+    transaction.updated_at = datetime.utcnow()  # חשוב אם יש לכם עמודת updated_at
+    db.session.commit()
+
+    # ! מחזירים ל- marketplace.my_transactions
+    return redirect(url_for('marketplace.my_transactions'))

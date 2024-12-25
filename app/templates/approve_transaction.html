@@ -1,3 +1,4 @@
+<!-- templates/approve_transaction.html -->
 {% extends 'base.html' %}
 
 {% block title %}
@@ -7,33 +8,40 @@
 {% block content %}
 <section class="approve-transaction">
     <h2>אשר עסקה</h2>
-    <p>הקונה: {{ transaction.buyer.first_name }} {{ transaction.buyer.last_name }}</p>
-    <form method="post" class="transaction-form" id="transaction-form">
-        {{ form.hidden_tag() }}
 
-        <div class="form-group">
-            {{ form.code.label }}<span class="required">*</span>
-            <input type="text"
-                   id="code-field"
-                   class="input-field"
-                   name="code"
-                   value="{{ transaction.coupon.code if transaction.coupon.code else '' }}"
-                   placeholder="הכנס קוד קופון">
-            <span class="error-message" id="code-error" style="display:none;">קוד קופון הוא שדה חובה</span>
-        </div>
+    {% if transaction.status == 'ממתין לאישור המוכר' and not transaction.seller_approved %}
+        <p>הקונה: {{ transaction.buyer.first_name }} {{ transaction.buyer.last_name }}</p>
+        <form method="post" class="transaction-form" id="transaction-form">
+            {{ form.hidden_tag() }}
 
-        <div class="form-group">
-            {{ form.seller_phone.label }}<span class="required">*</span>
-            {{ form.seller_phone(class="input-field") }}
-            {% for error in form.seller_phone.errors %}
-                <span class="error-message">{{ error }}</span><br>
-            {% endfor %}
-        </div>
+            <div class="form-group">
+                {{ form.code.label }}<span class="required">*</span>
+                <input type="text"
+                       id="code-field"
+                       class="input-field"
+                       name="code"
+                       value="{{ transaction.coupon.code if transaction.coupon.code else '' }}"
+                       placeholder="הכנס קוד קופון">
+                <span class="error-message" id="code-error" style="display:none;">קוד קופון הוא שדה חובה</span>
+            </div>
 
-        <div class="form-group">
-            <button type="submit" class="submit-button">אשר עסקה</button>
-        </div>
-    </form>
+            <div class="form-group">
+                {{ form.seller_phone.label }}<span class="required">*</span>
+                {{ form.seller_phone(class="input-field") }}
+                {% for error in form.seller_phone.errors %}
+                    <span class="error-message">{{ error }}</span><br>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="submit-button">אשר עסקה</button>
+            </div>
+        </form>
+    {% elif transaction.status == 'ממתין לאישור הקונה' or transaction.seller_approved %}
+        <p>כבר אישרת את העסקה והמייל נשלח לקונה.</p>
+    {% else %}
+        <p>לא ניתן לאשר את העסקה במצב הנוכחי.</p>
+    {% endif %}
 </section>
 {% endblock %}
 
@@ -41,21 +49,18 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('transaction-form');
+    if (!form) return; // אם אין טופס (כי כבר אושר או במצב אחר), לא עושים כלום.
+
     const codeField = document.getElementById('code-field');
     const codeError = document.getElementById('code-error');
 
     form.addEventListener('submit', function (event) {
-        // Reset error message
         codeError.style.display = 'none';
-
-        // Check if the "code" field is empty
         if (!codeField.value.trim()) {
             codeError.style.display = 'block';
-            event.preventDefault(); // Prevent form submission
+            event.preventDefault();
         }
     });
-
-    // Optionally: Add more interactive behaviors as needed.
 });
 </script>
 {% endblock %}
