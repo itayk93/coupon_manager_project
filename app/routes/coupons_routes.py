@@ -107,7 +107,7 @@ def log_user_activity(action, coupon_id=None):
 @login_required
 def sell_coupon():
     # -- activity log snippet --
-    log_user_activity("sell_coupon_view", transaction.coupon_id)
+    log_user_activity("sell_coupon_view", coupon.id)
 
     form = SellCouponForm()
 
@@ -554,7 +554,7 @@ def get_most_common_tag_for_company(company_name):
 @login_required
 def add_coupon():
     # -- activity log snippet --
-    log_user_activity("add_coupon_view", transaction.coupon_id)
+    log_user_activity("add_coupon_view", coupon.id)
 
     try:
         manual = request.args.get('manual', 'false').lower() == 'true'
@@ -2628,7 +2628,7 @@ def update_coupon_usage_from_multipass(id):
 @coupons_bp.route('/update_coupon_usage/<int:id>', methods=['GET', 'POST'])
 @login_required
 def update_coupon_usage_route(id):
-    log_user_activity("complete_transaction", transaction.coupon_id)
+    log_user_activity("complete_transaction", coupon.id)
 
     from forms import UpdateCouponUsageForm, MarkCouponAsFullyUsedForm
     coupon = Coupon.query.get_or_404(id)
