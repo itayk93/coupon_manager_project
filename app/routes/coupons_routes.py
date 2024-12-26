@@ -554,7 +554,7 @@ def get_most_common_tag_for_company(company_name):
 @login_required
 def add_coupon():
     # -- activity log snippet --
-    log_user_activity("add_coupon_view", coupon.id)
+    log_user_activity("add_coupon_view", None)
 
     try:
         manual = request.args.get('manual', 'false').lower() == 'true'
