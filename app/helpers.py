@@ -22,6 +22,7 @@ from app.models import (
     Coupon, CouponTransaction, Notification,
     Tag, coupon_tags, Transaction
 )
+from itsdangerous import URLSafeTimedSerializer
 
 load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
