@@ -102,9 +102,9 @@
 <body>
     <header>
         <nav>
-            <a href="{{ url_for('main.index') }}">דף הבית</a> |
+            <a href="{{ url_for('profile.index') }}">דף הבית</a> |
             <a href="{{ url_for('auth.login') }}">התחברות</a> |
-            <a href="{{ url_for('main.about') }}">אודות</a>
+            <a href="{{ url_for('profile.about') }}">אודות</a>
         </nav>
     </header>
     <main class="privacy-policy">
@@ -140,7 +140,7 @@
         </div>
     </main>
     <footer>
-        <p>&copy; 2024 מנהל הקופונים | <a href="{{ url_for('main.privacy_policy') }}">מדיניות פרטיות</a></p>
+        <p>&copy; 2024 מנהל הקופונים | <a href="{{ url_for('auth.privacy_policy') }}">מדיניות פרטיות</a></p>
     </footer>
     <script>
         // הוספת לוגיקת JavaScript לפעולות דינמיות בעתיד אם נדרש

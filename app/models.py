@@ -378,7 +378,8 @@ class UserConsent(db.Model):
     __tablename__ = "user_consents"
 
     consent_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)  # הפך ללא חובה
+    ip_address = db.Column(db.String(45), nullable=True)  # הוסף שדה זה
     consent_status = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     version = db.Column(db.String(50), default="1.0")

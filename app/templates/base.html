@@ -113,19 +113,25 @@
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": "{{ csrf_token() }}"
+                    "X-CSRFToken": document.querySelector('meta[name="csrf-token"]').content
                 },
                 body: JSON.stringify({ consent: status })
-            }).then(response => {
+            })
+            .then(response => {
                 if (response.ok) {
-                    document.getElementById('cookie-consent').classList.remove('visible');
+                    document.getElementById('cookie-consent').style.display = 'none';
                 } else {
-                    alert("שגיאה בשליחת ההעדפה לשרת");
+                    response.json().then(data => {
+                        alert(data.error || "שגיאה בשליחת ההעדפה לשרת");
+                    });
                 }
-            }).catch(error => {
-                console.error("Error:", error);
+            })
+            .catch(error => {
+                console.error("Fetch error:", error);
+                alert("שגיאה בלתי צפויה בעת שליחת ההעדפה לשרת");
             });
         }
+
 
         // הצגת הודעת עוגיות אם העוגיה לא קיימת
         window.onload = function () {

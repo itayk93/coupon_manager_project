@@ -187,21 +187,35 @@ def logout():
 def save_consent():
     log_user_activity("save_consent_attempt")
 
-    if not current_user.is_authenticated:
-        return jsonify({"error": "User not authenticated"}), 401
-
+    # קבלת הנתונים מהבקשה
     data = request.json
     consent = data.get('consent')
 
     if consent is None:
         return jsonify({"error": "Invalid data"}), 400
 
-    existing_consent = UserConsent.query.filter_by(user_id=current_user.id).first()
+    # זיהוי משתמש לפי user_id (אם מחובר) או לפי כתובת IP (אם לא מחובר)
+    user_id = current_user.id if current_user.is_authenticated else None
+    ip_address = request.remote_addr
+
+    # בדיקה אם כבר קיימת רשומת הסכמה
+    if user_id:
+        existing_consent = UserConsent.query.filter_by(user_id=user_id).first()
+    else:
+        existing_consent = UserConsent.query.filter_by(ip_address=ip_address).first()
+
     if existing_consent:
+        # עדכון סטטוס העדפה
         existing_consent.consent_status = consent
         existing_consent.timestamp = datetime.utcnow()
     else:
-        new_consent = UserConsent(user_id=current_user.id, consent_status=consent, timestamp=datetime.utcnow())
+        # יצירת רשומת הסכמה חדשה
+        new_consent = UserConsent(
+            user_id=user_id,
+            ip_address=ip_address,
+            consent_status=consent,
+            timestamp=datetime.utcnow()
+        )
         db.session.add(new_consent)
 
     db.session.commit()
