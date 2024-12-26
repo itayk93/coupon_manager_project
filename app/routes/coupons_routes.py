@@ -107,7 +107,7 @@ def log_user_activity(action, coupon_id=None):
 @login_required
 def sell_coupon():
     # -- activity log snippet --
-    log_user_activity("sell_coupon_view", None)
+    log_user_activity("sell_coupon_view", transaction.coupon_id)
 
     form = SellCouponForm()
 
@@ -554,7 +554,7 @@ def get_most_common_tag_for_company(company_name):
 @login_required
 def add_coupon():
     # -- activity log snippet --
-    log_user_activity("add_coupon_view", None)
+    log_user_activity("add_coupon_view", transaction.coupon_id)
 
     try:
         manual = request.args.get('manual', 'false').lower() == 'true'
@@ -1328,7 +1328,7 @@ def edit_coupon(id):
     coupon = Coupon.query.get_or_404(id)
 
     # -- activity log snippet --
-    log_user_activity("edit_coupon_view", None)
+    log_user_activity("edit_coupon_view", coupon.id)
 
     if coupon.user_id != current_user.id:
         flash('אינך מורשה לערוך קופון זה.', 'danger')
@@ -1511,7 +1511,7 @@ def coupon_detail(id):
     delete_form = DeleteCouponForm()
     update_form = UpdateCouponUsageForm()
 
-    log_user_activity("view_coupon", None)
+    log_user_activity("view_coupon", coupon.id)
 
     transactions = CouponTransaction.query.filter_by(coupon_id=coupon.id).order_by(
         CouponTransaction.transaction_date.asc()).all()
@@ -1606,7 +1606,7 @@ def mark_coupon_as_fully_used(id):
     coupon = Coupon.query.get_or_404(id)
 
     # -- activity log snippet --
-    log_user_activity("mark_coupon_as_fully_used", None)
+    log_user_activity("mark_coupon_as_fully_used", coupon.id)
 
     if coupon.user_id != current_user.id:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
@@ -1687,7 +1687,7 @@ def update_coupon(id):
     coupon = Coupon.query.get_or_404(id)
 
     # -- activity log snippet --
-    log_user_activity("update_coupon_view", None)
+    log_user_activity("update_coupon_view", coupon.id)
 
     if coupon.user_id != current_user.id:
         flash('אין לך הרשאה לעדכן קופון זה.', 'danger')
@@ -1776,7 +1776,7 @@ def update_coupon(id):
 @login_required
 def delete_coupon(id):
     # -- activity log snippet --
-    log_user_activity("delete_coupon_attempt", None)
+    log_user_activity("delete_coupon_attempt", id)
 
     form = DeleteCouponForm()
     if form.validate_on_submit():
@@ -1845,7 +1845,7 @@ def confirm_delete_coupon(id):
     coupon = Coupon.query.get_or_404(id)
 
     # -- activity log snippet --
-    log_user_activity("confirm_delete_coupon_view", None)
+    log_user_activity("confirm_delete_coupon_view", coupon.id)
 
     if coupon.user_id != current_user.id:
         flash('אינך מורשה למחוק קופון זה.', 'danger')
@@ -1892,7 +1892,7 @@ def edit_usage(usage_id):
     coupon = Coupon.query.get_or_404(usage.coupon_id)
 
     # -- activity log snippet --
-    log_user_activity("edit_usage_view", None)
+    log_user_activity("edit_usage_view", coupon_id)
 
     if coupon.user_id != current_user.id:
         flash('אינך מורשה לערוך שימוש זה.', 'danger')
@@ -2480,8 +2480,7 @@ def send_coupon_expiration_warning(coupon_id):
     coupon = Coupon.query.get_or_404(coupon_id)
 
     # -- activity log snippet --
-    log_user_activity("send_coupon_expiration_warning", None)
-
+    log_user_activity("send_coupon_expiration_warning", coupon.id)
 
     user = coupon.user
     expiration_date = coupon.expiration
@@ -2512,7 +2511,7 @@ def mark_coupon_as_used(id):
     coupon = Coupon.query.get_or_404(id)
 
     # -- activity log snippet --
-    log_user_activity("mark_coupon_as_used", None)
+    log_user_activity("mark_coupon_as_used", coupon.id)
 
     if coupon.user_id != current_user.id:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
@@ -2581,6 +2580,8 @@ def mark_coupon_as_used(id):
 @coupons_bp.route('/update_coupon_usage_from_multipass/<int:id>', methods=['GET', 'POST'])
 @login_required
 def update_coupon_usage_from_multipass(id):
+    log_user_activity("update_coupon_usage_from_multipass", coupon.id)
+
     if current_user.email != 'itayk93@gmail.com':
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('coupons.coupon_detail', id=id))
@@ -2627,6 +2628,8 @@ def update_coupon_usage_from_multipass(id):
 @coupons_bp.route('/update_coupon_usage/<int:id>', methods=['GET', 'POST'])
 @login_required
 def update_coupon_usage_route(id):
+    log_user_activity("complete_transaction", transaction.coupon_id)
+
     from forms import UpdateCouponUsageForm, MarkCouponAsFullyUsedForm
     coupon = Coupon.query.get_or_404(id)
     is_owner = (current_user.id == coupon.user_id)
