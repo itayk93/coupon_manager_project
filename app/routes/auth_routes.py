@@ -207,3 +207,8 @@ def save_consent():
     db.session.commit()
     log_user_activity("save_consent_success")
     return jsonify({"message": "Consent saved successfully"}), 200
+
+@auth_bp.route('/privacy-policy')
+def privacy_policy():
+    log_user_activity("view_privacy_policy")
+    return render_template('privacy_policy.html')

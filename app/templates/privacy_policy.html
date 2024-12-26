@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>מדיניות פרטיות</title>
+    <style>
+        /* עיצוב מדיניות פרטיות */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --background-color: #f8f9fa;
+            --text-color: #212529;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        header nav {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        header nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+
+        header nav a:hover {
+            text-decoration: underline;
+        }
+
+        .privacy-policy {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            text-align: right;
+            direction: rtl;
+        }
+
+        .privacy-policy h2, .privacy-policy h3 {
+            color: var(--primary-color);
+        }
+
+        .privacy-policy h2 {
+            margin-bottom: 20px;
+        }
+
+        .privacy-policy h3 {
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        .privacy-policy p, .privacy-policy li {
+            line-height: 1.6;
+            font-size: 1.1em;
+        }
+
+        .privacy-policy ul {
+            list-style-type: disc;
+            padding-right: 20px;
+        }
+
+        .qa-section {
+            margin-top: 30px;
+        }
+
+        .qa-section .question {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid var(--secondary-color);
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .qa-section h4 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .qa-section p {
+            margin: 0;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: var(--secondary-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="{{ url_for('main.index') }}">דף הבית</a> |
+            <a href="{{ url_for('auth.login') }}">התחברות</a> |
+            <a href="{{ url_for('main.about') }}">אודות</a>
+        </nav>
+    </header>
+    <main class="privacy-policy">
+        <h2>מדיניות פרטיות</h2>
+        <p>מדיניות פרטיות זו מתארת כיצד אנו אוספים, משתמשים ושומרים על המידע האישי שלך.</p>
+
+        <h3>איסוף מידע</h3>
+        <p>אנו עשויים לאסוף מידע אישי כמו שם, כתובת דוא"ל, מספר טלפון ונתונים טכניים כמו כתובת IP, דפדפן ונתוני שימוש.</p>
+
+        <h3>שימוש במידע</h3>
+        <ul>
+            <li>לשיפור השירותים שלנו ולהתאמתם לצרכי המשתמשים.</li>
+            <li>ליצירת קשר ולמענה על בקשות או שאלות שלך.</li>
+            <li>לשליחת התראות חשובות ועדכונים בנוגע לשירותים.</li>
+        </ul>
+
+        <h3>שמירת מידע</h3>
+        <p>אנו נוקטים באמצעי אבטחה מתקדמים כדי לשמור על המידע שלך מפני גישה לא מורשית.</p>
+
+        <h3>זכויות המשתמש</h3>
+        <p>באפשרותך לעיין, לעדכן או למחוק את המידע האישי שלך. צור קשר בכתובת: <a href="mailto:support@couponapp.com">support@couponapp.com</a></p>
+
+        <h3>שאלות ותשובות</h3>
+        <div class="qa-section">
+            <div class="question">
+                <h4>איך אני מוחק את המידע שלי?</h4>
+                <p>פנה אלינו בדוא"ל ואנו נסייע לך למחוק את המידע שלך באופן מאובטח.</p>
+            </div>
+            <div class="question">
+                <h4>האם האתר משתמש בעוגיות?</h4>
+                <p>כן, אנו משתמשים בעוגיות כדי לשפר את חוויית המשתמש. תוכל לשלוט בהגדרות העוגיות דרך הדפדפן.</p>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2024 מנהל הקופונים | <a href="{{ url_for('main.privacy_policy') }}">מדיניות פרטיות</a></p>
+    </footer>
+    <script>
+        // הוספת לוגיקת JavaScript לפעולות דינמיות בעתיד אם נדרש
+        console.log("Privacy Policy page loaded.");
+    </script>
+</body>
+</html>
