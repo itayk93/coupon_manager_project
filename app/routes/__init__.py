@@ -6,6 +6,7 @@ from .transactions_routes import transactions_bp
 from .uploads_routes import uploads_bp
 from .admin_routes import admin_bp
 from .export_routes import export_bp
+from .usage_data_routes import usage_data_bp
 
 def init_app(app):
     app.register_blueprint(marketplace_bp)
@@ -15,3 +16,4 @@ def init_app(app):
     app.register_blueprint(admin_bp)
     app.register_blueprint(export_bp)
     app.register_blueprint(coupons_bp)
+    app.register_blueprint(usage_data_bp)

@@ -1,23 +1,58 @@
-# uploads_routes.py
-
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, send_file
 from flask_login import login_required, current_user
 from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
-from app.models import Coupon, Tag, Company, CouponUsage
-from app.forms import UploadCouponsForm, AddCouponsBulkForm
-from app.helpers import process_coupons_excel, get_coupon_data
-from app.extensions import db
+from datetime import datetime
+import logging
 import os
 import pandas as pd
 import traceback
-from datetime import datetime
+from io import BytesIO
+
+from app.models import Coupon, Tag, Company, CouponUsage, db
+from app.forms import UploadCouponsForm, AddCouponsBulkForm
+from app.helpers import process_coupons_excel, get_coupon_data, get_geo_location
+from app.extensions import db
 
 uploads_bp = Blueprint('uploads', __name__)
+logger = logging.getLogger(__name__)
+
+def log_user_activity(action):
+    try:
+        ip_address = request.remote_addr
+        user_agent = request.headers.get('User-Agent', '')
+        geo_location = get_geo_location(ip_address) if ip_address else None
+
+        activity = {
+            "user_id": current_user.id if current_user.is_authenticated else None,
+            "coupon_id": None,
+            "timestamp": datetime.utcnow(),
+            "action": action,
+            "device": user_agent[:50] if user_agent else None,
+            "browser": user_agent.split(' ')[0][:50] if user_agent else None,
+            "ip_address": ip_address[:45] if ip_address else None,
+            "geo_location": geo_location[:100] if geo_location else None
+        }
+
+        db.session.execute(
+            db.text("""
+                INSERT INTO user_activities
+                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                VALUES
+                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+            """),
+            activity
+        )
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error logging activity [{action}]: {e}")
 
 @uploads_bp.route('/upload_coupons', methods=['GET', 'POST'])
 @login_required
 def upload_coupons():
+    log_user_activity("upload_coupons_view")
+
     form = UploadCouponsForm()
     if form.validate_on_submit():
         file = form.file.data
@@ -35,9 +70,12 @@ def upload_coupons():
                 flash('הקופונים הבאים לא היו תקינים ולא נוספו:<br>' + '<br>'.join(invalid_coupons), 'danger')
             else:
                 flash('כל הקופונים נוספו בהצלחה!', 'success')
+
+            log_user_activity("upload_coupons_submit")
         except Exception as e:
             flash('אירעה שגיאה בעת עיבוד הקובץ.', 'danger')
             traceback.print_exc()
+            current_app.logger.error(f"Error processing uploaded coupons: {e}")
 
         return redirect(url_for('transactions.show_coupons'))
 
@@ -46,11 +84,12 @@ def upload_coupons():
 @uploads_bp.route('/add_coupons_bulk', methods=['GET', 'POST'])
 @login_required
 def add_coupons_bulk():
+    log_user_activity("add_coupons_bulk_view")
+
     form = AddCouponsBulkForm()
     companies = Company.query.all()
     tags = Tag.query.all()
 
-    # Define choices before form validation
     for coupon_entry in form.coupons.entries:
         coupon_form = coupon_entry.form
         company_choices = [(str(company.id), company.name) for company in companies]
@@ -66,7 +105,7 @@ def add_coupons_bulk():
             new_coupons_data = []
             for idx, coupon_entry in enumerate(form.coupons.entries):
                 coupon_form = coupon_entry.form
-                # Handle company_id
+
                 if coupon_form.company_id.data == 'other':
                     company_name = coupon_form.other_company.data.strip()
                     if not company_name:
@@ -85,7 +124,6 @@ def add_coupons_bulk():
                         flash(f'ID החברה אינו תקין בקופון #{idx + 1}.', 'danger')
                         continue
 
-                # Handle tag_id
                 if coupon_form.tag_id.data == 'other':
                     tag_name = coupon_form.other_tag.data.strip()
                     if not tag_name:
@@ -104,7 +142,6 @@ def add_coupons_bulk():
                         flash(f'ID התגית אינו תקין בקופון #{idx + 1}.', 'danger')
                         continue
 
-                # Handle value and cost
                 try:
                     value = float(coupon_form.value.data) if coupon_form.value.data else 0.0
                 except ValueError:
@@ -117,7 +154,6 @@ def add_coupons_bulk():
                     flash(f'עלות הקופון אינה תקינה בקופון #{idx + 1}.', 'danger')
                     continue
 
-                # Collect coupon data into a dictionary
                 coupon_data = {
                     'קוד קופון': coupon_form.code.data.strip(),
                     'חברה': company_name,
@@ -129,15 +165,12 @@ def add_coupons_bulk():
                     'תיאור': coupon_form.description.data.strip() if coupon_form.description.data else '',
                     'תגיות': tag_name if tag_name else ''
                 }
-
                 new_coupons_data.append(coupon_data)
 
-            # --- Create DataFrame and export to Excel ---
             if new_coupons_data:
                 df_new_coupons = pd.DataFrame(new_coupons_data)
-
-                export_folder = 'exports'  # Folder where files will be saved
-                os.makedirs(export_folder, exist_ok=True)  # Create folder if it doesn't exist
+                export_folder = 'exports'
+                os.makedirs(export_folder, exist_ok=True)
 
                 export_filename = f"new_coupons_{current_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
                 export_path = os.path.join(export_folder, export_filename)
@@ -145,9 +178,7 @@ def add_coupons_bulk():
                 df_new_coupons.to_excel(export_path, index=False)
                 current_app.logger.info(f"Exported new coupons to {export_path}")
 
-                # --- Process the Excel file to add coupons ---
                 invalid_coupons, missing_optional_fields_messages = process_coupons_excel(export_path, current_user)
-
                 for msg in missing_optional_fields_messages:
                     flash(msg, 'warning')
 
@@ -157,6 +188,7 @@ def add_coupons_bulk():
                     flash('כל הקופונים נוספו בהצלחה!', 'success')
 
                 current_app.logger.info("All coupons successfully processed and imported.")
+                log_user_activity("add_coupons_bulk_submit")
                 return redirect(url_for('transactions.show_coupons'))
             else:
                 current_app.logger.info("No new coupons were added, so no export or import was made.")
@@ -167,24 +199,18 @@ def add_coupons_bulk():
             current_app.logger.error(f"Error during bulk coupon processing: {e}")
             traceback.print_exc()
             flash('אירעה שגיאה בעת עיבוד הקופונים. אנא נסה שוב.', 'danger')
-
     else:
         if form.is_submitted():
             current_app.logger.warning(f"Form validation failed: {form.errors}")
 
     return render_template('add_coupons_bulk.html', form=form, companies=companies, tags=tags)
 
-from flask import Blueprint, send_file
-import pandas as pd
-from io import BytesIO
-from flask_login import login_required
-import os
-
-uploads_bp = Blueprint('uploads', __name__, url_prefix='/uploads')  # ניתן לשנות את ה-url_prefix לפי הצורך
 
 @uploads_bp.route('/download_template')
 @login_required
 def download_template():
+    log_user_activity("download_template_view")
+
     data = {
         'קוד קופון': ['ABC123', 'DEF456', 'GHI789'],
         'ערך מקורי': [100, 200, 150],
@@ -204,6 +230,9 @@ def download_template():
         df.to_excel(writer, index=False, sheet_name='תבנית קופונים')
 
     output.seek(0)
+
+    flash('תבנית להוספת קופונים הורדה בהצלחה.', 'success')
+    log_user_activity("download_template_success")
 
     return send_file(
         output,

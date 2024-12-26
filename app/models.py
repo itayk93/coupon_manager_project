@@ -1,26 +1,16 @@
-from datetime import datetime, timezone
-from flask import url_for
-from app.extensions import db  # Import db from extensions.py
-from app.extensions import db
-from flask_login import UserMixin
-from datetime import datetime, timezone
-from flask import url_for
-from app.extensions import db  # Import db from extensions.py
-from flask_login import UserMixin
-from datetime import datetime, timezone
-from flask import url_for
-from .extensions import db
-from flask_login import UserMixin
-from datetime import datetime
-from sqlalchemy.sql import func
+# app/models.py
 
-# Additional imports for encryption
-from sqlalchemy.types import TypeDecorator, String
-from cryptography.fernet import Fernet
 import os
-
+from datetime import datetime, timezone
 from dotenv import load_dotenv
-import os
+
+from flask import url_for
+from flask_login import UserMixin
+from sqlalchemy.types import TypeDecorator, String
+from sqlalchemy.sql import func
+from cryptography.fernet import Fernet
+
+from app.extensions import db  # נניח שיש לך את האובייקט db כאן
 
 # טוען את קובץ ה-.env
 load_dotenv()
@@ -39,7 +29,8 @@ class EncryptedString(TypeDecorator):
 
     def process_bind_param(self, value, dialect):
         if value is not None:
-            if not value.startswith("gAAAAA"):  # הצפנה רק אם הערך אינו מוצפן
+            # הצפנה רק אם הערך אינו נראה כבר מוצפן
+            if not value.startswith("gAAAAA"):
                 value = value.encode()
                 encrypted_value = cipher_suite.encrypt(value)
                 return encrypted_value.decode()
@@ -48,25 +39,28 @@ class EncryptedString(TypeDecorator):
     def process_result_value(self, value, dialect):
         if value is not None:
             try:
-                if value.startswith("gAAAAA"):  # פענוח רק אם הערך נראה מוצפן
+                # פענוח רק אם הערך נראה מוצפן
+                if value.startswith("gAAAAA"):
                     value = value.encode()
                     decrypted_value = cipher_suite.decrypt(value)
                     return decrypted_value.decode()
             except Exception as e:
-                # טיפול בשגיאות ערכים לא חוקיים
                 print(f"Error decrypting value: {value} - {e}")
         return value
 
 
-# Association table for Coupon and Tag
-coupon_tags = db.Table('coupon_tags',
-                       db.Column('coupon_id', db.Integer, db.ForeignKey('coupon.id'), primary_key=True),
-                       db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
-                       )
+# Association table for Coupon and Tag (many-to-many)
+coupon_tags = db.Table(
+    'coupon_tags',
+    db.Column('coupon_id', db.Integer, db.ForeignKey('coupon.id'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
+)
 
 
-# User model
 class User(UserMixin, db.Model):
+    """
+    טבלת המשתמשים.
+    """
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -80,23 +74,37 @@ class User(UserMixin, db.Model):
     religiosity = db.Column(db.String(50), nullable=True)
     income_level = db.Column(db.String(50), nullable=True)
     is_confirmed = db.Column(db.Boolean, default=False, nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)  # שדה האדמין
+    is_admin = db.Column(db.Boolean, default=False)
     slots = db.Column(db.Integer, default=0, nullable=False)
-    # בתוך מחלקת User (לא כל הקוד, רק השורה הרלוונטית)
     slots_automatic_coupons = db.Column(db.Integer, default=50, nullable=False)
 
     # Relationships
     notifications = db.relationship('Notification', back_populates='user', lazy=True)
     coupons = db.relationship('Coupon', back_populates='user', lazy=True)
     coupon_requests = db.relationship('CouponRequest', back_populates='user', lazy=True)
-    transactions_sold = db.relationship('Transaction', foreign_keys='Transaction.seller_id', back_populates='seller',
-                                        lazy=True)
-    transactions_bought = db.relationship('Transaction', foreign_keys='Transaction.buyer_id', back_populates='buyer',
-                                          lazy=True)
+    transactions_sold = db.relationship(
+        'Transaction',
+        foreign_keys='Transaction.seller_id',
+        back_populates='seller',
+        lazy=True
+    )
+    transactions_bought = db.relationship(
+        'Transaction',
+        foreign_keys='Transaction.buyer_id',
+        back_populates='buyer',
+        lazy=True
+    )
+
+    # New Relationships for Usage Data
+    consents = db.relationship("UserConsent", back_populates="user", lazy=True)
+    activities = db.relationship("UserActivity", back_populates="user", lazy=True)
+    opt_out = db.relationship("OptOut", back_populates="user", uselist=False)
 
 
-# Tag model
 class Tag(db.Model):
+    """
+    טבלת תגיות (לסיווג קופונים, למשל).
+    """
     __tablename__ = 'tag'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -104,20 +112,10 @@ class Tag(db.Model):
     count = db.Column(db.Integer, default=0, nullable=False)
 
 
-# Coupon Usage model
-class CouponUsage(db.Model):
-    __tablename__ = 'coupon_usage'
-    id = db.Column(db.Integer, primary_key=True)
-    coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=False)
-    used_amount = db.Column(db.Float, nullable=False)
-    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    action = db.Column(db.String(50), nullable=True)  # Added action field
-    details = db.Column(db.String(255), nullable=True)  # Additional details field if needed
-
-
-# models.py
-
 class Coupon(db.Model):
+    """
+    טבלת קופונים.
+    """
     __tablename__ = 'coupon'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -126,7 +124,7 @@ class Coupon(db.Model):
     value = db.Column(db.Float, nullable=False)
     cost = db.Column(db.Float, nullable=False)
     company = db.Column(db.String(100), nullable=False)
-    expiration = db.Column(db.Date, nullable=True)  # db.Date לשמירת תאריך בלבד
+    expiration = db.Column(db.Date, nullable=True)  # תאריך תוקף
     date_added = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     used_value = db.Column(db.Float, default=0.0, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='פעיל')
@@ -143,24 +141,12 @@ class Coupon(db.Model):
     tags = db.relationship('Tag', secondary=coupon_tags, backref=db.backref('coupons', lazy='dynamic'))
     usages = db.relationship('CouponUsage', backref='coupon', lazy=True, cascade='all, delete-orphan')
 
-    # העמודה החדשה
-    discount_percentage = db.Column(db.Float, nullable=True)
-
     # **הוספת היחס multipass_transactions**
     multipass_transactions = db.relationship(
         'CouponTransaction',
         back_populates='coupon',
         cascade='all, delete-orphan'
     )
-
-    # Fields for tracking reminders
-    reminder_sent_30_days = db.Column(db.Boolean, default=False, nullable=False)
-    reminder_sent_7_days = db.Column(db.Boolean, default=False, nullable=False)
-    reminder_sent_1_day = db.Column(db.Boolean, default=False, nullable=False)
-
-    # Fields for tracking notifications
-    notification_sent_pagh_tokev = db.Column(db.Boolean, default=False, nullable=False)
-    notification_sent_nutzel = db.Column(db.Boolean, default=False, nullable=False)
 
     # Fields for tracking reminders
     reminder_sent_30_days = db.Column(db.Boolean, default=False, nullable=False)
@@ -203,8 +189,23 @@ class Coupon(db.Model):
         return 0.0
 
 
-# Notification model
+class CouponUsage(db.Model):
+    """
+    טבלת רישום פעולות שימוש (חלקיות או מלאות) בקופון.
+    """
+    __tablename__ = 'coupon_usage'
+    id = db.Column(db.Integer, primary_key=True)
+    coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=False)
+    used_amount = db.Column(db.Float, nullable=False)
+    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    action = db.Column(db.String(50), nullable=True)     # לדוגמה: "redeem", "partial_use"
+    details = db.Column(db.String(255), nullable=True)
+
+
 class Notification(db.Model):
+    """
+    טבלת התראות (Notifications).
+    """
     __tablename__ = 'notifications'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -219,8 +220,10 @@ class Notification(db.Model):
     user = db.relationship('User', back_populates='notifications', lazy=True)
 
 
-# Transaction model
 class Transaction(db.Model):
+    """
+    טבלת טרנזקציות (קניה/מכירה של קופון בין משתמשים).
+    """
     __tablename__ = 'transactions'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -247,19 +250,24 @@ class Transaction(db.Model):
     updated_at = db.Column(db.DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships
-    coupon = db.relationship('Coupon',
-                             backref=db.backref('transactions', cascade='all, delete-orphan', passive_deletes=True),
-                             lazy=True)
+    coupon = db.relationship(
+        'Coupon',
+        backref=db.backref('transactions', cascade='all, delete-orphan', passive_deletes=True),
+        lazy=True
+    )
     seller = db.relationship('User', foreign_keys=[seller_id], back_populates='transactions_sold', lazy=True)
     buyer = db.relationship('User', foreign_keys=[buyer_id], back_populates='transactions_bought', lazy=True)
 
 
 class CouponRequest(db.Model):
+    """
+    טבלת בקשות לקופונים (משתמשים מבקשים קופון מסוים).
+    """
     __tablename__ = 'coupon_requests'
     id = db.Column(db.Integer, primary_key=True)
     company = db.Column(db.String(100), nullable=False)
     other_company = db.Column(db.String(100), nullable=True)  # שדה חדש
-    code = db.Column(db.String(255), nullable=True)  # אפשר ערך NULL
+    code = db.Column(db.String(255), nullable=True)           # אפשר ערך NULL
     value = db.Column(db.Float, nullable=False)
     cost = db.Column(db.Float, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -269,37 +277,38 @@ class CouponRequest(db.Model):
     user = db.relationship('User', back_populates='coupon_requests')
 
 
-# Company model
 class Company(db.Model):
+    """
+    טבלת חברות (כדי לשמור תמונות לוגו, למשל).
+    """
     __tablename__ = 'companies'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
-    image_path = db.Column(db.String(200), nullable=False)  # נתיב לתמונת הלוגו
+    image_path = db.Column(db.String(200), nullable=False)
 
     def __repr__(self):
         return f"<Company {self.name}>"
 
 
-# Helper function to update coupon status
 def update_coupon_status(coupon):
+    """
+    פונקציה שתעודכן (כנראה) בכל שלב של שינוי קופון.
+    """
     try:
         current_date = datetime.now(timezone.utc).date()
         status = 'פעיל'
 
         if coupon.expiration:
-            try:
-                expiration_date = coupon.expiration
-                if current_date > expiration_date:
-                    status = 'פג תוקף'
-                    # Create notification for expired coupon
-                    notification = Notification(
-                        user_id=coupon.user_id,
-                        message=f"הקופון {coupon.code} פג תוקף.",
-                        link=url_for('coupon_detail', id=coupon.id)
-                    )
-                    db.session.add(notification)
-            except ValueError:
-                pass
+            expiration_date = coupon.expiration
+            if current_date > expiration_date:
+                status = 'פג תוקף'
+                # Create notification for expired coupon
+                notification = Notification(
+                    user_id=coupon.user_id,
+                    message=f"הקופון {coupon.code} פג תוקף.",
+                    link=url_for('coupon_detail', id=coupon.id)
+                )
+                db.session.add(notification)
 
         if coupon.used_value >= coupon.value:
             status = 'נוצל'
@@ -313,31 +322,40 @@ def update_coupon_status(coupon):
 
         if coupon.status != status:
             coupon.status = status
+
     except Exception as e:
         print(f"Error in update_coupon_status: {e}")
 
 
 class CouponTransaction(db.Model):
-    __tablename__ = 'coupon_transaction'  # ודא ששמו נכון
+    """
+    טבלת "טרנזקציות" (או לוג) של שימוש רב-פעמי בקופון.
+    """
+    __tablename__ = 'coupon_transaction'
+
     id = db.Column(db.Integer, primary_key=True)
     coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=False)
     card_number = db.Column(db.String(50), nullable=False)
-    transaction_date = db.Column(db.DateTime, nullable=True)  # מאפשר NULL
+    transaction_date = db.Column(db.DateTime, nullable=True)
     location = db.Column(db.String(255), nullable=True)
     recharge_amount = db.Column(db.Float, nullable=True)
     usage_amount = db.Column(db.Float, nullable=True)
     reference_number = db.Column(db.String(100), nullable=True)
-    source = db.Column(db.String(50), nullable=False, default='User')  # שדה חדש
+    source = db.Column(db.String(50), nullable=False, default='User')
 
-    # קשר לקופון
     coupon = db.relationship('Coupon', back_populates='multipass_transactions')
 
+
 class GptUsage(db.Model):
+    """
+    טבלת רישום שימוש ב-GPT ע"י המשתמש.
+    """
     __tablename__ = 'gpt_usage'
 
     gpt_usage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    # שדה 'id' בקוליזיה עם self.id => שים לב אם הכוונה ל-GPT API ID
     id = db.Column(db.String(255))
     object = db.Column(db.String(255))
     model = db.Column(db.String(255))
@@ -351,3 +369,52 @@ class GptUsage(db.Model):
     response_text = db.Column(db.Text, nullable=True)
 
     user = db.relationship('User', backref='gpt_usage_records')
+
+
+class UserConsent(db.Model):
+    """
+    טבלת הסכמה לאיסוף מידע (Consent).
+    """
+    __tablename__ = "user_consents"
+
+    consent_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    consent_status = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    version = db.Column(db.String(50), default="1.0")
+
+    user = db.relationship("User", back_populates="consents")
+
+
+class UserActivity(db.Model):
+    """
+    טבלת פעילות משתמשים (Events, Trackers וכו').
+    """
+    __tablename__ = "user_activities"
+
+    activity_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    action = db.Column(db.String(100), nullable=False)  # כגון: "view_coupon", "redeem_coupon"
+    coupon_id = db.Column(db.Integer, nullable=True)    # מזהה קופון
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(45), nullable=True)
+    device = db.Column(db.String(50), nullable=True)    # "Desktop", "Mobile"
+    browser = db.Column(db.String(50), nullable=True)
+    geo_location = db.Column(db.String(100), nullable=True)
+    duration = db.Column(db.Integer, nullable=True)     # משך הפעולה בשניות, אם רלוונטי
+    extra_metadata = db.Column(db.Text, nullable=True)  # JSON או טקסט נוסף
+
+    user = db.relationship("User", back_populates="activities")
+
+
+class OptOut(db.Model):
+    """
+    טבלת Opt-Out: משתמשים שביקשו להפסיק איסוף מידע.
+    """
+    __tablename__ = "opt_outs"
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    opted_out = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", back_populates="opt_out")

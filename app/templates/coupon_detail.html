@@ -217,7 +217,7 @@
     <!-- Button: עדכן שימוש בקופון -->
     {% if is_owner %}
     <div class="update-usage-button" style="margin-top: 10px;">
-        <a href="{{ url_for('coupons.update_coupon_usage', id=coupon.id) }}" class="action-button">עדכן שימוש בקופון</a>
+        <a href="{{ url_for('coupons.update_coupon_usage_route', id=coupon.id) }}" class="action-button">עדכן שימוש בקופון</a>
     </div>
     {% endif %}
 

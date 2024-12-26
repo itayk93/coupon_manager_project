@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
-
+from sqlalchemy.sql import text
 import os
 import pandas as pd
 import traceback
@@ -55,42 +55,86 @@ logger = logging.getLogger(__name__)
 
 coupons_bp = Blueprint('coupons', __name__)
 
+import requests
+
+def get_geo_location(ip_address):
+    try:
+        response = requests.get(f"https://ipinfo.io/{ip_address}/json", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('city', 'Unknown') + ', ' + data.get('country', 'Unknown')
+        else:
+            return "Unknown"
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving geo location: {e}")
+        return "Unknown"
+
+def log_user_activity(action, coupon_id=None):
+    """
+    פונקציה מרכזית לרישום activity log.
+    """
+    try:
+        ip_address = request.remote_addr
+        user_agent = request.headers.get('User-Agent', '')
+        geo_location = get_geo_location(ip_address)
+
+        activity = {
+            "user_id": current_user.id,
+            "coupon_id": coupon_id,
+            "timestamp": datetime.utcnow(),
+            "action": action,
+            "device": user_agent[:50],
+            "browser": user_agent.split(' ')[0][:50] if user_agent else None,
+            "ip_address": ip_address[:45] if ip_address else None,
+            "geo_location": geo_location[:100] if geo_location else None
+        }
+
+        db.session.execute(
+            text("""
+                INSERT INTO user_activities
+                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                VALUES
+                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+            """),
+            activity
+        )
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error logging activity [{action}]: {e}")
 
 @coupons_bp.route('/sell_coupon', methods=['GET', 'POST'])
 @login_required
 def sell_coupon():
+    # -- activity log snippet --
+    log_user_activity("sell_coupon_view", None)
+
     form = SellCouponForm()
 
-    # שליפת החברות והתגיות ממסד הנתונים
     companies = Company.query.all()
     tags = Tag.query.all()
 
-    # הגדרת האפשרויות לשדות הבחירה, כולל אפשרות placeholder
-    company_choices = [('', 'בחר חברה')]  # אפשרות placeholder
+    company_choices = [('', 'בחר חברה')]
     company_choices += [(str(company.id), company.name) for company in companies]
     company_choices.append(('other', 'אחר'))
     form.company_select.choices = company_choices
 
-    tag_choices = [('', 'בחר תגית')]  # אפשרות placeholder
+    tag_choices = [('', 'בחר תגית')]
     tag_choices += [(str(tag.id), tag.name) for tag in tags]
     tag_choices.append(('other', 'אחר'))
     form.tag_select.choices = tag_choices
 
     if form.validate_on_submit():
-        # טיפול בשדות הטופס
         expiration = form.expiration.data
         purpose = form.purpose.data.strip() if form.is_one_time.data and form.purpose.data else None
-
         value = float(form.value.data)
         cost = float(form.cost.data)
 
-        # חישוב אחוז ההנחה
         if value > 0:
             discount_percentage = ((value - cost) / value) * 100
         else:
             discount_percentage = 0.0
 
-        # טיפול בבחירת החברה
         selected_company_id = form.company_select.data
         if selected_company_id == '':
             flash('יש לבחור חברה.', 'danger')
@@ -119,7 +163,6 @@ def sell_coupon():
                 flash('החברה שנבחרה אינה תקפה.', 'danger')
                 return redirect(url_for('coupons.sell_coupon'))
 
-        # טיפול בבחירת התגית
         selected_tag_id = form.tag_select.data
         if selected_tag_id == '':
             flash('יש לבחור תגית.', 'danger')
@@ -148,7 +191,6 @@ def sell_coupon():
                 flash('התגית שנבחרה אינה תקפה.', 'danger')
                 return redirect(url_for('coupons.sell_coupon'))
 
-        # יצירת הקופון החדש
         new_coupon = Coupon(
             code=form.code.data.strip(),
             value=value,
@@ -157,8 +199,8 @@ def sell_coupon():
             description=form.description.data.strip() if form.description.data else '',
             expiration=expiration,
             user_id=current_user.id,
-            is_available=True,  # הקופון מסומן כזמין
-            is_for_sale=True,  # הקופון מסומן למכירה
+            is_available=True,
+            is_for_sale=True,
             is_one_time=form.is_one_time.data,
             purpose=purpose,
             discount_percentage=discount_percentage
@@ -166,14 +208,41 @@ def sell_coupon():
         current_app.logger.info(
             f"Coupon created: is_available={new_coupon.is_available}, is_for_sale={new_coupon.is_for_sale}")
 
-        # הוספת התגית לקופון
         if tag:
             new_coupon.tags.append(tag)
-            tag.count += 1  # עדכון ספירת התגית
+            tag.count += 1
 
         db.session.add(new_coupon)
         try:
             db.session.commit()
+
+            # -- activity log snippet --
+            try:
+                new_activity = {
+                    "user_id": current_user.id,
+                    "coupon_id": new_coupon.id,
+                    "timestamp": datetime.utcnow(),
+                    "action": "sell_coupon_created",
+                    "device": request.headers.get('User-Agent', '')[:50],
+                    "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                    "ip_address": request.remote_addr[:45],
+                    "geo_location": get_geo_location(request.remote_addr)[:100]
+                }
+                db.session.execute(
+                    text("""
+                        INSERT INTO user_activities
+                            (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                        VALUES
+                            (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                    """),
+                    new_activity
+                )
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error logging activity [sell_coupon_created]: {e}")
+            # -- end snippet --
+
             flash('קופון למכירה נוסף בהצלחה!', 'success')
             return redirect(url_for('coupons.show_coupons'))
         except IntegrityError:
@@ -189,24 +258,23 @@ def sell_coupon():
 
     return render_template('sell_coupon.html', form=form, companies=companies, tags=tags)
 
+
 @coupons_bp.route('/coupons')
 @login_required
 def show_coupons():
-    # שליפת כל הקופונים של המשתמש, למעט קופונים למכירה
+    log_user_activity("show_coupons", None)
+
     coupons = Coupon.query.options(joinedload(Coupon.tags)).filter_by(user_id=current_user.id, is_for_sale=False).all()
     for coupon in coupons:
         update_coupon_status(coupon)
     db.session.commit()
 
-    # שליפת כל החברות ויצירת מילון מיפוי
     companies = Company.query.all()
     company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
 
-    # חלוקת הקופונים לקטגוריות
     active_coupons = [coupon for coupon in coupons if coupon.status == 'פעיל' and not coupon.is_one_time]
     active_one_time_coupons = [coupon for coupon in coupons if coupon.status == 'פעיל' and coupon.is_one_time]
 
-    # קופונים שנוצלו ולא פעילים, ממויינים לפי תאריך ניצול אחרון ואז לפי שם החברה
     latest_usage_subquery = db.session.query(
         CouponUsage.coupon_id,
         func.max(CouponUsage.timestamp).label('latest_usage')
@@ -229,7 +297,6 @@ def show_coupons():
 
     inactive_coupons_with_usage = inactive_coupons_query.all()
 
-    # קבלת קופונים למכירה
     coupons_for_sale = Coupon.query.filter_by(user_id=current_user.id, is_for_sale=True).order_by(
         Coupon.date_added.desc()).all()
 
@@ -244,6 +311,9 @@ def show_coupons():
 @coupons_bp.route('/upload_coupons', methods=['GET', 'POST'])
 @login_required
 def upload_coupons():
+    # -- activity log snippet --
+    log_user_activity("upload_coupons_view", None)
+
     form = UploadCouponsForm()
     if form.validate_on_submit():
         file = form.file.data
@@ -253,10 +323,8 @@ def upload_coupons():
 
         try:
             invalid_coupons, missing_optional_fields_messages = process_coupons_excel(file_path, current_user)
-
             for msg in missing_optional_fields_messages:
                 flash(msg, 'warning')
-
             if invalid_coupons:
                 flash('הקופונים הבאים לא היו תקינים ולא נוספו:<br>' + '<br>'.join(invalid_coupons), 'danger')
             else:
@@ -265,18 +333,48 @@ def upload_coupons():
             flash('אירעה שגיאה בעת עיבוד הקובץ.', 'danger')
             traceback.print_exc()
 
+        # -- activity log snippet --
+        try:
+            new_activity = {
+                "user_id": current_user.id,
+                "coupon_id": None,
+                "timestamp": datetime.utcnow(),
+                "action": "upload_coupons_submit",
+                "device": request.headers.get('User-Agent', '')[:50],
+                "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                "ip_address": request.remote_addr[:45],
+                "geo_location": get_geo_location(request.remote_addr)[:100]
+            }
+            db.session.execute(
+                text("""
+                    INSERT INTO user_activities
+                        (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                    VALUES
+                        (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                """),
+                new_activity
+            )
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error logging activity [upload_coupons_submit]: {e}")
+        # -- end snippet --
+
         return redirect(url_for('coupons.show_coupons'))
 
     return render_template('upload_coupons.html', form=form)
 
+
 @coupons_bp.route('/add_coupons_bulk', methods=['GET', 'POST'])
 @login_required
 def add_coupons_bulk():
+    # -- activity log snippet --
+    log_user_activity("add_coupons_bulk_view", None)
+
     form = AddCouponsBulkForm()
     companies = Company.query.all()
     tags = Tag.query.all()
 
-    # Define choices before form validation
     for coupon_entry in form.coupons.entries:
         coupon_form = coupon_entry.form
         company_choices = [(str(company.id), company.name) for company in companies]
@@ -293,9 +391,6 @@ def add_coupons_bulk():
             new_coupons_data = []
             for idx, coupon_entry in enumerate(form.coupons.entries):
                 coupon_form = coupon_entry.form
-                # current_app.logger.info(f"עיבוד קופון #{idx + 1}: {coupon_form.data}")
-
-                # Handle company_id
                 if coupon_form.company_id.data == 'other':
                     company_name = coupon_form.other_company.data.strip()
                     if not company_name:
@@ -317,7 +412,6 @@ def add_coupons_bulk():
                         current_app.logger.warning(f"Invalid company ID format for coupon #{idx + 1}.")
                         continue
 
-                # Handle tag_id
                 if coupon_form.tag_id.data == 'other':
                     tag_name = coupon_form.other_tag.data.strip()
                     if not tag_name:
@@ -339,7 +433,6 @@ def add_coupons_bulk():
                         current_app.logger.warning(f"Invalid tag ID format for coupon #{idx + 1}.")
                         continue
 
-                # Handle value and cost
                 try:
                     value = float(coupon_form.value.data) if coupon_form.value.data else 0.0
                 except ValueError:
@@ -352,41 +445,32 @@ def add_coupons_bulk():
                     flash(f'עלות הקופון אינה תקינה בקופון #{idx + 1}.', 'danger')
                     continue
 
-                # Collect coupon data into a dictionary
                 coupon_data = {
                     'קוד קופון': coupon_form.code.data.strip(),
                     'חברה': company_name,
                     'ערך מקורי': value,
                     'עלות': cost,
-                    'תאריך תפוגה': coupon_form.expiration.data.strftime(
-                        '%Y-%m-%d') if coupon_form.expiration.data else '',
+                    'תאריך תפוגה': coupon_form.expiration.data.strftime('%Y-%m-%d') if coupon_form.expiration.data else '',
                     'קוד לשימוש חד פעמי': coupon_form.is_one_time.data,
                     'מטרת הקופון': coupon_form.purpose.data.strip() if coupon_form.is_one_time.data and coupon_form.purpose.data else '',
                     'תיאור': coupon_form.description.data.strip() if coupon_form.description.data else '',
                     'תגיות': tag_name if tag_name else ''
                 }
-
                 new_coupons_data.append(coupon_data)
 
-            # --- Create DataFrame and export to Excel ---
             if new_coupons_data:
                 df_new_coupons = pd.DataFrame(new_coupons_data)
-
-                export_folder = 'exports'  # Folder where files will be saved
-                os.makedirs(export_folder, exist_ok=True)  # Create folder if it doesn't exist
-
+                export_folder = 'exports'
+                os.makedirs(export_folder, exist_ok=True)
                 export_filename = f"new_coupons_{current_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
                 export_path = os.path.join(export_folder, export_filename)
 
                 df_new_coupons.to_excel(export_path, index=False)
                 current_app.logger.info(f"Exported new coupons to {export_path}")
 
-                # --- Process the Excel file to add coupons ---
                 invalid_coupons, missing_optional_fields_messages = process_coupons_excel(export_path, current_user)
-
                 for msg in missing_optional_fields_messages:
                     flash(msg, 'warning')
-
                 if invalid_coupons:
                     flash('הקופונים הבאים לא היו תקינים ולא נוספו:<br>' + '<br>'.join(invalid_coupons), 'danger')
                 else:
@@ -403,19 +487,41 @@ def add_coupons_bulk():
             traceback.print_exc()
             flash('אירעה שגיאה בעת עיבוד הקופונים. אנא נסה שוב.', 'danger')
 
+        # -- activity log snippet --
+        try:
+            new_activity = {
+                "user_id": current_user.id,
+                "coupon_id": None,
+                "timestamp": datetime.utcnow(),
+                "action": "add_coupons_bulk_submit",
+                "device": request.headers.get('User-Agent', '')[:50],
+                "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                "ip_address": request.remote_addr[:45],
+                "geo_location": get_geo_location(request.remote_addr)[:100]
+            }
+            db.session.execute(
+                text("""
+                    INSERT INTO user_activities
+                        (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                    VALUES
+                        (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                """),
+                new_activity
+            )
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error logging activity [add_coupons_bulk_submit]: {e}")
+        # -- end snippet --
+
     else:
         if form.is_submitted():
             current_app.logger.warning(f"Form validation failed: {form.errors}")
 
     return render_template('add_coupons.html', form=form, companies=companies, tags=tags)
 
-# -----------------------------------------------------------------------------
-# פונקציה לזיהוי התגית הנפוצה ביותר עבור חברה נתונה
-# -----------------------------------------------------------------------------
+
 def get_most_common_tag_for_company(company_name):
-    """
-    מציאת התגית הנפוצה ביותר בקופונים של החברה עם השם company_name
-    """
     results = db.session.query(Tag, func.count(Tag.id).label('tag_count')) \
         .join(coupon_tags, Tag.id == coupon_tags.c.tag_id) \
         .join(Coupon, Coupon.id == coupon_tags.c.coupon_id) \
@@ -423,23 +529,13 @@ def get_most_common_tag_for_company(company_name):
         .group_by(Tag.id) \
         .order_by(func.count(Tag.id).desc(), Tag.id.asc()) \
         .all()
-
     if results:
-        # התגית הראשונה ברשימה היא הנפוצה ביותר
-        print("[DEBUG] get_most_common_tag_for_company results =>", results)  # הדפסה לקונסול
         return results[0][0]
     else:
-        # אין תגיות משויכות לחברה זו
         return None
 
 
-# -----------------------------------------------------------------------------
-# פונקציה לזיהוי התגית הנפוצה ביותר עבור חברה נתונה
-# -----------------------------------------------------------------------------
 def get_most_common_tag_for_company(company_name):
-    """
-    מציאת התגית הנפוצה ביותר בקופונים של החברה עם השם company_name
-    """
     results = db.session.query(Tag, func.count(Tag.id).label('tag_count')) \
         .join(coupon_tags, Tag.id == coupon_tags.c.tag_id) \
         .join(Coupon, Coupon.id == coupon_tags.c.coupon_id) \
@@ -447,10 +543,9 @@ def get_most_common_tag_for_company(company_name):
         .group_by(Tag.id) \
         .order_by(func.count(Tag.id).desc(), Tag.id.asc()) \
         .all()
-
     if results:
         current_app.logger.info(f"[DEBUG] get_most_common_tag_for_company({company_name}) => {results}")
-        return results[0][0]  # התגית הנפוצה ביותר
+        return results[0][0]
     else:
         return None
 
@@ -458,27 +553,20 @@ def get_most_common_tag_for_company(company_name):
 @coupons_bp.route('/add_coupon', methods=['GET', 'POST'])
 @login_required
 def add_coupon():
-    """
-    מסך הוספת קופון - דרך SMS, דרך תמונה, או ידני.
-    כעת בזרימה הידנית, אנו מאתרים אוטומטית את התגית הנפוצה ביותר
-    על סמך שם החברה שבחר/הזין המשתמש.
-    """
-    try:
-        # האם אנו במצב הזנה ידני?
-        manual = request.args.get('manual', 'false').lower() == 'true'
+    # -- activity log snippet --
+    log_user_activity("add_coupon_view", None)
 
+    try:
+        manual = request.args.get('manual', 'false').lower() == 'true'
         sms_form = SMSInputForm()
         coupon_form = CouponForm()
         show_coupon_form = manual
 
-        # טען את כל החברות והתגיות מהדאטהבייס
         companies = Company.query.all()
         tags = Tag.query.all()
 
-        # רשימת שמות החברות
         companies_list = [c.name for c in companies]
 
-        # הגדרת האפשרויות לשדות company_id ו-tag_id
         coupon_form.company_id.choices = (
             [('', 'בחר')]
             + [(str(company.id), company.name) for company in companies]
@@ -490,16 +578,9 @@ def add_coupon():
             + [('other', 'אחר')]
         )
 
-        # ---------------------------------------------------------------------
-        # 1) טיפול בטופס SMS
-        # ---------------------------------------------------------------------
         if sms_form.validate_on_submit() and 'sms_text' in request.form:
             sms_text = sms_form.sms_text.data
-
-            # הפקת מידע מה-SMS
             extracted_data_df, pricing_df = extract_coupon_detail_sms(sms_text, companies_list)
-
-            # שמירת gpt_usage אם הופקו נתוני תמחור
             if not pricing_df.empty:
                 pricing_row = pricing_df.iloc[0]
                 new_usage = GptUsage(
@@ -522,8 +603,6 @@ def add_coupon():
 
             if not extracted_data_df.empty:
                 extracted_data = extracted_data_df.iloc[0].to_dict()
-
-                # איתור חברה
                 company_name = extracted_data.get('חברה', '').strip()
                 best_match_ratio = 0
                 best_company = None
@@ -542,7 +621,6 @@ def add_coupon():
                     coupon_form.other_company.data = company_name
                     chosen_company_name = company_name
 
-                # מילוי שדות
                 coupon_form.code.data = extracted_data.get('קוד קופון')
                 coupon_form.cost.data = extracted_data.get('ערך מקורי', 0) or 0
                 try:
@@ -559,7 +637,6 @@ def add_coupon():
                 coupon_form.value.data = 0
                 coupon_form.discount_percentage.data = 0
 
-                # הפחתת סלוטים
                 if current_user.slots_automatic_coupons > 0:
                     current_user.slots_automatic_coupons -= 1
                     db.session.commit()
@@ -567,7 +644,6 @@ def add_coupon():
                     flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
                     return redirect(url_for('coupons.add_coupon'))
 
-                # תגית נפוצה (אוטומטית)
                 current_app.logger.info(f"[DEBUG] Sending to get_most_common_tag_for_company => '{chosen_company_name}'")
                 found_tag = get_most_common_tag_for_company(chosen_company_name)
                 current_app.logger.info(f"[DEBUG] Received tag => '{found_tag}' for company '{chosen_company_name}'")
@@ -575,6 +651,33 @@ def add_coupon():
                 if found_tag:
                     coupon_form.tag_id.data = str(found_tag.id)
                     coupon_form.other_tag.data = ''
+
+                # -- activity log snippet --
+                try:
+                    new_activity = {
+                        "user_id": current_user.id,
+                        "coupon_id": None,
+                        "timestamp": datetime.utcnow(),
+                        "action": "add_coupon_via_sms",
+                        "device": request.headers.get('User-Agent', '')[:50],
+                        "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                        "ip_address": request.remote_addr[:45],
+                        "geo_location": get_geo_location(request.remote_addr)[:100]
+                    }
+                    db.session.execute(
+                        text("""
+                            INSERT INTO user_activities
+                                (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                            VALUES
+                                (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                        """),
+                        new_activity
+                    )
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error logging activity [add_coupon_via_sms]: {e}")
+                # -- end snippet --
 
                 show_coupon_form = True
             else:
@@ -589,12 +692,8 @@ def add_coupon():
                 tags=tags
             )
 
-        # ---------------------------------------------------------------------
-        # 2) טיפול בהעלאת תמונה
-        # ---------------------------------------------------------------------
         if request.method == 'POST':
             if 'upload_image' in request.form and coupon_form.upload_image.data:
-                # העלאת תמונה
                 image_file = coupon_form.coupon_image.data
                 if image_file and image_file.filename != '':
                     try:
@@ -628,7 +727,6 @@ def add_coupon():
                             flash("הופקו פרטי הקופון בהצלחה.", "success")
 
                             extracted_company = coupon_df.loc[0, 'חברה']
-                            # איתור החברה הכי דומה
                             best_match_ratio = 0
                             best_company = None
                             for comp in companies:
@@ -646,14 +744,10 @@ def add_coupon():
                                 coupon_form.other_company.data = extracted_company
                                 chosen_company_name = extracted_company
 
-                            # מילוי נתוני הקופון
                             coupon_form.code.data = coupon_df.loc[0, 'קוד קופון']
-                            coupon_form.cost.data = coupon_df.loc[0, 'עלות'] if pd.notnull(
-                                coupon_df.loc[0, 'עלות']) else 0
-                            coupon_form.value.data = coupon_df.loc[0, 'ערך מקורי'] if pd.notnull(
-                                coupon_df.loc[0, 'ערך מקורי']) else 0
-                            coupon_form.discount_percentage.data = coupon_df.loc[0, 'אחוז הנחה'] if pd.notnull(
-                                coupon_df.loc[0, 'אחוז הנחה']) else 0
+                            coupon_form.cost.data = coupon_df.loc[0, 'עלות'] if pd.notnull(coupon_df.loc[0, 'עלות']) else 0
+                            coupon_form.value.data = coupon_df.loc[0, 'ערך מקורי'] if pd.notnull(coupon_df.loc[0, 'ערך מקורי']) else 0
+                            coupon_form.discount_percentage.data = coupon_df.loc[0, 'אחוז הנחה'] if pd.notnull(coupon_df.loc[0, 'אחוז הנחה']) else 0
                             try:
                                 expiration_val = coupon_df.loc[0, 'תאריך תפוגה']
                                 if pd.notnull(expiration_val):
@@ -661,12 +755,10 @@ def add_coupon():
                             except Exception as e:
                                 current_app.logger.error(f"[ERROR] parsing expiration date from image: {e}")
 
-                            coupon_form.description.data = coupon_df.loc[0, 'תיאור'] \
-                                if pd.notnull(coupon_df.loc[0, 'תיאור']) else ''
+                            coupon_form.description.data = coupon_df.loc[0, 'תיאור'] if pd.notnull(coupon_df.loc[0, 'תיאור']) else ''
                             coupon_form.is_one_time.data = False
                             coupon_form.purpose.data = ''
 
-                            # הפחתת סלוטים
                             if current_user.slots_automatic_coupons > 0:
                                 current_user.slots_automatic_coupons -= 1
                                 db.session.commit()
@@ -674,7 +766,6 @@ def add_coupon():
                                 flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
                                 return redirect(url_for('coupons.add_coupon'))
 
-                            # תגית נפוצה (אוטומטית)
                             current_app.logger.info(f"[DEBUG] Sending to get_most_common_tag_for_company => '{chosen_company_name}'")
                             found_tag = get_most_common_tag_for_company(chosen_company_name)
                             current_app.logger.info(f"[DEBUG] Received tag => '{found_tag}' for company '{chosen_company_name}'")
@@ -682,6 +773,33 @@ def add_coupon():
                             if found_tag:
                                 coupon_form.tag_id.data = str(found_tag.id)
                                 coupon_form.other_tag.data = ''
+
+                            # -- activity log snippet --
+                            try:
+                                new_activity = {
+                                    "user_id": current_user.id,
+                                    "coupon_id": None,
+                                    "timestamp": datetime.utcnow(),
+                                    "action": "add_coupon_via_image_upload",
+                                    "device": request.headers.get('User-Agent', '')[:50],
+                                    "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                                    "ip_address": request.remote_addr[:45],
+                                    "geo_location": get_geo_location(request.remote_addr)[:100]
+                                }
+                                db.session.execute(
+                                    text("""
+                                        INSERT INTO user_activities
+                                            (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                                        VALUES
+                                            (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                                    """),
+                                    new_activity
+                                )
+                                db.session.commit()
+                            except Exception as e:
+                                db.session.rollback()
+                                current_app.logger.error(f"Error logging activity [add_coupon_via_image_upload]: {e}")
+                            # -- end snippet --
 
                             show_coupon_form = True
                             flash("הטופס מולא בהצלחה. אנא בדוק וערוך אם נדרש.", "success")
@@ -701,15 +819,10 @@ def add_coupon():
                                        companies=companies,
                                        tags=tags)
 
-            # -----------------------------------------------------------------
-            # 3) טיפול בהזנה ידנית (Manual)
-            # -----------------------------------------------------------------
             elif 'submit_coupon' in request.form and coupon_form.submit_coupon.data:
                 current_app.logger.info("[DEBUG] Manual flow - user pressed submit_coupon")
-
                 if coupon_form.validate_on_submit():
                     code = coupon_form.code.data.strip()
-                    # המרות
                     try:
                         value = float(coupon_form.value.data) if coupon_form.value.data else 0
                     except Exception as e:
@@ -729,13 +842,10 @@ def add_coupon():
                     selected_company_id = coupon_form.company_id.data
                     other_company_name = (coupon_form.other_company.data or '').strip()
 
-                    # קביעה סופית של שם החברה
                     if selected_company_id == 'other':
                         if not other_company_name:
                             flash('יש להזין שם חברה חדשה.', 'danger')
                             return redirect(url_for('coupons.add_coupon', manual='true'))
-
-                        # בדיקה אם החברה כבר קיימת
                         existing_company = Company.query.filter_by(name=other_company_name).first()
                         if existing_company:
                             company = existing_company
@@ -754,7 +864,6 @@ def add_coupon():
                             flash('חברה נבחרה אינה תקפה.', 'danger')
                             return redirect(url_for('coupons.add_coupon', manual='true'))
 
-                    # בדיקת סלוטים
                     if current_user.slots_automatic_coupons <= 0:
                         flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
                         return redirect(url_for('coupons.add_coupon', manual='true'))
@@ -762,7 +871,6 @@ def add_coupon():
                     current_user.slots_automatic_coupons -= 1
                     db.session.commit()
 
-                    # יצירת הקופון
                     new_coupon = Coupon(
                         code=code,
                         value=value,
@@ -775,8 +883,6 @@ def add_coupon():
                         purpose=purpose
                     )
 
-                    # כאן אנחנו קוראים ל־get_most_common_tag_for_company
-                    # כדי לייחס את התגית הנפוצה (במקום קריאת השדות tag_id / other_tag).
                     chosen_company_name = company.name
                     current_app.logger.info(f"[DEBUG] Manual flow => chosen_company_name = '{chosen_company_name}'")
                     found_tag = get_most_common_tag_for_company(chosen_company_name)
@@ -784,15 +890,39 @@ def add_coupon():
 
                     if found_tag:
                         new_coupon.tags.append(found_tag)
-                    else:
-                        # אין תגית נפוצה - אפשר (לבחירתך) ליצור תגית כללית,
-                        # או להשאיר בלי תגיות
-                        current_app.logger.info("[DEBUG] No common tag found. The coupon will have no tag.")
 
                     db.session.add(new_coupon)
 
                     try:
                         db.session.commit()
+
+                        # -- activity log snippet --
+                        try:
+                            new_activity = {
+                                "user_id": current_user.id,
+                                "coupon_id": new_coupon.id,
+                                "timestamp": datetime.utcnow(),
+                                "action": "add_coupon_manual_submit",
+                                "device": request.headers.get('User-Agent', '')[:50],
+                                "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                                "ip_address": request.remote_addr[:45],
+                                "geo_location": get_geo_location(request.remote_addr)[:100]
+                            }
+                            db.session.execute(
+                                text("""
+                                    INSERT INTO user_activities
+                                        (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                                    VALUES
+                                        (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                                """),
+                                new_activity
+                            )
+                            db.session.commit()
+                        except Exception as e:
+                            db.session.rollback()
+                            current_app.logger.error(f"Error logging activity [add_coupon_manual_submit]: {e}")
+                        # -- end snippet --
+
                         flash('קופון נוסף בהצלחה!', 'success')
                         return redirect(url_for('coupons.show_coupons'))
                     except IntegrityError as e:
@@ -806,7 +936,6 @@ def add_coupon():
                 else:
                     flash("הטופס אינו תקין. אנא בדוק את הנתונים שהזנת.", "danger")
 
-        # טעינה ראשונית של הדף (GET)
         return render_template(
             'add_coupon.html',
             coupon_form=coupon_form,
@@ -815,16 +944,19 @@ def add_coupon():
             companies=companies,
             tags=tags
         )
-
     except Exception as e:
         current_app.logger.error(f"[ERROR] Unhandled exception in add_coupon: {e}")
         traceback.print_exc()
         flash("אירעה שגיאה בלתי צפויה. אנא נסה שוב מאוחר יותר.", "danger")
         return redirect(url_for('coupons.add_coupon'))
 
+
 @coupons_bp.route('/add_coupon_with_image.html', methods=['GET', 'POST'])
 @login_required
 def add_coupon_with_image_html():
+    # -- activity log snippet --
+    log_user_activity("add_coupon_with_image_html_view", None)
+
     form = CouponForm()
     if request.method == 'POST':
         image_file = request.files.get('coupon_image')
@@ -853,23 +985,24 @@ def add_coupon_with_image_html():
                 flash("לא ניתן היה לחלץ פרטי קופון מהתמונה.", "danger")
     return render_template('add_coupon_with_image.html', form=form)
 
+
 @coupons_bp.route('/add_coupon_with_image', methods=['GET', 'POST'])
 @login_required
 def add_coupon_with_image():
+    # -- activity log snippet --
+    log_user_activity("add_coupon_with_image_view", None)
+
     upload_image_form = UploadImageForm()
     coupon_form = CouponForm()
     show_coupon_form = False
 
-    # הגדרת הבחירות לשדות company_id ו-tag_id מתוך הדאטהבייס
     companies = Company.query.all()
     tags = Tag.query.all()
 
-    # הגדרת הבחירות בצורה זהה ל-add_coupon
     coupon_form.company_id.choices = [('', 'בחר')] + [(str(company.id), company.name) for company in companies] + [('other', 'אחר')]
     coupon_form.tag_id.choices = [('', 'בחר')] + [(str(tag.id), tag.name) for tag in tags] + [('other', 'אחר')]
 
     if upload_image_form.validate_on_submit() and upload_image_form.submit_upload_image.data:
-        # טיפול בהעלאת התמונה
         image_file = upload_image_form.coupon_image.data
         if image_file:
             filename = secure_filename(image_file.filename)
@@ -879,14 +1012,12 @@ def add_coupon_with_image():
             image_path = os.path.join(upload_folder, filename)
             image_file.save(image_path)
 
-            # עיבוד התמונה והפקת פרטי הקופון
             try:
                 coupon_df, pricing_df = extract_coupon_detail_image_proccess(
                     client_id=os.getenv('IMGUR_CLIENT_ID'),
                     image_path=image_path,
                     companies_list=[company.name for company in companies]
                 )
-
             except Exception as e:
                 current_app.logger.error(f"Error extracting coupon from image: {e}")
                 flash(f"אירעה שגיאה בעת עיבוד התמונה: {e}", "danger")
@@ -900,7 +1031,6 @@ def add_coupon_with_image():
                 company_name = coupon_data.get('חברה', '').strip()
                 tag_name = coupon_data.get('תגיות', '').strip()
 
-                # חיפוש החברה באמצעות fuzzy matching
                 best_match_ratio = 0
                 best_company = None
                 for comp in companies:
@@ -916,7 +1046,6 @@ def add_coupon_with_image():
                     coupon_form.company_id.data = 'other'
                     coupon_form.other_company.data = company_name
 
-                # חיפוש התגית באמצעות fuzzy matching
                 best_tag_ratio = 0
                 best_tag = None
                 for tag in tags:
@@ -932,18 +1061,15 @@ def add_coupon_with_image():
                     coupon_form.tag_id.data = 'other'
                     coupon_form.other_tag.data = tag_name
 
-                # מילוי יתר השדות
                 coupon_form.code.data = coupon_data.get('קוד קופון')
                 coupon_form.cost.data = float(coupon_data.get('עלות', 0))
                 coupon_form.value.data = float(coupon_data.get('ערך מקורי', 0))
 
-                # אחוז הנחה
                 if 'אחוז הנחה' in coupon_df.columns:
                     coupon_form.discount_percentage.data = float(coupon_data.get('אחוז הנחה', 0))
                 else:
-                    coupon_form.discount_percentage.data = 0  # ברירת מחדל
+                    coupon_form.discount_percentage.data = 0
 
-                # תאריך תפוגה
                 expiration_str = coupon_data.get('תאריך תפוגה')
                 if expiration_str:
                     try:
@@ -953,14 +1079,10 @@ def add_coupon_with_image():
                 else:
                     coupon_form.expiration.data = None
 
-                # תיאור
                 coupon_form.description.data = coupon_data.get('תיאור', '')
-
-                # קוד לשימוש חד פעמי ומטרת הקופון
                 coupon_form.is_one_time.data = bool(coupon_data.get('קוד לשימוש חד פעמי'))
                 coupon_form.purpose.data = coupon_data.get('מטרת הקופון', '') if coupon_form.is_one_time.data else ''
 
-                # הפחתת סלוטים
                 if current_user.slots_automatic_coupons > 0:
                     current_user.slots_automatic_coupons -= 1
                     db.session.commit()
@@ -968,20 +1090,42 @@ def add_coupon_with_image():
                     flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
                     return redirect(url_for('coupons.add_coupon_with_image'))
 
+                # -- activity log snippet --
+                try:
+                    new_activity = {
+                        "user_id": current_user.id,
+                        "coupon_id": None,
+                        "timestamp": datetime.utcnow(),
+                        "action": "add_coupon_with_image_submit_image",
+                        "device": request.headers.get('User-Agent', '')[:50],
+                        "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                        "ip_address": request.remote_addr[:45],
+                        "geo_location": get_geo_location(request.remote_addr)[:100]
+                    }
+                    db.session.execute(
+                        text("""
+                            INSERT INTO user_activities
+                                (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                            VALUES
+                                (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                        """),
+                        new_activity
+                    )
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error logging activity [add_coupon_with_image_submit_image]: {e}")
+                # -- end snippet --
+
                 show_coupon_form = True
                 flash("הטופס מולא בהצלחה. אנא בדוק וערוך אם נדרש.", "success")
             else:
-                # כאן נוסיף סיבה
                 error_reason = "לא נמצאו נתונים בתמונה."
-                # אם pricing_df מכיל מידע על השגיאה, אפשר לשלוף משם:
                 if not pricing_df.empty and 'error_message' in pricing_df.columns:
                     error_reason = pricing_df.iloc[0]['error_message']
-
                 flash(f"לא ניתן היה לחלץ פרטי קופון מהתמונה: {error_reason}", "danger")
 
     elif coupon_form.validate_on_submit() and coupon_form.submit_coupon.data:
-        # טיפול בהגשת הטופס למילוי הקופון
-        # מציאת או יצירת החברה
         selected_company_id = coupon_form.company_id.data
         other_company_name = coupon_form.other_company.data.strip() if coupon_form.other_company.data else ''
 
@@ -1007,7 +1151,6 @@ def add_coupon_with_image():
                 flash('חברה נבחרה אינה תקפה.', 'danger')
                 return redirect(url_for('coupons.add_coupon_with_image'))
 
-        # מציאת או יצירת התגית
         selected_tag_id = coupon_form.tag_id.data
         other_tag_name = coupon_form.other_tag.data.strip() if coupon_form.other_tag.data else ''
         if selected_tag_id == 'other':
@@ -1032,7 +1175,6 @@ def add_coupon_with_image():
                 flash('תגית נבחרה אינה תקפה.', 'danger')
                 return redirect(url_for('coupons.add_coupon_with_image'))
 
-        # בדיקת תקינות נתונים ושמירה למסד הנתונים
         code = coupon_form.code.data.strip()
         try:
             value = float(coupon_form.value.data)
@@ -1063,12 +1205,10 @@ def add_coupon_with_image():
         is_one_time = coupon_form.is_one_time.data
         purpose = coupon_form.purpose.data.strip() if is_one_time and coupon_form.purpose.data else None
 
-        # בדיקת ייחודיות קוד הקופון
         if Coupon.query.filter_by(code=code).first():
             flash('קוד קופון זה כבר קיים. אנא בחר קוד אחר.', 'danger')
             return redirect(url_for('coupons.add_coupon_with_image'))
 
-        # בדיקת תאריך תפוגה
         current_date = datetime.utcnow().date()
         if expiration and expiration < current_date:
             flash('תאריך התפוגה של הקופון כבר עבר. אנא עדכן תאריך או בחר קופון אחר.', 'danger')
@@ -1081,7 +1221,6 @@ def add_coupon_with_image():
                 form=coupon_form
             )
 
-        # יצירת האובייקט החדש של הקופון
         new_coupon = Coupon(
             code=code,
             value=value,
@@ -1102,6 +1241,7 @@ def add_coupon_with_image():
         db.session.add(new_coupon)
         try:
             db.session.commit()
+
             notification = Notification(
                 user_id=current_user.id,
                 message=f"הקופון {new_coupon.code} נוסף בהצלחה.",
@@ -1109,6 +1249,33 @@ def add_coupon_with_image():
             )
             db.session.add(notification)
             db.session.commit()
+
+            # -- activity log snippet --
+            try:
+                new_activity = {
+                    "user_id": current_user.id,
+                    "coupon_id": new_coupon.id,
+                    "timestamp": datetime.utcnow(),
+                    "action": "add_coupon_with_image_submit_final",
+                    "device": request.headers.get('User-Agent', '')[:50],
+                    "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                    "ip_address": request.remote_addr[:45],
+                    "geo_location": get_geo_location(request.remote_addr)[:100]
+                }
+                db.session.execute(
+                    text("""
+                        INSERT INTO user_activities
+                            (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                        VALUES
+                            (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                    """),
+                    new_activity
+                )
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error logging activity [add_coupon_with_image_submit_final]: {e}")
+            # -- end snippet --
 
             flash('קופון נוסף בהצלחה!', 'success')
             return redirect(url_for('coupons.show_coupons'))
@@ -1128,21 +1295,20 @@ def add_coupon_with_image():
                            show_coupon_form=show_coupon_form,
                            form=upload_image_form if not show_coupon_form else coupon_form)
 
+
 @coupons_bp.route('/add_coupon_manual', methods=['GET', 'POST'])
 @login_required
 def add_coupon_manual():
+    # -- activity log snippet --
+    log_user_activity("add_coupon_manual_view", None)
+
     coupon_form = CouponForm()
-    # אתחול הטופס ללא נתונים
     if coupon_form.validate_on_submit():
-        # טיפול בהוספת הקופון
         pass
     return render_template('add_coupon.html', coupon_form=coupon_form, show_coupon_form=True)
 
+
 def convert_date_format(date_input):
-    """
-    המרת תאריך מפורמט DD/MM/YYYY לפורמט YYYY-MM-DD.
-    אם הפורמט אינו תקין, מחזיר None.
-    """
     if isinstance(date_input, str):
         try:
             return datetime.strptime(date_input, '%d/%m/%Y').date()
@@ -1155,23 +1321,24 @@ def convert_date_format(date_input):
     else:
         return None
 
+
 @coupons_bp.route('/edit_coupon/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_coupon(id):
     coupon = Coupon.query.get_or_404(id)
 
-    # בדיקת הרשאות
+    # -- activity log snippet --
+    log_user_activity("edit_coupon_view", None)
+
     if coupon.user_id != current_user.id:
         flash('אינך מורשה לערוך קופון זה.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
 
-    form = EditCouponForm(obj=coupon)  # אתחול הטופס עם נתוני הקופון
+    form = EditCouponForm(obj=coupon)
 
     if form.validate_on_submit():
         try:
-            old_value = coupon.value  # שמירת הערך הישן להשוואה
-
-            # עדכון השדות
+            old_value = coupon.value
             coupon.company = form.company.data.strip()
             coupon.code = form.code.data.strip()
             coupon.value = float(form.value.data)
@@ -1179,9 +1346,8 @@ def edit_coupon(id):
             coupon.description = form.description.data or ''
             coupon.is_one_time = form.is_one_time.data
             coupon.purpose = form.purpose.data.strip() if form.is_one_time.data else None
-            coupon.expiration = form.expiration.data if form.expiration.data else None  # צריך להיות אובייקט date או None
+            coupon.expiration = form.expiration.data if form.expiration.data else None
 
-            # טיפול בתגיות
             if form.tags.data:
                 tag_names = [tag.strip() for tag in form.tags.data.split(',') if tag.strip()]
                 coupon.tags.clear()
@@ -1198,7 +1364,6 @@ def edit_coupon(id):
 
             db.session.commit()
 
-            # עדכון רשומת העסקה הראשונית אם הערך השתנה
             if coupon.value != old_value:
                 initial_transaction = CouponTransaction.query.filter_by(
                     coupon_id=coupon.id,
@@ -1208,7 +1373,6 @@ def edit_coupon(id):
                 if initial_transaction:
                     initial_transaction.recharge_amount = coupon.value
                 else:
-                    # יצירת רשומת עסקה ראשונית אם לא קיימת
                     initial_transaction = CouponTransaction(
                         coupon_id=coupon.id,
                         card_number=coupon.code,
@@ -1222,20 +1386,45 @@ def edit_coupon(id):
                     db.session.add(initial_transaction)
                 db.session.commit()
 
+            # -- activity log snippet --
+            try:
+                new_activity = {
+                    "user_id": current_user.id,
+                    "coupon_id": coupon.id,
+                    "timestamp": datetime.utcnow(),
+                    "action": "edit_coupon_submit",
+                    "device": request.headers.get('User-Agent', '')[:50],
+                    "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                    "ip_address": request.remote_addr[:45],
+                    "geo_location": get_geo_location(request.remote_addr)[:100]
+                }
+                db.session.execute(
+                    text("""
+                        INSERT INTO user_activities
+                            (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                        VALUES
+                            (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                    """),
+                    new_activity
+                )
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error logging activity [edit_coupon_submit]: {e}")
+            # -- end snippet --
+
             flash('הקופון עודכן בהצלחה.', 'success')
             return redirect(url_for('coupons.coupon_detail', id=coupon.id))
 
         except IntegrityError:
             db.session.rollback()
             flash('קוד קופון זה כבר קיים. אנא בחר קוד אחר.', 'danger')
-
         except Exception as e:
             db.session.rollback()
             flash('אירעה שגיאה בעת עדכון הקופון. נסה שוב.', 'danger')
             current_app.logger.error(f"Error updating coupon: {e}")
 
     elif request.method == 'GET':
-        # מילוי הטופס עם נתוני הקופון הקיימים
         if coupon.expiration:
             if isinstance(coupon.expiration, str):
                 try:
@@ -1248,35 +1437,61 @@ def edit_coupon(id):
         form.expiration.data = coupon.expiration
         form.tags.data = ', '.join([tag.name for tag in coupon.tags])
 
-    # הכנת תגיות קיימות והצעות לתגיות
     existing_tags = ', '.join([tag.name for tag in coupon.tags])
     top_tags = Tag.query.order_by(Tag.count.desc()).limit(3).all()
     top_tags = [tag.name for tag in top_tags]
 
     return render_template('edit_coupon.html', form=form, coupon=coupon, existing_tags=existing_tags, top_tags=top_tags)
 
+
 @coupons_bp.route('/delete_coupons', methods=['GET', 'POST'])
 @login_required
 def select_coupons_to_delete():
-    form = DeleteCouponsForm()
-    # שליפת הקופונים של המשתמש ומיון מהחדש לישן לפי date_added
-    coupons = Coupon.query.filter_by(user_id=current_user.id).order_by(Coupon.date_added.desc()).all()
+    # -- activity log snippet --
+    log_user_activity("select_coupons_to_delete_view", None)
 
-    # הגדרת הבחירות לשדה ה-select
+    form = DeleteCouponsForm()
+    coupons = Coupon.query.filter_by(user_id=current_user.id).order_by(Coupon.date_added.desc()).all()
     form.coupon_ids.choices = [(coupon.id, f"{coupon.company} - {coupon.code}") for coupon in coupons]
 
     if form.validate_on_submit():
         selected_ids = form.coupon_ids.data
         if selected_ids:
-            # מחיקת הקופונים שנבחרו
             Coupon.query.filter(Coupon.id.in_(selected_ids)).delete(synchronize_session=False)
             db.session.commit()
+
+            try:
+                new_activity = {
+                    "user_id": current_user.id,
+                    "coupon_id": None,
+                    "timestamp": datetime.utcnow(),
+                    "action": f"deleted_coupons_{selected_ids}",
+                    "device": request.headers.get('User-Agent', '')[:50],
+                    "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                    "ip_address": request.remote_addr[:45],
+                    "geo_location": get_geo_location(request.remote_addr)[:100]
+                }
+                db.session.execute(
+                    text("""
+                        INSERT INTO user_activities
+                            (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                        VALUES
+                            (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                    """),
+                    new_activity
+                )
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error logging activity [deleted_coupons]: {e}")
+
             flash('הקופונים נמחקו בהצלחה.', 'success')
         else:
             flash('לא נבחרו קופונים למחיקה.', 'warning')
         return redirect(url_for('coupons.show_coupons'))
 
     return render_template('delete_coupons.html', form=form, coupons=coupons)
+
 
 def get_companies():
     response = supabase.table("companies").select("*").execute()
@@ -1286,6 +1501,7 @@ def get_companies():
         print("Error fetching companies:", response.error_message)
         return []
 
+
 @coupons_bp.route('/coupon_detail/<int:id>')
 @login_required
 def coupon_detail(id):
@@ -1293,18 +1509,17 @@ def coupon_detail(id):
     is_owner = coupon.user_id == current_user.id
     mark_form = MarkCouponAsUsedForm()
     delete_form = DeleteCouponForm()
-    update_form = UpdateCouponUsageForm()  # ודא שיש לך את הטופס הזה
+    update_form = UpdateCouponUsageForm()
 
-    # שאילתת עסקאות ממיינות לפי תאריך
+    log_user_activity("view_coupon", None)
+
     transactions = CouponTransaction.query.filter_by(coupon_id=coupon.id).order_by(
         CouponTransaction.transaction_date.asc()).all()
 
-    # שליפת כל החברות ויצירת מילון מיפוי עבור לוגואים
     companies = Company.query.all()
     company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
-    company_logo = company_logo_mapping.get(coupon.company.lower(), 'default_logo.png')  # הגדר לוגו ברירת מחדל אם אין
+    company_logo = company_logo_mapping.get(coupon.company.lower(), 'default_logo.png')
 
-    # חישוב אחוז ההנחה אם הקופון למכירה
     discount_percentage = None
     if coupon.is_for_sale and coupon.value > 0:
         discount_percentage = ((coupon.cost - coupon.value) / coupon.cost) * 100
@@ -1322,10 +1537,13 @@ def coupon_detail(id):
         discount_percentage=discount_percentage
     )
 
+
 @coupons_bp.route('/update_coupon_transactions', methods=['POST'])
 @login_required
 def update_coupon_transactions():
-    # בדיקת הרשאות
+    # -- activity log snippet --
+    log_user_activity("update_coupon_transactions", None)
+
     if not current_user.is_admin:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         coupon_id = request.form.get('coupon_id')
@@ -1343,11 +1561,8 @@ def update_coupon_transactions():
             flash('לא ניתן לעדכן נתונים ללא מזהה קופון תקין.', 'danger')
             return redirect(url_for('coupons.show_coupons'))
 
-    # קבלת הנתונים מהטופס
     coupon_id = request.form.get('coupon_id')
     coupon_code = request.form.get('coupon_code')
-    print(f"coupon_id: {coupon_id}, coupon_code: {coupon_code}")
-
     coupon = None
     if coupon_id:
         coupon = Coupon.query.get(coupon_id)
@@ -1358,13 +1573,9 @@ def update_coupon_transactions():
         flash('לא ניתן לעדכן נתונים ללא מזהה קופון תקין.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
 
-    # קבלת הנתונים ועדכון העסקאות
     df = get_coupon_data(coupon.code)
     if df is not None:
-        # מחיקת עסקאות קודמות שהגיעו מ-Multipass בלבד
         CouponTransaction.query.filter_by(coupon_id=coupon.id, source='Multipass').delete()
-
-        # הוספת עסקאות חדשות
         for index, row in df.iterrows():
             transaction = CouponTransaction(
                 coupon_id=coupon.id,
@@ -1374,11 +1585,10 @@ def update_coupon_transactions():
                 recharge_amount=row['recharge_amount'] or 0,
                 usage_amount=row['usage_amount'] or 0,
                 reference_number=row.get('reference_number', ''),
-                source='Multipass'  # ציון שהעסקה הגיעה מ-Multipass
+                source='Multipass'
             )
             db.session.add(transaction)
 
-        # עדכון השדה used_value של הקופון
         total_used = df['usage_amount'].sum()
         coupon.used_value = total_used
 
@@ -1389,39 +1599,36 @@ def update_coupon_transactions():
 
     return redirect(url_for('coupons.coupon_detail', id=coupon.id))
 
+
 @coupons_bp.route('/mark_coupon_as_fully_used/<int:id>', methods=['POST'])
 @login_required
 def mark_coupon_as_fully_used(id):
     coupon = Coupon.query.get_or_404(id)
 
-    # בדיקת הרשאה
+    # -- activity log snippet --
+    log_user_activity("mark_coupon_as_fully_used", None)
+
     if coupon.user_id != current_user.id:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
 
-    # בדיקה אם הקופון כבר נוצל או לא פעיל
     if coupon.status != 'פעיל':
         flash('הקופון כבר נוצל או לא פעיל.', 'warning')
         return redirect(url_for('coupons.coupon_detail', id=id))
 
-    # בדיקה אם הקופון הוא לא חד-פעמי (כי לחד-פעמי כבר יש רוטה אחרת)
     if coupon.is_one_time:
         flash('קופון זה הוא חד-פעמי. אנא השתמש בכפתור המתאים לו.', 'warning')
         return redirect(url_for('coupons.coupon_detail', id=id))
 
-    # מחשבים כמה עוד נותר להשתמש
     remaining_amount = coupon.value - coupon.used_value
     if remaining_amount <= 0:
         flash('אין ערך נותר בקופון, הוא כבר נוצל במלואו.', 'info')
         return redirect(url_for('coupons.coupon_detail', id=id))
 
-    # ביצוע העדכון
     try:
-        # עדכון הערך הנוצל
         coupon.used_value = coupon.value
-        update_coupon_status(coupon)  # יעדכן את הסטטוס ל"נוצל"
+        update_coupon_status(coupon)
 
-        # יצירת רשומת שימוש
         usage = CouponUsage(
             coupon_id=coupon.id,
             used_amount=remaining_amount,
@@ -1431,7 +1638,6 @@ def mark_coupon_as_fully_used(id):
         )
         db.session.add(usage)
 
-        # יצירת התראה למשתמש
         notification = Notification(
             user_id=coupon.user_id,
             message=f"הקופון {coupon.code} נוצל במלואו.",
@@ -1440,6 +1646,32 @@ def mark_coupon_as_fully_used(id):
         db.session.add(notification)
 
         db.session.commit()
+
+        try:
+            success_activity = {
+                "user_id": current_user.id,
+                "coupon_id": coupon.id,
+                "timestamp": datetime.utcnow(),
+                "action": "mark_coupon_as_fully_used_success",
+                "device": request.headers.get('User-Agent', '')[:50],
+                "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                "ip_address": request.remote_addr[:45],
+                "geo_location": get_geo_location(request.remote_addr)[:100]
+            }
+            db.session.execute(
+                text("""
+                    INSERT INTO user_activities 
+                        (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                    VALUES 
+                        (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                """),
+                success_activity
+            )
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error logging activity [mark_coupon_as_fully_used_success]: {e}")
+
         flash('הקופון סומן כנוצל לגמרי בהצלחה.', 'success')
     except Exception as e:
         db.session.rollback()
@@ -1448,17 +1680,19 @@ def mark_coupon_as_fully_used(id):
 
     return redirect(url_for('coupons.coupon_detail', id=id))
 
+
 @coupons_bp.route('/update_coupon/<int:id>', methods=['GET', 'POST'])
 @login_required
 def update_coupon(id):
     coupon = Coupon.query.get_or_404(id)
 
-    # בדיקת הרשאות
+    # -- activity log snippet --
+    log_user_activity("update_coupon_view", None)
+
     if coupon.user_id != current_user.id:
         flash('אין לך הרשאה לעדכן קופון זה.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
 
-    # בדיקת אם הקופון הוא חד-פעמי
     if coupon.is_one_time:
         coupon.status = "נוצל"
         try:
@@ -1482,11 +1716,9 @@ def update_coupon(id):
             return redirect(url_for('coupons.update_coupon_usage', id=id))
 
         try:
-            # עדכון כמות השימוש
             coupon.used_value += new_used_amount
             update_coupon_status(coupon)
 
-            # יצירת רשומת שימוש חדשה
             usage = CouponUsage(
                 coupon_id=coupon.id,
                 used_amount=new_used_amount,
@@ -1496,7 +1728,6 @@ def update_coupon(id):
             )
             db.session.add(usage)
 
-            # יצירת התראה למשתמש
             notification = Notification(
                 user_id=coupon.user_id,
                 message=f"השתמשת ב-{new_used_amount} ש״ח בקופון {coupon.code}.",
@@ -1505,8 +1736,34 @@ def update_coupon(id):
             db.session.add(notification)
 
             db.session.commit()
+
+            try:
+                new_activity = {
+                    "user_id": current_user.id,
+                    "coupon_id": coupon.id,
+                    "timestamp": datetime.utcnow(),
+                    "action": "update_coupon_usage_success",
+                    "device": request.headers.get('User-Agent', '')[:50],
+                    "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                    "ip_address": request.remote_addr[:45],
+                    "geo_location": get_geo_location(request.remote_addr)[:100]
+                }
+                db.session.execute(
+                    text("""
+                        INSERT INTO user_activities 
+                            (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                        VALUES 
+                            (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                    """),
+                    new_activity
+                )
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error logging activity [update_coupon_usage_success]: {e}")
+
             flash('כמות השימוש עודכנה בהצלחה.', 'success')
-            return redirect(url_for('coupons.coupon_detail', id=id))
+            return redirect(url_for('coupons.coupon_detail', id=coupon.id))
         except Exception as e:
             db.session.rollback()
             flash('אירעה שגיאה בעת עדכון כמות השימוש.', 'danger')
@@ -1514,9 +1771,13 @@ def update_coupon(id):
 
     return render_template('update_coupon_usage.html', form=form, coupon=coupon)
 
+
 @coupons_bp.route('/delete_coupon/<int:id>', methods=['POST'])
 @login_required
 def delete_coupon(id):
+    # -- activity log snippet --
+    log_user_activity("delete_coupon_attempt", None)
+
     form = DeleteCouponForm()
     if form.validate_on_submit():
         coupon = Coupon.query.get_or_404(id)
@@ -1524,20 +1785,15 @@ def delete_coupon(id):
             flash('אינך מורשה למחוק קופון זה.', 'danger')
             return redirect(url_for('coupons.show_coupons'))
 
-        # בדיקת עסקאות קשורות
         transactions = Transaction.query.filter_by(coupon_id=coupon.id).all()
         if transactions:
-            # נוביל לדף אישור המחיקה
             return redirect(url_for('coupons.confirm_delete_coupon', id=id))
         else:
-            # המשך במחיקה כרגיל
-            # הפחתת ספירת התגיות
             for tag in coupon.tags:
                 tag.count -= 1
                 if tag.count < 0:
                     tag.count = 0
 
-            # מחיקת קובץ ה-Excel הקשור
             data_directory = "multipass/input_html"
             xlsx_filename = f"coupon_{coupon.code}_{coupon.id}.xlsx"
             xlsx_path = os.path.join(data_directory, xlsx_filename)
@@ -1545,9 +1801,40 @@ def delete_coupon(id):
                 os.remove(xlsx_path)
 
             db.session.delete(coupon)
-            db.session.commit()
-            flash(f'קופון "{coupon.code}" נמחק בהצלחה!', 'success')
-            return redirect(url_for('coupons.show_coupons'))
+            try:
+                db.session.commit()
+
+                try:
+                    success_activity = {
+                        "user_id": current_user.id,
+                        "coupon_id": id,
+                        "timestamp": datetime.utcnow(),
+                        "action": "delete_coupon_success",
+                        "device": request.headers.get('User-Agent', '')[:50],
+                        "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                        "ip_address": request.remote_addr[:45],
+                        "geo_location": get_geo_location(request.remote_addr)[:100]
+                    }
+                    db.session.execute(
+                        text("""
+                            INSERT INTO user_activities 
+                                (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                            VALUES 
+                                (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                        """),
+                        success_activity
+                    )
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Error logging activity [delete_coupon_success]: {e}")
+
+                flash(f'קופון "{coupon.code}" נמחק בהצלחה!', 'success')
+                return redirect(url_for('coupons.show_coupons'))
+            except:
+                db.session.rollback()
+                flash('שגיאה בעת מחיקת הקופון.', 'danger')
+                return redirect(url_for('coupons.show_coupons'))
     else:
         flash('שגיאה במחיקת הקופון. נסה שוב.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
@@ -1556,6 +1843,10 @@ def delete_coupon(id):
 @login_required
 def confirm_delete_coupon(id):
     coupon = Coupon.query.get_or_404(id)
+
+    # -- activity log snippet --
+    log_user_activity("confirm_delete_coupon_view", None)
+
     if coupon.user_id != current_user.id:
         flash('אינך מורשה למחוק קופון זה.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
@@ -1564,25 +1855,21 @@ def confirm_delete_coupon(id):
     if form.validate_on_submit():
         if form.submit.data:
             try:
-                # מחיקת העסקאות הקשורות
                 transactions = Transaction.query.filter_by(coupon_id=coupon.id).all()
                 for transaction in transactions:
                     db.session.delete(transaction)
 
-                # הפחתת ספירת התגיות
                 for tag in coupon.tags:
                     tag.count -= 1
                     if tag.count < 0:
                         tag.count = 0
 
-                # מחיקת קובץ ה-Excel הקשור
                 data_directory = "multipass/input_html"
                 xlsx_filename = f"coupon_{coupon.code}_{coupon.id}.xlsx"
                 xlsx_path = os.path.join(data_directory, xlsx_filename)
                 if os.path.exists(xlsx_path):
                     os.remove(xlsx_path)
 
-                # מחיקת הקופון
                 db.session.delete(coupon)
                 db.session.commit()
                 flash(f'קופון "{coupon.code}" נמחק בהצלחה!', 'success')
@@ -1592,48 +1879,81 @@ def confirm_delete_coupon(id):
                 current_app.logger.error(f"Error deleting coupon {coupon.id}: {e}")
                 flash('אירעה שגיאה במחיקת הקופון. נסה שוב.', 'danger')
         elif form.cancel.data:
-            # ביטול המחיקה
             flash('המחיקה בוטלה.', 'info')
             return redirect(url_for('coupons.coupon_detail', id=id))
 
     return render_template('confirm_delete.html', coupon=coupon, form=form)
+
 
 @coupons_bp.route('/edit_usage/<int:usage_id>', methods=['GET', 'POST'])
 @login_required
 def edit_usage(usage_id):
     usage = CouponUsage.query.get_or_404(usage_id)
     coupon = Coupon.query.get_or_404(usage.coupon_id)
+
+    # -- activity log snippet --
+    log_user_activity("edit_usage_view", None)
+
     if coupon.user_id != current_user.id:
         flash('אינך מורשה לערוך שימוש זה.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
+
     if request.method == 'POST':
         new_used_amount = float(request.form['used_amount'])
         if new_used_amount <= 0:
             flash('כמות השימוש חייבת להיות חיובית.', 'danger')
             return redirect(url_for('coupons.edit_usage', usage_id=usage_id))
 
-        # Adjust the used_value
         coupon.used_value -= usage.used_amount
         if (coupon.used_value + new_used_amount) > coupon.value:
             flash('הכמות שהשתמשת בה גדולה מערך הקופון הנותר.', 'danger')
-            coupon.used_value += usage.used_amount  # Revert the change
+            coupon.used_value += usage.used_amount
             return redirect(url_for('coupons.edit_usage', usage_id=usage_id))
 
         usage.used_amount = new_used_amount
         coupon.used_value += new_used_amount
-
         update_coupon_status(coupon)
 
         db.session.commit()
+
+        # -- activity log snippet --
+        try:
+            new_activity = {
+                "user_id": current_user.id,
+                "coupon_id": coupon.id,
+                "timestamp": datetime.utcnow(),
+                "action": "edit_usage_success",
+                "device": request.headers.get('User-Agent', '')[:50],
+                "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                "ip_address": request.remote_addr[:45],
+                "geo_location": get_geo_location(request.remote_addr)[:100]
+            }
+            db.session.execute(
+                text("""
+                    INSERT INTO user_activities 
+                        (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                    VALUES 
+                        (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                """),
+                new_activity
+            )
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error logging activity [edit_usage_success]: {e}")
+
         flash('רשומת השימוש עודכנה בהצלחה!', 'success')
         return redirect(url_for('coupons.coupon_detail', id=coupon.id))
 
     return render_template('edit_usage.html', usage=usage, coupon=coupon)
 
+
 @coupons_bp.route('/update_all_coupons')
 @login_required
 def update_all_coupons():
-    # קבלת כל הקופונים הפעילים של המשתמש הנוכחי שאינם נוצלו עד הסוף
+    # -- activity log snippet --
+    log_user_activity("update_all_coupons_view", None)
+
     active_coupons = Coupon.query.filter(
         Coupon.user_id == current_user.id,
         Coupon.status == 'פעיל'
@@ -1647,29 +1967,22 @@ def update_all_coupons():
     failed_coupons = []
 
     for coupon in active_coupons:
-        # בדיקת פורמט הקוד
         pattern = r'^(\d+)-(\d{4})$'
         match = re.match(pattern, coupon.code)
         if match:
             coupon_number_input = match.group(1)
-            # קריאת הפונקציה לקבלת הנתונים
             df = get_coupon_data(coupon_number_input)
             if df is not None and 'שימוש' in df.columns:
-                # עדכון השדה used_value עם סך 'שימוש'
                 total_used = df['שימוש'].sum()
                 if isinstance(total_used, (pd.Series, pd.DataFrame)):
-                    # אם total_used הוא Series, קבל את הערך הבודד
                     total_used = total_used.iloc[0] if not total_used.empty else 0.0
                 else:
                     total_used = float(total_used) if not pd.isna(total_used) else 0.0
 
-                # עדכון הערך החדש
                 coupon.used_value = total_used
                 update_coupon_status(coupon)
-
                 db.session.commit()
 
-                # שמירת ה-DataFrame כקובץ xlsx
                 data_directory = "multipass/input_html"
                 os.makedirs(data_directory, exist_ok=True)
                 xlsx_filename = f"coupon_{coupon.code}_{coupon.id}.xlsx"
@@ -1682,7 +1995,6 @@ def update_all_coupons():
         else:
             failed_coupons.append(coupon.code)
 
-    # הצגת הודעות למשתמש
     if updated_coupons:
         flash('הקופונים הבאים עודכנו בהצלחה: ' + ', '.join(updated_coupons), 'success')
     if failed_coupons:
@@ -1690,10 +2002,13 @@ def update_all_coupons():
 
     return redirect(url_for('coupons.show_coupons'))
 
+
 @coupons_bp.route('/update_all_coupons/process', methods=['POST'])
 @login_required
 def update_all_coupons_route():
-    # עדכון מרוכז לכל הקופונים הפעילים של המשתמש
+    # -- activity log snippet --
+    log_user_activity("update_all_coupons_process", None)
+
     updated, failed = update_all_active_coupons(current_user.id)
     if updated:
         flash(f"הקופונים הבאים עודכנו: {', '.join(updated)}", "success")
@@ -1701,15 +2016,23 @@ def update_all_coupons_route():
         flash(f"הקופונים הבאים נכשלו: {', '.join(failed)}", "danger")
     return redirect(url_for('coupons.show_coupons'))
 
+
 @coupons_bp.route('/get_tags')
 @login_required
 def get_tags():
+    # -- activity log snippet --
+    log_user_activity("get_tags", None)
+
     tags = [tag.name for tag in Tag.query.all()]
     return jsonify(tags)
+
 
 @coupons_bp.route('/usage_order')
 @login_required
 def usage_order():
+    # -- activity log snippet --
+    log_user_activity("usage_order_view", None)
+
     valid_coupons = Coupon.query.filter(Coupon.status == 'פעיל', Coupon.user_id == current_user.id).order_by(
         (Coupon.used_value / Coupon.value).desc()
     ).all()
@@ -1720,9 +2043,13 @@ def usage_order():
 
     return render_template('usage_order.html', valid_coupons=valid_coupons, expired_coupons=expired_coupons)
 
+
 @coupons_bp.route('/export_excel')
 @login_required
 def export_excel():
+    # -- activity log snippet --
+    log_user_activity("export_excel", None)
+
     coupons = Coupon.query.filter_by(user_id=current_user.id).all()
     data = []
     for coupon in coupons:
@@ -1742,12 +2069,10 @@ def export_excel():
     df = pd.DataFrame(data)
     output = BytesIO()
 
-    # שימוש בבלוק with לניהול ExcelWriter
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='קופונים')
 
     output.seek(0)
-
     return send_file(
         output,
         download_name='coupons.xlsx',
@@ -1755,16 +2080,19 @@ def export_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
+
 @coupons_bp.route('/export_pdf')
 @login_required
 def export_pdf():
+    # -- activity log snippet --
+    log_user_activity("export_pdf", None)
+
+
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import letter
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.lib.units import mm
 
-    # Register a font that supports Hebrew
     pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
 
     coupons = Coupon.query.filter_by(user_id=current_user.id).all()
@@ -1775,7 +2103,7 @@ def export_pdf():
     y = 750
     for coupon in coupons:
         text = f"קוד קופון: {coupon.code}, חברה: {coupon.company}, ערך נותר: {coupon.remaining_value} ש\"ח"
-        p.drawRightString(550, y, text)  # Adjust position for RTL
+        p.drawRightString(550, y, text)
         y -= 20
         if y < 50:
             p.showPage()
@@ -1786,9 +2114,13 @@ def export_pdf():
     output.seek(0)
     return send_file(output, download_name='coupons.pdf', as_attachment=True, mimetype='application/pdf')
 
+
 @coupons_bp.route('/request_to_buy/<int:coupon_id>', methods=['POST'])
 @login_required
 def request_to_buy(coupon_id):
+    # -- activity log snippet --
+    log_user_activity("request_to_buy_attempt", None)
+
     coupon = Coupon.query.get_or_404(coupon_id)
     if coupon.user_id == current_user.id:
         flash('אינך יכול לקנות את הקופון שלך.', 'warning')
@@ -1798,7 +2130,6 @@ def request_to_buy(coupon_id):
         flash('קופון זה אינו זמין למכירה.', 'danger')
         return redirect(url_for('coupons.marketplace'))
 
-    # יצירת טרנזקציה חדשה
     transaction = Transaction(
         coupon_id=coupon.id,
         buyer_id=current_user.id,
@@ -1806,11 +2137,8 @@ def request_to_buy(coupon_id):
         status='ממתין לאישור המוכר'
     )
     db.session.add(transaction)
-
-    # סימון הקופון כלא זמין
     coupon.is_available = False
 
-    # יצירת התראה למוכר
     notification = Notification(
         user_id=coupon.user_id,
         message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
@@ -1819,11 +2147,9 @@ def request_to_buy(coupon_id):
     db.session.add(notification)
     db.session.commit()
 
-    # עדכון זמן שליחת הבקשה מהקונה
     transaction.buyer_request_sent_at = datetime.utcnow()
     db.session.commit()
 
-    # שליחת מייל למוכר
     seller = coupon.user
     buyer = current_user
     try:
@@ -1835,30 +2161,30 @@ def request_to_buy(coupon_id):
 
     return redirect(url_for('marketplace.my_transactions'))
 
+
 @coupons_bp.route('/buy_coupon', methods=['POST'])
 @login_required
 def buy_coupon():
     """
     רוטה לטיפול בבקשת קנייה של קופון.
     """
+    # -- activity log snippet --
+    log_user_activity("buy_coupon_attempt", None)
+
     coupon_id = request.form.get('coupon_id', type=int)
     if not coupon_id:
         flash('קופון לא תקין.', 'danger')
         return redirect(url_for('coupons.marketplace'))
 
     coupon = Coupon.query.get_or_404(coupon_id)
-
-    # בדיקת אם המשתמש מנסה לקנות את הקופון שלו
     if coupon.user_id == current_user.id:
         flash('אינך יכול לקנות את הקופון שלך.', 'warning')
         return redirect(url_for('coupons.marketplace'))
 
-    # בדיקת זמינות הקופון למכירה
     if not coupon.is_available or not coupon.is_for_sale:
         flash('קופון זה אינו זמין למכירה.', 'danger')
         return redirect(url_for('coupons.marketplace'))
 
-    # יצירת טרנזקציה חדשה
     transaction = Transaction(
         coupon_id=coupon.id,
         buyer_id=current_user.id,
@@ -1866,11 +2192,8 @@ def buy_coupon():
         status='ממתין לאישור המוכר'
     )
     db.session.add(transaction)
-
-    # סימון הקופון כלא זמין
     coupon.is_available = False
 
-    # יצירת התראה למוכר
     notification = Notification(
         user_id=coupon.user_id,
         message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
@@ -1886,7 +2209,6 @@ def buy_coupon():
         flash('אירעה שגיאה בעת יצירת העסקה. נסה שוב מאוחר יותר.', 'danger')
         return redirect(url_for('coupons.marketplace'))
 
-    # שליחת מייל למוכר באמצעות הפונקציה הנפרדת
     seller = coupon.user
     buyer = current_user
     try:
@@ -1898,6 +2220,7 @@ def buy_coupon():
 
     return redirect(url_for('marketplace.my_transactions'))
 
+
 @coupons_bp.route('/coupon_request/<int:id>', methods=['GET', 'POST'])
 @login_required
 def coupon_request_detail(id):
@@ -1908,46 +2231,40 @@ def coupon_request_detail(id):
         flash('בקשת הקופון כבר טופלה.', 'danger')
         return redirect(url_for('coupons.marketplace'))
 
-    # יצירת טופס מחיקה
     delete_form = DeleteCouponRequestForm()
 
-    # אם הטופס הוגש
     if delete_form.validate_on_submit():
-        # מחיקת הבקשה
         db.session.delete(coupon_request)
         db.session.commit()
         flash('הבקשה נמחקה בהצלחה.', 'success')
-        return redirect(url_for('coupons.marketplace'))  # חזרה לשוק הקופונים
+        return redirect(url_for('coupons.marketplace'))
 
-    # שליפת פרטי המבקש
     requester = User.query.get(coupon_request.user_id)
-
-    # שליפת החברה לפי ה-ID מהבקשה
     company = Company.query.get(coupon_request.company)
-
-    # אם החברה לא נמצאה
     if not company:
         flash('החברה לא נמצאה.', 'danger')
         return redirect(url_for('coupons.marketplace'))
 
-    # יצירת מילון של מיפוי לוגו של החברה
     company_logo_mapping = {company.name.lower(): company.image_path for company in Company.query.all()}
 
     return render_template(
         'coupon_request_detail.html',
         coupon_request=coupon_request,
         requester=requester,
-        company=company,  # העברת אובייקט החברה
+        company=company,
         company_logo_mapping=company_logo_mapping,
-        delete_form=delete_form  # שליחה של הטופס לתבנית
+        delete_form=delete_form
     )
+
 
 @coupons_bp.route('/delete_coupon_request/<int:id>', methods=['POST'])
 @login_required
 def delete_coupon_request(id):
     coupon_request = CouponRequest.query.get_or_404(id)
 
-    # בדיקת הרשאה: המשתמש יכול למחוק רק בקשות שהוא יצר
+    # -- activity log snippet --
+    log_user_activity("delete_coupon_request_attempt", None)
+
     if coupon_request.user_id != current_user.id:
         flash('אין לך הרשאה למחוק בקשה זו.', 'danger')
         return redirect(url_for('coupons.marketplace'))
@@ -1955,29 +2272,79 @@ def delete_coupon_request(id):
     try:
         db.session.delete(coupon_request)
         db.session.commit()
+
+        # לוג הצלחת המחיקה
+        try:
+            new_activity = {
+                "user_id": current_user.id,
+                "coupon_id": None,
+                "timestamp": datetime.utcnow(),
+                "action": "delete_coupon_request_success",
+                "device": request.headers.get('User-Agent', '')[:50],
+                "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                "ip_address": request.remote_addr[:45],
+                "geo_location": get_geo_location(request.remote_addr)[:100]
+            }
+            db.session.execute(
+                text("""
+                    INSERT INTO user_activities
+                        (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                    VALUES
+                        (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                """),
+                new_activity
+            )
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error logging activity [delete_coupon_request_success]: {e}")
+
         flash('בקשת הקופון נמחקה בהצלחה.', 'success')
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting coupon request {id}: {e}")
         flash('אירעה שגיאה בעת מחיקת הבקשה.', 'danger')
 
-    return redirect(url_for('coupons.marketplace'))
+    return redirect(url_for('marketplace.my_transactions'))
 
 
 def complete_transaction(transaction):
+    # -- activity log snippet --
+    try:
+        ip_address = request.remote_addr if request else 'N/A'
+        user_agent = request.headers.get('User-Agent', '') if request else ''
+        geo_location = get_geo_location(ip_address) if request else 'N/A'
+        activity = {
+            "user_id": transaction.seller_id,
+            "coupon_id": transaction.coupon_id,
+            "timestamp": datetime.utcnow(),
+            "action": "complete_transaction",
+            "device": user_agent[:50] if user_agent else None,
+            "browser": user_agent.split(' ')[0][:50] if user_agent else None,
+            "ip_address": ip_address[:45] if ip_address != 'N/A' else 'N/A',
+            "geo_location": geo_location[:100] if geo_location != 'N/A' else 'N/A'
+        }
+        db.session.execute(
+            text("""
+                INSERT INTO user_activities 
+                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                VALUES 
+                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+            """),
+            activity
+        )
+        db.session.commit()
+    except:
+        db.session.rollback()
+    # -- end snippet --
+
     try:
         coupon = transaction.coupon
-        # העברת הבעלות על הקופון לקונה
         coupon.user_id = transaction.buyer_id
-        # הקופון כבר לא למכירה
         coupon.is_for_sale = False
-        # הקופון כעת זמין שוב לשימוש
         coupon.is_available = True
-
-        # עדכון סטטוס העסקה
         transaction.status = 'הושלם'
 
-        # אפשר להוסיף התראות לשני הצדדים, רישום לוג, וכדומה
         notification_buyer = Notification(
             user_id=transaction.buyer_id,
             message='הקופון הועבר לחשבונך.',
@@ -1991,7 +2358,6 @@ def complete_transaction(transaction):
 
         db.session.add(notification_buyer)
         db.session.add(notification_seller)
-
         db.session.commit()
         flash('העסקה הושלמה בהצלחה והקופון הועבר לקונה!', 'success')
     except Exception as e:
@@ -1999,10 +2365,16 @@ def complete_transaction(transaction):
         current_app.logger.error(f"Error completing transaction {transaction.id}: {e}")
         flash('אירעה שגיאה בעת השלמת העסקה. נא לנסות שוב.', 'danger')
 
+
 @coupons_bp.route('/approve_transaction/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 def approve_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
+
+    # -- activity log snippet --
+    log_user_activity("approve_transaction_view", None)
+
+
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
         return redirect(url_for('marketplace.my_transactions'))
@@ -2014,14 +2386,12 @@ def approve_transaction(transaction_id):
         transaction.coupon_code_entered = True
         db.session.commit()
 
-        # לאחר שהמוכר אישר את העסקה, נשלח מייל לקונה
         seller = transaction.seller
         buyer = transaction.buyer
         coupon = transaction.coupon
 
         html_content = render_template('emails/seller_approved_transaction.html',
                                        seller=seller, buyer=buyer, coupon=coupon)
-
         try:
             send_email(
                 sender_email='itayk93@gmail.com',
@@ -2040,15 +2410,20 @@ def approve_transaction(transaction_id):
 
     return render_template('approve_transaction.html', form=form, transaction=transaction)
 
+
 @coupons_bp.route('/decline_transaction/<int:transaction_id>')
 @login_required
 def decline_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
+
+    # -- activity log snippet --
+    log_user_activity("decline_transaction", None)
+
+
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
         return redirect(url_for('marketplace.my_transactions'))
 
-    # החזרת הקופון לזמינות
     coupon = transaction.coupon
     coupon.is_available = True
     db.session.delete(transaction)
@@ -2056,16 +2431,21 @@ def decline_transaction(transaction_id):
     flash('דחית את העסקה.', 'info')
     return redirect(url_for('marketplace.my_transactions'))
 
+
 @coupons_bp.route('/confirm_transaction/<int:transaction_id>')
 @login_required
 def confirm_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
+
+    # -- activity log snippet --
+    log_user_activity("confirm_transaction", None)
+
+
     if transaction.buyer_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
         return redirect(url_for('marketplace.my_transactions'))
 
     transaction.status = 'הושלם'
-    # העברת הבעלות על הקופון
     coupon = transaction.coupon
     coupon.user_id = current_user.id
     coupon.is_available = True
@@ -2073,15 +2453,20 @@ def confirm_transaction(transaction_id):
     flash('אישרת את העסקה. הקופון הועבר לחשבונך.', 'success')
     return redirect(url_for('marketplace.my_transactions'))
 
+
 @coupons_bp.route('/cancel_transaction/<int:transaction_id>')
 @login_required
 def cancel_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
+
+    # -- activity log snippet --
+    log_user_activity("cancel_transaction", None)
+
+
     if transaction.buyer_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
         return redirect(url_for('marketplace.my_transactions'))
 
-    # החזרת הקופון לזמינות
     coupon = transaction.coupon
     coupon.is_available = True
     db.session.delete(transaction)
@@ -2089,15 +2474,24 @@ def cancel_transaction(transaction_id):
     flash('ביטלת את העסקה.', 'info')
     return redirect(url_for('marketplace.my_transactions'))
 
+
 @coupons_bp.route('/send_coupon_expiration_warning/<int:coupon_id>')
 def send_coupon_expiration_warning(coupon_id):
     coupon = Coupon.query.get_or_404(coupon_id)
+
+    # -- activity log snippet --
+    log_user_activity("send_coupon_expiration_warning", None)
+
+
     user = coupon.user
     expiration_date = coupon.expiration
     coupon_detail_link = url_for('coupons.coupon_detail', id=coupon.id, _external=True)
 
-    html_content = render_template('emails/coupon_expiration_warning.html', user=user, coupon=coupon,
-                                   expiration_date=expiration_date, coupon_detail_link=coupon_detail_link)
+    html_content = render_template('emails/coupon_expiration_warning.html',
+                                   user=user,
+                                   coupon=coupon,
+                                   expiration_date=expiration_date,
+                                   coupon_detail_link=coupon_detail_link)
 
     send_email(
         sender_email='itayk93@gmail.com',
@@ -2116,6 +2510,10 @@ def send_coupon_expiration_warning(coupon_id):
 @login_required
 def mark_coupon_as_used(id):
     coupon = Coupon.query.get_or_404(id)
+
+    # -- activity log snippet --
+    log_user_activity("mark_coupon_as_used", None)
+
     if coupon.user_id != current_user.id:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
@@ -2128,7 +2526,6 @@ def mark_coupon_as_used(id):
         flash('הקופון כבר נוצל או פג תוקפו.', 'warning')
         return redirect(url_for('coupons.coupon_detail', id=id))
 
-    # סימון כנוצל
     try:
         coupon.used_value = coupon.value
         update_coupon_status(coupon)
@@ -2147,6 +2544,31 @@ def mark_coupon_as_used(id):
         )
         db.session.add(notification)
         db.session.commit()
+
+        # לוג הצלחה
+        try:
+            success_activity = {
+                "user_id": current_user.id,
+                "coupon_id": coupon.id,
+                "timestamp": datetime.utcnow(),
+                "action": "mark_coupon_as_used_success",
+                "device": user_agent[:50],
+                "browser": user_agent.split(' ')[0][:50] if user_agent else None,
+                "ip_address": ip_address[:45],
+                "geo_location": geo_location[:100]
+            }
+            db.session.execute(
+                text("""
+                INSERT INTO user_activities (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                VALUES (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                """),
+                success_activity
+            )
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error logging activity [mark_coupon_as_used_success]: {e}")
+
         flash('הקופון סומן כנוצל בהצלחה.', 'success')
     except Exception as e:
         db.session.rollback()
@@ -2159,7 +2581,6 @@ def mark_coupon_as_used(id):
 @coupons_bp.route('/update_coupon_usage_from_multipass/<int:id>', methods=['GET', 'POST'])
 @login_required
 def update_coupon_usage_from_multipass(id):
-    # נניח שרק למנהל יש הרשאה
     if current_user.email != 'itayk93@gmail.com':
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('coupons.coupon_detail', id=id))
@@ -2214,7 +2635,6 @@ def update_coupon_usage_route(id):
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
 
-    # אם הקופון חד-פעמי ואין צורך להוסיף כמות שימוש (מסמנים כנוצל)
     if coupon.is_one_time:
         coupon.status = 'נוצל'
         try:
@@ -2261,10 +2681,7 @@ def update_all_active_coupons():
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('index'))
 
-    # תבנית לזהות את מבנה הקוד
     valid_coupon_pattern = re.compile(r'^\d{8,9}-\d{4}$')
-
-    # שליפת כל הקופונים הפעילים שאינם חד-פעמיים
     active_coupons = Coupon.query.filter(
         Coupon.status == 'פעיל',
         Coupon.is_one_time == False
@@ -2274,7 +2691,6 @@ def update_all_active_coupons():
     failed_coupons = []
 
     for coupon in active_coupons:
-        # בדיקת מבנה הקוד
         if not valid_coupon_pattern.match(coupon.code):
             failed_coupons.append(coupon.code)
             continue
@@ -2282,18 +2698,13 @@ def update_all_active_coupons():
         print(valid_coupon_pattern.match(coupon.code))
         try:
             print(f"Updating {coupon.code}")
-            # קריאה ל-Multipass לקבלת נתוני הקופון
             df = get_coupon_data(coupon.code)
             if df is not None:
-                # סך כל השימוש בקופון
                 total_usage = df['usage_amount'].sum()
-                total_usage = float(total_usage)  # הבטחת המרה למספר
-
-                # עדכון הערכים של הקופון
+                total_usage = float(total_usage)
                 coupon.used_value = total_usage
                 update_coupon_status(coupon)
 
-                # הוספת רשומת שימוש
                 usage = CouponUsage(
                     coupon_id=coupon.id,
                     used_amount=total_usage,
@@ -2303,7 +2714,6 @@ def update_all_active_coupons():
                 )
                 db.session.add(usage)
 
-                # יצירת התראה למשתמש
                 notification = Notification(
                     user_id=coupon.user_id,
                     message=f"השימוש בקופון {coupon.code} עודכן מ-Multipass.",
@@ -2314,16 +2724,13 @@ def update_all_active_coupons():
                 updated_coupons.append(coupon.code)
             else:
                 failed_coupons.append(coupon.code)
-
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error updating coupon {coupon.code}: {e}")
             failed_coupons.append(coupon.code)
 
-    # שמירת השינויים
     db.session.commit()
 
-    # הצגת הודעות למשתמש
     if updated_coupons:
         flash(f'הקופונים הבאים עודכנו בהצלחה: {", ".join(updated_coupons)}', 'success')
     if failed_coupons:

@@ -1,4 +1,3 @@
-<!-- base.html -->
 <!DOCTYPE html>
 <html lang="he">
 <head>
@@ -44,7 +43,6 @@
                     <div class="dropdown-content">
                         <a href="{{ url_for('coupons.show_coupons') }}">הקופונים שלי</a>
                         <a href="{{ url_for('coupons.add_coupon') }}">הוסף קופון</a>
-                        <!-- תפריטים נוספים -->
                         <a href="{{ url_for('auth.logout') }}">התנתק</a>
                     </div>
                 </div>
@@ -86,8 +84,77 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- הודעת עוגיות -->
+    <div id="cookie-consent" style="display: none; position: fixed; bottom: 0; width: 100%; background-color: #f8f9fa; padding: 15px; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); text-align: center; z-index: 1000;">
+        <p style="margin: 0; font-size: 14px; color: #333;">
+            אנו משתמשים בעוגיות כדי לשפר את חוויית הגלישה שלך. על ידי המשך השימוש באתר, אתה מסכים לשימוש בעוגיות.
+            <a href="/privacy-policy" style="color: #007bff; text-decoration: none;">למידע נוסף</a>.
+        </p>
+        <button id="accept-cookies" style="margin-top: 10px; padding: 10px 20px; background-color: #28a745; color: #fff; border: none; border-radius: 5px; cursor: pointer;">
+            אני מסכים
+        </button>
+        <button id="reject-cookies" style="margin-top: 10px; padding: 10px 20px; background-color: #dc3545; color: #fff; border: none; border-radius: 5px; cursor: pointer;">
+            אני דוחה
+        </button>
+    </div>
+
     <!-- הכללת script.js -->
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // פונקציה לבדיקת קיום עוגיה
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // שליחת הסכמה לשרת
+        function sendConsentToServer(status) {
+            fetch("{{ url_for('auth.save_consent') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({ consent: status })
+            }).then(response => {
+                if (response.ok) {
+                    document.getElementById('cookie-consent').classList.remove('visible');
+                } else {
+                    alert("שגיאה בשליחת ההעדפה לשרת");
+                }
+            }).catch(error => {
+                console.error("Error:", error);
+            });
+        }
+
+        // הצגת הודעת עוגיות אם העוגיה לא קיימת
+        window.onload = function () {
+            if (!getCookie('cookies_accepted')) {
+                const consentBox = document.getElementById('cookie-consent');
+                consentBox.style.display = 'block';
+                setTimeout(() => {
+                    consentBox.classList.add('visible');
+                }, 100); // מוסיף את האנימציה לאחר 100ms
+            }
+        };
+
+        // טיפול בלחיצה על כפתור "אני מסכים"
+        document.getElementById('accept-cookies').onclick = function () {
+            const d = new Date();
+            d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000)); // שנה קדימה
+            document.cookie = `cookies_accepted=true; expires=${d.toUTCString()}; path=/`;
+            sendConsentToServer(true);
+        };
+
+        // טיפול בלחיצה על כפתור "אני דוחה"
+        document.getElementById('reject-cookies').onclick = function () {
+            const d = new Date();
+            d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000)); // שנה קדימה
+            document.cookie = `cookies_accepted=false; expires=${d.toUTCString()}; path=/`;
+            sendConsentToServer(false);
+        };
+    </script>
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -1209,3 +1209,15 @@ def get_most_common_tag_for_company(company_name):
         # אין תגיות משויכות לחברה זו
         return None
 
+def get_geo_location(ip_address):
+    try:
+        response = requests.get(f"https://ipinfo.io/{ip_address}/json", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('city', 'Unknown') + ', ' + data.get('country', 'Unknown')
+        else:
+            return "Unknown"
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving geo location: {e}")
+        return "Unknown"
+
