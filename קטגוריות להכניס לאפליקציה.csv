@@ -1,15 +1,59 @@
-Category,Companies
-Fast Food,"בורגר קינג, בורגר ראנץ, בורגראנץ, בורגראנץ', בורגראנץ׳, בורגרים, בורגרנץ, בורגרס בר (b), KFC, מקדולנדס, מקדולנס, מקדונ'לס, מקדונלד'ס, מקדונלד׳ס, מקדונלדס, פיצה האט, פיצה דומינוס, פאפא ג'ונס, סבארו"
-Desserts & Ice Cream,"בן אנד ג'ריס, בן אנד גרים, בן אנד גריס, גולדה, פרוזן יוגורט, רולדין, רולדין מזרחי, רולדין של פיס, בלג'נדה, בלגנדה, בלגנה"
-Beverages & Coffee,"קפה רולדין, ארקפה, קפה קפה, ריבאר, קפה עלית"
-Cinema & Movies,"יס פלאנט, סינמה סיטי, הוט סינמה, רב חן, מובילנד, סינמטק תל אביב"
-Tickets for Shows & Events,"הופעות חנוכה, פעלטון, קארטינג ראשל, פאנקי מאנקי"
-Technology & Gadgets,"LENOVO, נספרסו, טרמינל איקס, טרקלין חשמל, ksp, איל מקיאג, קרליין"
-Clothing & Fashion,"קסטרו, אורבניקה, גולף, מגה ספורט, טימברלנד, נייק, אדידס"
-Health & Beauty,"BE פארם, Be200, סופר פארם, דרים קארד, טויס אר אס"
-Home & Furniture,"יינות ביתן, קרפור, פוקס הום, רשתות, מאפה נאמן, ורדינון"
-Sports & Fitness,"Freefit, Rebar"
-Baby & Kids Products,"רשת מוצצים, טויס אר אס, מיי בייבי"
-Books & Stationery,"צומת ספרים, סטימצקי"
-Gift Cards & Vouchers,"תו הזהב, תו קנייה, Buyme, mygift"
-Other,
+Category,Companies,,Here is the translation to Hebrew:,,"INSERT INTO companies (id, name, image_path) VALUES (19, '_____ ____', 'images/burger_king.png');"
+Fast Food,"_____ ____, _____ ____, ________, ________', _________, _______, _______, ______ __ (b), KFC, ________, _______, _____'__, _______'_, _________, ________, ____ ___, ____ _______, ____ _'___, _____",,____ ____,,"INSERT INTO companies (id, name, image_path) VALUES (20, '________', 'images/burgeranch.png');"
+Desserts & Ice Cream,"__ ___ _'___, __ ___ ____, __ ___ ____, _____, _____ ______, ______, ______ _____, ______ __ ___, ___'___, ______, _____",,___,,"INSERT INTO companies (id, name, image_path) VALUES (21, 'KFC', 'images/kfc.png');"
+Beverages & Coffee,"___ ______, _____, ___ ___, _____, ___ ____",,_____ ______,,"INSERT INTO companies (id, name, image_path) VALUES (22, '____ ___', 'images/pizza_hut.png');"
+Cinema & Movies,"__ _____, _____ ____, ___ _____, __ __, _______, ______ __ ____",,___ ______,,"INSERT INTO companies (id, name, image_path) VALUES (23, '____ _______', 'images/dominos_pizza.png');"
+Tickets for Shows & Events,"______ _____, ______, _______ ____, _____ _____",,______ _____,,"INSERT INTO companies (id, name, image_path) VALUES (24, '____ _\'___', 'images/papa_johns.png');"
+Technology & Gadgets,"LENOVO, ______, ______ ____, ______ ____, ksp, ___ _____, ______",,_________ _____'___,,"INSERT INTO companies (id, name, image_path) VALUES (26, '__ ___ _\'___', 'images/ben_and_jerrys.png');"
+Clothing & Fashion,"_____, ________, ____, ___ _____, ________, ____, _____",,______ ____ _______,,"INSERT INTO companies (id, name, image_path) VALUES (27, '_____', 'images/golda.png');"
+Health & Beauty,"BE ____, Be200, ____ ____, ____ ____, ____ __ __",,_______ _______ ________,,"INSERT INTO companies (id, name, image_path) VALUES (29, '______', 'images/lagenda.png');"
+Home & Furniture,"_____ ____, _____, ____ ___, _____, ____ ____, _______",,______ ________ _______,,"INSERT INTO companies (id, name, image_path) VALUES (30, '_____', 'images/arcaffe.png');"
+Sports & Fitness,"Freefit, Rebar",,______ ____,,"INSERT INTO companies (id, name, image_path) VALUES (31, '___ ___', 'images/cafe_cafe.png');"
+Baby & Kids Products,"___ ______, ____ __ __, ___ _____",,_____ _____,,"INSERT INTO companies (id, name, image_path) VALUES (32, '_____', 'images/rebar.png');"
+Books & Stationery,"____ _____, _______",,_____ _____ _____,,"INSERT INTO companies (id, name, image_path) VALUES (33, '__ _____', 'images/yes_planet.png');"
+Gift Cards & Vouchers,"__ ____, __ _____, Buyme, mygift",,______ ______,,"INSERT INTO companies (id, name, image_path) VALUES (34, '_____ ____', 'images/cinema_city.png');"
+Other,,,_______ _______,,"INSERT INTO companies (id, name, image_path) VALUES (35, '___ _____', 'images/hot_cinema.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (36, '__ __', 'images/rav_chen.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (37, '_______', 'images/movieland.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (38, '______ __ ____', 'images/cinematheque_tlv.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (39, '_____', 'images/peloton.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (40, '_______ ____', 'images/karting_rishon.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (41, '_____ _____', 'images/funky_monkey.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (42, 'LENOVO', 'images/lenovo.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (43, '______', 'images/nespresso.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (44, '______ ____', 'images/terminal_x.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (45, '______ ____', 'images/traklin.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (46, 'KSP', 'images/ksp.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (48, '______', 'images/careline.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (49, '_____', 'images/castro.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (50, '________', 'images/urbanica.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (51, '____', 'images/golf.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (52, '___ _____', 'images/mega_sport.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (53, '________', 'images/timberland.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (54, '____', 'images/nike.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (55, '_____', 'images/adidas.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (57, '____ ____', 'images/super_pharm.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (58, '____ ____', 'images/dream_card.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (59, '____ __ __', 'images/toys_r_us.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (60, '_____ ____', 'images/yeinot_bitan.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (61, '____ ___', 'images/fox_home.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (62, '_______', 'images/vardinon.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (63, '__ ____', 'images/tav_hazahav.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (64, 'Buyme', 'images/buyme.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (65, 'mygift', 'images/mygift.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (66, '___ ______', 'images/motzetzim.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (67, '___ _____', 'images/my_baby.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (68, '____ _____', 'images/tzomet_sfarim.png');"
+,,,,,"INSERT INTO companies (id, name, image_path) VALUES (69, '_______', 'images/steimatzky.png');"
+,,,,,#NAME?
+,,,,,#NAME?
+,,,,,#NAME?
+,,,,,#NAME?
+,,,,,#NAME?
+,,,,,#NAME?
+,,,,,#NAME?
+,,,,,#NAME?
+,,,,,#NAME?
+,,,,,#NAME?
+,,,,,#NAME?
+,,,,,#NAME?

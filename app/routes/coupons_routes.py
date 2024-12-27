@@ -172,24 +172,21 @@ def sell_coupon():
             if not tag_name:
                 flash('יש להזין שם תגית חדשה.', 'danger')
                 return redirect(url_for('coupons.sell_coupon'))
-            existing_tag = Tag.query.filter_by(name=tag_name).first()
-            if existing_tag:
-                tag = existing_tag
-            else:
+            tag = Tag.query.filter_by(name=tag_name).first()
+            if not tag:
                 tag = Tag(name=tag_name, count=1)
                 db.session.add(tag)
-                try:
-                    db.session.commit()
-                    flash(f'התגית "{tag_name}" נוספה בהצלחה.', 'success')
-                except IntegrityError:
-                    db.session.rollback()
-                    flash('שגיאה בעת הוספת התגית. ייתכן שהתגית כבר קיימת.', 'danger')
-                    return redirect(url_for('coupons.sell_coupon'))
+            else:
+                tag.count += 1
         else:
             tag = Tag.query.get(int(selected_tag_id))
             if not tag:
                 flash('התגית שנבחרה אינה תקפה.', 'danger')
                 return redirect(url_for('coupons.sell_coupon'))
+
+        # להוסיף את התגית לקופון ולהמשיך
+        if tag:
+            new_coupon.tags.append(tag)
 
         new_coupon = Coupon(
             code=form.code.data.strip(),
@@ -954,7 +951,6 @@ def add_coupon():
 @coupons_bp.route('/add_coupon_with_image.html', methods=['GET', 'POST'])
 @login_required
 def add_coupon_with_image_html():
-    # -- activity log snippet --
     log_user_activity("add_coupon_with_image_html_view", None)
 
     form = CouponForm()
@@ -989,20 +985,22 @@ def add_coupon_with_image_html():
 @coupons_bp.route('/add_coupon_with_image', methods=['GET', 'POST'])
 @login_required
 def add_coupon_with_image():
-    # -- activity log snippet --
     log_user_activity("add_coupon_with_image_view", None)
 
     upload_image_form = UploadImageForm()
     coupon_form = CouponForm()
     show_coupon_form = False
 
+    # הגדרת הבחירות לשדות company_id ו-tag_id מתוך הדאטהבייס
     companies = Company.query.all()
     tags = Tag.query.all()
 
+    # הגדרת הבחירות בצורה זהה ל-add_coupon
     coupon_form.company_id.choices = [('', 'בחר')] + [(str(company.id), company.name) for company in companies] + [('other', 'אחר')]
     coupon_form.tag_id.choices = [('', 'בחר')] + [(str(tag.id), tag.name) for tag in tags] + [('other', 'אחר')]
 
     if upload_image_form.validate_on_submit() and upload_image_form.submit_upload_image.data:
+        # טיפול בהעלאת התמונה
         image_file = upload_image_form.coupon_image.data
         if image_file:
             filename = secure_filename(image_file.filename)
@@ -1012,12 +1010,14 @@ def add_coupon_with_image():
             image_path = os.path.join(upload_folder, filename)
             image_file.save(image_path)
 
+            # עיבוד התמונה והפקת פרטי הקופון
             try:
                 coupon_df, pricing_df = extract_coupon_detail_image_proccess(
                     client_id=os.getenv('IMGUR_CLIENT_ID'),
                     image_path=image_path,
                     companies_list=[company.name for company in companies]
                 )
+
             except Exception as e:
                 current_app.logger.error(f"Error extracting coupon from image: {e}")
                 flash(f"אירעה שגיאה בעת עיבוד התמונה: {e}", "danger")
@@ -1031,6 +1031,7 @@ def add_coupon_with_image():
                 company_name = coupon_data.get('חברה', '').strip()
                 tag_name = coupon_data.get('תגיות', '').strip()
 
+                # חיפוש החברה באמצעות fuzzy matching
                 best_match_ratio = 0
                 best_company = None
                 for comp in companies:
@@ -1046,6 +1047,7 @@ def add_coupon_with_image():
                     coupon_form.company_id.data = 'other'
                     coupon_form.other_company.data = company_name
 
+                # חיפוש התגית באמצעות fuzzy matching
                 best_tag_ratio = 0
                 best_tag = None
                 for tag in tags:
@@ -1061,15 +1063,18 @@ def add_coupon_with_image():
                     coupon_form.tag_id.data = 'other'
                     coupon_form.other_tag.data = tag_name
 
+                # מילוי יתר השדות
                 coupon_form.code.data = coupon_data.get('קוד קופון')
                 coupon_form.cost.data = float(coupon_data.get('עלות', 0))
                 coupon_form.value.data = float(coupon_data.get('ערך מקורי', 0))
 
+                # אחוז הנחה
                 if 'אחוז הנחה' in coupon_df.columns:
                     coupon_form.discount_percentage.data = float(coupon_data.get('אחוז הנחה', 0))
                 else:
-                    coupon_form.discount_percentage.data = 0
+                    coupon_form.discount_percentage.data = 0  # ברירת מחדל
 
+                # תאריך תפוגה
                 expiration_str = coupon_data.get('תאריך תפוגה')
                 if expiration_str:
                     try:
@@ -1079,60 +1084,42 @@ def add_coupon_with_image():
                 else:
                     coupon_form.expiration.data = None
 
+                # תיאור
                 coupon_form.description.data = coupon_data.get('תיאור', '')
+
+                # קוד לשימוש חד פעמי ומטרת הקופון
                 coupon_form.is_one_time.data = bool(coupon_data.get('קוד לשימוש חד פעמי'))
                 coupon_form.purpose.data = coupon_data.get('מטרת הקופון', '') if coupon_form.is_one_time.data else ''
 
+                # הפחתת סלוטים
                 if current_user.slots_automatic_coupons > 0:
                     current_user.slots_automatic_coupons -= 1
                     db.session.commit()
                 else:
                     flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
-                    return redirect(url_for('coupons.add_coupon_with_image'))
-
-                # -- activity log snippet --
-                try:
-                    new_activity = {
-                        "user_id": current_user.id,
-                        "coupon_id": None,
-                        "timestamp": datetime.utcnow(),
-                        "action": "add_coupon_with_image_submit_image",
-                        "device": request.headers.get('User-Agent', '')[:50],
-                        "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                        "ip_address": request.remote_addr[:45],
-                        "geo_location": get_geo_location(request.remote_addr)[:100]
-                    }
-                    db.session.execute(
-                        text("""
-                            INSERT INTO user_activities
-                                (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
-                            VALUES
-                                (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
-                        """),
-                        new_activity
-                    )
-                    db.session.commit()
-                except Exception as e:
-                    db.session.rollback()
-                    current_app.logger.error(f"Error logging activity [add_coupon_with_image_submit_image]: {e}")
-                # -- end snippet --
+                    return redirect(url_for('add_coupon_with_image'))
 
                 show_coupon_form = True
                 flash("הטופס מולא בהצלחה. אנא בדוק וערוך אם נדרש.", "success")
             else:
+                # כאן נוסיף סיבה
                 error_reason = "לא נמצאו נתונים בתמונה."
+                # אם pricing_df מכיל מידע על השגיאה, אפשר לשלוף משם:
                 if not pricing_df.empty and 'error_message' in pricing_df.columns:
                     error_reason = pricing_df.iloc[0]['error_message']
+
                 flash(f"לא ניתן היה לחלץ פרטי קופון מהתמונה: {error_reason}", "danger")
 
     elif coupon_form.validate_on_submit() and coupon_form.submit_coupon.data:
+        # טיפול בהגשת הטופס למילוי הקופון
+        # מציאת או יצירת החברה
         selected_company_id = coupon_form.company_id.data
         other_company_name = coupon_form.other_company.data.strip() if coupon_form.other_company.data else ''
 
         if selected_company_id == 'other':
             if not other_company_name:
                 flash('יש להזין שם חברה חדשה.', 'danger')
-                return redirect(url_for('coupons.add_coupon_with_image'))
+                return redirect(url_for('add_coupon_with_image'))
             existing_company = Company.query.filter_by(name=other_company_name).first()
             if existing_company:
                 company = existing_company
@@ -1146,17 +1133,18 @@ def add_coupon_with_image():
                 company = Company.query.get(selected_company_id)
                 if not company:
                     flash('חברה נבחרה אינה תקפה.', 'danger')
-                    return redirect(url_for('coupons.add_coupon_with_image'))
+                    return redirect(url_for('add_coupon_with_image'))
             except (ValueError, TypeError):
                 flash('חברה נבחרה אינה תקפה.', 'danger')
-                return redirect(url_for('coupons.add_coupon_with_image'))
+                return redirect(url_for('add_coupon_with_image'))
 
+        # מציאת או יצירת התגית
         selected_tag_id = coupon_form.tag_id.data
         other_tag_name = coupon_form.other_tag.data.strip() if coupon_form.other_tag.data else ''
         if selected_tag_id == 'other':
             if not other_tag_name:
                 flash('יש להזין שם תגית חדשה.', 'danger')
-                return redirect(url_for('coupons.add_coupon_with_image'))
+                return redirect(url_for('add_coupon_with_image'))
             existing_tag = Tag.query.filter_by(name=other_tag_name).first()
             if existing_tag:
                 tag = existing_tag
@@ -1170,11 +1158,12 @@ def add_coupon_with_image():
                 tag = Tag.query.get(selected_tag_id)
                 if not tag:
                     flash('תגית נבחרה אינה תקפה.', 'danger')
-                    return redirect(url_for('coupons.add_coupon_with_image'))
+                    return redirect(url_for('add_coupon_with_image'))
             except (ValueError, TypeError):
                 flash('תגית נבחרה אינה תקפה.', 'danger')
-                return redirect(url_for('coupons.add_coupon_with_image'))
+                return redirect(url_for('add_coupon_with_image'))
 
+        # בדיקת תקינות נתונים ושמירה למסד הנתונים
         code = coupon_form.code.data.strip()
         try:
             value = float(coupon_form.value.data)
@@ -1205,10 +1194,12 @@ def add_coupon_with_image():
         is_one_time = coupon_form.is_one_time.data
         purpose = coupon_form.purpose.data.strip() if is_one_time and coupon_form.purpose.data else None
 
+        # בדיקת ייחודיות קוד הקופון
         if Coupon.query.filter_by(code=code).first():
             flash('קוד קופון זה כבר קיים. אנא בחר קוד אחר.', 'danger')
-            return redirect(url_for('coupons.add_coupon_with_image'))
+            return redirect(url_for('add_coupon_with_image'))
 
+        # בדיקת תאריך תפוגה
         current_date = datetime.utcnow().date()
         if expiration and expiration < current_date:
             flash('תאריך התפוגה של הקופון כבר עבר. אנא עדכן תאריך או בחר קופון אחר.', 'danger')
@@ -1221,6 +1212,7 @@ def add_coupon_with_image():
                 form=coupon_form
             )
 
+        # יצירת האובייקט החדש של הקופון
         new_coupon = Coupon(
             code=code,
             value=value,
@@ -1241,7 +1233,6 @@ def add_coupon_with_image():
         db.session.add(new_coupon)
         try:
             db.session.commit()
-
             notification = Notification(
                 user_id=current_user.id,
                 message=f"הקופון {new_coupon.code} נוסף בהצלחה.",
@@ -1249,33 +1240,6 @@ def add_coupon_with_image():
             )
             db.session.add(notification)
             db.session.commit()
-
-            # -- activity log snippet --
-            try:
-                new_activity = {
-                    "user_id": current_user.id,
-                    "coupon_id": new_coupon.id,
-                    "timestamp": datetime.utcnow(),
-                    "action": "add_coupon_with_image_submit_final",
-                    "device": request.headers.get('User-Agent', '')[:50],
-                    "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                    "ip_address": request.remote_addr[:45],
-                    "geo_location": get_geo_location(request.remote_addr)[:100]
-                }
-                db.session.execute(
-                    text("""
-                        INSERT INTO user_activities
-                            (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
-                        VALUES
-                            (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
-                    """),
-                    new_activity
-                )
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                current_app.logger.error(f"Error logging activity [add_coupon_with_image_submit_final]: {e}")
-            # -- end snippet --
 
             flash('קופון נוסף בהצלחה!', 'success')
             return redirect(url_for('coupons.show_coupons'))

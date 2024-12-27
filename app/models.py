@@ -107,10 +107,9 @@ class Tag(db.Model):
     """
     __tablename__ = 'tag'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
-    count = db.Column(db.Integer, default=0, nullable=False)
-
+    count = db.Column(db.Integer, default=0)
 
 class Coupon(db.Model):
     """

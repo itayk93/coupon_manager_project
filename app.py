@@ -65,6 +65,7 @@ app.register_blueprint(transactions_bp)
 app.register_blueprint(export_bp)
 app.register_blueprint(uploads_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(admin_tags_bp)
 
 # יצירת תיקיית instance אם לא קיימת
 if not os.path.exists('instance'):

@@ -20,6 +20,11 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Optional, Email, EqualTo, InputRequired, Length, NumberRange
 
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired, Length, Optional
+from flask_wtf.file import FileField, FileAllowed
+
 # forms.py
 
 from flask_wtf import FlaskForm
@@ -547,3 +552,13 @@ from wtforms import SubmitField
 
 class MarkCouponAsFullyUsedForm(FlaskForm):
     submit = SubmitField('סמן כ"נוצל לגמרי"')
+
+class TagManagementForm(FlaskForm):
+    name = StringField(
+        'שם התגית',
+        validators=[
+            DataRequired(message="חובה למלא שם תגית."),
+            Length(max=50, message="שם התגית לא יכול להיות ארוך מ-50 תווים.")
+        ]
+    )
+    submit = SubmitField('צור תגית חדשה')
