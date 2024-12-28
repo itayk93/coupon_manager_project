@@ -315,6 +315,6 @@ def check_location():
     country = geo_data.get("country")
 
     # אם המיקום אינו ישראל או איטליה, חסום את הגישה
-    if country not in ["Italy", "United States"]:
+    if country not in ["Israel", "United States"]:
         log_user_activity("access_blocked_due_to_location")
         return render_template("access_denied.html", country=country), 403
