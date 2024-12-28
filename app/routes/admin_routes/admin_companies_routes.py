@@ -5,9 +5,9 @@ from app.extensions import db
 from app.models import Company
 from app.forms import CompanyManagementForm, DeleteCompanyForm
 
-admin_companies_bp = Blueprint('admin_companies_bp', __name__)
+admin_companies_bp = Blueprint('admin_companies_bp', __name__, url_prefix='/admin/companies')
 
-@admin_companies_bp.route('/admin/manage_companies', methods=['GET', 'POST'])
+@admin_companies_bp.route('/', methods=['GET', 'POST'])
 @login_required
 def manage_companies():
     if not current_user.is_admin:

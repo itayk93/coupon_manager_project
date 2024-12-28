@@ -958,7 +958,8 @@ def send_coupon_purchase_request_email(seller, buyer, coupon):
         sender_name=sender_name,
         recipient_email=recipient_email,
         recipient_name=recipient_name,
-        subject=f"{subject} - {datetime.now().strftime('%d%m%Y %H:%M')}",
+        subject=subject,
+        #subject=f"{subject} - {datetime.now().strftime('%d%m%Y %H:%M')}",
         html_content=html_content
     )
 
@@ -1215,6 +1216,7 @@ def get_public_ip():
     """
     פונקציה לשליפת כתובת ה-IP הציבורית.
     """
+    """
     try:
         response = requests.get('https://api64.ipify.org?format=json', timeout=5)
         response.raise_for_status()
@@ -1223,7 +1225,8 @@ def get_public_ip():
     except requests.RequestException as e:
         current_app.logger.error(f"Error fetching public IP: {e}")
         return None
-
+    """
+    return None
 def get_geo_location():
     """
     פונקציה לשליפת מידע גיאוגרפי מבוסס IP.

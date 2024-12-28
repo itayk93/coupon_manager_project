@@ -8,7 +8,7 @@ from app.forms import ManageCouponTagForm
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 
-admin_coupon_tags_bp = Blueprint('admin_coupon_tags_bp', __name__)
+admin_coupon_tags_bp = Blueprint('admin_coupon_tags_bp', __name__, url_prefix='/admin/coupon-tags')
 
 # קביעת רמת הלוגינג
 logger = logging.getLogger(__name__)
@@ -20,18 +20,6 @@ console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
 
-# app/routes/admin_coupon_tags_routes.py
-
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required
-from app.models import Coupon, Tag, coupon_tags
-from app.extensions import db
-from app.forms import ManageCouponTagForm
-from sqlalchemy.exc import SQLAlchemyError
-import logging
-
-admin_coupon_tags_bp = Blueprint('admin_coupon_tags_bp', __name__)
-
 # קביעת רמת הלוגינג
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -42,7 +30,7 @@ console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
 
-@admin_coupon_tags_bp.route('/admin/manage_coupon_tags', methods=['GET', 'POST'])
+@admin_coupon_tags_bp.route('/', methods=['GET', 'POST'])
 @login_required
 def manage_coupon_tags():
     tags = Tag.query.all()

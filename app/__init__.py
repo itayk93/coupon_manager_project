@@ -54,9 +54,9 @@ def create_app():
     from app.routes.export_routes import export_bp
     from app.routes.uploads_routes import uploads_bp
     from app.routes.admin_routes import admin_bp
-    from app.routes.admin_tags_routes import admin_tags_bp
-    from app.routes.admin_companies_routes import admin_companies_bp
-    from app.routes.admin_coupon_tags_routes import admin_coupon_tags_bp
+    from app.routes.admin_routes.admin_tags_routes import admin_tags_bp
+    from app.routes.admin_routes.admin_companies_routes import admin_companies_bp
+    from app.routes.admin_routes.admin_coupon_tags_routes import admin_coupon_tags_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(profile_bp)
@@ -66,10 +66,10 @@ def create_app():
     app.register_blueprint(transactions_bp)
     app.register_blueprint(export_bp)
     app.register_blueprint(uploads_bp)
-    app.register_blueprint(admin_bp)
     app.register_blueprint(admin_tags_bp)
     app.register_blueprint(admin_companies_bp)
     app.register_blueprint(admin_coupon_tags_bp)
+    app.register_blueprint(admin_bp, url_prefix='/admin')
 
     # אם צריך - יצירת instance folder
     if not os.path.exists('instance'):

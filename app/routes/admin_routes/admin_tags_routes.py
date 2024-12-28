@@ -8,12 +8,12 @@ from app.models import Tag
 from app.forms import TagManagementForm, DeleteTagForm
 import logging
 
-admin_tags_bp = Blueprint('admin_tags_bp', __name__)
+admin_tags_bp = Blueprint('admin_tags_bp', __name__, url_prefix='/admin/tags')
 
 # הגדרת לוגר
 logger = logging.getLogger(__name__)
 
-@admin_tags_bp.route('/admin/manage_tags', methods=['GET', 'POST'])
+@admin_tags_bp.route('/', methods=['GET', 'POST'])
 @login_required
 def manage_tags():
     if not current_user.is_admin:

@@ -7,9 +7,9 @@ from .uploads_routes import uploads_bp
 from .admin_routes import admin_bp
 from .export_routes import export_bp
 from .usage_data_routes import usage_data_bp
-from app.routes.admin_tags_routes import admin_tags_bp
-from app.routes.admin_companies_routes import admin_companies_bp
-from app.routes.admin_coupon_tags_routes import admin_coupon_tags_bp
+from app.routes.admin_routes.admin_tags_routes import admin_tags_bp
+from app.routes.admin_routes.admin_companies_routes import admin_companies_bp
+from app.routes.admin_routes.admin_coupon_tags_routes import admin_coupon_tags_bp
 
 def init_app(app):
     app.register_blueprint(marketplace_bp)
