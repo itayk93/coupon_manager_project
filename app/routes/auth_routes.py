@@ -11,36 +11,61 @@ from app.forms import LoginForm, RegisterForm
 from app.helpers import generate_confirmation_token, confirm_token, send_email
 from app.helpers import send_coupon_purchase_request_email, get_geo_location  # אם צריך
 import logging
+from flask import Blueprint, render_template, request, current_app, redirect, url_for, flash
+from flask_login import current_user
+from sqlalchemy.sql import text
+from datetime import datetime
+from app.extensions import db
+from app.helpers import get_geo_location
+
 
 auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
+import requests
+from datetime import datetime
+from flask import request, current_app
+from flask_login import current_user
 
-def log_user_activity(action):
+
+def log_user_activity(action, coupon_id=None):
     """
-    פונקציה מרכזית לרישום activity log עבור פעולות אימות (לרוב אין coupon_id).
+    פונקציה מרכזית לרישום activity log.
     """
     try:
         ip_address = request.remote_addr
         user_agent = request.headers.get('User-Agent', '')
-        geo_location = get_geo_location(ip_address) if ip_address else None
+
+        geo_data = get_geo_location()
 
         activity = {
             "user_id": current_user.id if current_user and current_user.is_authenticated else None,
-            "coupon_id": None,
+            "coupon_id": coupon_id,
             "timestamp": datetime.utcnow(),
             "action": action,
             "device": user_agent[:50] if user_agent else None,
             "browser": user_agent.split(' ')[0][:50] if user_agent else None,
             "ip_address": ip_address[:45] if ip_address else None,
-            "geo_location": geo_location[:100] if geo_location else None
+            "city": geo_data.get("city"),
+            "region": geo_data.get("region"),
+            "country": geo_data.get("country"),
+            "isp": geo_data.get("isp"),
+            "country_code": geo_data.get("countryCode"),
+            "zip": geo_data.get("zip"),
+            "lat": geo_data.get("lat"),
+            "lon": geo_data.get("lon"),
+            "timezone": geo_data.get("timezone"),
+            "org": geo_data.get("org"),
+            "as_info": geo_data.get("as"),
         }
 
         db.session.execute(
-            db.text("""
+            text("""
                 INSERT INTO user_activities
-                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, 
+                     country_code, zip, lat, lon, timezone, org, as_info)
                 VALUES
-                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, 
+                     :country_code, :zip, :lat, :lon, :timezone, :org, :as_info)
             """),
             activity
         )
@@ -48,7 +73,6 @@ def log_user_activity(action):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error logging activity [{action}]: {e}")
-
 
 @auth_bp.route('/confirm/<token>')
 def confirm_email(token):
@@ -226,3 +250,71 @@ def save_consent():
 def privacy_policy():
     log_user_activity("view_privacy_policy")
     return render_template('privacy_policy.html')
+
+
+
+
+def log_user_activity(action, coupon_id=None):
+    """
+    פונקציה מרכזית לרישום פעילות המשתמש.
+    """
+    try:
+        ip_address = request.remote_addr
+        user_agent = request.headers.get('User-Agent', '')
+
+        geo_data = get_geo_location()
+
+        activity = {
+            "user_id": current_user.id if current_user.is_authenticated else None,
+            "coupon_id": coupon_id,
+            "timestamp": datetime.utcnow(),
+            "action": action,
+            "device": user_agent[:50] if user_agent else None,
+            "browser": user_agent.split(' ')[0][:50] if user_agent else None,
+            "ip_address": ip_address[:45] if ip_address else None,
+            "city": geo_data.get("city"),
+            "region": geo_data.get("region"),
+            "country": geo_data.get("country"),
+            "isp": geo_data.get("isp"),
+            "country_code": geo_data.get("country_code"),
+            "zip": geo_data.get("zip"),
+            "lat": geo_data.get("lat"),
+            "lon": geo_data.get("lon"),
+            "timezone": geo_data.get("timezone"),
+            "org": geo_data.get("org"),
+            "as_info": geo_data.get("as"),
+        }
+
+        db.session.execute(
+            text("""
+                INSERT INTO user_activities
+                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, 
+                     country_code, zip, lat, lon, timezone, org, as_info)
+                VALUES
+                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, 
+                     :country_code, :zip, :lat, :lon, :timezone, :org, :as_info)
+            """),
+            activity
+        )
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error logging activity [{action}]: {e}")
+
+
+@auth_bp.before_app_request
+def check_location():
+    """
+    פונקציה לבדיקה לפני כל בקשה נכנסת.
+    """
+    # רישום הפעולה
+    log_user_activity("page_access")
+
+    # קבלת נתוני המיקום
+    geo_data = get_geo_location()
+    country = geo_data.get("country")
+
+    # אם המיקום אינו ישראל או איטליה, חסום את הגישה
+    if country not in ["Israel"]:
+        log_user_activity("access_blocked_due_to_location")
+        return render_template("access_denied.html", country=country), 403

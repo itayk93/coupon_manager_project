@@ -1210,15 +1210,100 @@ def get_most_common_tag_for_company(company_name):
         # אין תגיות משויכות לחברה זו
         return None
 
-def get_geo_location(ip_address):
+
+def get_public_ip():
+    """
+    פונקציה לשליפת כתובת ה-IP הציבורית.
+    """
     try:
-        response = requests.get(f"https://ipinfo.io/{ip_address}/json", timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            return data.get('city', 'Unknown') + ', ' + data.get('country', 'Unknown')
+        response = requests.get('https://api64.ipify.org?format=json', timeout=5)
+        response.raise_for_status()
+        ip_data = response.json()
+        return ip_data.get('ip')
+    except requests.RequestException as e:
+        current_app.logger.error(f"Error fetching public IP: {e}")
+        return None
+
+def get_geo_location():
+    """
+    פונקציה לשליפת מידע גיאוגרפי מבוסס IP.
+    """
+    ip_address = get_public_ip()
+    if not ip_address:
+        return {
+            "status": None,
+            "country": None,
+            "country_code": None,
+            "region": None,
+            "region_name": None,
+            "city": None,
+            "zip": None,
+            "lat": None,
+            "lon": None,
+            "timezone": None,
+            "isp": None,
+            "org": None,
+            "as": None,
+            "query": None,
+        }
+
+    try:
+        response = requests.get(f"http://ip-api.com/json/{ip_address}", timeout=5)
+        response.raise_for_status()
+
+        data = response.json()
+
+        if data.get('status') == 'success':
+            return {
+                "status": data.get("status"),
+                "country": data.get("country"),
+                "country_code": data.get("countryCode"),
+                "region": data.get("region"),
+                "region_name": data.get("regionName"),
+                "city": data.get("city"),
+                "zip": data.get("zip"),
+                "lat": data.get("lat"),
+                "lon": data.get("lon"),
+                "timezone": data.get("timezone"),
+                "isp": data.get("isp"),
+                "org": data.get("org"),
+                "as": data.get("as"),
+                "query": data.get("query"),
+            }
         else:
-            return "Unknown"
-    except Exception as e:
+            current_app.logger.error(f"Error in geo-location response: {data.get('message')}")
+            return {
+                "status": data.get("status"),
+                "country": None,
+                "country_code": None,
+                "region": None,
+                "region_name": None,
+                "city": None,
+                "zip": None,
+                "lat": None,
+                "lon": None,
+                "timezone": None,
+                "isp": None,
+                "org": None,
+                "as": None,
+                "query": None,
+            }
+    except requests.RequestException as e:
         current_app.logger.error(f"Error retrieving geo location: {e}")
-        return "Unknown"
+        return {
+            "status": None,
+            "country": None,
+            "country_code": None,
+            "region": None,
+            "region_name": None,
+            "city": None,
+            "zip": None,
+            "lat": None,
+            "lon": None,
+            "timezone": None,
+            "isp": None,
+            "org": None,
+            "as": None,
+            "query": None,
+        }
 

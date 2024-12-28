@@ -55,19 +55,12 @@ logger = logging.getLogger(__name__)
 
 coupons_bp = Blueprint('coupons', __name__)
 
-import requests
-
-def get_geo_location(ip_address):
-    try:
-        response = requests.get(f"https://ipinfo.io/{ip_address}/json", timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            return data.get('city', 'Unknown') + ', ' + data.get('country', 'Unknown')
-        else:
-            return "Unknown"
-    except Exception as e:
-        current_app.logger.error(f"Error retrieving geo location: {e}")
-        return "Unknown"
+from datetime import datetime
+from flask import request, current_app
+from app.helpers import get_geo_location
+from flask_login import current_user
+from sqlalchemy.sql import text
+from app.extensions import db
 
 def log_user_activity(action, coupon_id=None):
     """
@@ -76,29 +69,43 @@ def log_user_activity(action, coupon_id=None):
     try:
         ip_address = request.remote_addr
         user_agent = request.headers.get('User-Agent', '')
-        geo_location = get_geo_location(ip_address)
+
+        geo_data = get_geo_location()
 
         activity = {
-            "user_id": current_user.id,
+            "user_id": current_user.id if current_user and current_user.is_authenticated else None,
             "coupon_id": coupon_id,
             "timestamp": datetime.utcnow(),
             "action": action,
-            "device": user_agent[:50],
+            "device": user_agent[:50] if user_agent else None,
             "browser": user_agent.split(' ')[0][:50] if user_agent else None,
             "ip_address": ip_address[:45] if ip_address else None,
-            "geo_location": geo_location[:100] if geo_location else None
+            "city": geo_data.get("city"),
+            "region": geo_data.get("region"),
+            "country": geo_data.get("country"),
+            "isp": geo_data.get("isp"),
+            "country_code": geo_data.get("country_code"),
+            "zip": geo_data.get("zip"),
+            "lat": geo_data.get("lat"),
+            "lon": geo_data.get("lon"),
+            "timezone": geo_data.get("timezone"),
+            "org": geo_data.get("org"),
+            "as_info": geo_data.get("as"),
         }
 
         db.session.execute(
             text("""
                 INSERT INTO user_activities
-                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, 
+                     country_code, zip, lat, lon, timezone, org, as_info)
                 VALUES
-                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, 
+                     :country_code, :zip, :lat, :lon, :timezone, :org, :as_info)
             """),
             activity
         )
         db.session.commit()
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error logging activity [{action}]: {e}")
@@ -107,7 +114,7 @@ def log_user_activity(action, coupon_id=None):
 @login_required
 def sell_coupon():
     # -- activity log snippet --
-    log_user_activity("sell_coupon_view", coupon.id)
+    log_user_activity("sell_coupon_view", None)
 
     form = SellCouponForm()
 
