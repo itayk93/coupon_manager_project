@@ -48,12 +48,13 @@ class EncryptedString(TypeDecorator):
                 print(f"Error decrypting value: {value} - {e}")
         return value
 
-
 # Association table for Coupon and Tag (many-to-many)
 coupon_tags = db.Table(
     'coupon_tags',
-    db.Column('coupon_id', db.Integer, db.ForeignKey('coupon.id'), primary_key=True),
-    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
+    db.metadata,  # Ensure you're using Flask-SQLAlchemy's metadata
+    db.Column('coupon_id', db.Integer, db.ForeignKey('coupon.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id', ondelete='CASCADE'), primary_key=True),
+    extend_existing=True  # Allows redefining the table if it already exists
 )
 
 
@@ -111,6 +112,9 @@ class Tag(db.Model):
     name = db.Column(db.String(50), unique=True, nullable=False)
     count = db.Column(db.Integer, default=0)
 
+    coupons = db.relationship('Coupon', secondary=coupon_tags, back_populates='tags')
+
+
 class Coupon(db.Model):
     """
     טבלת קופונים.
@@ -137,7 +141,7 @@ class Coupon(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     user = db.relationship('User', back_populates='coupons')
 
-    tags = db.relationship('Tag', secondary=coupon_tags, backref=db.backref('coupons', lazy='dynamic'))
+    tags = db.relationship('Tag', secondary=coupon_tags, back_populates='coupons')
     usages = db.relationship('CouponUsage', backref='coupon', lazy=True, cascade='all, delete-orphan')
 
     # **הוספת היחס multipass_transactions**

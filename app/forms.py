@@ -562,3 +562,64 @@ class TagManagementForm(FlaskForm):
         ]
     )
     submit = SubmitField('צור תגית חדשה')
+
+# forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import SubmitField, HiddenField
+from wtforms.validators import DataRequired
+
+class DeleteTagForm(FlaskForm):
+    tag_id = HiddenField('Tag ID', validators=[DataRequired()])
+    submit = SubmitField('מחק תגית')
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField, HiddenField
+from wtforms.validators import DataRequired, Length
+
+class CompanyManagementForm(FlaskForm):
+    name = StringField(
+        'שם החברה',
+        validators=[
+            DataRequired(message="חובה למלא שם חברה."),
+            Length(max=255, message="שם החברה לא יכול להיות ארוך מ-255 תווים.")
+        ]
+    )
+    submit = SubmitField('צור חברה חדשה')
+
+class DeleteCompanyForm(FlaskForm):
+    company_id = HiddenField('Company ID', validators=[DataRequired()])
+    submit = SubmitField('מחק חברה')
+
+from flask_wtf import FlaskForm
+from wtforms import SelectField, SubmitField, HiddenField
+from wtforms.validators import DataRequired
+
+from flask_wtf import FlaskForm
+from wtforms import SelectField, SubmitField
+from wtforms.validators import DataRequired
+
+class CouponTagForm(FlaskForm):
+    coupon_id = SelectField(
+        'בחר קופון',
+        coerce=int,
+        validators=[DataRequired(message="חובה לבחור קופון.")]
+    )
+    tag_id = SelectField(
+        'בחר תגית',
+        coerce=int,
+        validators=[DataRequired(message="חובה לבחור תגית.")]
+    )
+    submit = SubmitField('עדכן תגית')
+
+# app/forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import SelectField, HiddenField, SubmitField
+from wtforms.validators import DataRequired
+
+class ManageCouponTagForm(FlaskForm):
+    coupon_id = HiddenField('Coupon ID', validators=[DataRequired()])
+    tag_id = SelectField('תגית', coerce=int, validators=[DataRequired()])
+    submit = SubmitField('עדכן תגית')
+
