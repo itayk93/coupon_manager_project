@@ -1,0 +1,29 @@
+<!-- /templates/profile/rate_user.html -->
+{% extends 'base.html' %}
+
+{% block title %}דירוג משתמש{% endblock %}
+
+{% block content %}
+<h2>דרג את {{ user_to_rate.first_name }} {{ user_to_rate.last_name }}</h2>
+<form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="form-group">
+        {{ form.rating_value.label }}
+        {{ form.rating_value(class="form-control") }}
+        {% for error in form.rating_value.errors %}
+            <span class="error-message">{{ error }}</span>
+        {% endfor %}
+    </div>
+
+    <div class="form-group">
+        {{ form.rating_comment.label }}
+        {{ form.rating_comment(class="form-control", rows="4") }}
+        {% for error in form.rating_comment.errors %}
+            <span class="error-message">{{ error }}</span>
+        {% endfor %}
+    </div>
+
+    {{ form.submit(class="btn btn-primary") }}
+</form>
+{% endblock %}

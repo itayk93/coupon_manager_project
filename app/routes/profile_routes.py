@@ -30,6 +30,13 @@ logger = logging.getLogger(__name__)
 profile_bp = Blueprint('profile', __name__)
 
 
+@profile_bp.route('/')
+def home():
+    if current_user.is_authenticated:
+        return redirect(url_for('profile.index'))
+    return render_template('index.html')  # מסך ראשי למשתמשים לא מחוברים
+
+
 @profile_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -40,9 +47,6 @@ def profile():
         current_user.last_name = form.last_name.data
         current_user.age = form.age.data
         current_user.gender = form.gender.data
-        current_user.region = form.region.data
-        current_user.religiosity = form.religiosity.data
-        current_user.income_level = form.income_level.data
         db.session.commit()
         flash('פרטי הפרופיל עודכנו בהצלחה.', 'success')
         return redirect(url_for('profile.profile'))
@@ -53,18 +57,8 @@ def profile():
         form.last_name.data = current_user.last_name
         form.age.data = current_user.age
         form.gender.data = current_user.gender
-        form.region.data = current_user.region
-        form.religiosity.data = current_user.religiosity
-        form.income_level.data = current_user.income_level
 
-    return render_template('profile.html', form=form)
-
-@profile_bp.route('/')
-def home():
-    if current_user.is_authenticated:
-        return redirect(url_for('profile.index'))
-    else:
-        return redirect(url_for('auth.login'))
+    return render_template('profile/profile.html', form=form)
 
 @profile_bp.route('/index', methods=['GET', 'POST'])
 @login_required
@@ -74,9 +68,6 @@ def index():
         # עדכון פרטי המשתמש
         current_user.age = form.age.data
         current_user.gender = form.gender.data
-        current_user.region = form.region.data
-        current_user.religiosity = form.religiosity.data
-        current_user.income_level = form.income_level.data
         db.session.commit()
         flash('פרטי הפרופיל עודכנו בהצלחה.', 'success')
         return redirect(url_for('profile.index'))
@@ -87,9 +78,6 @@ def index():
         form.last_name.data = current_user.last_name
         form.age.data = current_user.age
         form.gender.data = current_user.gender
-        form.region.data = current_user.region
-        form.religiosity.data = current_user.religiosity
-        form.income_level.data = current_user.income_level
 
     # חישוב סך הקופונים והחיסכון לאחר עדכון הסטטוס
     all_non_one_time_coupons = Coupon.query.filter(
@@ -296,7 +284,7 @@ def update_profile_field():
             logger.warning("Invalid CSRF token.")
             return jsonify({'status': 'error', 'message': 'Invalid CSRF token.'}), 400
 
-        allowed_fields = ['first_name', 'last_name', 'age', 'gender', 'region', 'religiosity', 'income_level']
+        allowed_fields = ['first_name', 'last_name', 'age', 'gender']
         if field not in allowed_fields:
             logger.warning(f"Attempt to update unauthorized field: {field}")
             return jsonify({'status': 'error', 'message': 'Unauthorized field.'}), 400
@@ -336,3 +324,25 @@ def buy_slots():
             flash('כמות סלוטים לא תקפה.', 'danger')
             return redirect(url_for('profile.buy_slots'))
     return render_template('buy_slots.html', slots=current_user.slots, form=form)
+
+@profile_bp.route('/edit_profile')
+@login_required
+def edit_profile():
+    return render_template('profile/edit_profile.html', form=form)
+
+@profile_bp.route('/rate_user')
+@login_required
+def rate_user():
+    return render_template('profile/rate_user.html', form=form)
+
+@profile_bp.route('/user_profile/<int:user_id>', methods=['GET'])
+@login_required
+def user_profile(user_id):
+    user = User.query.get_or_404(user_id)
+    return render_template('profile/user_profile.html', user=user)
+
+
+@profile_bp.route('/user_profile')
+@login_required
+def user_profile_default():
+    return redirect(url_for('profile.user_profile', user_id=current_user.id))

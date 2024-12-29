@@ -57,8 +57,12 @@
                         <a href="{{ url_for('transactions.my_transactions') }}">העסקאות שלי</a>
                     </div>
                 </div>
+                <!-- קישור לעמוד הפרופיל -->
+                <a href="{{ url_for('profile.user_profile_default') }}" class="nav-icon profile-icon">
+                    <i class="fa fa-user" style="font-size: 24px;"></i>
+                </a>
                 <!-- קישור לעמוד ההתראות -->
-                <a href="{{ url_for('profile.notifications') }}" class="nav-icon">
+                <a href="{{ url_for('profile.notifications') }}" class="nav-icon bell-icon">
                     <i class="fa fa-bell"></i>
                 </a>
             </nav>

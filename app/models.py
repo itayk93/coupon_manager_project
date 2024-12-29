@@ -71,9 +71,15 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(150), nullable=False)
     age = db.Column(db.Integer, nullable=True)
     gender = db.Column(db.String(20), nullable=True)
-    region = db.Column(db.String(50), nullable=True)
-    religiosity = db.Column(db.String(50), nullable=True)
-    income_level = db.Column(db.String(50), nullable=True)
+    # עמודה תאריך יצירת המשתמש
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+
+    # שדה תיאור פרופיל (טקסט משתמש כותב על עצמו)
+    profile_description = db.Column(db.Text, nullable=True)
+
+    # נתיב לתמונת פרופיל
+    profile_image = db.Column(db.String(255), nullable=True)
+
     is_confirmed = db.Column(db.Boolean, default=False, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     slots = db.Column(db.Integer, default=0, nullable=False)
@@ -95,6 +101,33 @@ class User(UserMixin, db.Model):
         back_populates='buyer',
         lazy=True
     )
+
+    # New: יחס לטבלת דירוגים (עבור משתמש זה כ"מקבל" הדירוג)
+    received_ratings = db.relationship('UserRating', foreign_keys='UserRating.rated_user_id', back_populates='rated_user', lazy=True)
+
+    # פונקציה לחישוב כמה קופונים המשתמש מכר
+    @property
+    def coupons_sold_count(self):
+        # למשל, נניח ב-Transaction הססטוס הסופי הוא 'הושלם' / 'אושר' / 'נסגר'
+        # אפשר לבדוק transaction.status == 'הושלם'
+        from app.models import Transaction
+        sold_transactions = Transaction.query.filter_by(seller_id=self.id, status='הושלמה').all()
+        return len(sold_transactions)
+
+    @property
+    def days_since_register(self):
+        """
+        מחזיר כמה ימים עברו מאז שהמשתמש נוצר.
+        """
+        if not self.created_at:
+            return 0
+        now_naive = datetime.now().replace(tzinfo=None)
+        created_at_naive = self.created_at.replace(tzinfo=None) if self.created_at.tzinfo else self.created_at
+        delta = now_naive - created_at_naive
+        return delta.days
+
+    def __repr__(self):
+        return f"<User {self.id} {self.email}>"
 
     # New Relationships for Usage Data
     consents = db.relationship("UserConsent", back_populates="user", lazy=True)
@@ -422,3 +455,32 @@ class OptOut(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", back_populates="opt_out")
+
+
+# app/models.py (המשך)
+
+class UserRating(db.Model):
+    """
+    טבלת דירוג והערות על משתמשים:
+    - כל רשומה מציינת ש- rating_user_id (מי מדרג) נתן דירוג ל- rated_user_id (מי שקיבל).
+    - rating_value: מספר (1-5 למשל).
+    - rating_comment: הערה חופשית.
+    - created_at: תאריך כתיבת הדירוג/ההערה.
+    - מגבלה: כל משתמש יכול לדרג משתמש אחר רק פעם אחת => נטפל בזה בלוגיקה של ה-Route.
+    """
+    __tablename__ = 'user_ratings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    rated_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    rating_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    rating_value = db.Column(db.Integer, nullable=False)
+    rating_comment = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+
+    # יחסים
+    rated_user = db.relationship('User', foreign_keys=[rated_user_id], back_populates='received_ratings')
+    # אם תרצה לקבל גם את מי שנתן את הדירוג (User), אפשר להוסיף יחסים נוספים:
+    rating_user = db.relationship('User', foreign_keys=[rating_user_id], lazy=True)
+
+    def __repr__(self):
+        return f"<UserRating from {self.rating_user_id} to {self.rated_user_id} = {self.rating_value}>"

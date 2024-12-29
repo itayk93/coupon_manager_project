@@ -401,25 +401,6 @@ class ProfileForm(FlaskForm):
         ('female', 'נקבה'),
         ('other', 'אחר')
     ], validators=[Optional()])
-    region = SelectField('אזור מגורים בישראל', choices=[
-        ('center', 'מרכז'),
-        ('north', 'צפון'),
-        ('south', 'דרום'),
-        ('jerusalem', 'ירושלים'),
-        ('other', 'אחר'),
-    ], validators=[Optional()])
-    religiosity = SelectField('האם אתה חילוני, מסורתי דתי או חרדי', choices=[
-        ('secular', 'חילוני'),
-        ('traditional', 'מסורתי דתי'),
-        ('ultra_orthodox', 'חרדי'),
-    ], validators=[Optional()])
-    income_level = SelectField('רמת הכנסה', choices=[
-        ('high_above_average', 'הרבה מעל הממוצע'),
-        ('slightly_above_average', 'מעט מעל הממוצע'),
-        ('average', 'ממוצע'),
-        ('slightly_below_average', 'מעט מתחת לממוצע'),
-        ('high_below_average', 'הרבה מתחת לממוצע'),
-    ], validators=[Optional()])
     submit = SubmitField('שמור')
 
 
@@ -623,3 +604,35 @@ class ManageCouponTagForm(FlaskForm):
     tag_id = SelectField('תגית', coerce=int, validators=[DataRequired()])
     submit = SubmitField('עדכן תגית')
 
+# app/forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, TextAreaField, SubmitField, IntegerField, FileField
+from wtforms.validators import DataRequired, NumberRange, Optional
+from flask_wtf.file import FileAllowed
+
+class UserProfileForm(FlaskForm):
+    """
+    טופס לעדכון פרופיל משתמש (תיאור קצר + אפשרות להעלאת תמונה).
+    """
+    profile_description = TextAreaField('ספר על עצמך בקצרה', validators=[Optional()])
+    profile_image = FileField(
+        'העלה תמונת פרופיל',
+        validators=[
+            Optional(),
+            FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'רק קבצי תמונה מותרים!')
+        ]
+    )
+    submit = SubmitField('שמור פרופיל')
+
+
+class RateUserForm(FlaskForm):
+    """
+    טופס דירוג משתמש + הוספת הערה (בפעם אחת).
+    """
+    rating_value = IntegerField('דירוג (1-5)', validators=[
+        DataRequired(message='חובה לתת דירוג'),
+        NumberRange(min=1, max=5, message='הדירוג חייב להיות בין 1 ל-5')
+    ])
+    rating_comment = TextAreaField('הערה (אופציונלי)', validators=[Optional()])
+    submit = SubmitField('שלח דירוג')

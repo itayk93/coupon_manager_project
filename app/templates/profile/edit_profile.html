@@ -1,0 +1,29 @@
+<!-- /templates/profile/edit_profile.html -->
+{% extends 'base.html' %}
+
+{% block title %}עריכת פרופיל{% endblock %}
+
+{% block content %}
+<h2>ערוך את הפרופיל שלך</h2>
+<form method="POST" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+
+    <div class="form-group">
+        {{ form.profile_description.label }}<br>
+        {{ form.profile_description(class="form-control", rows="4") }}
+        {% for error in form.profile_description.errors %}
+            <span class="error-message">{{ error }}</span>
+        {% endfor %}
+    </div>
+
+    <div class="form-group">
+        {{ form.profile_image.label }}<br>
+        {{ form.profile_image(class="form-control") }}
+        {% for error in form.profile_image.errors %}
+            <span class="error-message">{{ error }}</span>
+        {% endfor %}
+    </div>
+
+    {{ form.submit(class="btn btn-success") }}
+</form>
+{% endblock %}
