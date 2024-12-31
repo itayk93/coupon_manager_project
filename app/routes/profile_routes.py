@@ -34,10 +34,20 @@ profile_bp = Blueprint('profile', __name__)
 def home():
     if current_user.is_authenticated:
         return redirect(url_for('profile.index'))
-    # ערך ברירת מחדל עבור משתמשים לא מחוברים
-    total_value = 0
-    return render_template('index.html', total_value=total_value)
 
+    # ערכי ברירת מחדל עבור משתמשים לא מחוברים
+    total_value = 0
+    total_savings = 0
+    total_coupons_value = 0
+    percentage_savings = 0
+
+    return render_template(
+        'index.html',
+        total_value=total_value,
+        total_savings=total_savings,
+        total_coupons_value=total_coupons_value,
+        percentage_savings=percentage_savings
+    )
 
 @profile_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
