@@ -70,7 +70,7 @@ def log_user_activity(action, coupon_id=None):
         ip_address = request.remote_addr
         user_agent = request.headers.get('User-Agent', '')
 
-        geo_data = get_geo_location()
+        geo_data = get_geo_location(ip_address)
 
         activity = {
             "user_id": current_user.id if current_user and current_user.is_authenticated else None,
@@ -1050,9 +1050,11 @@ def add_coupon_with_image():
                 if best_company and best_match_ratio >= 90:
                     coupon_form.company_id.data = str(best_company.id)
                     coupon_form.other_company.data = ''
+                    chosen_company_name = best_company.name
                 else:
                     coupon_form.company_id.data = 'other'
                     coupon_form.other_company.data = company_name
+                    chosen_company_name = company_name
 
                 # חיפוש התגית באמצעות fuzzy matching
                 best_tag_ratio = 0
@@ -1066,18 +1068,41 @@ def add_coupon_with_image():
                 if best_tag and best_tag_ratio >= 90:
                     coupon_form.tag_id.data = str(best_tag.id)
                     coupon_form.other_tag.data = ''
+                    assigned_tag = best_tag
                 else:
-                    coupon_form.tag_id.data = 'other'
-                    coupon_form.other_tag.data = tag_name
+                    # שלב 4: קביעת התגית הנפוצה ביותר לחברה
+                    found_common_tag = get_most_common_tag_for_company(chosen_company_name)
+                    if found_common_tag:
+                        coupon_form.tag_id.data = str(found_common_tag.id)
+                        coupon_form.other_tag.data = ''
+                        assigned_tag = found_common_tag
+                        flash(f"התגית הנפוצה ביותר לחברה '{chosen_company_name}' נבחרה אוטומטית: '{found_common_tag.name}'.", "info")
+                    else:
+                        # אם גם אין תגית נפוצה, אפשר להציע למשתמש לבחור תגית חדשה
+                        coupon_form.tag_id.data = 'other'
+                        coupon_form.other_tag.data = tag_name
+                        assigned_tag = None
 
                 # מילוי יתר השדות
                 coupon_form.code.data = coupon_data.get('קוד קופון')
-                coupon_form.cost.data = float(coupon_data.get('עלות', 0))
-                coupon_form.value.data = float(coupon_data.get('ערך מקורי', 0))
+                try:
+                    coupon_form.cost.data = float(coupon_data.get('עלות', 0))
+                except ValueError:
+                    coupon_form.cost.data = 0.0
+                    flash('מחיר הקופון לא יכול להיות מומר למספר. הוגדר ל-0.', 'warning')
+                try:
+                    coupon_form.value.data = float(coupon_data.get('ערך מקורי', 0))
+                except ValueError:
+                    coupon_form.value.data = 0.0
+                    flash('ערך הקופון לא יכול להיות מומר למספר. הוגדר ל-0.', 'warning')
 
                 # אחוז הנחה
                 if 'אחוז הנחה' in coupon_df.columns:
-                    coupon_form.discount_percentage.data = float(coupon_data.get('אחוז הנחה', 0))
+                    try:
+                        coupon_form.discount_percentage.data = float(coupon_data.get('אחוז הנחה', 0))
+                    except ValueError:
+                        coupon_form.discount_percentage.data = 0.0
+                        flash('אחוז ההנחה לא יכול להיות מומר למספר. הוגדר ל-0.', 'warning')
                 else:
                     coupon_form.discount_percentage.data = 0  # ברירת מחדל
 
@@ -1087,7 +1112,11 @@ def add_coupon_with_image():
                     try:
                         coupon_form.expiration.data = datetime.strptime(expiration_str, '%Y-%m-%d').date()
                     except ValueError:
-                        coupon_form.expiration.data = None
+                        try:
+                            coupon_form.expiration.data = datetime.strptime(expiration_str, '%d/%m/%Y').date()
+                        except ValueError:
+                            coupon_form.expiration.data = None
+                            flash('תאריך התפוגה לא בפורמט תקין.', 'warning')
                 else:
                     coupon_form.expiration.data = None
 
@@ -1104,7 +1133,7 @@ def add_coupon_with_image():
                     db.session.commit()
                 else:
                     flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
-                    return redirect(url_for('add_coupon_with_image'))
+                    return redirect(url_for('coupons.add_coupon_with_image'))
 
                 show_coupon_form = True
                 flash("הטופס מולא בהצלחה. אנא בדוק וערוך אם נדרש.", "success")
@@ -1151,7 +1180,7 @@ def add_coupon_with_image():
         if selected_tag_id == 'other':
             if not other_tag_name:
                 flash('יש להזין שם תגית חדשה.', 'danger')
-                return redirect(url_for('add_coupon_with_image'))
+                return redirect(url_for('coupons.add_coupon_with_image'))
             existing_tag = Tag.query.filter_by(name=other_tag_name).first()
             if existing_tag:
                 tag = existing_tag
@@ -1165,10 +1194,10 @@ def add_coupon_with_image():
                 tag = Tag.query.get(selected_tag_id)
                 if not tag:
                     flash('תגית נבחרה אינה תקפה.', 'danger')
-                    return redirect(url_for('add_coupon_with_image'))
+                    return redirect(url_for('coupons.add_coupon_with_image'))
             except (ValueError, TypeError):
                 flash('תגית נבחרה אינה תקפה.', 'danger')
-                return redirect(url_for('add_coupon_with_image'))
+                return redirect(url_for('coupons.add_coupon_with_image'))
 
         # בדיקת תקינות נתונים ושמירה למסד הנתונים
         code = coupon_form.code.data.strip()

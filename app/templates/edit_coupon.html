@@ -69,21 +69,6 @@
             {% endfor %}
         </div>
 
-        <!-- שדה תגיות -->
-        <div class="form-group">
-            {{ form.tags.label }}
-            {{ form.tags(class="input-field") }}
-            <p>תגיות קיימות:
-                <span id="current-tags">{{ existing_tags }}</span>
-            </p>
-            <p>תגיות נפוצות:
-                <span id="suggested-tags">{{ top_tags|join(', ') }}</span>
-            </p>
-            {% for error in form.tags.errors %}
-                <span class="error">{{ error }}</span>
-            {% endfor %}
-        </div>
-
         <!-- שדה תיאור -->
         <div class="form-group">
             {{ form.description.label }}
@@ -223,5 +208,30 @@
         // Initialize on page load
         togglePurposeField();
     });
+
+        document.addEventListener('DOMContentLoaded', function() {
+        // פונקציה שמגבילה הזנה לערכים מספריים בלבד
+        function enforceNumericInput(event) {
+            const input = event.target;
+            const value = input.value;
+
+            // בדיקה שהערך מכיל רק מספרים או נקודה עשרונית
+            const isValid = /^-?\d*\.?\d*$/.test(value);
+
+            if (!isValid) {
+                // אם הערך אינו חוקי, מחיקת התו האחרון
+                input.value = value.slice(0, -1);
+            }
+        }
+
+        // מציאת כל שדות ה-input שרלוונטיים
+        const numericFields = document.querySelectorAll('input[type="number"]');
+
+        // הוספת מאזין לאירוע input
+        numericFields.forEach(field => {
+            field.addEventListener('input', enforceNumericInput);
+        });
+    });
+
 </script>
 {% endblock %}

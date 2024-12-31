@@ -3,35 +3,24 @@
 {% block title %}פרופיל משתמש{% endblock %}
 
 {% block content %}
-<section class="coupon-detail">
+<section class="profile-detail fadeIn">
     <h2>פרופיל של {{ user.first_name }} {{ user.last_name }}</h2>
 
-    <style>
-    .profile-img {
-        width: 100px; /* רוחב קבוע כמו בתמונת הקופון */
-        height: 100px; /* גובה קבוע */
-        object-fit: contain; /* מתאים את התוכן בצורה נכונה */
-        border-radius: 8px; /* עיגול פינות */
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* צל כמו בתמונת הקופון */
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .profile-img:hover {
-        transform: scale(1.05); /* אפקט התקרבות במעבר עכבר */
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* אפקט צל יותר חזק */
-    }
-    </style>
-
-    <!-- Company Logo and Name -->
-    <div class="company-info">
-        {% if user.profile_image %}
-            <img src="{{ url_for('static', filename=user.profile_image.split('static/')[1]) }}"
-                 alt="Profile Image" class="profile-img">
-        {% else %}
-            <img src="{{ url_for('static', filename='images/profiles/default_avatar.png') }}"
-                 alt="Profile Image" class="profile-img">
-        {% endif %}
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <!-- Profile Image -->
+        <div class="profile-image">
+            {% if user.profile_image %}
+                <img src="{{ url_for('static', filename=user.profile_image.split('static/')[1]) }}"
+                     alt="Profile Image" class="profile-img">
+            {% else %}
+                <img src="{{ url_for('static', filename='images/default_avatar.png') }}"
+                     alt="Profile Image" class="profile-img">
+            {% endif %}
+        </div>
     </div>
+
+    <hr>
 
     <!-- Tabs Navigation -->
     <div class="tabs">
@@ -113,31 +102,35 @@
 {% block scripts %}
 <script>
     function openTab(evt, tabName) {
-        // Hide all tab contents
+        // הסתרת כל תכני הטאבים
         var tabContents = document.getElementsByClassName("tab-content");
         for (var i = 0; i < tabContents.length; i++) {
             tabContents[i].classList.remove("active");
         }
 
-        // Remove 'active' class from all tab buttons
+        // הסרת 'active' מכל כפתורי הטאב
         var tabButtons = document.getElementsByClassName("tab-button");
         for (var i = 0; i < tabButtons.length; i++) {
             tabButtons[i].classList.remove("active");
         }
 
-        // Show the selected tab content and activate the button
+        // מציג את הטאב שנבחר ומסמן את הכפתור כ-active
         document.getElementById(tabName).classList.add("active");
         evt.currentTarget.classList.add("active");
     }
 
-    // Open the default tab on page load
+    // פתיחת הטאב הראשון כברירת מחדל
     document.addEventListener("DOMContentLoaded", function() {
         var defaultTab = document.querySelector(".tab-button.active");
         if (defaultTab) {
-            // Ensure that the active tab is displayed
             var tabName = defaultTab.getAttribute("onclick").split("'")[1];
             document.getElementById(tabName).classList.add("active");
         }
     });
 </script>
+{% endblock %}
+
+{% block styles %}
+<!-- במידה ויש לך קובץ CSS ראשי (שנראה שכבר קיים), אין צורך בשכפול עיצובים כאן. -->
+<!-- אם תרצה להוסיף שינויים נקודתיים, תוכל לעשות זאת כאן. -->
 {% endblock %}

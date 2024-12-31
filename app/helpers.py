@@ -1216,7 +1216,6 @@ def get_public_ip():
     """
     פונקציה לשליפת כתובת ה-IP הציבורית.
     """
-    """
     try:
         response = requests.get('https://api64.ipify.org?format=json', timeout=5)
         response.raise_for_status()
@@ -1225,8 +1224,7 @@ def get_public_ip():
     except requests.RequestException as e:
         current_app.logger.error(f"Error fetching public IP: {e}")
         return None
-    """
-    return None
+
 def get_geo_location():
     """
     פונקציה לשליפת מידע גיאוגרפי מבוסס IP.

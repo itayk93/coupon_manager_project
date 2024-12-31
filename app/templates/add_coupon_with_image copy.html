@@ -47,6 +47,21 @@
             {% endfor %}
         </div>
 
+        <!-- Tags Field -->
+        <div class="form-group">
+            {{ coupon_form.tag_id.label(class="form-label") }}
+            {{ coupon_form.tag_id(class="input-field", id="tag_select") }}
+            {% for error in coupon_form.tag_id.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="form-group" id="other_tag_group" style="display: none;">
+            {{ coupon_form.other_tag.label(class="form-label") }}
+            {{ coupon_form.other_tag(class="input-field", id="other_tag") }}
+            {% for error in coupon_form.other_tag.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
 
         <!-- Code Field -->
         <div class="form-group">
@@ -223,6 +238,24 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+
+    // Handle Tags
+    const tagSelect = document.getElementById('tag_select');
+    const otherTagGroup = document.getElementById('other_tag_group');
+    const otherTagInput = document.getElementById('other_tag');
+
+    function toggleOtherTagField() {
+        if (tagSelect && tagSelect.value === 'other') {
+            otherTagGroup.style.display = 'block';
+        } else {
+            otherTagGroup.style.display = 'none';
+            if (otherTagInput) otherTagInput.value = '';
+        }
+    }
+    if(tagSelect) {
+        toggleOtherTagField();
+        tagSelect.addEventListener('change', toggleOtherTagField);
+    }
 
     // Handle Company
     const companySelect = document.getElementById('company_select');
