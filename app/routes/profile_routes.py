@@ -34,7 +34,9 @@ profile_bp = Blueprint('profile', __name__)
 def home():
     if current_user.is_authenticated:
         return redirect(url_for('profile.index'))
-    return render_template('index.html')  # מסך ראשי למשתמשים לא מחוברים
+    # ערך ברירת מחדל עבור משתמשים לא מחוברים
+    total_value = 0
+    return render_template('index.html', total_value=total_value)
 
 
 @profile_bp.route('/profile', methods=['GET', 'POST'])
