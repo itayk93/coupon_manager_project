@@ -16,7 +16,7 @@ from flask_login import current_user
 from sqlalchemy.sql import text
 from datetime import datetime
 from app.extensions import db
-from app.helpers import get_geo_location
+from app.helpers import get_geo_location, get_public_ip
 
 
 auth_bp = Blueprint('auth', __name__)
@@ -26,13 +26,12 @@ from datetime import datetime
 from flask import request, current_app
 from flask_login import current_user
 
-
 def log_user_activity(action, coupon_id=None):
     """
     פונקציה מרכזית לרישום activity log.
     """
     try:
-        ip_address = request.remote_addr
+        ip_address = get_public_ip()
         user_agent = request.headers.get('User-Agent', '')
 
         geo_data = get_geo_location()
@@ -220,7 +219,7 @@ def save_consent():
 
     # זיהוי משתמש לפי user_id (אם מחובר) או לפי כתובת IP (אם לא מחובר)
     user_id = current_user.id if current_user.is_authenticated else None
-    ip_address = request.remote_addr
+    ip_address = get_public_ip()
 
     # בדיקה אם כבר קיימת רשומת הסכמה
     if user_id:
@@ -259,7 +258,7 @@ def log_user_activity(action, coupon_id=None):
     פונקציה מרכזית לרישום פעילות המשתמש.
     """
     try:
-        ip_address = request.remote_addr
+        ip_address = get_public_ip()
         user_agent = request.headers.get('User-Agent', '')
 
         geo_data = get_geo_location()

@@ -1213,16 +1213,16 @@ def get_most_common_tag_for_company(company_name):
 
 
 def get_public_ip():
-    """
-    פונקציה לשליפת כתובת ה-IP הציבורית.
-    """
     try:
-        response = requests.get('https://api64.ipify.org?format=json', timeout=5)
-        response.raise_for_status()
-        ip_data = response.json()
-        return ip_data.get('ip')
+        response = requests.get('https://api.ipify.org?format=json')
+        if response.status_code == 200:
+            data = response.json()
+            return data['ip']
+        else:
+            print(f"Failed to get IP. Status code: {response.status_code}")
+            return None
     except requests.RequestException as e:
-        current_app.logger.error(f"Error fetching public IP: {e}")
+        print(f"An error occurred: {e}")
         return None
 
 def get_geo_location():
