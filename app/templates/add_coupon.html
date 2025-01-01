@@ -9,15 +9,19 @@
     <h2>הוסף קופון חדש</h2>
     <!-- Existing buttons above the form -->
     <div class="add-coupons-buttons">
-        <a href="{{ url_for('coupons.add_coupons_bulk') }}" class="secondary-button">
-            <i class="fa fa-plus-circle" aria-hidden="true"></i> הוסף קופונים מרובים
-        </a>
-        <a href="{{ url_for('coupons.upload_coupons') }}" class="secondary-button">
-            <i class="fa fa-upload" aria-hidden="true"></i> העלה קובץ קופונים
-        </a>
-        <a href="{{ url_for('coupons.add_coupon_with_image') }}" class="secondary-button">
-            <i class="fa fa-image" aria-hidden="true"></i> הוסף קופון מתמונה
-        </a>
+        <div class="button-row">
+            <a href="{{ url_for('coupons.add_coupons_bulk') }}" class="secondary-button">
+                <i class="fa fa-plus-circle" aria-hidden="true"></i> הוסף קופונים מרובים
+            </a>
+            <a href="{{ url_for('coupons.upload_coupons') }}" class="secondary-button">
+                <i class="fa fa-upload" aria-hidden="true"></i> העלה קובץ קופונים
+            </a>
+        </div>
+        <div class="button-row full-width">
+            <a href="{{ url_for('coupons.add_coupon_with_image') }}" class="secondary-button wide-button">
+                <i class="fa fa-image" aria-hidden="true"></i> הוסף קופון מתמונה
+            </a>
+        </div>
     </div>
 
     <!-- הצגת הודעות flash -->
@@ -270,6 +274,15 @@
     .manual-entry p {
         text-align: center; /* מרכז את הטקסט במסמך הכניסה הידנית */
     }
+
+    /* כאן מתקנים את סידור הצ'קבוקס והטקסט בשורה במסכים קטנים */
+    .form-group.center-text .form-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-align: center;
+    }
 }
 
 /* כפתור הסגירה (X) ל-tooltip (משמש רק בדסקטופ) */
@@ -295,12 +308,31 @@
         display: block;
     }
 }
-
-/* עיצוב נוסף למרכז טקסט בלייבלים במידת הצורך */
-.form-group.center-text .form-label {
-    display: block;
-    text-align: center;
+    .add-coupons-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
 }
+
+.button-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.button-row.full-width {
+    width: 100%;
+}
+
+.wide-button {
+    flex-grow: 1;
+    text-align: center;
+    display: block;
+    width: 100%;
+    max-width: 320px; /* להתאים לרוחב הרצוי */
+}
+
 </style>
 
 <script>
@@ -416,8 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (changedField === 'value' && cost > 0 && discount > 0 && discount <= 100) {
                 discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
 
-            // שיניתי את discount - צריך לעדכן את discount שוב (כדי להישאר עקביים) או להשאיר
-            // אבל לרוב נרצה לעדכן את אחד מן האחרים. כאן בחרתי שוב discountPercentage כדי למנוע מצב סותר:
+            // שיניתי את discount - צריך לעדכן שוב (כדי להישאר עקביים)
             } else if (changedField === 'discount' && cost > 0 && value > 0) {
                 discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
             }
