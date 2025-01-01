@@ -34,7 +34,7 @@ def log_user_activity(action, coupon_id=None):
         ip_address = get_public_ip()
         user_agent = request.headers.get('User-Agent', '')
 
-        geo_data = get_geo_location()
+        geo_data = get_geo_location(ip_address)
 
         activity = {
             "user_id": current_user.id if current_user and current_user.is_authenticated else None,
@@ -261,7 +261,7 @@ def log_user_activity(action, coupon_id=None):
         ip_address = get_public_ip()
         user_agent = request.headers.get('User-Agent', '')
 
-        geo_data = get_geo_location()
+        geo_data = get_geo_location(ip_address)
 
         activity = {
             "user_id": current_user.id if current_user.is_authenticated else None,
@@ -310,7 +310,7 @@ def check_location():
     log_user_activity("page_access")
 
     # קבלת נתוני המיקום
-    geo_data = get_geo_location()
+    geo_data = get_geo_location(ip_address)
     country = geo_data.get("country")
 
     # אם המיקום אינו ישראל או איטליה, חסום את הגישה
