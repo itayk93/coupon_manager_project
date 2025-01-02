@@ -310,7 +310,10 @@ def check_location():
     log_user_activity("page_access")
 
     # קבלת נתוני המיקום
-    geo_data = get_geo_location(ip_address)
+    from app.helpers import get_geo_location, get_public_ip
+    ip_address = get_public_ip()
+    print(ip_address)
+    geo_data = get_geo_location()
     country = geo_data.get("country")
 
     # אם המיקום אינו ישראל או איטליה, חסום את הגישה
