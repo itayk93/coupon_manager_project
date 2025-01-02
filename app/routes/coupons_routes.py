@@ -50,6 +50,7 @@ from app.helpers import (
     create_notification, update_coupon_usage, update_all_active_coupons
 )
 import logging
+from app.helpers import get_geo_location, get_public_ip
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ def log_user_activity(action, coupon_id=None):
     פונקציה מרכזית לרישום activity log.
     """
     try:
-        ip_address = request.remote_addr
+        ip_address = get_public_ip()
         user_agent = request.headers.get('User-Agent', '')
 
         geo_data = get_geo_location(ip_address)

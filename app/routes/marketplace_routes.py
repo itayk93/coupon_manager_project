@@ -16,16 +16,16 @@ marketplace_bp = Blueprint('marketplace', __name__)
 
 logger = logging.getLogger(__name__)
 
-from app.helpers import get_geo_location
+from app.helpers import get_geo_location, get_public_ip
 def log_user_activity(action, coupon_id=None):
     """
     פונקציה מרכזית לרישום activity log.
     """
     try:
-        ip_address = request.remote_addr
+        ip_address = get_public_ip()
         user_agent = request.headers.get('User-Agent', '')
 
-        geo_data = get_geo_location()
+        geo_data = get_geo_location(ip_address)
 
         # ודא ש-geo_data מחזירה ערכים נכונים
         print(f"Geo Data: {geo_data}")
