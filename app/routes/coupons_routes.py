@@ -63,14 +63,19 @@ from flask_login import current_user
 from sqlalchemy.sql import text
 from app.extensions import db
 
+from app.helpers import get_geo_location, get_public_ip
 def log_user_activity(action, coupon_id=None):
     """
     פונקציה מרכזית לרישום activity log.
+    כעת מקבלת כפרמטר ראשון את שם הפעולה (action),
+    ובאופן אופציונלי מזהה קופון (coupon_id).
     """
     try:
-        user_agent = request.headers.get('User-Agent', '')
+        # הפקת כתובת IP כאן
+        ip_addr = get_public_ip()
 
-        geo_data = get_geo_location(ip_address)
+        user_agent = request.headers.get('User-Agent', '')  # דפדפן/מכשיר
+        geo_data = get_geo_location(ip_addr)                # מידע גאוגרפי ע"פ ה-IP
 
         activity = {
             "user_id": current_user.id if current_user and current_user.is_authenticated else None,
@@ -79,7 +84,7 @@ def log_user_activity(action, coupon_id=None):
             "action": action,
             "device": user_agent[:50] if user_agent else None,
             "browser": user_agent.split(' ')[0][:50] if user_agent else None,
-            "ip_address": ip_address[:45] if ip_address else None,
+            "ip_address": ip_addr[:45] if ip_addr else None,
             "city": geo_data.get("city"),
             "region": geo_data.get("region"),
             "country": geo_data.get("country"),
@@ -113,44 +118,59 @@ def log_user_activity(action, coupon_id=None):
 @coupons_bp.route('/sell_coupon', methods=['GET', 'POST'])
 @login_required
 def sell_coupon():
+    """
+    מסך/נקודת קצה למכירת קופון. מאפשר הזנת פרטי הקופון,
+    מחשב אוטומטית את אחוז ההנחה,
+    ומוסיף תגית באופן אוטומטי לפי שם החברה (אם נמצאה).
+    אין אפשרות ידנית לבחירת תגית.
+    """
     # -- activity log snippet --
     log_user_activity("sell_coupon_view", None)
 
     form = SellCouponForm()
 
+    # מביאים רק חברות (אין צורך בשליפת תגיות עבור בחירה ידנית)
     companies = Company.query.all()
-    tags = Tag.query.all()
 
+    # מכינים רשימת אפשרויות לבחירת חברה
     company_choices = [('', 'בחר חברה')]
     company_choices += [(str(company.id), company.name) for company in companies]
     company_choices.append(('other', 'אחר'))
     form.company_select.choices = company_choices
 
-    tag_choices = [('', 'בחר תגית')]
-    tag_choices += [(str(tag.id), tag.name) for tag in tags]
-    tag_choices.append(('other', 'אחר'))
-    form.tag_select.choices = tag_choices
-
     if form.validate_on_submit():
+        # איסוף נתונים מהטופס
         expiration = form.expiration.data
         purpose = form.purpose.data.strip() if form.is_one_time.data and form.purpose.data else None
-        value = float(form.value.data)
-        cost = float(form.cost.data)
 
+        try:
+            value = float(form.value.data) if form.value.data else 0.0
+        except:
+            value = 0.0
+
+        try:
+            cost = float(form.cost.data) if form.cost.data else 0.0
+        except:
+            cost = 0.0
+
+        # חישוב אחוז ההנחה (ערך לוגי לשימוש פנימי / תצוגה)
         if value > 0:
             discount_percentage = ((value - cost) / value) * 100
         else:
             discount_percentage = 0.0
 
+        # טיפול בבחירת חברה
         selected_company_id = form.company_select.data
         if selected_company_id == '':
             flash('יש לבחור חברה.', 'danger')
             return redirect(url_for('coupons.sell_coupon'))
+
         elif selected_company_id == 'other':
             company_name = form.other_company.data.strip()
             if not company_name:
                 flash('יש להזין שם חברה חדשה.', 'danger')
                 return redirect(url_for('coupons.sell_coupon'))
+
             existing_company = Company.query.filter_by(name=company_name).first()
             if existing_company:
                 company = existing_company
@@ -170,31 +190,7 @@ def sell_coupon():
                 flash('החברה שנבחרה אינה תקפה.', 'danger')
                 return redirect(url_for('coupons.sell_coupon'))
 
-        selected_tag_id = form.tag_select.data
-        if selected_tag_id == '':
-            flash('יש לבחור תגית.', 'danger')
-            return redirect(url_for('coupons.sell_coupon'))
-        elif selected_tag_id == 'other':
-            tag_name = form.other_tag.data.strip()
-            if not tag_name:
-                flash('יש להזין שם תגית חדשה.', 'danger')
-                return redirect(url_for('coupons.sell_coupon'))
-            tag = Tag.query.filter_by(name=tag_name).first()
-            if not tag:
-                tag = Tag(name=tag_name, count=1)
-                db.session.add(tag)
-            else:
-                tag.count += 1
-        else:
-            tag = Tag.query.get(int(selected_tag_id))
-            if not tag:
-                flash('התגית שנבחרה אינה תקפה.', 'danger')
-                return redirect(url_for('coupons.sell_coupon'))
-
-        # להוסיף את התגית לקופון ולהמשיך
-        if tag:
-            new_coupon.tags.append(tag)
-
+        # יצירת אובייקט קופון (ללא discount_percentage, כי לא קיים בעמודות המודל)
         new_coupon = Coupon(
             code=form.code.data.strip(),
             value=value,
@@ -206,16 +202,24 @@ def sell_coupon():
             is_available=True,
             is_for_sale=True,
             is_one_time=form.is_one_time.data,
-            purpose=purpose,
-            discount_percentage=discount_percentage
+            purpose=purpose
+            # אין discount_percentage כי הוא לא בעמודות Coupon
         )
-        current_app.logger.info(
-            f"Coupon created: is_available={new_coupon.is_available}, is_for_sale={new_coupon.is_for_sale}")
 
-        if tag:
-            new_coupon.tags.append(tag)
-            tag.count += 1
+        # ------------------------------------------------------------
+        # זיהוי תגית אוטומטי לפי שם החברה
+        # ------------------------------------------------------------
+        chosen_company_name = company.name
+        current_app.logger.info(f"[DEBUG] sell_coupon => chosen_company_name = '{chosen_company_name}'")
 
+        found_tag = get_most_common_tag_for_company(chosen_company_name)
+        current_app.logger.info(f"[DEBUG] sell_coupon => auto found_tag = '{found_tag}'")
+
+        # אם נמצאה תגית תואמת, מוסיפים אותה
+        if found_tag:
+            new_coupon.tags.append(found_tag)
+
+        # שמירה ב־DB
         db.session.add(new_coupon)
         try:
             db.session.commit()
@@ -230,7 +234,6 @@ def sell_coupon():
                     "device": request.headers.get('User-Agent', '')[:50],
                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
                     "ip_address": ip_address[:45],
-                    #"geo_location": get_geo_location(ip_address)[:100]
                     "geo_location": get_geo_location(ip_address)[:100]
                 }
                 db.session.execute(
@@ -250,6 +253,7 @@ def sell_coupon():
 
             flash('קופון למכירה נוסף בהצלחה!', 'success')
             return redirect(url_for('coupons.show_coupons'))
+
         except IntegrityError:
             db.session.rollback()
             flash('קוד הקופון כבר קיים. אנא בחר קוד אחר.', 'danger')
@@ -257,11 +261,20 @@ def sell_coupon():
             db.session.rollback()
             flash('אירעה שגיאה בעת הוספת הקופון. אנא נסה שוב מאוחר יותר.', 'danger')
             current_app.logger.error(f"Error adding coupon: {e}")
+
     else:
+        # אם הגענו ב־POST ויש שגיאות, מדפיסים log
         if request.method == 'POST':
+            for field, errors in form.errors.items():
+                for error in errors:
+                    current_app.logger.error(f"Error in {field}: {error}")
             flash('יש לתקן את השגיאות בטופס.', 'danger')
 
-    return render_template('sell_coupon.html', form=form, companies=companies, tags=tags)
+    return render_template(
+        'sell_coupon.html',
+        form=form,
+        companies=companies
+    )
 
 
 @coupons_bp.route('/coupons')

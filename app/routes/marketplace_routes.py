@@ -17,63 +17,53 @@ marketplace_bp = Blueprint('marketplace', __name__)
 logger = logging.getLogger(__name__)
 
 from app.helpers import get_geo_location, get_public_ip
-ip_address = get_public_ip()
 
-def log_user_activity(ip_address,action, coupon_id=None):
+def log_user_activity(action, coupon_id=None):
     """
-    פונקציה מרכזית לרישום activity log.
+    רישום פעולות משתמש.
     """
     try:
+        # קבלת נתוני IP וגיאוגרפיה
+        ip_address = get_public_ip()
+        geo_data = get_geo_location(ip_address)
         user_agent = request.headers.get('User-Agent', '')
 
-        geo_data = get_geo_location(ip_address)
-
-        # ודא ש-geo_data מחזירה ערכים נכונים
-        print(f"Geo Data: {geo_data}")
-
+        # בניית נתוני הפעולה
         activity = {
-            "user_id": current_user.id if current_user and current_user.is_authenticated else None,
+            "user_id": current_user.id if current_user.is_authenticated else None,
             "coupon_id": coupon_id,
             "timestamp": datetime.utcnow(),
             "action": action,
             "device": user_agent[:50] if user_agent else None,
             "browser": user_agent.split(' ')[0][:50] if user_agent else None,
-            "ip_address": ip_address[:45] if ip_address else None,
+            "ip_address": ip_address,
             "city": geo_data.get("city"),
             "region": geo_data.get("region"),
             "country": geo_data.get("country"),
             "isp": geo_data.get("isp"),
-            "country_code": geo_data.get("country_code"),
-            "zip": geo_data.get("zip"),
             "lat": geo_data.get("lat"),
             "lon": geo_data.get("lon"),
             "timezone": geo_data.get("timezone"),
-            "org": geo_data.get("org"),
-            "as_info": geo_data.get("as"),
         }
 
+        # כתיבה למסד הנתונים
         db.session.execute(
             text("""
-                INSERT INTO user_activities
-                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, 
-                     country_code, zip, lat, lon, timezone, org, as_info)
-                VALUES
-                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, 
-                     :country_code, :zip, :lat, :lon, :timezone, :org, :as_info)
+                INSERT INTO user_activities (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, lat, lon, timezone)
+                VALUES (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, :lat, :lon, :timezone)
             """),
             activity
         )
         db.session.commit()
-
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error logging activity [{action}]: {e}")
+        current_app.logger.error(f"Error logging activity: {e}")
 
 
 @marketplace_bp.route('/marketplace')
 @login_required
 def marketplace():
-    log_user_activity(ip_address,"marketplace_view", None)
+    log_user_activity("marketplace_view", None)
 
     coupons = Coupon.query.filter_by(is_available=True, is_for_sale=True).all()
     coupon_requests = CouponRequest.query.filter_by(fulfilled=False).all()
@@ -111,7 +101,7 @@ def marketplace():
 @marketplace_bp.route('/marketplace/coupon/<int:id>')
 @login_required
 def marketplace_coupon_detail(id):
-    log_user_activity(ip_address,"marketplace_coupon_detail_view", coupon_id=id)
+    log_user_activity("marketplace_coupon_detail_view", coupon_id=id)
 
     coupon = Coupon.query.get_or_404(id)
     if not coupon.is_available or not coupon.is_for_sale:
@@ -122,10 +112,10 @@ def marketplace_coupon_detail(id):
     return render_template('marketplace_coupon_detail.html', coupon=coupon, seller=seller)
 
 
-@marketplace_bp.route('/request_coupon', methods=['GET', 'POST'])
+@marketplace_bp.route('/request_coupon/<int:id>', methods=['GET', 'POST'])
 @login_required
 def request_coupon_detail(id):
-    log_user_activity(ip_address,"request_coupon_detail_view", None)
+    log_user_activity("request_coupon_detail_view", None)
 
     coupon_request = CouponRequest.query.get_or_404(id)
     if coupon_request.fulfilled:
@@ -159,7 +149,7 @@ def request_coupon_detail(id):
 @marketplace_bp.route('/request_to_buy/<int:coupon_id>', methods=['POST'])
 @login_required
 def request_to_buy(coupon_id):
-    log_user_activity(ip_address,"request_to_buy_attempt", coupon_id=coupon_id)
+    log_user_activity("request_to_buy_attempt", coupon_id=coupon_id)
 
     coupon = Coupon.query.get_or_404(coupon_id)
     if coupon.user_id == current_user.id:
@@ -182,7 +172,7 @@ def request_to_buy(coupon_id):
     notification = Notification(
         user_id=coupon.user_id,
         message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
-        link=url_for('coupons.my_transactions')
+        link=url_for('marketplace.my_transactions')
     )
     db.session.add(notification)
     db.session.commit()
@@ -208,7 +198,7 @@ def buy_coupon():
     """
     רוטה לטיפול בבקשת קנייה של קופון.
     """
-    log_user_activity(ip_address,"buy_coupon_attempt", None)
+    log_user_activity("buy_coupon_attempt", None)
 
     coupon_id = request.form.get('coupon_id', type=int)
     if not coupon_id:
@@ -263,7 +253,7 @@ def buy_coupon():
 @marketplace_bp.route('/coupon_request/<int:id>', methods=['GET', 'POST'])
 @login_required
 def coupon_request_detail_view(id):
-    log_user_activity(ip_address,"coupon_request_detail_view", None)
+    log_user_activity("coupon_request_detail_view", None)
 
     coupon_request = CouponRequest.query.get_or_404(id)
     if coupon_request.fulfilled:
@@ -297,7 +287,7 @@ def coupon_request_detail_view(id):
 @marketplace_bp.route('/delete_coupon_request/<int:id>', methods=['POST'])
 @login_required
 def delete_coupon_request(id):
-    log_user_activity(ip_address,"delete_coupon_request_attempt", None)
+    log_user_activity("delete_coupon_request_attempt", None)
 
     coupon_request = CouponRequest.query.get_or_404(id)
     if coupon_request.user_id != current_user.id:
@@ -309,7 +299,7 @@ def delete_coupon_request(id):
         db.session.commit()
 
         try:
-            log_user_activity(ip_address,"delete_coupon_request_success", None)
+            log_user_activity("delete_coupon_request_success", None)
         except Exception as e:
             current_app.logger.error(f"Error logging success activity [delete_coupon_request_success]: {e}")
 
@@ -325,7 +315,7 @@ def delete_coupon_request(id):
 @marketplace_bp.route('/my_transactions')
 @login_required
 def my_transactions():
-    log_user_activity(ip_address,"my_transactions_view", None)
+    log_user_activity("my_transactions_view", None)
 
     transactions_as_buyer = Transaction.query.filter(
         Transaction.buyer_id == current_user.id,
@@ -357,7 +347,7 @@ def my_transactions():
 @marketplace_bp.route('/approve_transaction/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 def approve_transaction(transaction_id):
-    log_user_activity(ip_address,"approve_transaction_view", None)
+    log_user_activity("approve_transaction_view", None)
 
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.seller_id != current_user.id:
@@ -408,7 +398,7 @@ def approve_transaction(transaction_id):
 @marketplace_bp.route('/decline_transaction/<int:transaction_id>')
 @login_required
 def decline_transaction(transaction_id):
-    log_user_activity(ip_address,"decline_transaction", None)
+    log_user_activity("decline_transaction", None)
 
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.seller_id != current_user.id:
@@ -426,7 +416,7 @@ def decline_transaction(transaction_id):
 @marketplace_bp.route('/confirm_transaction/<int:transaction_id>')
 @login_required
 def confirm_transaction(transaction_id):
-    log_user_activity(ip_address,"confirm_transaction", None)
+    log_user_activity("confirm_transaction", None)
 
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.buyer_id != current_user.id:
@@ -445,7 +435,7 @@ def confirm_transaction(transaction_id):
 @marketplace_bp.route('/cancel_transaction/<int:transaction_id>')
 @login_required
 def cancel_transaction(transaction_id):
-    log_user_activity(ip_address,"cancel_transaction", None)
+    log_user_activity("cancel_transaction", None)
 
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.buyer_id != current_user.id:
@@ -467,7 +457,7 @@ def complete_transaction(transaction):
     """
     try:
         # Log the completion attempt
-        log_user_activity(ip_address,"complete_transaction", coupon_id=transaction.coupon_id)
+        log_user_activity("complete_transaction", coupon_id=transaction.coupon_id)
     except Exception as e:
         current_app.logger.error(f"Error logging activity [complete_transaction]: {e}")
 
@@ -502,7 +492,7 @@ def complete_transaction(transaction):
 @marketplace_bp.route('/offer_coupon/<int:request_id>', methods=['GET', 'POST'])
 @login_required
 def offer_coupon(request_id):
-    log_user_activity(ip_address,"offer_coupon_view", None)
+    log_user_activity("offer_coupon_view", None)
 
     coupon_request = CouponRequest.query.get_or_404(request_id)
     if coupon_request.user_id == current_user.id:
@@ -545,7 +535,7 @@ def offer_coupon(request_id):
         db.session.commit()
 
         try:
-            log_user_activity(ip_address,"offer_coupon_submit", coupon_id=coupon.id)
+            log_user_activity("offer_coupon_submit", coupon_id=coupon.id)
         except Exception as e:
             current_app.logger.error(f"Error logging activity [offer_coupon_submit]: {e}")
 
@@ -558,7 +548,7 @@ def offer_coupon(request_id):
 @marketplace_bp.route('/seller_cancel_transaction/<int:transaction_id>')
 @login_required
 def seller_cancel_transaction(transaction_id):
-    log_user_activity(ip_address,"seller_cancel_transaction_attempt", transaction_id)
+    log_user_activity("seller_cancel_transaction_attempt", transaction_id)
 
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.seller_id != current_user.id:
@@ -596,7 +586,7 @@ def seller_cancel_transaction(transaction_id):
     db.session.commit()
 
     try:
-        log_user_activity(ip_address,"seller_cancel_transaction_success", transaction_id)
+        log_user_activity("seller_cancel_transaction_success", transaction_id)
     except Exception as e:
         current_app.logger.error(f"Error logging activity [seller_cancel_transaction_success]: {e}")
 

@@ -1,4 +1,3 @@
-<!-- sell_coupon.html -->
 {% extends 'base.html' %}
 
 {% block title %}
@@ -65,21 +64,6 @@
             <span class="error-message">{{ error }}</span><br>
             {% endfor %}
         </div>
-        <!-- Tags Field -->
-        <div class="form-group">
-            {{ form.tag_select.label }}<span class="required">*</span>
-            {{ form.tag_select(class="input-field") }}
-            {% for error in form.tag_select.errors %}
-            <span class="error-message">{{ error }}</span><br>
-            {% endfor %}
-        </div>
-        <div class="form-group" id="other_tag_group" style="display: none;">
-            {{ form.other_tag.label }}
-            {{ form.other_tag(class="input-field") }}
-            {% for error in form.other_tag.errors %}
-            <span class="error-message">{{ error }}</span><br>
-            {% endfor %}
-        </div>
         <!-- Description Field -->
         <div class="form-group">
             {{ form.description.label }}
@@ -113,23 +97,6 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle Tags
-    const tagSelect = document.getElementById('{{ form.tag_select.id }}');
-    const otherTagGroup = document.getElementById('other_tag_group');
-    const otherTagInput = document.getElementById('{{ form.other_tag.id }}');
-
-    function toggleOtherTagField() {
-        if (tagSelect.value === 'other') {
-            otherTagGroup.style.display = 'block';
-        } else {
-            otherTagGroup.style.display = 'none';
-            otherTagInput.value = '';
-        }
-    }
-
-    tagSelect.addEventListener('change', toggleOtherTagField);
-    toggleOtherTagField();
-
     // Handle Company
     const companySelect = document.getElementById('{{ form.company_select.id }}');
     const otherCompanyGroup = document.getElementById('other_company_group');

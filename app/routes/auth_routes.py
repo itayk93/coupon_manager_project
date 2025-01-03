@@ -213,31 +213,32 @@ def logout():
 
 @auth_bp.route('/save_consent', methods=['POST'])
 def save_consent():
-    log_user_activity(ip_address,"save_consent_attempt")
+    # Retrieve the IP address at the beginning of the function
+    ip_address = get_public_ip()
+    log_user_activity(ip_address, "save_consent_attempt")
 
-    # קבלת הנתונים מהבקשה
+    # Get data from the request
     data = request.json
     consent = data.get('consent')
 
     if consent is None:
         return jsonify({"error": "Invalid data"}), 400
 
-    # זיהוי משתמש לפי user_id (אם מחובר) או לפי כתובת IP (אם לא מחובר)
+    # Identify user by user_id (if logged in) or IP address (if not logged in)
     user_id = current_user.id if current_user.is_authenticated else None
-    ip_address = get_public_ip()
 
-    # בדיקה אם כבר קיימת רשומת הסכמה
+    # Check if there is already an existing consent record
     if user_id:
         existing_consent = UserConsent.query.filter_by(user_id=user_id).first()
     else:
         existing_consent = UserConsent.query.filter_by(ip_address=ip_address).first()
 
     if existing_consent:
-        # עדכון סטטוס העדפה
+        # Update consent status
         existing_consent.consent_status = consent
         existing_consent.timestamp = datetime.utcnow()
     else:
-        # יצירת רשומת הסכמה חדשה
+        # Create a new consent record
         new_consent = UserConsent(
             user_id=user_id,
             ip_address=ip_address,
@@ -247,7 +248,7 @@ def save_consent():
         db.session.add(new_consent)
 
     db.session.commit()
-    log_user_activity(ip_address,"save_consent_success")
+    log_user_activity(ip_address, "save_consent_success")
     return jsonify({"message": "Consent saved successfully"}), 200
 
 @auth_bp.route('/privacy-policy')
@@ -314,7 +315,6 @@ def check_location():
 
     # קבלת כתובת ה-IP
     ip_address = get_public_ip()
-    print(ip_address)
 
     # רישום הפעולה
     log_user_activity(ip_address, "page_access")

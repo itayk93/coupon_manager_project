@@ -292,7 +292,7 @@ class SellCouponForm(FlaskForm):
     tag_select = SelectField(
         'קטגוריה',
         choices=[],
-        validators=[DataRequired(message="יש לבחור תגית.")]
+        validators=[Optional()]
     )
     other_tag = StringField(
         'קטגוריה חדשה',
