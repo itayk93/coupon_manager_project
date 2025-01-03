@@ -1225,11 +1225,10 @@ def get_public_ip():
         print(f"An error occurred: {e}")
         return None
 
-def get_geo_location():
+def get_geo_location(ip_address):
     """
     פונקציה לשליפת מידע גיאוגרפי מבוסס IP.
     """
-    ip_address = get_public_ip()
     if not ip_address:
         return {
             "status": None,

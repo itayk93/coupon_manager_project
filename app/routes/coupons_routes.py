@@ -68,7 +68,6 @@ def log_user_activity(action, coupon_id=None):
     פונקציה מרכזית לרישום activity log.
     """
     try:
-        ip_address = get_public_ip()
         user_agent = request.headers.get('User-Agent', '')
 
         geo_data = get_geo_location(ip_address)
@@ -230,8 +229,8 @@ def sell_coupon():
                     "action": "sell_coupon_created",
                     "device": request.headers.get('User-Agent', '')[:50],
                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                    "ip_address": request.remote_addr[:45],
-                    #"geo_location": get_geo_location(request.remote_addr)[:100]
+                    "ip_address": ip_address[:45],
+                    #"geo_location": get_geo_location(ip_address)[:100]
                     "geo_location": get_geo_location(ip_address)[:100]
                 }
                 db.session.execute(
@@ -348,7 +347,7 @@ def upload_coupons():
                 "action": "upload_coupons_submit",
                 "device": request.headers.get('User-Agent', '')[:50],
                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                "ip_address": request.remote_addr[:45],
+                "ip_address": ip_address[:45],
                 "geo_location": get_geo_location(ip_address)[:100]
             }
             db.session.execute(
@@ -502,7 +501,7 @@ def add_coupons_bulk():
                 "action": "add_coupons_bulk_submit",
                 "device": request.headers.get('User-Agent', '')[:50],
                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                "ip_address": request.remote_addr[:45],
+                "ip_address": ip_address[:45],
                 "geo_location": get_geo_location(ip_address)[:100]
             }
             db.session.execute(
@@ -667,7 +666,7 @@ def add_coupon():
                         "action": "add_coupon_via_sms",
                         "device": request.headers.get('User-Agent', '')[:50],
                         "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                        "ip_address": request.remote_addr[:45],
+                        "ip_address": ip_address[:45],
                         "geo_location": get_geo_location(ip_address)[:100]
                     }
                     db.session.execute(
@@ -789,7 +788,7 @@ def add_coupon():
                                     "action": "add_coupon_via_image_upload",
                                     "device": request.headers.get('User-Agent', '')[:50],
                                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                                    "ip_address": request.remote_addr[:45],
+                                    "ip_address": ip_address[:45],
                                     "geo_location": get_geo_location(ip_address)[:100]
                                 }
                                 db.session.execute(
@@ -911,7 +910,7 @@ def add_coupon():
                                 "action": "add_coupon_manual_submit",
                                 "device": request.headers.get('User-Agent', '')[:50],
                                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                                "ip_address": request.remote_addr[:45],
+                                "ip_address": ip_address[:45],
                                 "geo_location": get_geo_location(ip_address)[:100]
                             }
                             db.session.execute(
@@ -1450,7 +1449,7 @@ def edit_coupon(id):
                     "action": "edit_coupon_submit",
                     "device": request.headers.get('User-Agent', '')[:50],
                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                    "ip_address": request.remote_addr[:45],
+                    "ip_address": ip_address[:45],
                     "geo_location": get_geo_location(ip_address)[:100]
                 }
                 db.session.execute(
@@ -1523,7 +1522,7 @@ def select_coupons_to_delete():
                     "action": f"deleted_coupons_{selected_ids}",
                     "device": request.headers.get('User-Agent', '')[:50],
                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                    "ip_address": request.remote_addr[:45],
+                    "ip_address": ip_address[:45],
                     "geo_location": get_geo_location(ip_address)[:100]
                 }
                 db.session.execute(
@@ -1710,7 +1709,7 @@ def mark_coupon_as_fully_used(id):
                 "action": "mark_coupon_as_fully_used_success",
                 "device": request.headers.get('User-Agent', '')[:50],
                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                "ip_address": request.remote_addr[:45],
+                "ip_address": ip_address[:45],
                 "geo_location": get_geo_location(ip_address)[:100]
             }
             db.session.execute(
@@ -1800,7 +1799,7 @@ def update_coupon(id):
                     "action": "update_coupon_usage_success",
                     "device": request.headers.get('User-Agent', '')[:50],
                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                    "ip_address": request.remote_addr[:45],
+                    "ip_address": ip_address[:45],
                     "geo_location": get_geo_location(ip_address)[:100]
                 }
                 db.session.execute(
@@ -1867,7 +1866,7 @@ def delete_coupon(id):
                         "action": "delete_coupon_success",
                         "device": request.headers.get('User-Agent', '')[:50],
                         "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                        "ip_address": request.remote_addr[:45],
+                        "ip_address": ip_address[:45],
                         "geo_location": get_geo_location(ip_address)[:100]
                     }
                     db.session.execute(
@@ -1980,7 +1979,7 @@ def edit_usage(usage_id):
                 "action": "edit_usage_success",
                 "device": request.headers.get('User-Agent', '')[:50],
                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                "ip_address": request.remote_addr[:45],
+                "ip_address": ip_address[:45],
                 "geo_location": get_geo_location(ip_address)[:100]
             }
             db.session.execute(
@@ -2337,7 +2336,7 @@ def delete_coupon_request(id):
                 "action": "delete_coupon_request_success",
                 "device": request.headers.get('User-Agent', '')[:50],
                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                "ip_address": request.remote_addr[:45],
+                "ip_address": ip_address[:45],
                 "geo_location": get_geo_location(ip_address)[:100]
             }
             db.session.execute(
@@ -2366,7 +2365,6 @@ def delete_coupon_request(id):
 def complete_transaction(transaction):
     # -- activity log snippet --
     try:
-        ip_address = request.remote_addr if request else 'N/A'
         user_agent = request.headers.get('User-Agent', '') if request else ''
         geo_location = get_geo_location(ip_address) if request else 'N/A'
         activity = {
