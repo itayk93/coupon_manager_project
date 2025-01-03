@@ -64,53 +64,35 @@ from sqlalchemy.sql import text
 from app.extensions import db
 
 from app.helpers import get_geo_location, get_public_ip
-def log_user_activity(action, coupon_id=None):
-    """
-    פונקציה מרכזית לרישום activity log.
-    כעת מקבלת כפרמטר ראשון את שם הפעולה (action),
-    ובאופן אופציונלי מזהה קופון (coupon_id).
-    """
-    try:
-        # הפקת כתובת IP כאן
-        ip_addr = get_public_ip()
 
-        user_agent = request.headers.get('User-Agent', '')  # דפדפן/מכשיר
-        geo_data = get_geo_location(ip_addr)                # מידע גאוגרפי ע"פ ה-IP
+def log_user_activity(action, coupon_id=None):
+    try:
+        ip_address = get_public_ip()  # ודא ש-fallback ערך מחזיר אם כתובת לא זמינה
+        geo_data = get_geo_location(ip_address)
 
         activity = {
             "user_id": current_user.id if current_user and current_user.is_authenticated else None,
             "coupon_id": coupon_id,
             "timestamp": datetime.utcnow(),
             "action": action,
-            "device": user_agent[:50] if user_agent else None,
-            "browser": user_agent.split(' ')[0][:50] if user_agent else None,
-            "ip_address": ip_addr[:45] if ip_addr else None,
+            "device": request.headers.get('User-Agent', '')[:50],
+            "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+            "ip_address": ip_address[:45] if ip_address else None,
             "city": geo_data.get("city"),
             "region": geo_data.get("region"),
             "country": geo_data.get("country"),
-            "isp": geo_data.get("isp"),
-            "country_code": geo_data.get("country_code"),
-            "zip": geo_data.get("zip"),
-            "lat": geo_data.get("lat"),
-            "lon": geo_data.get("lon"),
-            "timezone": geo_data.get("timezone"),
-            "org": geo_data.get("org"),
-            "as_info": geo_data.get("as"),
         }
 
         db.session.execute(
             text("""
                 INSERT INTO user_activities
-                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, 
-                     country_code, zip, lat, lon, timezone, org, as_info)
+                (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country)
                 VALUES
-                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, 
-                     :country_code, :zip, :lat, :lon, :timezone, :org, :as_info)
+                (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country)
             """),
             activity
         )
         db.session.commit()
-
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error logging activity [{action}]: {e}")
@@ -1416,7 +1398,12 @@ def edit_coupon(id):
             coupon.expiration = form.expiration.data if form.expiration.data else None
 
             if form.tags.data:
-                tag_names = [tag.strip() for tag in form.tags.data.split(',') if tag.strip()]
+                if isinstance(form.tags.data, str) and form.tags.data:
+                    tag_names = [tag.strip() for tag in form.tags.data.split(',') if tag.strip()]
+                elif isinstance(form.tags.data, list):
+                    tag_names = [tag.strip() for tag in form.tags.data if isinstance(tag, str) and tag.strip()]
+                else:
+                    tag_names = []
                 coupon.tags.clear()
                 for name in tag_names:
                     tag = Tag.query.filter_by(name=name).first()
@@ -2070,7 +2057,7 @@ def update_all_coupons():
     return redirect(url_for('coupons.show_coupons'))
 
 
-@coupons_bp.route('/update_all_coupons/process', methods=['POST'])
+@coupons_bp.route('/update_all_coupons/process', methods=['GET', 'POST'])
 @login_required
 def update_all_coupons_route():
     # -- activity log snippet --
@@ -2610,30 +2597,6 @@ def mark_coupon_as_used(id):
         db.session.add(notification)
         db.session.commit()
 
-        # לוג הצלחה
-        try:
-            success_activity = {
-                "user_id": current_user.id,
-                "coupon_id": coupon.id,
-                "timestamp": datetime.utcnow(),
-                "action": "mark_coupon_as_used_success",
-                "device": user_agent[:50],
-                "browser": user_agent.split(' ')[0][:50] if user_agent else None,
-                "ip_address": ip_address[:45],
-                "geo_location": geo_location[:100]
-            }
-            db.session.execute(
-                text("""
-                INSERT INTO user_activities (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
-                VALUES (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
-                """),
-                success_activity
-            )
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error logging activity [mark_coupon_as_used_success]: {e}")
-
         flash('הקופון סומן כנוצל בהצלחה.', 'success')
     except Exception as e:
         db.session.rollback()
@@ -2745,7 +2708,7 @@ def update_coupon_usage_route(id):
 
 @coupons_bp.route('/update_all_active_coupons', methods=['POST'])
 @login_required
-def update_all_active_coupons():
+def update_all_active_coupons(user_id):
     if not current_user.is_admin:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('index'))
@@ -2805,4 +2768,4 @@ def update_all_active_coupons():
     if failed_coupons:
         flash(f'הקופונים הבאים לא עודכנו: {", ".join(failed_coupons)}', 'danger')
 
-    return redirect(url_for('index'))
+    return redirect(url_for('profile.index'))

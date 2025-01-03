@@ -302,13 +302,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (changedField === 'cost' && cost !== null && value !== null && cost > 0) {
             // מחשבים discount בלבד
-            const newDiscount = ((cost - value) / cost) * 100;
+            const newDiscount = ((value - cost) / cost) * 100;
             discountPercentageInput.value = newDiscount.toFixed(2);
         }
 
         if (changedField === 'value' && value !== null && cost !== null && cost > 0) {
             // מחשבים discount בלבד
-            const newDiscount = ((cost - value) / cost) * 100;
+            const newDiscount = ((value - cost) / cost) * 100;
             discountPercentageInput.value = newDiscount.toFixed(2);
         }
 

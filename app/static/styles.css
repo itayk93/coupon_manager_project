@@ -43,6 +43,15 @@ body {
     padding-bottom: 50px; /* Bottom padding for the page */
 }
 
+/* Remove underline from all links permanently */
+a {
+    text-decoration: none !important;
+}
+
+a:hover {
+    text-decoration: none !important;
+}
+
 /* ===================================================
    3. Header Styles
    =================================================== */

@@ -135,7 +135,7 @@ def request_coupon():
         notification = Notification(
             user_id=coupon.user_id,
             message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
-            link=url_for('transactions.my_transactions')
+            link=url_for('marketplace.my_transactions')
         )
         db.session.add(notification)
         db.session.commit()
@@ -150,7 +150,7 @@ def request_coupon():
             requests_bp.logger.error(f'שגיאה בשליחת מייל למוכר: {e}')
             flash('הבקשה נשלחה אך לא הצלחנו לשלוח הודעה למוכר במייל.', 'warning')
 
-        return redirect(url_for('transactions.my_transactions'))
+        return redirect(url_for('marketplace.my_transactions'))
 
     return render_template('request_coupon.html')
 
