@@ -636,3 +636,21 @@ class RateUserForm(FlaskForm):
     ])
     rating_comment = TextAreaField('הערה (אופציונלי)', validators=[Optional()])
     submit = SubmitField('שלח דירוג')
+
+# app/forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import TextAreaField, HiddenField
+from wtforms.validators import DataRequired, NumberRange
+from wtforms.widgets import HiddenInput
+from wtforms import IntegerField
+
+class ReviewSellerForm(FlaskForm):
+    rating = IntegerField(
+        'דירוג (1 עד 5)',
+        validators=[
+            DataRequired(message="חובה להזין דירוג"),
+            NumberRange(min=1, max=5, message="הדירוג צריך להיות בין 1 ל-5")
+        ]
+    )
+    comment = TextAreaField('הערה (אופציונלי)')

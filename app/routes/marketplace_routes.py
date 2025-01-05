@@ -11,6 +11,7 @@ import logging
 from datetime import datetime, timezone
 import os
 from app.helpers import send_email
+from sqlalchemy.sql import text
 
 marketplace_bp = Blueprint('marketplace', __name__)
 
@@ -24,7 +25,7 @@ def log_user_activity(action, coupon_id=None):
     """
     try:
         # קבלת נתוני IP וגיאוגרפיה
-        ip_address = get_public_ip()
+        ip_address = get_public_ip() or '0.0.0.0'
         geo_data = get_geo_location(ip_address)
         user_agent = request.headers.get('User-Agent', '')
 
@@ -36,7 +37,7 @@ def log_user_activity(action, coupon_id=None):
             "action": action,
             "device": user_agent[:50] if user_agent else None,
             "browser": user_agent.split(' ')[0][:50] if user_agent else None,
-            "ip_address": ip_address,
+            "ip_address": ip_address[:45] if ip_address else None,
             "city": geo_data.get("city"),
             "region": geo_data.get("region"),
             "country": geo_data.get("country"),
@@ -347,36 +348,51 @@ def my_transactions():
 @marketplace_bp.route('/approve_transaction/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 def approve_transaction(transaction_id):
-    log_user_activity("approve_transaction_view", None)
+    log_user_activity("approve_transaction_view", transaction_id)
 
+    # שליפת העסקה מהדאטהבייס
     transaction = Transaction.query.get_or_404(transaction_id)
+
+    # בדיקת הרשאות (שהמשתמש הוא המוכר בעסקה)
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
         return redirect(url_for('coupons.my_transactions'))
 
+    # בדיקה אם העסקה כבר אושרה בעבר
     if transaction.seller_approved or transaction.status == 'ממתין לאישור הקונה':
         flash('כבר אישרת את העסקה. לא ניתן לאשר שוב.', 'warning')
         return redirect(url_for('coupons.my_transactions'))
 
+    # יצירת אובייקט טופס
     form = ApproveTransactionForm()
-    if form.validate_on_submit():
-        transaction.seller_phone = form.seller_phone.data
-        transaction.seller_approved = True
-        transaction.coupon_code_entered = True
-        transaction.status = 'ממתין לאישור הקונה'
-        db.session.commit()
 
-        seller = transaction.seller
-        buyer = transaction.buyer
-        coupon = transaction.coupon
-
-        html_content = render_template(
-            'emails/seller_approved_transaction.html',
-            seller=seller,
-            buyer=buyer,
-            coupon=coupon
-        )
+    # ווידוא שהבקשה היא POST והטופס תקין
+    if request.method == 'POST' and form.validate_on_submit():
         try:
+            # עדכון פרטי העסקה
+            transaction.seller_phone = form.seller_phone.data
+            transaction.seller_approved = True
+            transaction.coupon_code_entered = True
+            transaction.status = 'ממתין לאישור הקונה'
+
+            # שמירת השינויים בדאטהבייס
+            db.session.commit()
+
+            # הוספת הודעת הצלחה ללוגים ולמשתמש
+            print("Transaction updated successfully!")
+            flash('אישרת את העסקה בהצלחה!', 'success')
+
+            # שליחת מייל לקונה
+            seller = transaction.seller
+            buyer = transaction.buyer
+            coupon = transaction.coupon
+
+            html_content = render_template(
+                'emails/seller_approved_transaction.html',
+                seller=seller,
+                buyer=buyer,
+                coupon=coupon
+            )
             send_email(
                 sender_email='itayk93@gmail.com',
                 sender_name='MaCoupon',
@@ -385,13 +401,17 @@ def approve_transaction(transaction_id):
                 subject='המוכר אישר את העסקה',
                 html_content=html_content
             )
-            flash('אישרת את העסקה והמייל נשלח לקונה בהצלחה.', 'success')
+
+            # הפניה לעמוד העסקאות
+            return redirect(url_for('coupons.my_transactions'))
+
         except Exception as e:
-            logger.error(f"Error sending seller approved email: {e}")
-            flash('העסקה אושרה, אך לא הצלחנו לשלוח מייל לקונה.', 'warning')
+            # טיפול בשגיאה ועדכון הדאטהבייס
+            db.session.rollback()
+            print(f"Error committing transaction: {e}")
+            flash('שגיאה בעת אישור העסקה. נסה שוב מאוחר יותר.', 'danger')
 
-        return redirect(url_for('coupons.my_transactions'))
-
+    # אם זה GET בלבד, הצגת העמוד עם הטופס
     return render_template('approve_transaction.html', form=form, transaction=transaction)
 
 
@@ -429,7 +449,10 @@ def confirm_transaction(transaction_id):
     coupon.is_available = True
     db.session.commit()
     flash('אישרת את העסקה. הקופון הועבר לחשבונך.', 'success')
-    return redirect(url_for('coupons.my_transactions'))
+
+    # כעת נפנה אותו למסך הביקורת על המוכר
+    seller_id = transaction.seller_id
+    return redirect(url_for('marketplace.review_seller', seller_id=seller_id, transaction_id=transaction.id))
 
 
 @marketplace_bp.route('/cancel_transaction/<int:transaction_id>')
@@ -591,3 +614,120 @@ def seller_cancel_transaction(transaction_id):
         current_app.logger.error(f"Error logging activity [seller_cancel_transaction_success]: {e}")
 
     return redirect(url_for('marketplace.my_transactions'))
+
+
+@marketplace_bp.route('/review_seller/<int:seller_id>', methods=['GET', 'POST'])
+@login_required
+def review_seller(seller_id):
+    """
+    הקונה משאיר ביקורת למוכר.
+    נבדוק שמדובר בקונה שאכן סיים עסקה עם המוכר הזה.
+    """
+    transaction_id = request.args.get('transaction_id', type=int)
+
+    # בדיקה אם אכן קיימת עסקה הושלמה בין current_user (הקונה) למוכר (seller_id)
+    transaction = Transaction.query.filter_by(
+        id=transaction_id,
+        buyer_id=current_user.id,
+        seller_id=seller_id,
+        status='הושלם'
+    ).first()
+
+    if not transaction:
+        flash('לא נמצאה עסקה תקינה להוספת ביקורת.', 'danger')
+        return redirect(url_for('marketplace.my_transactions'))
+
+    if request.method == 'GET':
+        # בדיקה אם כבר השארת ביקורת על העסקה הזו (אופציונלי).
+        existing_review = UserReview.query.filter_by(
+            reviewer_id=current_user.id,
+            reviewed_user_id=seller_id
+        ).first()
+        if existing_review:
+            flash('כבר השארת ביקורת על משתמש זה.', 'info')
+            return redirect(url_for('marketplace.my_transactions'))
+
+        return render_template('review_seller.html', seller_id=seller_id)
+
+    if request.method == 'POST':
+        # מקבלים את הערך מהסליידר (1-5) ואת התגובה
+        rating_str = request.form.get('rating')
+        comment = request.form.get('comment', '')
+
+        # ולידציה בסיסית
+        try:
+            rating = int(rating_str)
+        except:
+            flash('עליך לבחור דירוג תקין בין 1 ל-5.', 'danger')
+            return redirect(request.url)
+
+        if rating < 1 or rating > 5:
+            flash('הדירוג חייב להיות בין 1 ל-5.', 'danger')
+            return redirect(request.url)
+
+        # שמירת הביקורת
+        user_review = UserReview(
+            reviewer_id=current_user.id,
+            reviewed_user_id=seller_id,
+            rating=rating,
+            comment=comment
+        )
+        db.session.add(user_review)
+        db.session.commit()
+
+        flash('הביקורת נשמרה בהצלחה!', 'success')
+        return redirect(url_for('profile.profile_view', user_id=seller_id))
+
+@marketplace_bp.route('/buyer_confirm_transfer/<int:transaction_id>', methods=['GET', 'POST'])
+@login_required
+def buyer_confirm_transfer(transaction_id):
+    """
+    הקונה מאשר שההעברה הכספית בוצעה.
+    """
+    log_user_activity("buyer_confirm_transfer_view", transaction_id)
+
+    transaction = Transaction.query.get_or_404(transaction_id)
+    if transaction.buyer_id != current_user.id:
+        flash('אין לך הרשאה לפעולה זו.', 'danger')
+        return redirect(url_for('marketplace.my_transactions'))
+
+    # אם הגיעו בטופס POST (כלומר לחצו על "אשר שההעברה הכספית בוצעה")
+    if request.method == 'POST':
+        # נסמן בדאטה־בייס שהקונה אישר
+        transaction.buyer_confirmed = True
+        transaction.buyer_confirmed_at = datetime.utcnow()
+        db.session.commit()
+
+        flash('אישרת שההעברה הכספית בוצעה.', 'success')
+
+        # שליחת מייל למוכר (בדומה לבקוד הישן שלך)
+        seller = transaction.seller
+        buyer = transaction.buyer
+        coupon = transaction.coupon
+        if seller and seller.email:
+            try:
+                html_content = render_template(
+                    'emails/buyer_confirmed_transfer.html',
+                    seller=seller, buyer=buyer, coupon=coupon
+                )
+                send_email(
+                    sender_email='itayk93@gmail.com',
+                    sender_name='MaCoupon',
+                    recipient_email=seller.email,
+                    recipient_name=f'{seller.first_name} {seller.last_name}',
+                    subject='הקונה אישר שההעברה הכספית בוצעה',
+                    html_content=html_content
+                )
+            except Exception as e:
+                current_app.logger.error(f"Error sending buyer_confirmed_transfer email to seller: {e}")
+                flash('האישור נקלט אך המייל למוכר לא נשלח.', 'warning')
+
+        # בדיקה אם גם המוכר אישר (seller_approved), ואם הקוד הוזן (coupon_code_entered)
+        if transaction.seller_approved and transaction.buyer_confirmed and transaction.coupon_code_entered:
+            # במקרה ששלושת התנאים התקיימו, קוראים לפונקציה שמסיימת את העסקה
+            complete_transaction(transaction)
+
+        return redirect(url_for('marketplace.my_transactions'))
+
+    # אם זה GET בלבד, אפשר סתם להחזיר דף המאשר שזו פעולת הקונה.
+    return render_template('buyer_confirm_transfer.html', transaction=transaction)

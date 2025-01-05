@@ -56,6 +56,7 @@ from app.routes.uploads_routes import uploads_bp
 from app.routes.admin_routes import admin_bp
 
 # רישום ה-Blueprints
+"""""""""
 app.register_blueprint(auth_bp)
 app.register_blueprint(profile_bp)
 app.register_blueprint(coupons_bp)
@@ -66,6 +67,16 @@ app.register_blueprint(export_bp)
 app.register_blueprint(uploads_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(admin_tags_bp)
+"""""""""
+app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(profile_bp, url_prefix='/profile')
+app.register_blueprint(coupons_bp, url_prefix='/coupons')
+app.register_blueprint(marketplace_bp, url_prefix='/marketplace')
+app.register_blueprint(requests_bp, url_prefix='/requests')
+app.register_blueprint(transactions_bp, url_prefix='/transactions')
+app.register_blueprint(export_bp, url_prefix='/export')
+app.register_blueprint(uploads_bp, url_prefix='/uploads')
+app.register_blueprint(admin_bp, url_prefix='/admin')
 
 # יצירת תיקיית instance אם לא קיימת
 if not os.path.exists('instance'):

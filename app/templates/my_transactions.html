@@ -33,18 +33,20 @@
                             <a href="{{ url_for('marketplace.approve_transaction', transaction_id=transaction.id) }}" class="action-button">אשר</a>
                             <a href="{{ url_for('marketplace.decline_transaction', transaction_id=transaction.id) }}" class="action-button danger">דחה</a>
                             <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
-                        {% elif transaction.status == 'ממתין לאישור הקונה' and not transaction.seller_approved %}
-                            <!-- המוכר לא סימן שאישר, אבל הסטטוס הוא "ממתין לאישור הקונה" -->
-                            <span class="text-muted">ממתין לאישור הקונה.</span>
-                            <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
-                        {% elif transaction.status == 'ממתין לאישור הקונה' or transaction.seller_approved %}
-                            <!-- המוכר כבר אישר או הסטטוס ממתין לקונה -->
-                            <div class="seller-confirmation">
-                                <p class="text-muted">כבר אישרת את העסקה והמייל נשלח לקונה.</p>
-                                <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger cancel-button">בטל</a>
-                            </div>
-                        {% else %}
-                            <!-- אם הסטטוס משהו אחר (לדוגמה "הושלם" או "מבוטל") – אין פעולות -->
+                        {% elif transaction.status == 'ממתין לאישור הקונה' %}
+                            {% if not transaction.seller_approved %}
+                                <!-- אם המוכר לא אישר -->
+                                <span class="text-muted">ממתין לאישור הקונה.</span>
+                                <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
+                            {% else %}
+                                <!-- אם המוכר אישר -->
+                                <div class="seller-confirmation">
+                                    <p class="text-muted">כבר אישרת את העסקה והמייל נשלח לקונה.</p>
+                                    <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger cancel-button">בטל</a>
+                                </div>
+                            {% endif %}
+                        {% elif transaction.status in ['הושלם', 'מבוטל'] %}
+                            <!-- אם העסקה הושלמה או בוטלה -->
                             <span class="text-muted">אין פעולות זמינות</span>
                         {% endif %}
                     </td>
@@ -93,7 +95,6 @@
                                 <span class="text-muted">ממתין לאישור המוכר.</span>
                             {% endif %}
                         {% else %}
-                            <!-- למשל "הושלם" או "מבוטל" או כל דבר אחר – לא יוצג כחלק מהעסקאות הפעילות -->
                             <span class="text-muted">אין פעולות זמינות</span>
                         {% endif %}
                     </td>

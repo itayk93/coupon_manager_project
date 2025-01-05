@@ -1,0 +1,30 @@
+<!-- templates/review_seller.html -->
+{% extends 'base.html' %}
+{% block title %}השאר ביקורת למוכר{% endblock %}
+
+{% block content %}
+<h2>השאר ביקורת למוכר</h2>
+
+<form method="POST">
+    <div class="form-group">
+        <label for="rating">דירוג (1 עד 5):</label>
+        <input
+            type="range"
+            id="rating"
+            name="rating"
+            min="1"
+            max="5"
+            value="3"
+            oninput="this.nextElementSibling.value = this.value"
+        >
+        <output>3</output>
+    </div>
+
+    <div class="form-group">
+        <label for="comment">הערה (אופציונלי):</label>
+        <textarea id="comment" name="comment" rows="4"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">שלח ביקורת</button>
+</form>
+{% endblock %}

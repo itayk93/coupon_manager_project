@@ -4,23 +4,33 @@ from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
 import logging
 import re
-
+import traceback
 from app.models import Coupon, User, Transaction, Notification, CouponRequest, CouponUsage, Tag, Company, db
 from app.forms import DeleteCouponRequestForm, ApproveTransactionForm, ConfirmDeleteForm, UpdateCouponUsageForm
 from app.helpers import send_coupon_purchase_request_email, send_email, get_coupon_data, update_coupon_status, complete_transaction, get_geo_location
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
+from flask_login import login_required, current_user
+from sqlalchemy.exc import SQLAlchemyError
+from datetime import datetime
+from app.models import Transaction, db
+from app.forms import ApproveTransactionForm
+from app.helpers import send_email
 
 transactions_bp = Blueprint('transactions', __name__)
 logger = logging.getLogger(__name__)
+from app.helpers import get_geo_location, get_public_ip
 
 def log_user_activity(action, coupon_id=None):
     """
-    פונקציה מרכזית לרישום activity log בנתיב transactions.
+    רישום פעולות משתמש.
     """
     try:
-        ip_address = request.remote_addr
+        # קבלת נתוני IP וגיאוגרפיה
+        ip_address = get_public_ip() or '0.0.0.0'
+        geo_data = get_geo_location(ip_address)
         user_agent = request.headers.get('User-Agent', '')
-        geo_location = get_geo_location(ip_address) if ip_address else None
 
+        # בניית נתוני הפעולה
         activity = {
             "user_id": current_user.id if current_user.is_authenticated else None,
             "coupon_id": coupon_id,
@@ -29,22 +39,27 @@ def log_user_activity(action, coupon_id=None):
             "device": user_agent[:50] if user_agent else None,
             "browser": user_agent.split(' ')[0][:50] if user_agent else None,
             "ip_address": ip_address[:45] if ip_address else None,
-            "geo_location": geo_location[:100] if geo_location else None
+            "city": geo_data.get("city"),
+            "region": geo_data.get("region"),
+            "country": geo_data.get("country"),
+            "isp": geo_data.get("isp"),
+            "lat": geo_data.get("lat"),
+            "lon": geo_data.get("lon"),
+            "timezone": geo_data.get("timezone"),
         }
 
+        # כתיבה למסד הנתונים
         db.session.execute(
-            db.text("""
-                INSERT INTO user_activities
-                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
-                VALUES
-                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+            text("""
+                INSERT INTO user_activities (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, lat, lon, timezone)
+                VALUES (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, :lat, :lon, :timezone)
             """),
             activity
         )
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error logging activity [{action}]: {e}")
+        current_app.logger.error(f"Error logging activity: {e}")
 
 @transactions_bp.route('/my_transactions')
 @login_required
@@ -83,39 +98,50 @@ def buy_coupon():
         flash('קופון זה אינו זמין למכירה.', 'danger')
         return redirect(url_for('transactions.my_transactions'))
 
-    transaction = Transaction(
-        coupon_id=coupon.id,
-        buyer_id=current_user.id,
-        seller_id=coupon.user_id,
-        status='ממתין לאישור המוכר'
-    )
-    db.session.add(transaction)
-    coupon.is_available = False
-
-    notification = Notification(
-        user_id=coupon.user_id,
-        message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
-        link=url_for('transactions.my_transactions')
-    )
-    db.session.add(notification)
-
     try:
+        # יצירת אובייקט עסקה
+        transaction = Transaction(
+            coupon_id=coupon.id,
+            buyer_id=current_user.id,
+            seller_id=coupon.user_id,
+            status='ממתין לאישור המוכר',
+            timestamp=datetime.utcnow()
+        )
+
+        db.session.add(transaction)
+
+        # עדכון סטטוס הקופון
+        coupon.is_available = False
+
+        # יצירת התראה למוכר
+        notification = Notification(
+            user_id=coupon.user_id,
+            message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
+            link=url_for('transactions.my_transactions')
+        )
+        db.session.add(notification)
+
         db.session.commit()
         log_user_activity("buy_coupon_created", coupon_id=coupon.id)
+
+        # שליחת מייל למוכר
+        seller = coupon.user
+        buyer = current_user
+        send_coupon_purchase_request_email(seller, buyer, coupon)
+
+        flash('בקשתך נשלחה והמוכר יקבל הודעה גם במייל.', 'success')
+
+    except IntegrityError as e:
+        db.session.rollback()
+        logger.error(f"IntegrityError: {e}")
+        logger.error(traceback.format_exc())  # הדפסת traceback ללוגים
+        flash('אירעה שגיאה בעת יצירת העסקה. נסה שוב מאוחר יותר.', 'danger')
+
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error creating transaction: {e}")
-        flash('אירעה שגיאה בעת יצירת העסקה. נסה שוב מאוחר יותר.', 'danger')
-        return redirect(url_for('transactions.my_transactions'))
-
-    seller = coupon.user
-    buyer = current_user
-    try:
-        send_coupon_purchase_request_email(seller, buyer, coupon)
-        flash('בקשתך נשלחה והמוכר יקבל הודעה גם במייל.', 'success')
-    except Exception as e:
-        logger.error(f'שגיאה בשליחת מייל למוכר: {e}')
-        flash('הבקשה נשלחה אך לא הצלחנו לשלוח הודעה למוכר במייל.', 'warning')
+        logger.error(f"Unexpected error: {e}")
+        logger.error(traceback.format_exc())  # הדפסת traceback ללוגים
+        flash('שגיאה בלתי צפויה התרחשה.', 'danger')
 
     return redirect(url_for('transactions.my_transactions'))
 
@@ -165,51 +191,84 @@ def request_to_buy(coupon_id):
 
     return redirect(url_for('transactions.my_transactions'))
 
+
 @transactions_bp.route('/approve_transaction/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 def approve_transaction(transaction_id):
     log_user_activity("approve_transaction_view")
 
     transaction = Transaction.query.get_or_404(transaction_id)
+
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
         return redirect(url_for('transactions.my_transactions'))
 
+    # אם העסקה כבר אושרה על ידי המוכר או שהסטטוס שונה לממתין לקונה
+    if transaction.seller_approved or transaction.status == 'ממתין לאישור הקונה':
+        flash('כבר אישרת את העסקה. לא ניתן לאשר שוב.', 'warning')
+        return redirect(url_for('transactions.my_transactions'))
+
+    # בדיקה אם הסטטוס הוא נכון לאישור עסקה
+    if transaction.status != 'ממתין לאישור המוכר':
+        flash('לא ניתן לאשר עסקה שאינה במצב המתנה לאישור המוכר.', 'danger')
+        return redirect(url_for('transactions.my_transactions'))
+
     form = ApproveTransactionForm()
     if form.validate_on_submit():
+        print(f"Seller phone: {form.seller_phone.data}, Code: {form.code.data}")
         transaction.seller_phone = form.seller_phone.data
         transaction.seller_approved = True
         transaction.coupon_code_entered = True
-        db.session.commit()
+        transaction.updated_at = datetime.utcnow()
+        transaction.status = 'ממתין לאישור הקונה'
 
-        seller = transaction.seller
-        buyer = transaction.buyer
-        coupon = transaction.coupon
-
-        html_content = render_template(
-            'emails/seller_approved_transaction.html',
-            seller=seller,
-            buyer=buyer,
-            coupon=coupon
-        )
         try:
-            send_email(
-                sender_email='itayk93@gmail.com',
-                sender_name='MaCoupon',
-                recipient_email=buyer.email,
-                recipient_name=f'{buyer.first_name} {buyer.last_name}',
-                subject='המוכר אישר את העסקה',
-                html_content=html_content
-            )
-            flash('אישרת את העסקה והמייל נשלח לקונה בהצלחה.', 'success')
-            log_user_activity("approve_transaction_success", coupon_id=coupon.id)
-        except Exception as e:
-            logger.error(f"Error sending seller approved email: {e}")
-            flash('העסקה אושרה, אך לא הצלחנו לשלוח מייל לקונה.', 'warning')
+            db.session.commit()
+            flash('אישרת את העסקה בהצלחה!', 'success')
+
+            # אימות שהסטטוס השתנה
+            updated_transaction = Transaction.query.get(transaction_id)
+            if updated_transaction.status != 'ממתין לאישור הקונה':
+                logger.error("הסטטוס לא עודכן כראוי")
+                flash('אירעה שגיאה בעת עדכון הסטטוס.', 'danger')
+                return redirect(url_for('transactions.my_transactions'))
+            else:
+                logger.info("הסטטוס עודכן בהצלחה")
+
+            # שליחת מייל רק אם הסטטוס עודכן בהצלחה
+            if updated_transaction.status == 'ממתין לאישור הקונה':
+                seller = updated_transaction.seller
+                buyer = updated_transaction.buyer
+                coupon = updated_transaction.coupon
+
+                html_content = render_template(
+                    'emails/seller_approved_transaction.html',
+                    seller=seller,
+                    buyer=buyer,
+                    coupon=coupon
+                )
+                try:
+                    send_email(
+                        sender_email='itayk93@gmail.com',
+                        sender_name='MaCoupon',
+                        recipient_email=buyer.email,
+                        recipient_name=f'{buyer.first_name} {buyer.last_name}',
+                        subject='המוכר אישר את העסקה',
+                        html_content=html_content
+                    )
+                except Exception as e:
+                    current_app.logger.error(f"Error sending seller_approved_transaction email: {e}")
+                    flash('האישור נקלט אך לא הצלחנו לשלוח הודעה במייל לקונה.', 'warning')
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            logger.error(f"Database error: {e}")
+            flash('אירעה שגיאה בעת שמירת השינויים במסד הנתונים.', 'danger')
 
         return redirect(url_for('transactions.my_transactions'))
 
     return render_template('approve_transaction.html', form=form, transaction=transaction)
+
 
 @transactions_bp.route('/decline_transaction/<int:transaction_id>')
 @login_required

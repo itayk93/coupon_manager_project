@@ -484,3 +484,22 @@ class UserRating(db.Model):
 
     def __repr__(self):
         return f"<UserRating from {self.rating_user_id} to {self.rated_user_id} = {self.rating_value}>"
+
+# app/models.py
+
+from app.extensions import db
+from datetime import datetime
+
+class UserReview(db.Model):
+    __tablename__ = 'user_reviews'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # מי שנתן את הביקורת
+    reviewed_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # המשתמש שמקבל את הביקורת
+    rating = db.Column(db.Integer, nullable=True)  # דירוג 1-5
+    comment = db.Column(db.Text, nullable=True)    # הערה טקסטואלית
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # קשרים אופציונליים
+    reviewer = db.relationship("User", foreign_keys=[reviewer_id], backref="reviews_given")
+    reviewed_user = db.relationship("User", foreign_keys=[reviewed_user_id], backref="reviews_received")

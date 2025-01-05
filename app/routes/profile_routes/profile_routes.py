@@ -9,6 +9,7 @@ import os
 from werkzeug.utils import secure_filename
 
 from app.forms import UserProfileForm, RateUserForm
+from sqlalchemy.sql import text
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -18,26 +19,25 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+from app.models import User, UserReview  # במקום UserRating
+
 @profile_bp.route('/profile/<int:user_id>', methods=['GET'])
 def profile_view(user_id):
-    """
-    צפייה בפרופיל של משתמש אחר או של עצמך (כולל הצגת דירוגים והערות).
-    """
     user = User.query.get_or_404(user_id)
 
-    # שליפת כל הדירוגים שהמשתמש קיבל
-    all_ratings = UserRating.query.filter_by(rated_user_id=user.id).all()
+    # שליפת כל הביקורות שהמשתמש קיבל
+    all_reviews = UserReview.query.filter_by(reviewed_user_id=user.id).all()
 
-    # חישוב ממוצע דירוג (אם תרצה)
-    if len(all_ratings) > 0:
-        avg_rating = sum([r.rating_value for r in all_ratings]) / len(all_ratings)
+    # חישוב ממוצע דירוג
+    if len(all_reviews) > 0:
+        avg_rating = sum([r.rating for r in all_reviews]) / len(all_reviews)
     else:
         avg_rating = None
 
     return render_template(
         'profile/user_profile.html',
         user=user,
-        ratings=all_ratings,
+        ratings=all_reviews,  # נעביר את כל הביקורות
         avg_rating=avg_rating
     )
 

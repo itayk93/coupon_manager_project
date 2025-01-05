@@ -51,10 +51,13 @@ from app.helpers import (
 )
 import logging
 from app.helpers import get_geo_location, get_public_ip
+import traceback
+import traceback
 
 logger = logging.getLogger(__name__)
 
 coupons_bp = Blueprint('coupons', __name__)
+from sqlalchemy.sql import text
 
 from datetime import datetime
 from flask import request, current_app
@@ -67,7 +70,7 @@ from app.helpers import get_geo_location, get_public_ip
 
 def log_user_activity(action, coupon_id=None):
     try:
-        ip_address = get_public_ip()  # ודא ש-fallback ערך מחזיר אם כתובת לא זמינה
+        ip_address = get_public_ip() or '0.0.0.0'
         geo_data = get_geo_location(ip_address)
 
         activity = {
@@ -77,7 +80,7 @@ def log_user_activity(action, coupon_id=None):
             "action": action,
             "device": request.headers.get('User-Agent', '')[:50],
             "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-            "ip_address": ip_address[:45] if ip_address else None,
+            "ip_address": ip_address[:45] if ip_address else None if ip_address else None,
             "city": geo_data.get("city"),
             "region": geo_data.get("region"),
             "country": geo_data.get("country"),
@@ -215,7 +218,7 @@ def sell_coupon():
                     "action": "sell_coupon_created",
                     "device": request.headers.get('User-Agent', '')[:50],
                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                    "ip_address": ip_address[:45],
+                    "ip_address": ip_address[:45] if ip_address else None,
                     "geo_location": get_geo_location(ip_address)[:100]
                 }
                 db.session.execute(
@@ -342,7 +345,7 @@ def upload_coupons():
                 "action": "upload_coupons_submit",
                 "device": request.headers.get('User-Agent', '')[:50],
                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                "ip_address": ip_address[:45],
+                "ip_address": ip_address[:45] if ip_address else None,
                 "geo_location": get_geo_location(ip_address)[:100]
             }
             db.session.execute(
@@ -496,7 +499,7 @@ def add_coupons_bulk():
                 "action": "add_coupons_bulk_submit",
                 "device": request.headers.get('User-Agent', '')[:50],
                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                "ip_address": ip_address[:45],
+                "ip_address": ip_address[:45] if ip_address else None,
                 "geo_location": get_geo_location(ip_address)[:100]
             }
             db.session.execute(
@@ -647,37 +650,20 @@ def add_coupon():
                 current_app.logger.info(f"[DEBUG] Sending to get_most_common_tag_for_company => '{chosen_company_name}'")
                 found_tag = get_most_common_tag_for_company(chosen_company_name)
                 current_app.logger.info(f"[DEBUG] Received tag => '{found_tag}' for company '{chosen_company_name}'")
+                if found_tag:
+                    tag_id = found_tag.id
+                    tag_name = found_tag.name
+                    current_app.logger.info(
+                        f"[DEBUG] Received tag => '{tag_name}' (ID: {tag_id}) for company '{chosen_company_name}'")
+                else:
+                    current_app.logger.info(f"[DEBUG] No tag found for company '{chosen_company_name}'")
 
                 if found_tag:
                     coupon_form.tag_id.data = str(found_tag.id)
                     coupon_form.other_tag.data = ''
 
-                # -- activity log snippet --
-                try:
-                    new_activity = {
-                        "user_id": current_user.id,
-                        "coupon_id": None,
-                        "timestamp": datetime.utcnow(),
-                        "action": "add_coupon_via_sms",
-                        "device": request.headers.get('User-Agent', '')[:50],
-                        "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                        "ip_address": ip_address[:45],
-                        "geo_location": get_geo_location(ip_address)[:100]
-                    }
-                    db.session.execute(
-                        text("""
-                            INSERT INTO user_activities
-                                (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
-                            VALUES
-                                (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
-                        """),
-                        new_activity
-                    )
-                    db.session.commit()
-                except Exception as e:
-                    db.session.rollback()
-                    current_app.logger.error(f"Error logging activity [add_coupon_via_sms]: {e}")
-                # -- end snippet --
+                # -- activity log add_coupon_via_sms --
+                log_user_activity("add_coupon_via_sms", None)
 
                 show_coupon_form = True
             else:
@@ -769,6 +755,13 @@ def add_coupon():
                             current_app.logger.info(f"[DEBUG] Sending to get_most_common_tag_for_company => '{chosen_company_name}'")
                             found_tag = get_most_common_tag_for_company(chosen_company_name)
                             current_app.logger.info(f"[DEBUG] Received tag => '{found_tag}' for company '{chosen_company_name}'")
+                            if found_tag:
+                                tag_id = found_tag.id
+                                tag_name = found_tag.name
+                                current_app.logger.info(
+                                    f"[DEBUG] Received tag => '{tag_name}' (ID: {tag_id}) for company '{chosen_company_name}'")
+                            else:
+                                current_app.logger.info(f"[DEBUG] No tag found for company '{chosen_company_name}'")
 
                             if found_tag:
                                 coupon_form.tag_id.data = str(found_tag.id)
@@ -783,7 +776,7 @@ def add_coupon():
                                     "action": "add_coupon_via_image_upload",
                                     "device": request.headers.get('User-Agent', '')[:50],
                                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                                    "ip_address": ip_address[:45],
+                                    "ip_address": ip_address[:45] if ip_address else None,
                                     "geo_location": get_geo_location(ip_address)[:100]
                                 }
                                 db.session.execute(
@@ -905,7 +898,7 @@ def add_coupon():
                                 "action": "add_coupon_manual_submit",
                                 "device": request.headers.get('User-Agent', '')[:50],
                                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                                "ip_address": ip_address[:45],
+                                "ip_address": ip_address[:45] if ip_address else None,
                                 "geo_location": get_geo_location(ip_address)[:100]
                             }
                             db.session.execute(
@@ -1449,7 +1442,7 @@ def edit_coupon(id):
                     "action": "edit_coupon_submit",
                     "device": request.headers.get('User-Agent', '')[:50],
                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                    "ip_address": ip_address[:45],
+                    "ip_address": ip_address[:45] if ip_address else None,
                     "geo_location": get_geo_location(ip_address)[:100]
                 }
                 db.session.execute(
@@ -1522,7 +1515,7 @@ def select_coupons_to_delete():
                     "action": f"deleted_coupons_{selected_ids}",
                     "device": request.headers.get('User-Agent', '')[:50],
                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                    "ip_address": ip_address[:45],
+                    "ip_address": ip_address[:45] if ip_address else None,
                     "geo_location": get_geo_location(ip_address)[:100]
                 }
                 db.session.execute(
@@ -1709,7 +1702,7 @@ def mark_coupon_as_fully_used(id):
                 "action": "mark_coupon_as_fully_used_success",
                 "device": request.headers.get('User-Agent', '')[:50],
                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                "ip_address": ip_address[:45],
+                "ip_address": ip_address[:45] if ip_address else None,
                 "geo_location": get_geo_location(ip_address)[:100]
             }
             db.session.execute(
@@ -1799,7 +1792,7 @@ def update_coupon(id):
                     "action": "update_coupon_usage_success",
                     "device": request.headers.get('User-Agent', '')[:50],
                     "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                    "ip_address": ip_address[:45],
+                    "ip_address": ip_address[:45] if ip_address else None,
                     "geo_location": get_geo_location(ip_address)[:100]
                 }
                 db.session.execute(
@@ -1866,7 +1859,7 @@ def delete_coupon(id):
                         "action": "delete_coupon_success",
                         "device": request.headers.get('User-Agent', '')[:50],
                         "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                        "ip_address": ip_address[:45],
+                        "ip_address": ip_address[:45] if ip_address else None,
                         "geo_location": get_geo_location(ip_address)[:100]
                     }
                     db.session.execute(
@@ -1979,7 +1972,7 @@ def edit_usage(usage_id):
                 "action": "edit_usage_success",
                 "device": request.headers.get('User-Agent', '')[:50],
                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                "ip_address": ip_address[:45],
+                "ip_address": ip_address[:45] if ip_address else None,
                 "geo_location": get_geo_location(ip_address)[:100]
             }
             db.session.execute(
@@ -2211,6 +2204,7 @@ def request_to_buy(coupon_id):
         flash('בקשתך נשלחה והמוכר יקבל הודעה גם במייל.', 'success')
     except Exception as e:
         current_app.logger.error(f'שגיאה בשליחת מייל למוכר: {e}')
+        #traceback.print_exc()
         flash('הבקשה נשלחה אך לא הצלחנו לשלוח הודעה למוכר במייל.', 'warning')
 
     return redirect(url_for('marketplace.my_transactions'))
@@ -2270,6 +2264,7 @@ def buy_coupon():
         flash('בקשתך נשלחה והמוכר יקבל הודעה גם במייל.', 'success')
     except Exception as e:
         current_app.logger.error(f'שגיאה בשליחת מייל למוכר: {e}')
+        #traceback.print_exc()
         flash('הבקשה נשלחה אך לא הצלחנו לשלוח הודעה למוכר במייל.', 'warning')
 
     return redirect(url_for('marketplace.my_transactions'))
@@ -2291,7 +2286,7 @@ def coupon_request_detail(id):
         db.session.delete(coupon_request)
         db.session.commit()
         flash('הבקשה נמחקה בהצלחה.', 'success')
-        return redirect(url_for('coupons.marketplace'))
+        return redirect(url_for('marketplace.marketplace'))
 
     requester = User.query.get(coupon_request.user_id)
     company = Company.query.get(coupon_request.company)
@@ -2336,7 +2331,7 @@ def delete_coupon_request(id):
                 "action": "delete_coupon_request_success",
                 "device": request.headers.get('User-Agent', '')[:50],
                 "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                "ip_address": ip_address[:45],
+                "ip_address": ip_address[:45] if ip_address else None,
                 "geo_location": get_geo_location(ip_address)[:100]
             }
             db.session.execute(
@@ -2374,7 +2369,7 @@ def complete_transaction(transaction):
             "action": "complete_transaction",
             "device": user_agent[:50] if user_agent else None,
             "browser": user_agent.split(' ')[0][:50] if user_agent else None,
-            "ip_address": ip_address[:45] if ip_address != 'N/A' else 'N/A',
+            "ip_address": ip_address[:45] if ip_address else None if ip_address != 'N/A' else 'N/A',
             "geo_location": geo_location[:100] if geo_location != 'N/A' else 'N/A'
         }
         db.session.execute(

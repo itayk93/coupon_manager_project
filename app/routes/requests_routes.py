@@ -10,6 +10,7 @@ from app.helpers import send_coupon_purchase_request_email, get_geo_location  # 
 
 requests_bp = Blueprint('requests', __name__)
 logger = logging.getLogger(__name__)
+from sqlalchemy.sql import text
 
 def log_user_activity(action, coupon_id=None):
     """

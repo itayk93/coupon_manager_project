@@ -20,9 +20,80 @@
         transform: scale(1.05); /* אפקט התקרבות במעבר עכבר */
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* אפקט צל יותר חזק */
     }
+
+    /* עיצוב כללי לטאבים */
+    .tabs {
+        margin-top: 20px;
+    }
+
+    .tab-button {
+        background-color: #eee;
+        border: none;
+        padding: 10px 20px;
+        cursor: pointer;
+        margin-right: 5px;
+    }
+
+    .tab-button.active {
+        background-color: #ccc;
+    }
+
+    .tab-content {
+        display: none;
+        margin-top: 20px;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .rounded-box {
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+
+    .info-title {
+        font-weight: bold;
+    }
+
+    .info-value {
+        margin-right: 5px; /* רווח קטן */
+    }
+
+    .ratings-list {
+        list-style-type: none;
+        padding-left: 0;
+    }
+
+    .rating-item {
+        margin-bottom: 10px;
+    }
+
+    .info-box {
+        margin-bottom: 5px;
+    }
+
+    .action-buttons {
+        margin-top: 20px;
+    }
+
+    .action-button {
+        background-color: #007bff;
+        color: #fff;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-right: 10px;
+    }
+
+    .action-button:hover {
+        background-color: #0056b3;
+    }
     </style>
 
-    <!-- Company Logo and Name -->
+    <!-- תמונת פרופיל (אם קיימת) -->
     <div class="company-info">
         {% if user.profile_image %}
             <img src="{{ url_for('static', filename=user.profile_image.split('static/')[1]) }}"
@@ -33,14 +104,14 @@
         {% endif %}
     </div>
 
-    <!-- Tabs Navigation -->
+    <!-- כפתורי טאבים -->
     <div class="tabs">
         <button class="tab-button active" onclick="openTab(event, 'tab1')">תיאור פרופיל</button>
         <button class="tab-button" onclick="openTab(event, 'tab2')">דירוגים והערות</button>
         <button class="tab-button" onclick="openTab(event, 'tab3')">פרטים נוספים</button>
     </div>
 
-    <!-- Tab Content -->
+    <!-- תוכן טאב 1: תיאור פרופיל -->
     <div id="tab1" class="tab-content active">
         <div class="rounded-box">
             <span class="info-title">תיאור:</span>
@@ -48,6 +119,7 @@
         </div>
     </div>
 
+    <!-- תוכן טאב 2: דירוגים והערות -->
     <div id="tab2" class="tab-content">
         <h3>דירוגים והערות ממשתמשים אחרים</h3>
         {% if avg_rating %}
@@ -69,16 +141,16 @@
                 <li class="rating-item">
                     <div class="info-box">
                         <span class="info-title">דירוג:</span>
-                        <span class="info-value">{{ r.rating_value }}</span>
+                        <span class="info-value">{{ r.rating }}</span>
                     </div>
                     <div class="info-box">
                         <span class="info-title">הערה:</span>
-                        <span class="info-value">{{ r.rating_comment or '' }}</span>
+                        <span class="info-value">{{ r.comment or '' }}</span>
                     </div>
                     <div class="info-box">
                         <span class="info-title">מאת:</span>
                         <span class="info-value">
-                            משתמש מספר {{ r.rating_user_id }}
+                            משתמש מספר {{ r.reviewer_id }}
                             ({{ r.created_at.strftime('%Y-%m-%d %H:%M') }})
                         </span>
                     </div>
@@ -86,8 +158,42 @@
                 </li>
             {% endfor %}
         </ul>
+
+        <!-- אם המשתמש הנוכחי מחובר ואינו צופה בעצמו, אפשר לאפשר לו לדרג -->
+        {% if current_user.is_authenticated and current_user.id != user.id %}
+            <hr>
+            <h4>הוסף דירוג</h4>
+            <form method="POST" action="{{ url_for('profile.rate_user', user_id=user.id) }}">
+                <!-- במידה ואתה משתמש ב-WTForms עם CSRF, תוכל להוסיף כאן:
+                     {{ form.csrf_token }} או {{ csrf_token() }}
+                     תלוי איך הגדרת את האפליקציה -->
+
+                <div class="form-group">
+                    <label for="rating">בחר דירוג (1 עד 5):</label><br>
+                    <input
+                        type="range"
+                        id="rating"
+                        name="rating"
+                        min="1"
+                        max="5"
+                        value="3"
+                        oninput="this.nextElementSibling.value = this.value"
+                        style="width: 300px;"
+                    >
+                    <output>3</output>
+                </div>
+
+                <div class="form-group">
+                    <label for="comment">הערה (אופציונלי):</label><br>
+                    <textarea id="comment" name="comment" rows="4" cols="50"></textarea>
+                </div>
+
+                <button type="submit" class="action-button">שלח ביקורת</button>
+            </form>
+        {% endif %}
     </div>
 
+    <!-- תוכן טאב 3: פרטים נוספים -->
     <div id="tab3" class="tab-content">
         <div class="info-box">
             <span class="info-title">מספר קופונים שמכר:</span>
@@ -99,12 +205,11 @@
         </div>
     </div>
 
-    <!-- Action Buttons -->
+    <!-- כפתורי פעולה נוספים (לדוגמה) -->
     <div class="action-buttons">
         {% if current_user.is_authenticated and current_user.id != user.id %}
-            <a href="{{ url_for('profile.rate_user', user_id=user.id) }}" class="action-button">
-                דרג משתמש זה
-            </a>
+            <!-- כפתור עריכה וכו' רק לדוגמה, אם תרצה... -->
+            <!-- כאן למשל כפתור נוסף לפרופיל -->
         {% endif %}
     </div>
 </section>
@@ -113,28 +218,27 @@
 {% block scripts %}
 <script>
     function openTab(evt, tabName) {
-        // Hide all tab contents
+        // מסתיר את כל התכנים
         var tabContents = document.getElementsByClassName("tab-content");
         for (var i = 0; i < tabContents.length; i++) {
             tabContents[i].classList.remove("active");
         }
 
-        // Remove 'active' class from all tab buttons
+        // מסיר מחלקת 'active' מכל הכפתורים
         var tabButtons = document.getElementsByClassName("tab-button");
         for (var i = 0; i < tabButtons.length; i++) {
             tabButtons[i].classList.remove("active");
         }
 
-        // Show the selected tab content and activate the button
+        // מציג את הטאב שנלחץ ומוסיף לו מחלקת active
         document.getElementById(tabName).classList.add("active");
         evt.currentTarget.classList.add("active");
     }
 
-    // Open the default tab on page load
+    // פתיחת הטאב הראשון כברירת מחדל
     document.addEventListener("DOMContentLoaded", function() {
         var defaultTab = document.querySelector(".tab-button.active");
         if (defaultTab) {
-            // Ensure that the active tab is displayed
             var tabName = defaultTab.getAttribute("onclick").split("'")[1];
             document.getElementById(tabName).classList.add("active");
         }
