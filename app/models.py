@@ -294,7 +294,45 @@ class Transaction(db.Model):
     seller = db.relationship('User', foreign_keys=[seller_id], back_populates='transactions_sold', lazy=True)
     buyer = db.relationship('User', foreign_keys=[buyer_id], back_populates='transactions_bought', lazy=True)
 
+""""""""""
+class Transaction(db.Model):
 
+    __tablename__ = 'transactions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id', ondelete='CASCADE'), nullable=False)
+    seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    buyer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='ממתין לאישור המוכר')
+
+    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    buyer_phone = db.Column(db.String(20), nullable=True)
+    seller_phone = db.Column(db.String(20), nullable=True)
+    seller_confirmed = db.Column(db.Boolean, default=False)
+    seller_approved = db.Column(db.Boolean, default=False)
+    buyer_confirmed = db.Column(db.Boolean, default=False)
+    coupon_code_entered = db.Column(db.Boolean, default=False)
+    action = db.Column(db.String(50), nullable=True)
+    details = db.Column(db.String(255), nullable=True)
+
+    # עמודות תיעוד נוספות
+    buyer_request_sent_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    seller_email_sent_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    buyer_email_sent_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    buyer_confirmed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    seller_confirmed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    coupon = db.relationship(
+        'Coupon',
+        backref=db.backref('transactions', cascade='all, delete-orphan', passive_deletes=True),
+        lazy=True
+    )
+    seller = db.relationship('User', foreign_keys=[seller_id], back_populates='transactions_sold', lazy=True)
+    buyer = db.relationship('User', foreign_keys=[buyer_id], back_populates='transactions_bought', lazy=True)
+"""""""""
 class CouponRequest(db.Model):
     """
     טבלת בקשות לקופונים (משתמשים מבקשים קופון מסוים).

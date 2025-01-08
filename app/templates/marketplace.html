@@ -77,7 +77,7 @@
 
                     {# 3. אחרת => המשתמש יכול לבקש לקנות #}
                     {% else %}
-                        <form action="{{ url_for('marketplace.buy_coupon') }}" method="post" class="buy-form">
+                        <form action="{{ url_for('transactions.buy_coupon') }}" method="post" class="buy-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
                             <button type="submit" class="action-button">בקש לקנות</button>

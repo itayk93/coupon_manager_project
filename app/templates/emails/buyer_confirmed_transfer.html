@@ -107,7 +107,7 @@
                             <p>הקונה <strong class="highlight">{{ buyer.first_name }} {{ buyer.last_name }}</strong> אישר שהעברה כספית בוצעה עבור הקופון <strong style="color: #2E86C1;">{{ coupon.code }}</strong> של <span class="highlight">{{ coupon.company }}</span>.</p>
                             <p>כעת נותר רק עבורך לאשר את ההעברה. לאחר שתאשר זאת, הקופון יעבור לקונה באופן מלא.</p>
                             <div class="button-container">
-                                <a href="{{ url_for('my_transactions', _external=True) }}" class="button" style="color: #ffffff; font-weight: bold;">צפה בעסקה</a>
+                                <a href="{{ url_for('transactions.my_transactions', _external=True) }}" class="button" style="color: #ffffff; font-weight: bold;">צפה בעסקה</a>
                             </div>
                             <p>אם יש לך שאלות או צורך בעזרה נוספת, אל תהסס ליצור איתנו קשר.</p>
                             <p>בברכה,<br>MaCoupon</p>

@@ -1,5 +1,9 @@
 # app/config.py
 import os
+import logging
+
+LOGGING_CONFIG = None
+LOG_LEVEL = logging.DEBUG
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')

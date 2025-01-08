@@ -1,4 +1,3 @@
-<!-- templates/my_transactions.html -->
 {% extends 'base.html' %}
 
 {% block title %}העסקאות שלי{% endblock %}
@@ -14,7 +13,7 @@
                     <th>לוגו</th>
                     <th>קונה</th>
                     <th>סטטוס</th>
-                    <th>פעולות</th>
+                    <th>שלבים</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,27 +27,27 @@
                     <td>{{ transaction.buyer.first_name }} {{ transaction.buyer.last_name }}</td>
                     <td>{{ transaction.status }}</td>
                     <td>
-                        {% if transaction.status == 'ממתין לאישור המוכר' and not transaction.seller_approved %}
-                            <!-- המוכר עוד לא אישר -->
-                            <a href="{{ url_for('transactions.approve_transaction', transaction_id=transaction.id) }}" class="action-button">אשר</a>
-                            <a href="{{ url_for('transactions.decline_transaction', transaction_id=transaction.id) }}" class="action-button danger">דחה</a>
-                            <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
-                        {% elif transaction.status == 'ממתין לאישור הקונה' %}
-                            {% if not transaction.seller_approved %}
-                                <!-- אם המוכר לא אישר -->
-                                <span class="text-muted">ממתין לאישור הקונה.</span>
-                                <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
-                            {% else %}
-                                <!-- אם המוכר אישר -->
-                                <div class="seller-confirmation">
-                                    <p class="text-muted">כבר אישרת את העסקה והמייל נשלח לקונה.</p>
-                                    <a href="{{ url_for('marketplace.seller_cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger cancel-button">בטל</a>
-                                </div>
-                            {% endif %}
-                        {% elif transaction.status in ['הושלם', 'מבוטל'] %}
-                            <!-- אם העסקה הושלמה או בוטלה -->
-                            <span class="text-muted">אין פעולות זמינות</span>
-                        {% endif %}
+                        <ul class="transaction-steps">
+                            <li>
+                                {% if transaction.status == 'ממתין לאישור המוכר' %}
+                                    <a href="{{ url_for('transactions.approve_transaction', transaction_id=transaction.id) }}" class="step-link">אשר בקשה</a>
+                                {% else %}
+                                    <span class="step-completed">אושר</span>
+                                {% endif %}
+                            </li>
+                            <li>
+                                {% if transaction.status == 'ממתין לאישור הקונה' %}
+                                    <a href="{{ url_for('transactions.seller_confirm_transfer', transaction_id=transaction.id) }}" class="step-link">אשר העברה</a>
+                                {% elif transaction.status == 'הושלם' %}
+                                    <span class="step-completed">הושלם</span>
+                                {% endif %}
+                            </li>
+                            <li>
+                                {% if transaction.status != 'הושלם' and transaction.status != 'מבוטל' %}
+                                    <a href="{{ url_for('transactions.cancel_transaction', transaction_id=transaction.id) }}" class="step-link danger">בטל</a>
+                                {% endif %}
+                            </li>
+                        </ul>
                     </td>
                 </tr>
                 {% endfor %}
@@ -67,7 +66,7 @@
                     <th>לוגו</th>
                     <th>מוכר</th>
                     <th>סטטוס</th>
-                    <th>פעולות</th>
+                    <th>שלבים</th>
                 </tr>
             </thead>
             <tbody>
@@ -81,22 +80,27 @@
                     <td>{{ transaction.seller.first_name }} {{ transaction.seller.last_name }}</td>
                     <td>{{ transaction.status }}</td>
                     <td>
-                        {% if transaction.status == 'ממתין לאישור המוכר' %}
-                            <p>ממתין לאישור המוכר.</p>
-                            <a href="{{ url_for('transactions.cancel_transaction', transaction_id=transaction.id) }}" class="action-button danger">בטל</a>
-                        {% elif transaction.status == 'ממתין לאישור הקונה' %}
-                            <p>מספר טלפון של המוכר: {{ transaction.seller_phone }}</p>
-                            {% if not transaction.buyer_confirmed %}
-                                <form method="post" action="{{ url_for('transactions.buyer_confirm_transfer', transaction_id=transaction.id) }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="action-button">אשר שההעברה הכספית בוצעה</button>
-                                </form>
-                            {% else %}
-                                <span class="text-muted">ממתין לאישור המוכר.</span>
-                            {% endif %}
-                        {% else %}
-                            <span class="text-muted">אין פעולות זמינות</span>
-                        {% endif %}
+                        <ul class="transaction-steps">
+                            <li>
+                                {% if transaction.status == 'ממתין לאישור הקונה' %}
+                                    <a href="{{ url_for('transactions.buyer_confirm_transfer', transaction_id=transaction.id) }}" class="step-link">אשר העברה</a>
+                                {% else %}
+                                    <span class="step-completed">אושר</span>
+                                {% endif %}
+                            </li>
+                            <li>
+                                {% if transaction.status == 'ממתין לאישור המוכר שהעברה בוצעה' %}
+                                    <a href="{{ url_for('transactions.buyer_approve', transaction_id=transaction.id) }}" class="step-link">אשר עסקה</a>
+                                {% elif transaction.status == 'הושלם' %}
+                                    <span class="step-completed">הושלם</span>
+                                {% endif %}
+                            </li>
+                            <li>
+                                {% if transaction.status != 'הושלם' and transaction.status != 'מבוטל' %}
+                                    <a href="{{ url_for('transactions.cancel_transaction', transaction_id=transaction.id) }}" class="step-link danger">בטל</a>
+                                {% endif %}
+                            </li>
+                        </ul>
                     </td>
                 </tr>
                 {% endfor %}
@@ -107,7 +111,7 @@
     {% endif %}
 </section>
 
-<!-- טבלה חדשה להצגת עסקאות שהסתיימו (מבוטלות או הושלמו) -->
+<!-- טבלה להצגת עסקאות שהסתיימו (מבוטלות או הושלמו) -->
 <section class="transactions completed-transactions">
     <h2>עסקאות שהסתיימו</h2>
     {% if completed_transactions %}
@@ -196,7 +200,7 @@
         height: auto;
     }
 
-    .action-button {
+    .action-button, .step-link {
         display: inline-block;
         padding: 8px 12px;
         background-color: var(--primary-color);
@@ -206,14 +210,14 @@
         margin: 2px;
         font-size: 0.9em;
     }
-    .action-button:hover {
+    .action-button:hover, .step-link:hover {
         background-color: var(--accent-color);
     }
 
-    .action-button.danger {
+    .action-button.danger, .step-link.danger {
         background-color: var(--danger-color);
     }
-    .action-button.danger:hover {
+    .action-button.danger:hover, .step-link.danger:hover {
         background-color: darkred;
     }
 
@@ -253,6 +257,29 @@
         font-weight: bold;
     }
     .transaction-table .text-success {
+        color: green;
+        font-weight: bold;
+    }
+
+    /* עיצוב לרשימת השלבים */
+    .transaction-steps {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .transaction-steps li {
+        margin-bottom: 5px;
+    }
+
+    .step-link {
+        background-color: #007bff;
+    }
+
+    .step-completed {
         color: green;
         font-weight: bold;
     }
