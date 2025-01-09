@@ -40,19 +40,19 @@
             <span class="error-message">{{ error }}</span><br>
             {% endfor %}
         </div>
-        <!-- Discount Percentage Field -->
-        <div class="form-group">
-            {{ form.discount_percentage.label }}
-            {{ form.discount_percentage(class="input-field") }}
-            {% for error in form.discount_percentage.errors %}
-            <span class="error-message">{{ error }}</span><br>
-            {% endfor %}
-        </div>
         <!-- Desired Value Field -->
         <div class="form-group">
             {{ form.value.label }}
             {{ form.value(class="input-field") }}
             {% for error in form.value.errors %}
+            <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+        <!-- Discount Percentage Field -->
+        <div class="form-group">
+            {{ form.discount_percentage.label }}
+            {{ form.discount_percentage(class="input-field") }}
+            {% for error in form.discount_percentage.errors %}
             <span class="error-message">{{ error }}</span><br>
             {% endfor %}
         </div>

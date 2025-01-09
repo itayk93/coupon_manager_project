@@ -65,18 +65,39 @@ def log_user_activity(action, coupon_id=None):
 @transactions_bp.route('/my_transactions')
 @login_required
 def my_transactions():
-    transactions_as_buyer = Transaction.query.filter_by(buyer_id=current_user.id).all()
-    transactions_as_seller = Transaction.query.filter_by(seller_id=current_user.id).all()
+    """
+    מציג את כל העסקאות של המשתמש הנוכחי, מחולקות ל:
+    - עסקאות פעילות (מוכר/קונה) שהסטטוס שלהן לא 'הושלם' ולא 'מבוטל'
+    - עסקאות שהסתיימו (הושלמו או בוטלו)
+    """
+    # עסקאות פעילות של המשתמש כמוכר
+    transactions_as_seller = Transaction.query.filter(
+        Transaction.seller_id == current_user.id,
+        ~Transaction.status.in_(["הושלם", "מבוטל"])
+    ).all()
 
-    # שליפת כל החברות
+    # עסקאות פעילות של המשתמש כקונה
+    transactions_as_buyer = Transaction.query.filter(
+        Transaction.buyer_id == current_user.id,
+        ~Transaction.status.in_(["הושלם", "מבוטל"])
+    ).all()
+
+    # עסקאות שהסתיימו (הושלמו או בוטלו) של המשתמש (כמוכר או כקונה)
+    completed_transactions = Transaction.query.filter(
+        (Transaction.seller_id == current_user.id) | (Transaction.buyer_id == current_user.id),
+        Transaction.status.in_(["הושלם", "מבוטל"])
+    ).all()
+
+    # שליפת כל החברות לצורך לוגו
     companies = Company.query.all()
     # יצירת מיפוי שם חברה -> נתיב תמונה (באות קטנות)
     company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
 
     return render_template(
         'my_transactions.html',
-        transactions_as_buyer=transactions_as_buyer,
         transactions_as_seller=transactions_as_seller,
+        transactions_as_buyer=transactions_as_buyer,
+        completed_transactions=completed_transactions,
         company_logo_mapping=company_logo_mapping
     )
 
@@ -267,66 +288,6 @@ def cancel_transaction(transaction_id):
 
 
 
-@transactions_bp.route('/update_coupon_transactions', methods=['POST'])
-@login_required
-def update_coupon_transactions():
-    log_user_activity("update_coupon_transactions_attempt")
-
-    if not current_user.is_admin:
-        flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
-        coupon_id = request.form.get('coupon_id')
-        coupon_code = request.form.get('coupon_code')
-
-        coupon = None
-        if coupon_id:
-            coupon = Coupon.query.get(coupon_id)
-        elif coupon_code:
-            coupon = Coupon.query.filter_by(code=coupon_code).first()
-
-        if coupon:
-            return redirect(url_for('transactions.coupon_detail', id=coupon.id))
-        else:
-            flash('לא ניתן לעדכן נתונים ללא מזהה קופון תקין.', 'danger')
-            return redirect(url_for('transactions.my_transactions'))
-
-    coupon_id = request.form.get('coupon_id')
-    coupon_code = request.form.get('coupon_code')
-    coupon = None
-    if coupon_id:
-        coupon = Coupon.query.get(coupon_id)
-    elif coupon_code:
-        coupon = Coupon.query.filter_by(code=coupon_code).first()
-
-    if not coupon:
-        flash('לא ניתן לעדכן נתונים ללא מזהה קופון תקין.', 'danger')
-        return redirect(url_for('transactions.my_transactions'))
-
-    df = get_coupon_data(coupon.code)
-    if df is not None:
-        Transaction.query.filter_by(coupon_id=coupon.id, source='Multipass').delete()
-        for index, row in df.iterrows():
-            t = Transaction(
-                coupon_id=coupon.id,
-                card_number=row['card_number'],
-                transaction_date=row['transaction_date'],
-                location=row['location'],
-                recharge_amount=row['recharge_amount'] or 0,
-                usage_amount=row['usage_amount'] or 0,
-                reference_number=row.get('reference_number', ''),
-                source='Multipass'
-            )
-            db.session.add(t)
-
-        total_used = df['usage_amount'].sum()
-        coupon.used_value = total_used
-        db.session.commit()
-
-        flash(f'הנתונים עבור הקופון {coupon.code} עודכנו בהצלחה.', 'success')
-        log_user_activity("update_coupon_transactions_success", coupon.id)
-    else:
-        flash(f'אירעה שגיאה בעת עדכון הנתונים עבור הקופון {coupon.code}.', 'danger')
-
-    return redirect(url_for('transactions.coupon_detail', id=coupon.id))
 
 @transactions_bp.route('/mark_coupon_as_fully_used/<int:id>', methods=['POST'])
 @login_required
@@ -514,54 +475,108 @@ def complete_transaction_route(transaction_id):
     flash('העסקה סומנה כהושלמה (באופן ידני).', 'info')
     return redirect(url_for('transactions.my_transactions'))
 
+
 @transactions_bp.route('/seller_confirm_transfer/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 def seller_confirm_transfer(transaction_id):
+    """
+    המוכר מאשר סופית שהכסף התקבל.
+    פעולה זו תסיים את העסקה, תעביר את הקופון לקונה ותסמן את הטרנזקציה כהושלמה.
+    כמו כן, נשלח מייל למוכר עצמו כדי להודיע שהעסקה הסתיימה.
+    """
     transaction = Transaction.query.get_or_404(transaction_id)
     log_user_activity("seller_confirm_transfer_view", transaction.coupon_id)
 
+    # וידוא שהמשתמש הנוכחי הוא אכן המוכר
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
         return redirect(url_for('transactions.my_transactions'))
 
     if request.method == 'POST':
+        # המוכר אישר שהכסף התקבל
         transaction.seller_confirmed = True
         transaction.seller_confirmed_at = datetime.utcnow()
-        db.session.commit()
-        flash('אישרת שההעברה הכספית בוצעה.', 'success')
 
-        seller = transaction.seller
-        buyer = transaction.buyer
+        # סימון העסקה כ"הושלמה"
+        transaction.status = 'הושלם'
+
+        # העברת בעלות על הקופון לקונה
         coupon = transaction.coupon
+        buyer = transaction.buyer
+        seller = transaction.seller
 
+        coupon.user_id = buyer.id
+        coupon.is_for_sale = False  # "רגיל"
+        coupon.is_available = True  # הקופון פעיל בשימוש הקונה
+
+        try:
+            db.session.commit()
+            flash('העסקה הושלמה. הקופון הועבר לבעלות הקונה.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error completing transaction {transaction_id}: {e}")
+            flash('אירעה שגיאה בעת סימון העסקה כהושלמה.', 'danger')
+            return redirect(url_for('transactions.my_transactions'))
+
+        # 1. שליחת מייל לקונה (אופציונלי, אם קיים כבר)
         if buyer and buyer.email:
-            html_content = render_template('emails/seller_confirmed_transfer.html',
-                                           seller=seller, buyer=buyer, coupon=coupon)
+            html_content_buyer = render_template(
+                'emails/seller_confirmed_transfer.html',  # תבנית שכבר יש לך
+                seller=seller,
+                buyer=buyer,
+                coupon=coupon
+            )
             try:
                 send_email(
                     sender_email='itayk93@gmail.com',
                     sender_name='MaCoupon',
                     recipient_email=buyer.email,
                     recipient_name=f'{buyer.first_name} {buyer.last_name}',
-                    subject='המוכר ביטל שההעברה הכספית בוצעה',
-                    html_content=html_content
+                    subject='המוכר אישר את קבלת התשלום והעסקה הושלמה',
+                    html_content=html_content_buyer
                 )
             except Exception as e:
-                print(f"Error sending seller_confirmed_transfer email: {e}")
-                flash('האישור נקלט אך המייל לא נשלח.', 'warning')
+                current_app.logger.error(f"Error sending seller_confirmed_transfer email to buyer: {e}")
+                flash('העסקה הושלמה אך לא הצלחנו לשלוח מייל לקונה.', 'warning')
 
-        # השלמה אוטומטית אם כל התנאים מתקיימים
-        if transaction.seller_confirmed and transaction.buyer_confirmed and transaction.coupon_code_entered:
-            complete_transaction(transaction)
-            log_user_activity("seller_confirm_transfer_complete_transaction", transaction.coupon_id)
+        # 2. שליחת מייל למוכר עצמו – "העסקה הסתיימה"
+        if seller and seller.email:
+            html_content_seller = render_template(
+                'emails/transaction_completed_seller.html',  # תבנית חדשה (ראה למטה)
+                seller=seller,
+                buyer=buyer,
+                coupon=coupon
+            )
+            try:
+                send_email(
+                    sender_email='itayk93@gmail.com',
+                    sender_name='MaCoupon',
+                    recipient_email=seller.email,
+                    recipient_name=f'{seller.first_name} {seller.last_name}',
+                    subject='העסקה הסתיימה בהצלחה',
+                    html_content=html_content_seller
+                )
+            except Exception as e:
+                current_app.logger.error(f"Error sending transaction_completed_seller email: {e}")
+                flash('העסקה הושלמה אך לא הצלחנו לשלוח מייל למוכר.', 'warning')
 
         return redirect(url_for('transactions.my_transactions'))
 
+    # בקשת GET (או שגיאה) => הצגת הטופס
     return render_template('seller_confirm_transfer.html', transaction=transaction)
+
 
 @transactions_bp.route('/buyer_confirm_transfer/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 def buyer_confirm_transfer(transaction_id):
+    """
+    הקונה מאשר את העברת הכסף למוכר.
+    לאחר האישור:
+    - מעדכנים את השדה buyer_confirmed ל-True ואת buyer_confirmed_at עם התאריך הנוכחי.
+    - הסטטוס נשמר כערך קצר יותר במקום הטקסט המלא (למשל 'buyer_confirmed') כדי למנוע חריגת אורך בעמודה status.
+    - נשלח מייל למוכר.
+    - חוזרים ל-my_transactions בסיום.
+    """
     log_user_activity("buyer_confirm_transfer_view", transaction_id)
     current_app.logger.debug(f"Starting buyer_confirm_transfer with transaction_id: {transaction_id}")
 
@@ -569,22 +584,30 @@ def buyer_confirm_transfer(transaction_id):
         transaction = Transaction.query.get_or_404(transaction_id)
         current_app.logger.debug(f"Fetched transaction: {transaction}")
 
+        # בדיקה שהמשתמש הנוכחי הוא אכן הקונה
         if transaction.buyer_id != current_user.id:
             current_app.logger.warning("User attempted to confirm transfer for a transaction they do not own.")
             flash('אין לך הרשאה לפעולה זו.', 'danger')
             return redirect(url_for('transactions.my_transactions'))
 
+        # אם הבקשה היא POST, מבצעים את האישור
         if request.method == 'POST':
             try:
+                # סימון שהקונה אישר
                 transaction.buyer_confirmed = True
                 transaction.buyer_confirmed_at = datetime.utcnow()
-                current_app.logger.debug("Set buyer_confirmed to True and updated timestamp.")
-                db.session.commit()
-                current_app.logger.debug("Committed buyer confirmation to the database.")
+
+                # שמירת סטטוס קצר כדי לא לחרוג מהמגבלה של ה-DB
+                transaction.status = "buyer_confirmed"
+                # אפשר כמובן לבחור מילה אחרת, למשל: "buyer_confirmed_waiting_seller"
+                # העיקר שהיא תהיה קצרה מספיק עבור העמודה בעייתית.
+
+                db.session.commit()  # ניסיון לשמור את השינויים במסד הנתונים
 
                 flash('אישרת שההעברה הכספית בוצעה.', 'success')
                 current_app.logger.info("Buyer confirmed transfer successfully.")
 
+                # שליחת מייל למוכר
                 seller = transaction.seller
                 buyer = transaction.buyer
                 coupon = transaction.coupon
@@ -609,11 +632,7 @@ def buyer_confirm_transfer(transaction_id):
                         current_app.logger.error(f"Error sending buyer_confirmed_transfer email to seller: {e}")
                         flash('האישור נקלט אך המייל למוכר לא נשלח.', 'warning')
 
-                if transaction.seller_confirmed and transaction.buyer_confirmed and transaction.coupon_code_entered:
-                    current_app.logger.debug("All conditions met for completing the transaction.")
-                    complete_transaction(transaction)
-                    log_user_activity("buyer_confirm_transfer_complete_transaction", transaction.coupon_id)
-
+                # בסיום, חזרה לרשימת העסקאות
                 return redirect(url_for('transactions.my_transactions'))
 
             except Exception as e:
@@ -627,5 +646,6 @@ def buyer_confirm_transfer(transaction_id):
         traceback.print_exc()
         flash('אירעה שגיאה בלתי צפויה. נא לנסות שוב.', 'danger')
 
+    # אם זו בקשת GET או שהייתה שגיאה, מציגים את התבנית buyer_confirm_transfer.html
     current_app.logger.debug("Rendering buyer_confirm_transfer template.")
     return render_template('buyer_confirm_transfer.html', transaction=transaction)

@@ -2153,7 +2153,7 @@ def update_coupon_usage_from_multipass(id):
 @coupons_bp.route('/update_coupon_usage/<int:id>', methods=['GET', 'POST'])
 @login_required
 def update_coupon_usage_route(id):
-    log_user_activity("complete_transaction", coupon.id)
+    log_user_activity("complete_transaction")
 
     from forms import UpdateCouponUsageForm, MarkCouponAsFullyUsedForm
     coupon = Coupon.query.get_or_404(id)
@@ -2265,3 +2265,64 @@ def update_all_active_coupons(user_id):
         flash(f'הקופונים הבאים לא עודכנו: {", ".join(failed_coupons)}', 'danger')
 
     return redirect(url_for('profile.index'))
+
+@coupons_bp.route('/update_coupon_transactions', methods=['POST'])
+@login_required
+def update_coupon_transactions():
+    log_user_activity("update_coupon_transactions_attempt")
+
+    if not current_user.is_admin:
+        flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
+        coupon_id = request.form.get('coupon_id')
+        coupon_code = request.form.get('coupon_code')
+
+        coupon = None
+        if coupon_id:
+            coupon = Coupon.query.get(coupon_id)
+        elif coupon_code:
+            coupon = Coupon.query.filter_by(code=coupon_code).first()
+
+        if coupon:
+            return redirect(url_for('transactions.coupon_detail', id=coupon.id))
+        else:
+            flash('לא ניתן לעדכן נתונים ללא מזהה קופון תקין.', 'danger')
+            return redirect(url_for('transactions.my_transactions'))
+
+    coupon_id = request.form.get('coupon_id')
+    coupon_code = request.form.get('coupon_code')
+    coupon = None
+    if coupon_id:
+        coupon = Coupon.query.get(coupon_id)
+    elif coupon_code:
+        coupon = Coupon.query.filter_by(code=coupon_code).first()
+
+    if not coupon:
+        flash('לא ניתן לעדכן נתונים ללא מזהה קופון תקין.', 'danger')
+        return redirect(url_for('transactions.my_transactions'))
+
+    df = get_coupon_data(coupon.code)
+    if df is not None:
+        Transaction.query.filter_by(coupon_id=coupon.id, source='Multipass').delete()
+        for index, row in df.iterrows():
+            t = Transaction(
+                coupon_id=coupon.id,
+                card_number=row['card_number'],
+                transaction_date=row['transaction_date'],
+                location=row['location'],
+                recharge_amount=row['recharge_amount'] or 0,
+                usage_amount=row['usage_amount'] or 0,
+                reference_number=row.get('reference_number', ''),
+                source='Multipass'
+            )
+            db.session.add(t)
+
+        total_used = df['usage_amount'].sum()
+        coupon.used_value = total_used
+        db.session.commit()
+
+        flash(f'הנתונים עבור הקופון {coupon.code} עודכנו בהצלחה.', 'success')
+        log_user_activity("update_coupon_transactions_success", coupon.id)
+    else:
+        flash(f'אירעה שגיאה בעת עדכון הנתונים עבור הקופון {coupon.code}.', 'danger')
+
+    return redirect(url_for('coupons.coupon_detail', id=coupon.id))
