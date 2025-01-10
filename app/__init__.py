@@ -21,6 +21,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler()
 
+
 def create_app():
     # טוען משתני סביבה (ליתר בטחון, אפשר גם ב-wsgi.py)
     load_dotenv()
@@ -43,6 +44,10 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
+
+    # רישום הפילטר
+    from app.routes.coupons_routes import to_israel_time_filter
+    app.add_template_filter(to_israel_time_filter, 'to_israel_time')
 
     # רישום Blueprints
     from app.routes.auth_routes import auth_bp

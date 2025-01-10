@@ -1,29 +1,97 @@
-<!-- /templates/profile/rate_user.html -->
-{% extends 'base.html' %}
+<!-- templates/profile/rate_user.html -->
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>הוסף ביקורת</title>
+    <style>
+        body {
+            direction: rtl;
+            text-align: right;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 500px;
+            margin: 30px auto;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2E86C1;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        .form-control {
+            display: block;
+            width: 100%;
+            margin-top: 5px;
+            padding: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .submit-btn {
+            background-color: #2E86C1;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            margin-top: 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .submit-btn:hover {
+            background-color: #2874A6;
+        }
+        .flash-messages {
+            color: red;
+            margin-bottom: 10px;
+        }
+        .user-name {
+            font-weight: bold;
+            color: #34495E;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>הוסף ביקורת</h1>
 
-{% block title %}דירוג משתמש{% endblock %}
+        <p>אתה עומד לכתוב ביקורת על
+            <span class="user-name">{{ user_to_rate.first_name }} {{ user_to_rate.last_name }}</span>.
+        </p>
 
-{% block content %}
-<h2>דרג את {{ user_to_rate.first_name }} {{ user_to_rate.last_name }}</h2>
-<form method="POST">
-    {{ form.hidden_tag() }}
+        {# הצגת הודעות פלאש, במידה ויש #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <p class="{{ category }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
-    <div class="form-group">
-        {{ form.rating_value.label }}
-        {{ form.rating_value(class="form-control") }}
-        {% for error in form.rating_value.errors %}
-            <span class="error-message">{{ error }}</span>
-        {% endfor %}
+        <form method="POST" action="">
+            {{ form.hidden_tag() }}
+
+            <label for="rating">דירוג (1 עד 5):</label>
+            {{ form.rating(class="form-control", id="rating") }}
+            {% if form.rating.errors %}
+                <div style="color: red;">
+                    {% for error in form.rating.errors %}
+                        {{ error }}<br>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <label for="comment">הערה:</label>
+            {{ form.comment(class="form-control", id="comment") }}
+
+            {{ form.submit(class="submit-btn") }}
+        </form>
     </div>
-
-    <div class="form-group">
-        {{ form.rating_comment.label }}
-        {{ form.rating_comment(class="form-control", rows="4") }}
-        {% for error in form.rating_comment.errors %}
-            <span class="error-message">{{ error }}</span>
-        {% endfor %}
-    </div>
-
-    {{ form.submit(class="btn btn-primary") }}
-</form>
-{% endblock %}
+</body>
+</html>

@@ -172,7 +172,8 @@
     </div>
 
     <!-- Usage History -->
-    <h3 class="usage-history-title">היסטוריית שימוש</h3>
+    <!-- Usage History from CouponTransaction (ישן) -->
+    <h3 class="usage-history-title">היסטוריית טעינות/חיובים (CouponTransaction)</h3>
     {% if transactions|length > 0 %}
         <table class="transaction-table">
             <thead>
@@ -199,8 +200,45 @@
             </tbody>
         </table>
     {% else %}
-        <p class="no-data-message">אין רשומות שימוש.</p>
+        <p class="no-data-message">אין רשומות שימוש/טעינה ב־CouponTransaction.</p>
     {% endif %}
+
+
+    <!-- Usage History from CouponUsage (חדש) -->
+    <h3 class="usage-history-title">היסטוריית שימוש (CouponUsage)</h3>
+    {% if usages|length > 0 %}
+        <table class="transaction-table">
+            <thead>
+                <tr>
+                    <th>תאריך</th>
+                    <th>סכום שימוש (₪)</th>
+                    <th>פעולה</th>
+                    <th>פרטים</th>
+                    <th>משתמש</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usage in usages %}
+                    <tr>
+                        <td>
+                            {% if usage.timestamp %}
+                                {{ usage.timestamp | to_israel_time }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ '%.2f'|format(usage.used_amount or 0) }}</td>
+                        <td>{{ usage.action or '' }}</td>
+                        <td>{{ usage.details or '' }}</td>
+                        <td>{{ usage.user or '' }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="no-data-message">אין רשומות שימוש ב־CouponUsage.</p>
+    {% endif %}
+
 
     <!-- Action Buttons -->
     {% if is_owner %}

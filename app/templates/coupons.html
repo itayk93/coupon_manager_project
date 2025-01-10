@@ -144,7 +144,7 @@
                                 </td>
                                 <td>
                                     {% if latest_usage %}
-                                        {{ latest_usage.strftime('%Y-%m-%d %H:%M') }}
+                                        {{ latest_usage | to_israel_time }}
                                     {% else %}
                                         -
                                     {% endif %}

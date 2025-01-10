@@ -1,247 +1,71 @@
-{% extends 'base.html' %}
-
-{% block title %}פרופיל משתמש{% endblock %}
-
-{% block content %}
-<section class="coupon-detail">
-    <h2>פרופיל של {{ user.first_name }} {{ user.last_name }}</h2>
-
+<!-- templates/profile/user_profile.html -->
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <title>הפרופיל של {{ user.first_name }} {{ user.last_name }}</title>
     <style>
-    .profile-img {
-        width: 100px; /* רוחב קבוע כמו בתמונת הקופון */
-        height: 100px; /* גובה קבוע */
-        object-fit: contain; /* מתאים את התוכן בצורה נכונה */
-        border-radius: 8px; /* עיגול פינות */
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* צל כמו בתמונת הקופון */
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .profile-img:hover {
-        transform: scale(1.05); /* אפקט התקרבות במעבר עכבר */
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* אפקט צל יותר חזק */
-    }
-
-    /* עיצוב כללי לטאבים */
-    .tabs {
-        margin-top: 20px;
-    }
-
-    .tab-button {
-        background-color: #eee;
-        border: none;
-        padding: 10px 20px;
-        cursor: pointer;
-        margin-right: 5px;
-    }
-
-    .tab-button.active {
-        background-color: #ccc;
-    }
-
-    .tab-content {
-        display: none;
-        margin-top: 20px;
-    }
-
-    .tab-content.active {
-        display: block;
-    }
-
-    .rounded-box {
-        background-color: #f9f9f9;
-        border-radius: 8px;
-        padding: 10px;
-        margin-bottom: 10px;
-    }
-
-    .info-title {
-        font-weight: bold;
-    }
-
-    .info-value {
-        margin-right: 5px; /* רווח קטן */
-    }
-
-    .ratings-list {
-        list-style-type: none;
-        padding-left: 0;
-    }
-
-    .rating-item {
-        margin-bottom: 10px;
-    }
-
-    .info-box {
-        margin-bottom: 5px;
-    }
-
-    .action-buttons {
-        margin-top: 20px;
-    }
-
-    .action-button {
-        background-color: #007bff;
-        color: #fff;
-        text-decoration: none;
-        padding: 8px 12px;
-        border-radius: 4px;
-        margin-right: 10px;
-    }
-
-    .action-button:hover {
-        background-color: #0056b3;
-    }
+        body {
+            direction: rtl;
+            text-align: right;
+            font-family: Arial, sans-serif;
+        }
+        .profile-container {
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .reviews-section {
+            margin-top: 30px;
+        }
+        .review {
+            background-color: #f7f7f7;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .review .rating {
+            font-weight: bold;
+            color: #2E86C1;
+        }
     </style>
+</head>
+<body>
+    <div class="profile-container">
+        <h1>הפרופיל של {{ user.first_name }} {{ user.last_name }}</h1>
 
-    <!-- תמונת פרופיל (אם קיימת) -->
-    <div class="company-info">
+        {# אם יש תמונת פרופיל #}
         {% if user.profile_image %}
-            <img src="{{ url_for('static', filename=user.profile_image.split('static/')[1]) }}"
-                 alt="Profile Image" class="profile-img">
-        {% else %}
-            <img src="{{ url_for('static', filename='images/profiles/default_avatar.png') }}"
-                 alt="Profile Image" class="profile-img">
+            <img src="{{ url_for('static', filename=user.profile_image.replace('static/', '')) }}"
+                 alt="תמונת פרופיל"
+                 style="max-width: 150px; border-radius: 50%;">
         {% endif %}
-    </div>
 
-    <!-- כפתורי טאבים -->
-    <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'tab1')">תיאור פרופיל</button>
-        <button class="tab-button" onclick="openTab(event, 'tab2')">דירוגים והערות</button>
-        <button class="tab-button" onclick="openTab(event, 'tab3')">פרטים נוספים</button>
-    </div>
+        <p>גיל: {{ user.age or 'לא צויין' }}</p>
+        <p>מין: {{ user.gender or 'לא צויין' }}</p>
+        <p>תיאור פרופיל: {{ user.profile_description or '...' }}</p>
 
-    <!-- תוכן טאב 1: תיאור פרופיל -->
-    <div id="tab1" class="tab-content active">
-        <div class="rounded-box">
-            <span class="info-title">תיאור:</span>
-            <span class="info-value">{{ user.profile_description or 'לא הוזן תיאור' }}</span>
-        </div>
-    </div>
-
-    <!-- תוכן טאב 2: דירוגים והערות -->
-    <div id="tab2" class="tab-content">
-        <h3>דירוגים והערות ממשתמשים אחרים</h3>
+        {# ממוצע דירוג #}
         {% if avg_rating %}
-            <div class="rounded-box">
-                <span class="info-title">דירוג ממוצע:</span>
-                <span class="info-value">
-                    {{ "%.1f"|format(avg_rating) }} (מתוך {{ ratings|length }} דירוגים)
-                </span>
-            </div>
+            <p>ממוצע דירוג: {{ "%.1f"|format(avg_rating) }} / 5</p>
         {% else %}
-            <div class="rounded-box">
-                <span class="info-title">דירוג ממוצע:</span>
-                <span class="info-value">עדיין לא התקבלו דירוגים</span>
-            </div>
+            <p>אין עדיין דירוגים למשתמש הזה.</p>
         {% endif %}
 
-        <ul class="ratings-list">
-            {% for r in ratings %}
-                <li class="rating-item">
-                    <div class="info-box">
-                        <span class="info-title">דירוג:</span>
-                        <span class="info-value">{{ r.rating }}</span>
+        <div class="reviews-section">
+            <h2>ביקורות שקיבל:</h2>
+            {% if ratings %}
+                {% for review in ratings %}
+                    <div class="review">
+                        <p class="rating">דירוג: {{ review.rating }} / 5</p>
+                        <p>תגובה: {{ review.comment or 'אין הערה' }}</p>
+                        <p>נכתב על ידי משתמש ID {{ review.reviewer_id }} בתאריך {{ review.created_at.strftime('%d/%m/%Y') }}</p>
                     </div>
-                    <div class="info-box">
-                        <span class="info-title">הערה:</span>
-                        <span class="info-value">{{ r.comment or '' }}</span>
-                    </div>
-                    <div class="info-box">
-                        <span class="info-title">מאת:</span>
-                        <span class="info-value">
-                            משתמש מספר {{ r.reviewer_id }}
-                            ({{ r.created_at.strftime('%Y-%m-%d %H:%M') }})
-                        </span>
-                    </div>
-                    <hr>
-                </li>
-            {% endfor %}
-        </ul>
-
-        <!-- אם המשתמש הנוכחי מחובר ואינו צופה בעצמו, אפשר לאפשר לו לדרג -->
-        {% if current_user.is_authenticated and current_user.id != user.id %}
-            <hr>
-            <h4>הוסף דירוג</h4>
-            <form method="POST" action="{{ url_for('profile.rate_user', user_id=user.id) }}">
-                <!-- במידה ואתה משתמש ב-WTForms עם CSRF, תוכל להוסיף כאן:
-                     {{ form.csrf_token }} או {{ csrf_token() }}
-                     תלוי איך הגדרת את האפליקציה -->
-
-                <div class="form-group">
-                    <label for="rating">בחר דירוג (1 עד 5):</label><br>
-                    <input
-                        type="range"
-                        id="rating"
-                        name="rating"
-                        min="1"
-                        max="5"
-                        value="3"
-                        oninput="this.nextElementSibling.value = this.value"
-                        style="width: 300px;"
-                    >
-                    <output>3</output>
-                </div>
-
-                <div class="form-group">
-                    <label for="comment">הערה (אופציונלי):</label><br>
-                    <textarea id="comment" name="comment" rows="4" cols="50"></textarea>
-                </div>
-
-                <button type="submit" class="action-button">שלח ביקורת</button>
-            </form>
-        {% endif %}
-    </div>
-
-    <!-- תוכן טאב 3: פרטים נוספים -->
-    <div id="tab3" class="tab-content">
-        <div class="info-box">
-            <span class="info-title">מספר קופונים שמכר:</span>
-            <span class="info-value">{{ user.coupons_sold_count }}</span>
+                {% endfor %}
+            {% else %}
+                <p>אין ביקורות על משתמש זה.</p>
+            {% endif %}
         </div>
-        <div class="info-box">
-            <span class="info-title">ימים מאז שנרשם:</span>
-            <span class="info-value">{{ user.days_since_register }}</span>
-        </div>
+
     </div>
-
-    <!-- כפתורי פעולה נוספים (לדוגמה) -->
-    <div class="action-buttons">
-        {% if current_user.is_authenticated and current_user.id != user.id %}
-            <!-- כפתור עריכה וכו' רק לדוגמה, אם תרצה... -->
-            <!-- כאן למשל כפתור נוסף לפרופיל -->
-        {% endif %}
-    </div>
-</section>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    function openTab(evt, tabName) {
-        // מסתיר את כל התכנים
-        var tabContents = document.getElementsByClassName("tab-content");
-        for (var i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-
-        // מסיר מחלקת 'active' מכל הכפתורים
-        var tabButtons = document.getElementsByClassName("tab-button");
-        for (var i = 0; i < tabButtons.length; i++) {
-            tabButtons[i].classList.remove("active");
-        }
-
-        // מציג את הטאב שנלחץ ומוסיף לו מחלקת active
-        document.getElementById(tabName).classList.add("active");
-        evt.currentTarget.classList.add("active");
-    }
-
-    // פתיחת הטאב הראשון כברירת מחדל
-    document.addEventListener("DOMContentLoaded", function() {
-        var defaultTab = document.querySelector(".tab-button.active");
-        if (defaultTab) {
-            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
-            document.getElementById(tabName).classList.add("active");
-        }
-    });
-</script>
-{% endblock %}
+</body>
+</html>

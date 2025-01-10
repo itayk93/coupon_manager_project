@@ -159,6 +159,7 @@
                     <th>מוכר</th>
                     <th>סטטוס</th>
                     <th>תאריך עדכון</th>
+                    <th>פעולות</th>  {# <-- נוסיף עמודה לפעולות נוספות #}
                 </tr>
             </thead>
             <tbody>
@@ -184,7 +185,21 @@
 
                     <td>
                         {% if transaction.updated_at %}
-                            {{ transaction.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                            {{ transaction.updated_at | to_israel_time }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+
+                    {# -- הוספת עמודה "פעולות" - מאפשרת להוסיף ביקורת על המוכר -- #}
+                    <td>
+                        {% if transaction.status == 'הושלם' and current_user.id == transaction.buyer_id %}
+                            <!-- כפתור הוסף ביקורת על המוכר -->
+                            <a href="{{ url_for('profile.rate_user', user_id=transaction.seller_id) }}"
+                               class="action-button"
+                               title="הוסף ביקורת על המוכר">
+                                הוסף ביקורת
+                            </a>
                         {% else %}
                             -
                         {% endif %}

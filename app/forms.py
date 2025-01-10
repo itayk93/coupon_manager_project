@@ -422,7 +422,7 @@ class MarkCouponAsUsedForm(FlaskForm):
 
 class UpdateCouponUsageForm(FlaskForm):
     used_amount = FloatField('כמות שימוש', validators=[DataRequired(), NumberRange(min=0.0)])
-    submit = SubmitField('עדכן שימוש')
+    submit = SubmitField('עדכן שימוש עם MultiPass')
 
 
 class BuySlotsForm(FlaskForm):
@@ -532,7 +532,7 @@ from flask_wtf import FlaskForm
 from wtforms import SubmitField
 
 class MarkCouponAsFullyUsedForm(FlaskForm):
-    submit = SubmitField('סמן כ"נוצל לגמרי"')
+    submit = SubmitField('סימן הקופון כ"נוצל לגמרי"')
 
 class TagManagementForm(FlaskForm):
     name = StringField(
@@ -637,13 +637,11 @@ class RateUserForm(FlaskForm):
     rating_comment = TextAreaField('הערה (אופציונלי)', validators=[Optional()])
     submit = SubmitField('שלח דירוג')
 
-# app/forms.py
+# forms.py
 
 from flask_wtf import FlaskForm
-from wtforms import TextAreaField, HiddenField
-from wtforms.validators import DataRequired, NumberRange
-from wtforms.widgets import HiddenInput
-from wtforms import IntegerField
+from wtforms import IntegerField, TextAreaField, SubmitField
+from wtforms.validators import DataRequired, NumberRange, Optional
 
 class ReviewSellerForm(FlaskForm):
     rating = IntegerField(
@@ -653,4 +651,5 @@ class ReviewSellerForm(FlaskForm):
             NumberRange(min=1, max=5, message="הדירוג צריך להיות בין 1 ל-5")
         ]
     )
-    comment = TextAreaField('הערה (אופציונלי)')
+    comment = TextAreaField('הערה (אופציונלי)', validators=[Optional()])
+    submit = SubmitField('שלח ביקורת')

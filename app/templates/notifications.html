@@ -22,8 +22,7 @@
                         {% if notification.link %}
                             <a href="{{ notification.link }}" class="notification-link">פרטים</a>
                         {% endif %}
-                        <!-- הצגת התאריך בפורמט ISO 8601 -->
-                        <div class="notification-timestamp">{{ notification.timestamp.isoformat() }}</div>
+                        <div class="notification-timestamp">{{ notification.timestamp | to_israel_time }}</div>
                     </div>
                     <button class="notification-close" data-id="{{ notification.id }}" title="מחק התראה">
                         &times;

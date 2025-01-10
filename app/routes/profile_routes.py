@@ -24,7 +24,11 @@ from datetime import datetime
 from app.forms import BuySlotsForm
 from flask_wtf.csrf import validate_csrf, ValidationError
 import logging
-
+from flask import redirect, render_template, url_for, flash
+from flask_login import login_required, current_user
+from app.models import User, UserReview
+from app.forms import RateUserForm
+from app import db
 logger = logging.getLogger(__name__)
 
 profile_bp = Blueprint('profile', __name__)
@@ -331,10 +335,52 @@ def buy_slots():
 def edit_profile():
     return render_template('profile/edit_profile.html', form=form)
 
-@profile_bp.route('/rate_user')
+@profile_bp.route('/rate_user/<int:user_id>', methods=['GET', 'POST'])
 @login_required
-def rate_user():
-    return render_template('profile/rate_user.html', form=form)
+def rate_user(user_id):
+    """
+    # The route for rating a user (writing a review).
+    # This route expects:
+    # - user_id = the user being reviewed
+    # - The current_user (the one who is logged in) is writing the review.
+    """
+
+    # 1) Always define `form` at the very top!
+    #    So it exists no matter how we exit or return from the function:
+    form = RateUserForm()
+
+    # 2) Grab user to rate:
+    user_to_rate = User.query.get_or_404(user_id)
+
+    # 3) Check if user is rating themselves:
+    if user_id == current_user.id:
+        flash('You cannot rate yourself!', 'warning')
+        return redirect(url_for('profile.profile_view', user_id=user_id))
+
+    # 4) Check if user has already reviewed them:
+    existing_review = UserReview.query.filter_by(
+        reviewer_id=current_user.id,
+        reviewed_user_id=user_to_rate.id
+    ).first()
+    if existing_review:
+        flash('You have already written a review for this user.', 'warning')
+        return redirect(url_for('profile.profile_view', user_id=user_to_rate.id))
+
+    # 5) Handle POST submission:
+    if form.validate_on_submit():
+        new_review = UserReview(
+            reviewer_id=current_user.id,
+            reviewed_user_id=user_to_rate.id,
+            rating=form.rating.data,
+            comment=form.comment.data
+        )
+        db.session.add(new_review)
+        db.session.commit()
+        flash('Your review has been saved successfully!', 'success')
+        return redirect(url_for('profile.profile_view', user_id=user_to_rate.id))
+
+    # 6) If GET or form fails validation -> just render the template
+    return render_template('profile/rate_user.html', form=form, user_to_rate=user_to_rate)
 
 @profile_bp.route('/user_profile/<int:user_id>', methods=['GET'])
 @login_required

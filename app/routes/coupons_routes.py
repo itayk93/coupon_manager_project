@@ -57,6 +57,16 @@ import traceback
 logger = logging.getLogger(__name__)
 
 coupons_bp = Blueprint('coupons', __name__)
+import pytz
+
+def to_israel_time_filter(dt):
+    """Converts UTC datetime to Israel time and formats as string."""
+    if not dt:
+        return ''
+    israel = pytz.timezone('Asia/Jerusalem')
+    return dt.replace(tzinfo=pytz.utc).astimezone(israel).strftime('%d/%m/%Y %H:%M:%S')
+
+
 from sqlalchemy.sql import text
 
 from datetime import datetime
@@ -65,7 +75,7 @@ from app.helpers import get_geo_location
 from flask_login import current_user
 from sqlalchemy.sql import text
 from app.extensions import db
-
+from app.forms import MarkCouponAsFullyUsedForm
 from app.helpers import get_geo_location, get_public_ip
 
 def log_user_activity(action, coupon_id=None):
@@ -99,6 +109,7 @@ def log_user_activity(action, coupon_id=None):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error logging activity [{action}]: {e}")
+
 
 @coupons_bp.route('/sell_coupon', methods=['GET', 'POST'])
 @login_required
@@ -1554,14 +1565,22 @@ def get_companies():
 def coupon_detail(id):
     coupon = Coupon.query.get_or_404(id)
     is_owner = coupon.user_id == current_user.id
+
     mark_form = MarkCouponAsUsedForm()
     delete_form = DeleteCouponForm()
     update_form = UpdateCouponUsageForm()
 
     log_user_activity("view_coupon", coupon.id)
 
+    # שליפת היסטוריית הטרנזקציות (כפי שהיה)
     transactions = CouponTransaction.query.filter_by(coupon_id=coupon.id).order_by(
-        CouponTransaction.transaction_date.asc()).all()
+        CouponTransaction.transaction_date.asc()
+    ).all()
+
+    # **שליפת היסטוריית השימוש (CouponUsage)**
+    usages = CouponUsage.query.filter_by(coupon_id=coupon.id) \
+        .order_by(CouponUsage.timestamp.desc()) \
+        .all()
 
     companies = Company.query.all()
     company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
@@ -1580,13 +1599,10 @@ def coupon_detail(id):
         delete_form=delete_form,
         update_form=update_form,
         transactions=transactions,
+        usages=usages,  # מעבירים לטמפלייט
         company_logo=company_logo,
         discount_percentage=discount_percentage
     )
-
-
-
-
 
 
 @coupons_bp.route('/delete_coupon/<int:id>', methods=['POST'])
@@ -2066,38 +2082,36 @@ def mark_coupon_as_used(id):
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
 
-    if not coupon.is_one_time:
-        flash('הקופון אינו חד-פעמי.', 'warning')
-        return redirect(url_for('coupons.coupon_detail', id=id))
-
-    if coupon.status != 'פעיל':
-        flash('הקופון כבר נוצל או פג תוקפו.', 'warning')
-        return redirect(url_for('coupons.coupon_detail', id=id))
-
     try:
+        # במקום לבדוק is_one_time, נאפשר לכל קופון לסמן כ"נוצל לגמרי".
         coupon.used_value = coupon.value
         update_coupon_status(coupon)
+
+        # יוצרים רשומה בהיסטוריית השימוש (CouponUsage)
         usage = CouponUsage(
             coupon_id=coupon.id,
-            used_amount=coupon.value,
+            used_amount=coupon.value,  # סימון כנוצל לגמרי
             timestamp=datetime.now(timezone.utc),
-            action='נוצל',
-            details='הקופון סומן כנוצל על ידי המשתמש.'
+            action='נוצל לגמרי',
+            details='סומן על ידי המשתמש כ"נוצל לגמרי".'
         )
         db.session.add(usage)
+
+        # שולחים נוטיפיקציה
         notification = Notification(
             user_id=coupon.user_id,
-            message=f"הקופון {coupon.code} שלך ניצל.",
+            message=f"הקופון {coupon.code} סומן כנוצל לגמרי.",
             link=url_for('coupons.coupon_detail', id=coupon.id)
         )
         db.session.add(notification)
+
         db.session.commit()
 
-        flash('הקופון סומן כנוצל בהצלחה.', 'success')
+        flash('הקופון סומן בהצלחה כ"נוצל לגמרי".', 'success')
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error marking coupon as used: {e}")
-        flash('אירעה שגיאה בעת סימון הקופון כנוצל.', 'danger')
+        logger.error(f"Error marking coupon as fully used: {e}")
+        flash('אירעה שגיאה בעת סימון הקופון כנוצל לגמרי.', 'danger')
 
     return redirect(url_for('coupons.coupon_detail', id=id))
 
@@ -2155,8 +2169,9 @@ def update_coupon_usage_from_multipass(id):
 def update_coupon_usage_route(id):
     log_user_activity("complete_transaction")
 
-    from forms import UpdateCouponUsageForm, MarkCouponAsFullyUsedForm
     coupon = Coupon.query.get_or_404(id)
+    companies = Company.query.all()
+    company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
     is_owner = (current_user.id == coupon.user_id)
 
     if coupon.user_id != current_user.id:
@@ -2195,11 +2210,14 @@ def update_coupon_usage_route(id):
             flash('אירעה שגיאה בעת עדכון כמות השימוש.', 'danger')
             logger.error(f"Error updating coupon usage: {e}")
 
-    return render_template('update_coupon_usage.html',
-                           form=form,
-                           coupon=coupon,
-                           is_owner=is_owner,
-                           mark_fully_used_form=mark_fully_used_form)
+    return render_template(
+        'update_coupon_usage.html',
+        coupon=coupon,
+        is_owner=is_owner,
+        form=form,
+        mark_fully_used_form=mark_fully_used_form,
+        company_logo_mapping=company_logo_mapping
+    )
 
 
 @coupons_bp.route('/update_all_active_coupons', methods=['POST'])

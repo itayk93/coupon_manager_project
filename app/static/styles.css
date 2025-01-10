@@ -2683,7 +2683,69 @@ h3 {
    35. Coupon Detail Page Styles
    =================================================== */
 
-/* Info Box Styles - תיבת המידע */
+.coupon-detail {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid var(--light-gray);
+    margin: 40px auto; /* מרכז את הקופון */
+    padding-right: 20px;
+    border-radius: 8px;
+    max-width: 800px;
+    text-align: center; /* מיישר את כל התוכן במרכז */
+}
+
+.coupon-detail h2 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+/* Company Info in Coupon Detail */
+.coupon-detail .company-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* Center the buttons within action-buttons */
+.coupon-detail .action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+/* Specific styles for "update-usage-buttons" to center */
+.coupon-detail .update-usage-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Specific styles for mark-as-used-container */
+.coupon-detail .mark-as-used-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Responsive Adjustments for Coupon Detail */
+@media (max-width: 768px) {
+    .coupon-detail .company-logo {
+        width: 40px;  /* גודל קטן יותר במובייל */
+        height: 40px;
+    }
+
+    .coupon-detail .action-button,
+    .coupon-detail .export-button {
+        font-size: 0.8em;
+        padding: 8px 12px;
+    }
+}
+
+/* מכאן מתחילות תיבות המידע */
 .info-box {
     position: relative; /* מאפשר להשתמש ב-before ו-after */
     background-color: #ffffff;
@@ -2724,25 +2786,6 @@ h3 {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* התאמה של ה-padding לבעיית ה-line continuity */
-.info-box-padding-fix {
-    padding-top: 2px; /* עוזר לבעיית רציפות הקווים */
-    padding-bottom: 2px;
-}
-
-.usage-history-title {
-    text-align: center;
-    margin-top: 30px;
-    font-weight: bold;
-}
-
-
-
-.info-box:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
 .info-title {
     font-weight: bold;
     color: var(--primary-color);
@@ -2755,15 +2798,44 @@ h3 {
     text-align: left;
 }
 
+.usage-history-title {
+    text-align: center;
+    margin-top: 30px;
+    font-weight: bold;
+}
+
+/* אנכית כפתורי פעולה - לא תמיד בשימוש */
 .action-buttons.vertical-buttons {
     flex-direction: column; /* משנה את סידור האלמנטים לעמודה */
     align-items: center; /* מרכז את האלמנטים אופקית */
-    gap: 10px; /* מוריד את הפער בין האלמנטים */
+    gap: 10px;
 }
 
-.action-buttons.vertical-buttons .your-request {
-    margin-bottom: 10px; /* מוסיף רווח מתחת לטקסט */
+/* --------------------------------------------------
+   תוספת לטיפול בטופס "עדכון שימוש" כדי לכווץ את
+   שדה הטקסט והכפתור, ולמרכזם.
+   -------------------------------------------------- */
+.input-field.small-input {
+    width: 100%; /* או ערך ספציפי אם התיבה השנייה מוגדרת ברוחב קבוע */
+    max-width: 500px; /* הגבל את הרוחב המרבי, אם יש צורך */
+    padding: 10px; /* ודא שה-padding תואם לתיבה השנייה */
+    box-sizing: border-box; /* כולל padding ו-border בתוך הרוחב הכולל */
+    margin: 0 auto; /* מרכז את התיבה */
+    display: block; /* מבטיח שהתיבה תתנהג כבלוק */
 }
+
+
+.coupon-detail .form-container .submit-button.small-button {
+    width: auto !important;      /* מבטל את ה-width:100% */
+    display: inline-block;
+    margin: 0 auto;              /* מרכז את הכפתור */
+    font-size: 0.85em !important;/* מוודא גודל קטן */
+    padding: 8px 38px !important;/* כיווץ ה־padding */
+    /* אפשר להוסיף עוד התאמות כאן לפי הצורך */
+}
+/* -------------------------------------------------- */
+
+
 
 
 /* ===================================================

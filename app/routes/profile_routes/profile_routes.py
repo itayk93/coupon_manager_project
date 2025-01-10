@@ -1,5 +1,5 @@
 # /routes/profile_routes/profile_routes.py
-
+from app.forms import ReviewSellerForm
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app.extensions import db
@@ -85,42 +85,3 @@ def edit_profile():
     return render_template('profile/edit_profile.html', form=form)
 
 
-@profile_bp.route('/rate_user/<int:user_id>', methods=['GET', 'POST'])
-@login_required
-def rate_user(user_id):
-    """
-    כתיבת דירוג למשתמש אחר. משתמש יכול לדרג משתמש אחר רק פעם אחת.
-    """
-    if user_id == current_user.id:
-        flash('אינך יכול לדרג את עצמך!', 'warning')
-        return redirect(url_for('profile.profile_view', user_id=user_id))
-
-    user_to_rate = User.query.get_or_404(user_id)
-    form = RateUserForm()
-
-    # בדיקה האם כבר קיים דירוג של current_user -> user_id
-    existing_rating = UserRating.query.filter_by(
-        rated_user_id=user_to_rate.id,
-        rating_user_id=current_user.id
-    ).first()
-    if existing_rating:
-        flash('כבר דירגת את המשתמש הזה בעבר.', 'warning')
-        return redirect(url_for('profile.profile_view', user_id=user_to_rate.id))
-
-    if form.validate_on_submit():
-        rating_value = form.rating_value.data
-        rating_comment = form.rating_comment.data
-
-        new_rating = UserRating(
-            rated_user_id=user_to_rate.id,
-            rating_user_id=current_user.id,
-            rating_value=rating_value,
-            rating_comment=rating_comment
-        )
-        db.session.add(new_rating)
-        db.session.commit()
-
-        flash('הדירוג נשלח בהצלחה!', 'success')
-        return redirect(url_for('profile.profile_view', user_id=user_to_rate.id))
-
-    return render_template('profile/rate_user.html', form=form, user_to_rate=user_to_rate)

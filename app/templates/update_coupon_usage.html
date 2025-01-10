@@ -1,16 +1,20 @@
 <!-- templates/update_coupon_usage.html -->
 {% extends 'base.html' %}
 
-{% block title %}עדכון כמות שימוש בקופון{% endblock %}
+{% block title %}עדכון סכום שימוש בקופון{% endblock %}
 
 {% block content %}
 <section class="coupon-detail">
-    <h2>עדכון כמות שימוש בקופון</h2>
+    <h2>עדכון סכום שימוש בקופון</h2>
 
-    <!-- Company Info -->
+    <!-- Company Info (כמו בעמוד פרטי הקופון) -->
+    {% if company_logo_mapping %}
+        {% set final_logo = company_logo_mapping.get(coupon.company|lower, 'default_logo.png') %}
+    {% else %}
+        {% set final_logo = 'default_logo.png' %}
+    {% endif %}
     <div class="company-info">
-        <!-- לוגו ברירת מחדל, בהיעדר company_logo_mapping -->
-        <img src="{{ url_for('static', filename='default_logo.png') }}" alt="{{ coupon.company }} Logo" class="company-logo">
+        <img src="{{ url_for('static', filename=final_logo) }}" alt="{{ coupon.company }} Logo" class="company-logo">
         <h3>{{ coupon.company }}</h3>
     </div>
 
@@ -25,15 +29,11 @@
             <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
         </div>
         <div class="info-box">
-            <span class="info-title">תאריך תפוגה:</span>
-            <span class="info-value">{{ coupon.expiration if coupon.expiration else 'אין' }}</span>
-        </div>
-        <div class="info-box">
             <span class="info-title">סטטוס:</span>
             <span class="info-value">{{ coupon.status }}</span>
         </div>
         <div class="info-box">
-            <span class="info-title">כמות מנוצלת:</span>
+            <span class="info-title">סה״כ מנוצל:</span>
             <span class="info-value">{{ '%.2f'|format(coupon.used_value) }} ש"ח</span>
         </div>
         {% if not coupon.is_one_time %}
@@ -46,35 +46,36 @@
 
     <!-- Form to Update Usage -->
     <div class="form-container">
-        <h3>עדכן שימוש</h3>
-        <form method="POST" action="{{ url_for('update_coupon_usage', id=coupon.id) }}" class="update-form">
+        <form method="POST" action="{{ url_for('coupons.update_coupon_usage_route', id=coupon.id) }}" class="update-form">
             {{ form.hidden_tag() }}
-            <div class="form-group">
+            <div class="form-group" style="display: flex; flex-direction: column; align-items: center;">
                 {{ form.used_amount.label(class="form-label") }}
-                {{ form.used_amount(class="input-field", placeholder="הכנס את כמות השימוש") }}
+                {{ form.used_amount(class="input-field small-input", placeholder="לדוגמה: 20 (במידה וניצלת 20 ש״ח)") }}
                 {% for error in form.used_amount.errors %}
                     <span class="error-message">{{ error }}</span>
                 {% endfor %}
             </div>
-            <div class="form-group">
-                {{ form.submit(class="submit-button") }}
+            <div class="form-group" style="text-align: center;">
+                {{ form.submit(class="submit-button small-button", value="שליחת עדכון") }}
             </div>
         </form>
     </div>
 
     <!-- Mark as Fully Used Button -->
     {% if is_owner and coupon.status == 'פעיל' and not coupon.is_one_time %}
-        <div class="mark-fully-used-container">
-            <form method="post" action="{{ url_for('mark_coupon_as_fully_used', id=coupon.id) }}">
+        <div class="mark-fully-used-container" style="text-align: center; margin-top: 10px;">
+            <form method="post" action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}">
                 {{ mark_fully_used_form.hidden_tag() }}
-                {{ mark_fully_used_form.submit(class="action-button danger", onclick="return confirm('האם אתה בטוח שברצונך לסמן קופון זה כנוצל לגמרי?');") }}
+                {{ mark_fully_used_form.submit(class="action-button danger small-button", onclick="return confirm('האם אתה בטוח שברצונך לסמן קופון זה כנוצל לגמרי?');") }}
             </form>
         </div>
     {% endif %}
 
     <!-- Back to Coupon Detail -->
-    <div class="back-button-container">
-        <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="action-button secondary">חזור לפרטי הקופון</a>
+    <div class="back-button-container" style="text-align: center; margin-top: 20px;">
+        <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="action-button secondary small-button">
+            חזרה לעמוד של פרטי הקופון
+        </a>
     </div>
 </section>
 {% endblock %}
@@ -167,12 +168,6 @@
         margin-right: auto;
     }
 
-    .form-container h3 {
-        color: var(--primary-color);
-        margin-bottom: 20px;
-        font-size: 1.4em;
-    }
-
     .update-form {
         display: flex;
         flex-direction: column;
@@ -190,6 +185,7 @@
         margin-bottom: 5px;
         color: #2c3e50;
         font-weight: 500;
+        text-align: center; /* למרכז גם את התווית */
     }
 
     .input-field {
@@ -201,51 +197,42 @@
         text-align: center;
         box-sizing: border-box;
     }
+    .input-field.small-input {
+        font-size: 0.9em;
+        max-width: 200px; /* ניתן לשלוט ברוחב כאן */
+    }
 
     .error-message {
         display: block;
         margin-top: 5px;
         color: #e74c3c;
         font-size: 0.9em;
-        text-align: right;
-    }
-
-    .submit-button {
-        width: 100%;
-        padding: 12px;
-        background-color: #3498db;
-        color: #ffffff;
-        border: none;
-        border-radius: 5px;
-        font-size: 1em;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
         text-align: center;
     }
 
-    .submit-button:hover {
-        background-color: #2980b9;
-    }
-
-    .mark-fully-used-container {
-        margin-top: 20px;
-    }
-
+    /* כפתורים */
+    .submit-button,
     .action-button {
-        display: inline-block;
-        padding: 10px 20px;
         background-color: var(--primary-color);
         color: #ffffff;
-        text-decoration: none;
+        border: none;
         border-radius: 5px;
         font-weight: bold;
-        transition: background-color var(--transition-speed);
-        font-size: 1em;
-        border: none;
         cursor: pointer;
+        transition: background-color var(--transition-speed);
         text-align: center;
+        text-decoration: none;
         margin: 5px;
+        padding: 10px 20px;
+        font-size: 1em;
+        display: inline-block;
+    }
+
+    /* כפתורים קטנים (בהתאם לבקשה) */
+    .submit-button.small-button,
+    .action-button.small-button {
+        font-size: 0.85em;
+        padding: 8px 16px;
     }
 
     .action-button.secondary {
@@ -264,8 +251,8 @@
         background-color: #c0392b;
     }
 
-    .back-button-container {
-        margin-top: 20px;
+    .submit-button:hover {
+        background-color: #2980b9;
     }
 
     @media (max-width: 768px) {
@@ -282,5 +269,27 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- ניתן להוסיף סקריפטים נוספים במידת הצורך -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const inputField = document.getElementById('used_amount');
+
+        inputField.addEventListener('input', function () {
+            // מאפשר רק מספרים ונקודה עשרונית
+            this.value = this.value.replace(/[^0-9.]/g, '');
+
+            // מוודא שאין יותר מנקודה עשרונית אחת
+            const parts = this.value.split('.');
+            if (parts.length > 2) {
+                this.value = parts[0] + '.' + parts.slice(1).join('');
+            }
+        });
+
+        inputField.addEventListener('blur', function () {
+            // במקרה שהמשתמש הקליד נקודה עשרונית בסוף, מסיר אותה
+            if (this.value.endsWith('.')) {
+                this.value = this.value.slice(0, -1);
+            }
+        });
+    });
+</script>
 {% endblock %}
