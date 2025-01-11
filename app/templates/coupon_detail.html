@@ -19,12 +19,10 @@
         </div>
 
         {% if not is_owner %}
-            <!-- "בקש קופון" Button for non-owners -->
             <div class="request-coupon-button">
                 <a href="{{ url_for('marketplace.request_coupon_detail', id=coupon.id) }}" class="action-button">בקש קופון</a>
             </div>
         {% else %}
-            <!-- Message for owners of the coupon -->
             <div class="your-coupon small-button-style">
                 זהו הקופון שלך שעומד למכירה
             </div>
@@ -63,11 +61,11 @@
             </div>
 
             {% if is_owner and coupon.status == 'פעיל' %}
-                <!-- כפתור "סמן כקופון שנוצל" -->
                 <div class="mark-as-used-container">
                     <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
                         {{ mark_form.hidden_tag() }}
-                        {{ mark_form.submit(class="action-button danger", onclick="return confirm('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');") }}
+                        {{ mark_form.submit(class="action-button danger", 
+                            onclick="return confirm('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');") }}
                     </form>
                 </div>
             {% endif %}
@@ -122,14 +120,13 @@
             </div>
             <div class="info-box">
                 <span class="info-title">תאריך הזנה:</span>
-                <span class="info-value">{{ coupon.date_added.strftime('%Y-%m-%d %H:%M') }}</span>
+                <span class="info-value">{{ coupon.date_added | to_israel_time }}</span>
             </div>
         {% endif %}
 
-        <!-- הוספת תגיות כאן -->
         {% if coupon.tags %}
             <div class="info-box">
-                <span class="info-title">תגיות:</span>
+                <span class="info-title">קטגוריה:</span>
                 <span class="info-value">
                     {% for tag in coupon.tags %}
                         <span class="tag">{{ tag.name }}</span>{% if not loop.last %}, {% endif %}
@@ -138,8 +135,8 @@
             </div>
         {% else %}
             <div class="info-box">
-                <span class="info-title">תגיות:</span>
-                <span class="info-value">אין תגיות.</span>
+                <span class="info-title">קטגוריה:</span>
+                <span class="info-value">אין קטגוריה.</span>
             </div>
         {% endif %}
 
@@ -171,95 +168,64 @@
         {% endif %}
     </div>
 
-    <!-- Usage History -->
-    <!-- Usage History from CouponTransaction (ישן) -->
-    <h3 class="usage-history-title">היסטוריית טעינות/חיובים (CouponTransaction)</h3>
-    {% if transactions|length > 0 %}
+    <!-- טבלה אחת (כספית) המציגה את consolidated_rows -->
+    <h3 class="usage-history-title">היסטוריית טעינות / שימושים</h3>
+    {% if consolidated_rows and consolidated_rows|length > 0 %}
         <table class="transaction-table">
             <thead>
                 <tr>
                     <th>תאריך</th>
-                    <th>שימוש (₪)</th>
-                    <th>הטענה (₪)</th>
-                    <th>סה״כ שימוש מצטבר (₪)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% set ns = namespace(total=0) %}
-                {% for transaction in transactions %}
-                    {% set usage_amount = transaction.usage_amount or 0.0 %}
-                    {% set recharge_amount = transaction.recharge_amount or 0.0 %}
-                    {% set ns.total = ns.total + usage_amount %}
-                    <tr>
-                        <td>{{ transaction.transaction_date.strftime('%H:%M %d/%m/%Y') if transaction.transaction_date else '' }}</td>
-                        <td>{{ '%.2f'|format(usage_amount) if usage_amount else '' }}</td>
-                        <td>{{ '%.2f'|format(recharge_amount) if recharge_amount else '' }}</td>
-                        <td>{{ '%.2f'|format(ns.total) }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p class="no-data-message">אין רשומות שימוש/טעינה ב־CouponTransaction.</p>
-    {% endif %}
-
-
-    <!-- Usage History from CouponUsage (חדש) -->
-    <h3 class="usage-history-title">היסטוריית שימוש (CouponUsage)</h3>
-    {% if usages|length > 0 %}
-        <table class="transaction-table">
-            <thead>
-                <tr>
-                    <th>תאריך</th>
-                    <th>סכום שימוש (₪)</th>
-                    <th>פעולה</th>
+                    <th>סכום (₪)</th>
                     <th>פרטים</th>
-                    <th>משתמש</th>
                 </tr>
             </thead>
             <tbody>
-                {% for usage in usages %}
+                {% for row in consolidated_rows %}
                     <tr>
                         <td>
-                            {% if usage.timestamp %}
-                                {{ usage.timestamp | to_israel_time }}
+                            {% if row.timestamp %}
+                                {{ row.timestamp|to_israel_time }}
                             {% else %}
                                 -
                             {% endif %}
                         </td>
-                        <td>{{ '%.2f'|format(usage.used_amount or 0) }}</td>
-                        <td>{{ usage.action or '' }}</td>
-                        <td>{{ usage.details or '' }}</td>
-                        <td>{{ usage.user or '' }}</td>
+                        <td>
+                            {{ '%.2f'|format(row.transaction_amount) }}
+                        </td>
+                        <td>
+                            {% if row.details %}
+                                {{ row.details }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     {% else %}
-        <p class="no-data-message">אין רשומות שימוש ב־CouponUsage.</p>
+        <p class="no-data-message">אין תנועות להצגה.</p>
     {% endif %}
 
-
-    <!-- Action Buttons -->
+    <!-- כפתורי פעולה -->
     {% if is_owner %}
     <div class="action-buttons">
         <a href="{{ url_for('coupons.edit_coupon', id=coupon.id) }}" class="action-button">ערוך קופון</a>
         <form action="{{ url_for('coupons.delete_coupon', id=coupon.id) }}" method="post" style="display: inline;">
             {{ delete_form.hidden_tag() }}
-            {{ delete_form.submit(class="action-button danger", onclick="return confirm('האם אתה בטוח שברצונך למחוק קופון זה?');") }}
+            {{ delete_form.submit(class="action-button danger", 
+                onclick="return confirm('האם אתה בטוח שברצונך למחוק קופון זה?');") }}
         </form>
         <a href="{{ url_for('coupons.show_coupons') }}" class="action-button">חזור לקופונים</a>
     </div>
     {% endif %}
 
-    <!-- Button: עדכן שימוש בקופון -->
     {% if is_owner %}
     <div class="update-usage-button" style="margin-top: 10px;">
         <a href="{{ url_for('coupons.update_coupon_usage_route', id=coupon.id) }}" class="action-button">עדכן שימוש בקופון</a>
     </div>
     {% endif %}
 
-    <!-- Admin Actions -->
     {% if current_user.is_admin %}
     <div class="admin-actions">
         <form action="{{ url_for('coupons.update_coupon_transactions') }}" method="POST" class="admin-actions-form">
@@ -270,7 +236,6 @@
         </form>
     </div>
     {% endif %}
-
 </section>
 {% endblock %}
 
@@ -298,32 +263,9 @@
     document.addEventListener("DOMContentLoaded", function() {
         var defaultTab = document.querySelector(".tab-button.active");
         if (defaultTab) {
-            // Ensure that the active tab is displayed
             var tabName = defaultTab.getAttribute("onclick").split("'")[1];
             document.getElementById(tabName).classList.add("active");
         }
-    });
-
-    // Validate numeric inputs on form submission
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.querySelector('form');
-
-        form.addEventListener('submit', function(event) {
-            const costInput = document.getElementById('cost');
-            const valueInput = document.getElementById('value');
-
-            // Validate cost input
-            if (isNaN(parseFloat(costInput.value)) || parseFloat(costInput.value) < 0) {
-                alert('העלות חייבת להיות מספר חיובי');
-                event.preventDefault();
-            }
-
-            // Validate value input
-            if (isNaN(parseFloat(valueInput.value)) || parseFloat(valueInput.value) < 0) {
-                alert('ערך הקופון חייב להיות מספר חיובי');
-                event.preventDefault();
-            }
-        });
     });
 </script>
 {% endblock %}

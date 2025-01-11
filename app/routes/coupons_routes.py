@@ -78,6 +78,25 @@ from app.extensions import db
 from app.forms import MarkCouponAsFullyUsedForm
 from app.helpers import get_geo_location, get_public_ip
 
+from datetime import datetime
+
+def add_coupon_transaction(coupon):
+    """
+    הוספת רשומה לטבלת coupon_transaction כאשר מתווסף קופון חדש.
+    """
+    new_transaction = CouponTransaction(
+        coupon_id=coupon.id,  # מזהה הקופון
+        transaction_date=datetime.utcnow(),  # התאריך והשעה הנוכחיים
+        card_number='',  # אין מספר כרטיס
+        recharge_amount=coupon.value,  # הערך המקורי של הקופון
+        usage_amount=0,  # עדיין לא נעשה שימוש
+        location="קופון שהוזן ידנית",  # מיקום ידני
+        reference_number="ManualEntry",  # רפרנס ספציפי לתוספת ידנית
+        source="User"  # המשתמש שהוסיף
+    )
+    db.session.add(new_transaction)
+    db.session.commit()
+
 def log_user_activity(action, coupon_id=None):
     try:
         ip_address = get_public_ip() or '0.0.0.0'
@@ -220,6 +239,9 @@ def sell_coupon():
         try:
             db.session.commit()
 
+            # הוספת שורה ל-coupon_transaction
+            add_coupon_transaction(new_coupon)
+
             # -- activity log snippet --
             try:
                 new_activity = {
@@ -325,6 +347,9 @@ def show_coupons():
 @coupons_bp.route('/upload_coupons', methods=['GET', 'POST'])
 @login_required
 def upload_coupons():
+    """
+    מסך העלאת קובץ אקסל וביצוע הוספה גורפת של קופונים למשתמש הנוכחי.
+    """
     # -- activity log snippet --
     log_user_activity("upload_coupons_view", None)
 
@@ -336,13 +361,23 @@ def upload_coupons():
         file.save(file_path)
 
         try:
-            invalid_coupons, missing_optional_fields_messages = process_coupons_excel(file_path, current_user)
+            # כעת אנו מקבלים 3 ערכים: רשימת שגיאות, רשימת אזהרות, ורשימת קופונים חדשים.
+            invalid_coupons, missing_optional_fields_messages, new_coupons = process_coupons_excel(file_path, current_user)
+
+            # מציגים אזהרות לגבי שדות אופציונליים חסרים
             for msg in missing_optional_fields_messages:
                 flash(msg, 'warning')
+
+            # אם יש קופונים שלא נוספו - מציגים אותם
             if invalid_coupons:
                 flash('הקופונים הבאים לא היו תקינים ולא נוספו:<br>' + '<br>'.join(invalid_coupons), 'danger')
             else:
+                # עבור כל קופון חדש שנוסף בהצלחה – יוצרים רשומת coupon_transaction
+                for c in new_coupons:
+                    add_coupon_transaction(c)
+
                 flash('כל הקופונים נוספו בהצלחה!', 'success')
+
         except Exception as e:
             flash('אירעה שגיאה בעת עיבוד הקובץ.', 'danger')
             traceback.print_exc()
@@ -362,9 +397,9 @@ def upload_coupons():
             db.session.execute(
                 text("""
                     INSERT INTO user_activities
-                        (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
                     VALUES
-                        (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
                 """),
                 new_activity
             )
@@ -382,6 +417,10 @@ def upload_coupons():
 @coupons_bp.route('/add_coupons_bulk', methods=['GET', 'POST'])
 @login_required
 def add_coupons_bulk():
+    """
+    טופס המאפשר למשתמש להוסיף מספר קופונים באופן ידני (בלי להעלות קובץ),
+    ואחר כך ליצור אקסל זמני – שאותו מעבירים ל־process_coupons_excel לצורך עיבוד.
+    """
     # -- activity log snippet --
     log_user_activity("add_coupons_bulk_view", None)
 
@@ -389,6 +428,7 @@ def add_coupons_bulk():
     companies = Company.query.all()
     tags = Tag.query.all()
 
+    # התאמת רשימת החברות והתגיות לכל קופון בטופס
     for coupon_entry in form.coupons.entries:
         coupon_form = coupon_entry.form
         company_choices = [(str(company.id), company.name) for company in companies]
@@ -400,11 +440,14 @@ def add_coupons_bulk():
         coupon_form.tag_id.choices = tag_choices
 
     if form.validate_on_submit():
-        current_app.logger.info("טופס אומת בהצלחה")
+        current_app.logger.info("טופס add_coupons_bulk אומת בהצלחה")
         try:
             new_coupons_data = []
+            # עובר על כל השורות בטופס הריק/דינמי
             for idx, coupon_entry in enumerate(form.coupons.entries):
                 coupon_form = coupon_entry.form
+
+                # טיפול בשם החברה
                 if coupon_form.company_id.data == 'other':
                     company_name = coupon_form.other_company.data.strip()
                     if not company_name:
@@ -426,6 +469,7 @@ def add_coupons_bulk():
                         current_app.logger.warning(f"Invalid company ID format for coupon #{idx + 1}.")
                         continue
 
+                # טיפול בתגיות
                 if coupon_form.tag_id.data == 'other':
                     tag_name = coupon_form.other_tag.data.strip()
                     if not tag_name:
@@ -447,32 +491,45 @@ def add_coupons_bulk():
                         current_app.logger.warning(f"Invalid tag ID format for coupon #{idx + 1}.")
                         continue
 
+                # נסיונות המרה למספרים
                 try:
                     value = float(coupon_form.value.data) if coupon_form.value.data else 0.0
                 except ValueError:
                     flash(f'ערך הקופון אינו תקין בקופון #{idx + 1}.', 'danger')
                     continue
-
                 try:
                     cost = float(coupon_form.cost.data) if coupon_form.cost.data else 0.0
                 except ValueError:
                     flash(f'עלות הקופון אינה תקינה בקופון #{idx + 1}.', 'danger')
                     continue
 
+                # תאריך תפוגה בפורמט String לאקסל
+                expiration_str = ''
+                if coupon_form.expiration.data:
+                    expiration_str = coupon_form.expiration.data.strftime('%Y-%m-%d')
+
+                # קוד לשימוש חד פעמי + מטרת הקופון (purpose)
+                is_one_time = coupon_form.is_one_time.data
+                purpose = coupon_form.purpose.data.strip() if is_one_time and coupon_form.purpose.data else ''
+
+                description = coupon_form.description.data.strip() if coupon_form.description.data else ''
+
+                # יוצרים "שורת מידע" שתיכנס ל־DataFrame
                 coupon_data = {
                     'קוד קופון': coupon_form.code.data.strip(),
                     'חברה': company_name,
                     'ערך מקורי': value,
                     'עלות': cost,
-                    'תאריך תפוגה': coupon_form.expiration.data.strftime('%Y-%m-%d') if coupon_form.expiration.data else '',
-                    'קוד לשימוש חד פעמי': coupon_form.is_one_time.data,
-                    'מטרת הקופון': coupon_form.purpose.data.strip() if coupon_form.is_one_time.data and coupon_form.purpose.data else '',
-                    'תיאור': coupon_form.description.data.strip() if coupon_form.description.data else '',
+                    'תאריך תפוגה': expiration_str,
+                    'קוד לשימוש חד פעמי': is_one_time,
+                    'מטרת הקופון': purpose,
+                    'תיאור': description,
                     'תגיות': tag_name if tag_name else ''
                 }
                 new_coupons_data.append(coupon_data)
 
             if new_coupons_data:
+                # ממירים את הרשימה ל-DataFrame ומייצאים לאקסל זמני
                 df_new_coupons = pd.DataFrame(new_coupons_data)
                 export_folder = 'exports'
                 os.makedirs(export_folder, exist_ok=True)
@@ -482,12 +539,18 @@ def add_coupons_bulk():
                 df_new_coupons.to_excel(export_path, index=False)
                 current_app.logger.info(f"Exported new coupons to {export_path}")
 
-                invalid_coupons, missing_optional_fields_messages = process_coupons_excel(export_path, current_user)
+                # כעת נקרא ל-process_coupons_excel שמחזיר 3 ערכים
+                invalid_coupons, missing_optional_fields_messages, new_coupons = process_coupons_excel(export_path, current_user)
+
                 for msg in missing_optional_fields_messages:
                     flash(msg, 'warning')
                 if invalid_coupons:
                     flash('הקופונים הבאים לא היו תקינים ולא נוספו:<br>' + '<br>'.join(invalid_coupons), 'danger')
                 else:
+                    # לכל קופון חדש – מוסיפים transaction ראשוני
+                    for c in new_coupons:
+                        add_coupon_transaction(c)
+
                     flash('כל הקופונים נוספו בהצלחה!', 'success')
 
                 current_app.logger.info("All coupons successfully processed and imported.")
@@ -496,6 +559,7 @@ def add_coupons_bulk():
                 current_app.logger.info("No new coupons were added, so no export or import was made.")
                 flash('לא נוספו קופונים חדשים.', 'info')
                 return redirect(url_for('coupons.show_coupons'))
+
         except Exception as e:
             current_app.logger.error(f"Error during bulk coupon processing: {e}")
             traceback.print_exc()
@@ -516,9 +580,9 @@ def add_coupons_bulk():
             db.session.execute(
                 text("""
                     INSERT INTO user_activities
-                        (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
                     VALUES
-                        (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
                 """),
                 new_activity
             )
@@ -900,6 +964,9 @@ def add_coupon():
                     try:
                         db.session.commit()
 
+                        # הוספת שורה ל-coupon_transaction
+                        add_coupon_transaction(new_coupon)
+
                         # -- activity log snippet --
                         try:
                             new_activity = {
@@ -953,7 +1020,6 @@ def add_coupon():
         traceback.print_exc()
         flash("אירעה שגיאה בלתי צפויה. אנא נסה שוב מאוחר יותר.", "danger")
         return redirect(url_for('coupons.add_coupon'))
-
 
 @coupons_bp.route('/add_coupon_with_image.html', methods=['GET', 'POST'])
 @login_required
@@ -1564,7 +1630,7 @@ def get_companies():
 @login_required
 def coupon_detail(id):
     coupon = Coupon.query.get_or_404(id)
-    is_owner = coupon.user_id == current_user.id
+    is_owner = (coupon.user_id == current_user.id)
 
     mark_form = MarkCouponAsUsedForm()
     delete_form = DeleteCouponForm()
@@ -1572,24 +1638,96 @@ def coupon_detail(id):
 
     log_user_activity("view_coupon", coupon.id)
 
-    # שליפת היסטוריית הטרנזקציות (כפי שהיה)
-    transactions = CouponTransaction.query.filter_by(coupon_id=coupon.id).order_by(
-        CouponTransaction.transaction_date.asc()
-    ).all()
+    sql = text("""
+WITH CouponFilter AS (
+    SELECT DISTINCT coupon_id
+    FROM coupon_transaction
+    WHERE source = 'Multipass'
+),
+CombinedData AS (
+    SELECT
+        'coupon_usage' AS source_table,
+        id,
+        coupon_id,
+        -used_amount AS transaction_amount,
+        timestamp,
+        action,
+        details,
+        NULL AS card_number,
+        NULL AS location,
+        0 AS recharge_amount,
+        NULL AS reference_number,
+        NULL AS source
+    FROM
+        coupon_usage
+    WHERE
+        details NOT LIKE '%Multipass%'
 
-    # **שליפת היסטוריית השימוש (CouponUsage)**
-    usages = CouponUsage.query.filter_by(coupon_id=coupon.id) \
-        .order_by(CouponUsage.timestamp.desc()) \
-        .all()
+    UNION ALL
 
-    companies = Company.query.all()
-    company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
-    company_logo = company_logo_mapping.get(coupon.company.lower(), 'default_logo.png')
+    SELECT
+        'coupon_transaction' AS source_table,
+        id,
+        coupon_id,
+        -usage_amount + recharge_amount AS transaction_amount,
+        transaction_date AS timestamp,
+        source AS action,
+        CASE
+            WHEN location IS NOT NULL AND location != '' THEN location
+            ELSE NULL
+        END AS details,
+        card_number,
+        location,
+        recharge_amount,
+        reference_number,
+        source
+    FROM
+        coupon_transaction
+),
+SummedData AS (
+    SELECT
+        coupon_id,
+        timestamp,
+        transaction_amount,
+        details
+    FROM CombinedData
+    WHERE NOT (
+        coupon_id IN (SELECT coupon_id FROM CouponFilter) AND action = 'User'
+    )
+    AND coupon_id = :coupon_id
+
+    UNION ALL
+
+    SELECT
+        coupon_id,
+        NULL AS timestamp,
+        SUM(transaction_amount) AS transaction_amount,
+        'יתרה בקופון' AS details
+    FROM CombinedData
+    WHERE NOT (
+        coupon_id IN (SELECT coupon_id FROM CouponFilter) AND action = 'User'
+    )
+    AND coupon_id = :coupon_id
+    GROUP BY coupon_id
+)
+SELECT coupon_id, timestamp, transaction_amount, details
+FROM SummedData
+ORDER BY 
+    CASE WHEN timestamp IS NULL THEN 1 ELSE 0 END,
+    timestamp ASC;
+    """)
+
+    result = db.session.execute(sql, {'coupon_id': coupon.id})
+    consolidated_rows = result.fetchall()
 
     discount_percentage = None
     if coupon.is_for_sale and coupon.value > 0:
         discount_percentage = ((coupon.cost - coupon.value) / coupon.cost) * 100
         discount_percentage = round(discount_percentage, 2)
+
+    companies = Company.query.all()
+    company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
+    company_logo = company_logo_mapping.get(coupon.company.lower(), 'default_logo.png')
 
     return render_template(
         'coupon_detail.html',
@@ -1598,10 +1736,9 @@ def coupon_detail(id):
         mark_form=mark_form,
         delete_form=delete_form,
         update_form=update_form,
-        transactions=transactions,
-        usages=usages,  # מעבירים לטמפלייט
-        company_logo=company_logo,
-        discount_percentage=discount_percentage
+        consolidated_rows=consolidated_rows,
+        discount_percentage=discount_percentage,
+        company_logo=company_logo
     )
 
 
@@ -2256,7 +2393,7 @@ def update_all_active_coupons(user_id):
                     used_amount=total_usage,
                     timestamp=datetime.now(timezone.utc),
                     action='עדכון מרוכז',
-                    details='עדכון מרוכז של שימוש בקופון מ-Multipass'
+                    details='עדכון מתוך Multipass'
                 )
                 db.session.add(usage)
 

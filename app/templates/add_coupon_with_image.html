@@ -300,22 +300,22 @@ document.addEventListener('DOMContentLoaded', function() {
         //
         // אין שינויים מיותרים לערכים שכבר קיימים.
 
-        if (changedField === 'cost' && cost !== null && value !== null && cost > 0) {
-            // מחשבים discount בלבד
-            const newDiscount = ((value - cost) / cost) * 100;
+        if (changedField === 'cost' && cost !== null && value !== null && value > 0) {
+        // מחשבים discount בלבד
+            const newDiscount = ((value - cost) / value) * 100;
             discountPercentageInput.value = newDiscount.toFixed(2);
         }
 
-        if (changedField === 'value' && value !== null && cost !== null && cost > 0) {
+        if (changedField === 'value' && value !== null && cost !== null && value > 0) {
             // מחשבים discount בלבד
-            const newDiscount = ((value - cost) / cost) * 100;
+            const newDiscount = ((value - cost) / value) * 100;
             discountPercentageInput.value = newDiscount.toFixed(2);
         }
 
-        if (changedField === 'discount' && discount !== null && cost !== null && cost > 0) {
-            // מחשבים value בלבד
-            const newValue = cost * (1 - discount / 100);
-            desiredValueInput.value = newValue.toFixed(2);
+        if (changedField === 'discount' && discount !== null && value !== null && value > 0) {
+            // מחשבים cost בלבד
+            const newCost = value * (1 - discount / 100);
+            couponCostInput.value = newCost.toFixed(2);
         }
 
         isUpdating = false;

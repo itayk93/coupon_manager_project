@@ -1019,7 +1019,10 @@ def process_coupons_excel(file_path, user):
 
     :param file_path: The path to the Excel file.
     :param user: The user who is uploading the coupons.
-    :return: A tuple containing lists of invalid coupons and messages about missing optional fields.
+    :return: A tuple containing:
+       1) invalid_coupons: רשימת שגיאות בשורות שנכשלו/לא הוספו,
+       2) missing_optional_fields_messages: רשימת התראות על שדות אופציונליים חסרים,
+       3) new_coupons: רשימת אובייקטי Coupon שהתווספו בהצלחה לדאטהבייס.
     """
     try:
         df = pd.read_excel(file_path)
@@ -1028,6 +1031,7 @@ def process_coupons_excel(file_path, user):
 
         invalid_coupons = []
         missing_optional_fields_messages = []
+        new_coupons = []  # נוסיף רשימה זו כדי להחזיר קופונים שנוצרו
 
         for index, row in df.iterrows():
             try:
@@ -1046,7 +1050,6 @@ def process_coupons_excel(file_path, user):
                     status = status.strip()
                 else:
                     status = 'פעיל'
-
                 if status not in ['פעיל', 'נוצל']:
                     status = 'פעיל'
 
@@ -1070,8 +1073,11 @@ def process_coupons_excel(file_path, user):
                     missing_fields.append('עלות')
                 if not company:
                     missing_fields.append('חברה')
+
                 if missing_fields:
-                    invalid_coupons.append(f'בשורה {index + 2} חסרים שדות חובה: {", ".join(missing_fields)}')
+                    invalid_coupons.append(
+                        f'בשורה {index + 2} חסרים שדות חובה: {", ".join(missing_fields)}'
+                    )
                     continue
 
                 # Set 'used_value' based on status
@@ -1083,6 +1089,7 @@ def process_coupons_excel(file_path, user):
                 # Process optional fields
                 missing_optional_fields = []
                 description = '' if pd.isna(description) else description
+
                 if pd.isna(expiration) or not str(expiration).strip():
                     expiration = None
                     missing_optional_fields.append('תאריך תפוגה')
@@ -1135,15 +1142,26 @@ def process_coupons_excel(file_path, user):
                             new_coupon.tags.append(tag)
 
                 db.session.add(new_coupon)
+                # NOTE:
+                # לא עושים כאן db.session.commit() בפנים כדי לשמור על יעילות,
+                # אלא רק בסוף (אלא אם רוצים "קומיט לכל שורה" כדי להתגונן מפני כשל בשורה בודדת).
+
+                # מוסיפים לרשימה כדי להחזיר בסוף
+                new_coupons.append(new_coupon)
+
             except Exception as e:
                 traceback.print_exc()
                 invalid_coupons.append(f'בשורה {index + 2}: {str(e)}')
                 continue
 
+        # קומיט אחד מרוכז בסיום
         db.session.commit()
 
+        # מסירים את הקובץ
         os.remove(file_path)
-        return invalid_coupons, missing_optional_fields_messages
+
+        # כעת מחזירים גם את רשימת הקופונים החדשים
+        return invalid_coupons, missing_optional_fields_messages, new_coupons
 
     except Exception as e:
         db.session.rollback()

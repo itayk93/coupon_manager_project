@@ -26,7 +26,7 @@
                         <p class="company-name">{{ coupon.company }}</p>
                         <p>קוד: {{ coupon.code }}</p>
                         {% if coupon.tags %}
-                            <p>תגיות:
+                            <p>קטגוריה:
                                 {% for tag in coupon.tags %}
                                     {{ tag.name }}{% if not loop.last %}, {% endif %}
                                 {% endfor %}
