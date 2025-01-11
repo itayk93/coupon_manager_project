@@ -28,3 +28,4 @@ reportlab==4.2.5
 openai==0.28.1
 sib-api-v3-sdk
 itsdangerous
+xlsxwriter

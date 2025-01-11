@@ -2461,7 +2461,7 @@ def update_coupon_transactions():
         for index, row in df.iterrows():
             t = Transaction(
                 coupon_id=coupon.id,
-                card_number=row['card_number'],
+                card_number='',
                 transaction_date=row['transaction_date'],
                 location=row['location'],
                 recharge_amount=row['recharge_amount'] or 0,
