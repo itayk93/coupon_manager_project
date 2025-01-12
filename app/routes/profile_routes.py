@@ -42,28 +42,6 @@ def home():
         return redirect(url_for('auth.login'))
 
 
-@profile_bp.route('/profile', methods=['GET', 'POST'])
-@login_required
-def profile():
-    form = ProfileForm()
-    if form.validate_on_submit():
-        # Update user's profile details
-        current_user.first_name = form.first_name.data
-        current_user.last_name = form.last_name.data
-        current_user.age = form.age.data
-        current_user.gender = form.gender.data
-        db.session.commit()
-        flash('פרטי הפרופיל עודכנו בהצלחה.', 'success')
-        return redirect(url_for('profile.profile'))
-
-    if request.method == 'GET':
-        # Pre-fill the form with existing user data
-        form.first_name.data = current_user.first_name
-        form.last_name.data = current_user.last_name
-        form.age.data = current_user.age
-        form.gender.data = current_user.gender
-
-    return render_template('profile/profile.html', form=form)
 
 @profile_bp.route('/index', methods=['GET', 'POST'])
 @login_required
@@ -335,59 +313,106 @@ def buy_slots():
 def edit_profile():
     return render_template('profile/edit_profile.html', form=form)
 
-@profile_bp.route('/rate_user/<int:user_id>', methods=['GET', 'POST'])
+
+@profile_bp.route('/rate_user/<int:user_id>/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
-def rate_user(user_id):
-    """
-    # The route for rating a user (writing a review).
-    # This route expects:
-    # - user_id = the user being reviewed
-    # - The current_user (the one who is logged in) is writing the review.
-    """
-
-    # 1) Always define `form` at the very top!
-    #    So it exists no matter how we exit or return from the function:
+def rate_user(user_id, transaction_id):
     form = RateUserForm()
-
-    # 2) Grab user to rate:
     user_to_rate = User.query.get_or_404(user_id)
 
-    # 3) Check if user is rating themselves:
+    # לוודא שמשתמש לא יכול לדרג את עצמו
     if user_id == current_user.id:
         flash('You cannot rate yourself!', 'warning')
-        return redirect(url_for('profile.profile_view', user_id=user_id))
+        return redirect(url_for('profile.user_profile', user_id=user_id))
 
-    # 4) Check if user has already reviewed them:
+    # לוודא שהעסקה קיימת בין המשתמשים
+    transaction = Transaction.query.filter_by(
+        id=transaction_id,
+        buyer_id=current_user.id,
+        seller_id=user_to_rate.id
+    ).first()
+
+    if not transaction:
+        flash('Transaction not found or unauthorized.', 'error')
+        return redirect(url_for('profile.user_profile', user_id=user_id))
+
+    # לוודא שלא קיימת ביקורת על העסקה הזו
     existing_review = UserReview.query.filter_by(
         reviewer_id=current_user.id,
-        reviewed_user_id=user_to_rate.id
+        reviewed_user_id=user_to_rate.id,
+        transaction_id=transaction.id
     ).first()
-    if existing_review:
-        flash('You have already written a review for this user.', 'warning')
-        return redirect(url_for('profile.profile_view', user_id=user_to_rate.id))
 
-    # 5) Handle POST submission:
+    if existing_review:
+        flash('You have already written a review for this transaction.', 'warning')
+        return redirect(url_for('profile.user_profile', user_id=user_id))
+
+    # טיפול בשליחת הטופס
     if form.validate_on_submit():
         new_review = UserReview(
             reviewer_id=current_user.id,
             reviewed_user_id=user_to_rate.id,
+            transaction_id=transaction.id,  # קישור הביקורת לעסקה
             rating=form.rating.data,
             comment=form.comment.data
         )
         db.session.add(new_review)
         db.session.commit()
         flash('Your review has been saved successfully!', 'success')
-        return redirect(url_for('profile.profile_view', user_id=user_to_rate.id))
+        return redirect(url_for('profile.user_profile', user_id=user_to_rate.id))
 
-    # 6) If GET or form fails validation -> just render the template
-    return render_template('profile/rate_user.html', form=form, user_to_rate=user_to_rate)
+    return render_template('profile/rate_user.html', form=form, user_to_rate=user_to_rate, transaction=transaction)
 
-@profile_bp.route('/user_profile/<int:user_id>', methods=['GET'])
+@profile_bp.route('/user_profile/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 def user_profile(user_id):
     user = User.query.get_or_404(user_id)
-    return render_template('profile/user_profile.html', user=user)
+    form = ProfileForm()
 
+    # האם זהו המשתמש המחובר עצמו?
+    is_own_profile = (user.id == current_user.id)
+
+    if is_own_profile:
+        # המידע בפרופיל שייך למשתמש המחובר, ניתן לעדכן
+        if form.validate_on_submit():
+            user.first_name = form.first_name.data
+            user.last_name = form.last_name.data
+            user.age = form.age.data
+            user.gender = form.gender.data
+            db.session.commit()
+            flash('פרטי הפרופיל עודכנו בהצלחה.', 'success')
+            return redirect(url_for('profile.user_profile', user_id=user.id))
+
+        if request.method == 'GET':
+            # מילוי שדות הטופס עם הנתונים הקיימים
+            form.first_name.data = user.first_name
+            form.last_name.data = user.last_name
+            form.age.data = user.age
+            form.gender.data = user.gender
+    else:
+        # מדובר במשתמש אחר, הופכים את השדות ל־read-only
+        for field in form:
+            field.render_kw = {'readonly': True}
+
+        # מניעת עדכון פרופיל של משתמש אחר
+        if request.method == 'POST':
+            flash('אין לך הרשאה לעדכן פרופיל של משתמש אחר.', 'error')
+            return redirect(url_for('profile.user_profile', user_id=user.id))
+
+    # שליפת כל הביקורות שהמשתמש קיבל
+    all_reviews = UserReview.query.filter_by(reviewed_user_id=user.id).all()
+
+    # חישוב ממוצע דירוג אם יש ביקורות
+    avg_rating = sum(r.rating for r in all_reviews) / len(all_reviews) if all_reviews else None
+
+    return render_template(
+        'profile/user_profile.html',
+        user=user,
+        form=form,
+        ratings=all_reviews,
+        avg_rating=avg_rating,
+        is_owner=is_own_profile  # התאמת המשתנה לתבנית
+    )
 
 @profile_bp.route('/user_profile')
 @login_required

@@ -358,6 +358,7 @@ class SellCouponForm(FlaskForm):
             self.discount_percentage.errors.append(error_message)
             return False
         return True
+    
 class EditCouponForm(FlaskForm):
     company = StringField('שם החברה:', validators=[InputRequired(message="חובה למלא את שם החברה.")])
     code = StringField('קוד קופון (שם מוצר):', validators=[InputRequired(message="חובה למלא את קוד הקופון.")])
@@ -630,11 +631,11 @@ class RateUserForm(FlaskForm):
     """
     טופס דירוג משתמש + הוספת הערה (בפעם אחת).
     """
-    rating_value = IntegerField('דירוג (1-5)', validators=[
+    rating = IntegerField('דירוג (1-5)', validators=[
         DataRequired(message='חובה לתת דירוג'),
         NumberRange(min=1, max=5, message='הדירוג חייב להיות בין 1 ל-5')
     ])
-    rating_comment = TextAreaField('הערה (אופציונלי)', validators=[Optional()])
+    comment = TextAreaField('הערה (אופציונלי)', validators=[Optional()])
     submit = SubmitField('שלח דירוג')
 
 # forms.py

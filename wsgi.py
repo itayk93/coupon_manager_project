@@ -11,6 +11,11 @@ load_dotenv()
 app = create_app()
 
 if __name__ == "__main__":
-    # הרצה מקומית (Development) – אפשר להדליק debug=True
+    import sys
     logging.basicConfig(level=logging.DEBUG)
-    app.run(debug=True, host="0.0.0.0", port=5001)  # שינינו את הפורט ל-5001
+
+    try:
+        app.run(debug=os.getenv("FLASK_DEBUG", "true").lower() == "true", host="0.0.0.0", port=5001)
+    except SystemExit as e:
+        logging.error(f"אפליקציית Flask נסגרה עם קוד יציאה: {e.code}")
+        sys.exit(e.code)

@@ -6,7 +6,6 @@
 <section class="coupon-detail">
     <h2>פרטי קופון</h2>
 
-    <!-- Company Logo and Name -->
     <div class="company-info">
         <img src="{{ url_for('static', filename=company_logo) }}" alt="{{ coupon.company }} Logo" class="company-logo">
         <h3>{{ coupon.company }}</h3>
@@ -14,12 +13,13 @@
 
     {% if coupon.is_for_sale %}
         <div class="sale-message">
-            המשתמש {{ coupon.user.first_name }} {{ coupon.user.last_name }} מוכר קופון על סך {{ coupon.value|int }} ₪ ל{{ coupon.company }}<br>
+            {{ coupon.user.first_name }} {{ coupon.user.last_name }} מוכר קופון על סך {{ coupon.value|int }} ₪ ל{{ coupon.company }}<br>
             ב-{{ coupon.cost|int }} ₪ ({{ discount_percentage }}% הנחה)
         </div>
 
         {% if not is_owner %}
             <div class="request-coupon-button">
+                <a href="{{ url_for('profile.user_profile', user_id=coupon.user.id) }}" class="action-button" style="margin-right: 10px;">פרופיל המוכר</a>
                 <a href="{{ url_for('marketplace.request_coupon_detail', id=coupon.id) }}" class="action-button">בקש קופון</a>
             </div>
         {% else %}
@@ -29,7 +29,6 @@
         {% endif %}
     {% endif %}
 
-    <!-- Tabs Navigation -->
     <div class="tabs">
         <button class="tab-button active" onclick="openTab(event, 'tab1')">פרטי קופון</button>
         {% if not coupon.is_for_sale %}
@@ -38,7 +37,6 @@
         <button class="tab-button" onclick="openTab(event, 'tab3')">נתונים נוספים</button>
     </div>
 
-    <!-- Tab Content -->
     <div id="tab1" class="tab-content active">
         {% if not coupon.is_for_sale %}
             <div class="info-box">
@@ -64,7 +62,7 @@
                 <div class="mark-as-used-container">
                     <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
                         {{ mark_form.hidden_tag() }}
-                        {{ mark_form.submit(class="action-button danger", 
+                        {{ mark_form.submit(class="action-button danger",
                             onclick="return confirm('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');") }}
                     </form>
                 </div>
@@ -168,7 +166,6 @@
         {% endif %}
     </div>
 
-    <!-- טבלה אחת (כספית) המציגה את consolidated_rows -->
     <h3 class="usage-history-title">היסטוריית טעינות / שימושים</h3>
     {% if consolidated_rows and consolidated_rows|length > 0 %}
         <table class="transaction-table">
@@ -207,13 +204,12 @@
         <p class="no-data-message">אין תנועות להצגה.</p>
     {% endif %}
 
-    <!-- כפתורי פעולה -->
     {% if is_owner %}
     <div class="action-buttons">
         <a href="{{ url_for('coupons.edit_coupon', id=coupon.id) }}" class="action-button">ערוך קופון</a>
         <form action="{{ url_for('coupons.delete_coupon', id=coupon.id) }}" method="post" style="display: inline;">
             {{ delete_form.hidden_tag() }}
-            {{ delete_form.submit(class="action-button danger", 
+            {{ delete_form.submit(class="action-button danger",
                 onclick="return confirm('האם אתה בטוח שברצונך למחוק קופון זה?');") }}
         </form>
         <a href="{{ url_for('coupons.show_coupons') }}" class="action-button">חזור לקופונים</a>
@@ -242,24 +238,18 @@
 {% block scripts %}
 <script>
     function openTab(evt, tabName) {
-        // Hide all tab contents
         var tabContents = document.getElementsByClassName("tab-content");
         for (var i = 0; i < tabContents.length; i++) {
             tabContents[i].classList.remove("active");
         }
-
-        // Remove 'active' class from all tab buttons
         var tabButtons = document.getElementsByClassName("tab-button");
         for (var i = 0; i < tabButtons.length; i++) {
             tabButtons[i].classList.remove("active");
         }
-
-        // Show the selected tab content and activate the button
         document.getElementById(tabName).classList.add("active");
         evt.currentTarget.classList.add("active");
     }
 
-    // Open the default tab on page load
     document.addEventListener("DOMContentLoaded", function() {
         var defaultTab = document.querySelector(".tab-button.active");
         if (defaultTab) {

@@ -12,6 +12,18 @@ import traceback
 import re
 from io import BytesIO
 from datetime import datetime, timezone
+from sqlalchemy.sql import text
+
+from datetime import datetime
+from flask import request, current_app
+from app.helpers import get_geo_location
+from flask_login import current_user
+from sqlalchemy.sql import text
+from app.extensions import db
+from app.forms import MarkCouponAsFullyUsedForm
+from app.helpers import get_geo_location, get_public_ip
+
+from datetime import datetime
 
 from app.extensions import db
 from app.models import (
@@ -38,6 +50,7 @@ from datetime import datetime, timezone
 import logging
 from app.forms import UploadImageForm
 from app.forms import DeleteCouponRequestForm
+from app.forms import RateUserForm
 from app.models import User
 from app.helpers import get_most_common_tag_for_company
 from app.models import coupon_tags
@@ -67,18 +80,6 @@ def to_israel_time_filter(dt):
     return dt.replace(tzinfo=pytz.utc).astimezone(israel).strftime('%d/%m/%Y %H:%M:%S')
 
 
-from sqlalchemy.sql import text
-
-from datetime import datetime
-from flask import request, current_app
-from app.helpers import get_geo_location
-from flask_login import current_user
-from sqlalchemy.sql import text
-from app.extensions import db
-from app.forms import MarkCouponAsFullyUsedForm
-from app.helpers import get_geo_location, get_public_ip
-
-from datetime import datetime
 
 def add_coupon_transaction(coupon):
     """
@@ -158,19 +159,20 @@ def sell_coupon():
         expiration = form.expiration.data
         purpose = form.purpose.data.strip() if form.is_one_time.data and form.purpose.data else None
 
+        # המרת קלט מהטופס
         try:
-            value = float(form.value.data) if form.value.data else 0.0
+            face_value = float(form.value.data)  # כמה הקופון שווה בפועל
         except:
-            value = 0.0
+            face_value = 0.0
 
         try:
-            cost = float(form.cost.data) if form.cost.data else 0.0
+            asked_price = float(form.cost.data)  # כמה המשתמש רוצה לקבל
         except:
-            cost = 0.0
+            asked_price = 0.0
 
-        # חישוב אחוז ההנחה (ערך לוגי לשימוש פנימי / תצוגה)
-        if value > 0:
-            discount_percentage = ((value - cost) / value) * 100
+        # חישוב אחוז ההנחה
+        if face_value > 0:
+            discount_percentage = ((face_value - asked_price) / face_value) * 100
         else:
             discount_percentage = 0.0
 
@@ -208,8 +210,8 @@ def sell_coupon():
         # יצירת אובייקט קופון (ללא discount_percentage, כי לא קיים בעמודות המודל)
         new_coupon = Coupon(
             code=form.code.data.strip(),
-            value=value,
-            cost=cost,
+            value=face_value,    # face value
+            cost=asked_price,    # כמה המשתמש מבקש
             company=company.name,
             description=form.description.data.strip() if form.description.data else '',
             expiration=expiration,
@@ -1722,7 +1724,7 @@ ORDER BY
 
     discount_percentage = None
     if coupon.is_for_sale and coupon.value > 0:
-        discount_percentage = ((coupon.cost - coupon.value) / coupon.cost) * 100
+        discount_percentage = ((coupon.value - coupon.cost) / coupon.value) * 100
         discount_percentage = round(discount_percentage, 2)
 
     companies = Company.query.all()

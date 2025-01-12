@@ -1,71 +1,443 @@
-<!-- templates/profile/user_profile.html -->
-<!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-    <meta charset="utf-8">
-    <title>הפרופיל של {{ user.first_name }} {{ user.last_name }}</title>
-    <style>
-        body {
-            direction: rtl;
-            text-align: right;
-            font-family: Arial, sans-serif;
-        }
-        .profile-container {
-            max-width: 600px;
-            margin: 20px auto;
-        }
-        .reviews-section {
-            margin-top: 30px;
-        }
-        .review {
-            background-color: #f7f7f7;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-        .review .rating {
-            font-weight: bold;
-            color: #2E86C1;
-        }
-    </style>
-</head>
-<body>
-    <div class="profile-container">
-        <h1>הפרופיל של {{ user.first_name }} {{ user.last_name }}</h1>
+{% extends 'base.html' %}
 
-        {# אם יש תמונת פרופיל #}
+{% block title %}
+פרופיל המשתמש
+{% endblock %}
+
+{% block content %}
+<section class="coupon-detail">
+    <h2>פרופיל המשתמש</h2>
+
+    <div class="company-info">
         {% if user.profile_image %}
             <img src="{{ url_for('static', filename=user.profile_image.replace('static/', '')) }}"
                  alt="תמונת פרופיל"
-                 style="max-width: 150px; border-radius: 50%;">
-        {% endif %}
-
-        <p>גיל: {{ user.age or 'לא צויין' }}</p>
-        <p>מין: {{ user.gender or 'לא צויין' }}</p>
-        <p>תיאור פרופיל: {{ user.profile_description or '...' }}</p>
-
-        {# ממוצע דירוג #}
-        {% if avg_rating %}
-            <p>ממוצע דירוג: {{ "%.1f"|format(avg_rating) }} / 5</p>
+                 class="company-logo">
         {% else %}
-            <p>אין עדיין דירוגים למשתמש הזה.</p>
+            <img src="{{ url_for('static', filename='images/default_profile.png') }}"
+                 alt="תמונת פרופיל"
+                 class="company-logo">
         {% endif %}
+        <h3>{{ user.first_name }} {{ user.last_name }}</h3>
+    </div>
 
-        <div class="reviews-section">
-            <h2>ביקורות שקיבל:</h2>
-            {% if ratings %}
-                {% for review in ratings %}
-                    <div class="review">
-                        <p class="rating">דירוג: {{ review.rating }} / 5</p>
-                        <p>תגובה: {{ review.comment or 'אין הערה' }}</p>
-                        <p>נכתב על ידי משתמש ID {{ review.reviewer_id }} בתאריך {{ review.created_at.strftime('%d/%m/%Y') }}</p>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p>אין ביקורות על משתמש זה.</p>
-            {% endif %}
+    <div id="additional_info">
+        <div class="info-box">
+            <span class="info-title">ממוצע דירוג:</span>
+            <span class="info-value">
+                <div class="star-rating">
+                    {% for i in range(1,6) %}
+                        {% if avg_rating >= i %}
+                            <i class="fa fa-star" style="color:#ffca08"></i>
+                        {% elif avg_rating > i - 1 and (avg_rating - (i - 1)) >= 0.5 %}
+                            <i class="fa fa-star-half-o" style="color:#ffca08"></i>
+                        {% else %}
+                            <i class="fa fa-star-o" style="color:#ccc"></i>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </span>
         </div>
+        <div class="info-box">
+    <span class="info-title">תיאור פרופיל:</span>
+    <span class="info-value">{{ user.profile_description or '...' }}</span>
+</div>
 
     </div>
-</body>
-</html>
+
+    {% if is_owner %}
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'personal')">מידע אישי</button>
+        <button class="tab-button" onclick="openTab(event, 'demographics')">פרטים דמוגרפיים</button>
+    </div>
+
+    <form id="profile-form" method="POST" action="">
+        {{ form.hidden_tag() }}
+
+        <div id="personal" class="tab-content active">
+            <div class="info-box">
+                <span class="info-title">{{ form.first_name.label }}</span>
+                <span class="info-value">
+                    {{ form.first_name(class="input-field", id="first_name") }}
+                    <span class="save-indicator" id="first_name-save-indicator"></span>
+                </span>
+                {% for error in form.first_name.errors %}
+                    <span class="error-message">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="info-box">
+                <span class="info-title">{{ form.last_name.label }}</span>
+                <span class="info-value">
+                    {{ form.last_name(class="input-field", id="last_name") }}
+                    <span class="save-indicator" id="last_name-save-indicator"></span>
+                </span>
+                {% for error in form.last_name.errors %}
+                    <span class="error-message">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="info-box">
+                <span class="info-title">Email:</span>
+                <span class="info-value">
+                    <input type="email" id="email" name="email" class="input-field" value="{{ current_user.email }}" disabled>
+                </span>
+            </div>
+        </div>
+
+        <div id="demographics" class="tab-content">
+            <h3 style="margin-bottom: 20px;">פרטים דמוגרפיים (אופציונלי)</h3>
+
+            <div class="info-box">
+                <span class="info-title">{{ form.age.label }}</span>
+                <span class="info-value">
+                    {{ form.age(class="input-field", id="age") }}
+                    <span class="save-indicator" id="age-save-indicator"></span>
+                </span>
+                {% for error in form.age.errors %}
+                    <span class="error-message">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="info-box">
+                <span class="info-title">{{ form.gender.label }}</span>
+                <span class="info-value">
+                    {{ form.gender(class="input-field", id="gender") }}
+                    <span class="save-indicator" id="gender-save-indicator"></span>
+                </span>
+                {% for error in form.gender.errors %}
+                    <span class="error-message">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    <h3 class="usage-history-title">ביקורות שקיבל</h3>
+    {% if ratings and ratings|length > 0 %}
+        <table class="transaction-table">
+            <thead>
+                <tr>
+                    <th>תאריך</th>
+                    <th>תגובה</th>
+                    <th>דירוג</th>
+                    <th>פעולה</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for review in ratings %}
+                    <tr>
+                        <td>{{ review.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ review.comment or 'אין הערה' }}</td>
+                        <td>
+                            <div class="star-rating">
+                                {% for i in range(1,6) %}
+                                    {% if review.rating >= i %}
+                                        <i class="fa fa-star" style="color:#ffca08"></i>
+                                    {% elif review.rating > i - 1 and (review.rating - (i - 1)) >= 0.5 %}
+                                        <i class="fa fa-star-half-o" style="color:#ffca08"></i>
+                                    {% else %}
+                                        <i class="fa fa-star-o" style="color:#ccc"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if not review_already_exists(review.transaction_id) %}
+                                <a href="{{ url_for('profile.rate_user', user_id=user.id, transaction_id=review.transaction_id) }}" class="action-button">
+                                    כתוב ביקורת
+                                </a>
+                            {% else %}
+                                <span>ביקורת נכתבה</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="no-data-message">אין ביקורות על משתמש זה.</p>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openTab(evt, tabName) {
+        var tabContents = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+        }
+        var tabButtons = document.getElementsByClassName("tab-button");
+        for (var i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove("active");
+        }
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), wait);
+        };
+    }
+
+    function saveProfileField(fieldId, value) {
+        const csrfToken = getCookie('csrf_token');
+
+        fetch('/update_profile_field', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            credentials: 'include',
+            body: JSON.stringify({ field: fieldId, value: value })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const indicator = document.getElementById(`${fieldId}-save-indicator`);
+            if (data.status === 'success') {
+                indicator.classList.remove('error');
+                indicator.classList.add('success');
+            } else {
+                indicator.classList.remove('success');
+                indicator.classList.add('error');
+            }
+            const autoSaveMessage = document.getElementById('auto-save-message');
+            if (data.status === 'success') {
+                autoSaveMessage.textContent = 'שינויים נשמרו אוטומטית';
+            } else {
+                autoSaveMessage.textContent = 'אירעה שגיאה בשמירת השינויים';
+            }
+            autoSaveMessage.classList.add('show');
+            setTimeout(() => {
+                autoSaveMessage.classList.remove('show');
+            }, 3000);
+        })
+        .catch(error => {
+            const indicator = document.getElementById(`${fieldId}-save-indicator`);
+            indicator.classList.remove('success');
+            indicator.classList.add('error');
+            const autoSaveMessage = document.getElementById('auto-save-message');
+            autoSaveMessage.textContent = 'אירעה שגיאה בשמירת השינויים';
+            autoSaveMessage.classList.add('show');
+            setTimeout(() => {
+                autoSaveMessage.classList.remove('show');
+            }, 3000);
+        });
+    }
+
+    const debouncedSave = debounce((fieldId, value) => {
+        saveProfileField(fieldId, value);
+    }, 500);
+
+    document.addEventListener("DOMContentLoaded", function() {
+        var defaultTab = document.querySelector(".tab-button.active");
+        if (defaultTab) {
+            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
+            document.getElementById(tabName).classList.add("active");
+        }
+
+        var autoSaveMessage = document.createElement('div');
+        autoSaveMessage.id = 'auto-save-message';
+        autoSaveMessage.className = 'auto-save-message';
+        autoSaveMessage.textContent = 'שינויים נשמרו אוטומטית';
+        document.body.appendChild(autoSaveMessage);
+
+        const profileForm = document.getElementById('profile-form');
+        if (profileForm) {
+            const inputs = profileForm.querySelectorAll('.input-field');
+            inputs.forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const fieldId = e.target.id;
+                    const value = e.target.value;
+                    debouncedSave(fieldId, value);
+                });
+            });
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+    .tabs {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+        gap: 10px;
+    }
+    .tab-button {
+        flex: 1;
+        max-width: 200px;
+        background-color: var(--accent-color);
+        color: var(--white);
+        border: none;
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background-color 0.3s;
+        border-radius: 5px 5px 0 0;
+        text-align: center;
+    }
+    .tab-button:hover {
+        background-color: #e67e22;
+    }
+    .tab-button.active {
+        background-color: #e67e22;
+    }
+    .tab-content {
+        display: none;
+        padding: 20px;
+        border: 1px solid var(--light-gray);
+        border-top: none;
+        border-radius: 0 5px 5px 5px;
+        box-sizing: border-box;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    .company-info {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    .company-logo {
+        max-width: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    .info-box {
+        margin-bottom: 15px;
+    }
+    .info-title {
+        display: inline-block;
+        font-weight: bold;
+        width: 120px;
+    }
+    .info-value {
+        display: inline-block;
+    }
+    .usage-history-title {
+        margin-top: 30px;
+        margin-bottom: 10px;
+    }
+    .transaction-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+    .transaction-table th,
+    .transaction-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+    }
+    .transaction-table th {
+        background-color: var(--light-gray);
+        font-weight: bold;
+    }
+    .no-data-message {
+        text-align: center;
+        color: #888;
+        margin: 20px 0;
+    }
+    .action-buttons {
+        margin-top: 20px;
+    }
+    .action-buttons .action-button {
+        display: inline-block;
+        background-color: var(--accent-color);
+        color: var(--white);
+        padding: 10px 20px;
+        margin-right: 10px;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: background-color 0.3s;
+    }
+    .action-buttons .action-button:hover {
+        background-color: #e67e22;
+    }
+    .action-button.danger {
+        background-color: #e74c3c;
+    }
+    .action-button.danger:hover {
+        background-color: #c0392b;
+    }
+    .save-indicator.success::after {
+        content: '✔️';
+        color: green;
+        font-size: 1.2em;
+        margin-left: 5px;
+    }
+    .save-indicator.error::after {
+        content: '❌';
+        color: red;
+        font-size: 1.2em;
+        margin-left: 5px;
+    }
+    .auto-save-message {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: var(--success-color, #2ecc71);
+        color: var(--white, #fff);
+        padding: 10px 20px;
+        border-radius: 5px;
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+        z-index: 1000;
+    }
+    .auto-save-message.show {
+        opacity: 1;
+    }
+    .error-message {
+        color: red;
+        display: block;
+        margin-top: 5px;
+        font-size: 0.9em;
+    }
+    @media (max-width: 768px) {
+        .tab-button {
+            width: 100%;
+            max-width: none;
+            border-radius: 5px;
+        }
+        .company-info {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+    .star-rating {
+        direction: rtl;
+        display: inline-block;
+        font-size: 0;
+    }
+    .star-rating .fa {
+        font-size: 2em;
+        margin: 0 2px;
+        color: #ccc;
+    }
+</style>
+{% endblock %}

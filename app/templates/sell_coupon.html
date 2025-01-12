@@ -141,9 +141,16 @@ document.addEventListener('DOMContentLoaded', function() {
         isUpdating = true;
         const couponCost = parseFloat(couponCostInput.value);
         const discountPercentage = parseFloat(discountPercentageInput.value);
-        if (!isNaN(couponCost) && !isNaN(discountPercentage) && discountPercentage >=0 && discountPercentage <=100) {
-            const desiredValue = couponCost / (1 - (discountPercentage / 100));
-            desiredValueInput.value = desiredValue.toFixed(2);
+
+        if (
+            !isNaN(couponCost) && 
+            !isNaN(discountPercentage) && 
+            discountPercentage >= 0 && 
+            discountPercentage <= 100
+        ) {
+            // נוסחה: מחיר לאחר הנחה = מחיר מקורי * (1 - אחוז הנחה)
+            const finalPrice = couponCost * (1 - (discountPercentage / 100));
+            desiredValueInput.value = finalPrice.toFixed(2);
         } else if (desiredValueInput.value !== '') {
             desiredValueInput.value = '';
         }
@@ -155,9 +162,11 @@ document.addEventListener('DOMContentLoaded', function() {
         isUpdating = true;
         const desiredValue = parseFloat(desiredValueInput.value);
         const couponCost = parseFloat(couponCostInput.value);
-        if (!isNaN(couponCost) && !isNaN(desiredValue) && desiredValue > 0) {
-            const discountPercentage = ((desiredValue - couponCost) / desiredValue) * 100;
-            discountPercentageInput.value = discountPercentage.toFixed(2);
+
+        if (!isNaN(couponCost) && !isNaN(desiredValue) && couponCost > 0) {
+            // נוסחה: אחוז הנחה = (מחיר מקורי - מחיר לאחר הנחה) / מחיר מקורי * 100
+            const discount = ((couponCost - desiredValue) / couponCost) * 100;
+            discountPercentageInput.value = discount.toFixed(2);
         } else if (discountPercentageInput.value !== '') {
             discountPercentageInput.value = '';
         }
