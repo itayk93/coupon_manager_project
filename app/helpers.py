@@ -23,6 +23,7 @@ from app.models import (
     Tag, coupon_tags, Transaction
 )
 from itsdangerous import URLSafeTimedSerializer
+from app.models import Company
 
 load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
@@ -1025,45 +1026,26 @@ def process_coupons_excel(file_path, user):
        3) new_coupons: רשימת אובייקטי Coupon שהתווספו בהצלחה לדאטהבייס.
     """
     try:
+        # קריאת הקובץ לאובייקט DataFrame
         df = pd.read_excel(file_path)
-        existing_tags = {tag.name: tag for tag in Tag.query.all()}
+        existing_tags = {tag.name: tag for tag in Tag.query.all()}  # טעינת תגיות קיימות
         cache_tags = existing_tags.copy()
 
         invalid_coupons = []
         missing_optional_fields_messages = []
-        new_coupons = []  # נוסיף רשימה זו כדי להחזיר קופונים שנוצרו
+        new_coupons = []
 
         for index, row in df.iterrows():
             try:
-                # Reading fields with default values
+                # קריאת נתונים מהשורה
                 code = str(row.get('קוד קופון', '')).strip()
                 value = row.get('ערך מקורי', None)
                 cost = row.get('עלות', None)
-                company = str(row.get('חברה', '')).strip()
-                description = row.get('תיאור', '')
-                expiration = row.get('תאריך תפוגה', '')
-                tags_input = row.get('תגיות', '')
+                company_name = str(row.get('חברה', '')).strip()
+                description = row.get('תיאור', '') or ''
+                expiration = row.get('תאריך תפוגה', None)
 
-                # Status of the coupon from the 'סטטוס' column, or default to 'פעיל'
-                status = row.get('סטטוס', 'פעיל')
-                if isinstance(status, str):
-                    status = status.strip()
-                else:
-                    status = 'פעיל'
-                if status not in ['פעיל', 'נוצל']:
-                    status = 'פעיל'
-
-                # Convert 'קוד לשימוש חד פעמי' field to boolean
-                is_one_time_raw = row.get('קוד לשימוש חד פעמי', False)
-                if isinstance(is_one_time_raw, str):
-                    is_one_time = is_one_time_raw.strip().lower() in ['true', '1', 'כן', 'yes']
-                else:
-                    is_one_time = bool(is_one_time_raw)
-
-                # Set 'purpose' field based on 'is_one_time'
-                purpose = row.get('מטרת הקופון', '').strip() if is_one_time else None
-
-                # Check required fields
+                # בדיקת ערכים חסרים
                 missing_fields = []
                 if not code:
                     missing_fields.append('קוד קופון')
@@ -1071,101 +1053,86 @@ def process_coupons_excel(file_path, user):
                     missing_fields.append('ערך מקורי')
                 if cost is None or pd.isna(cost):
                     missing_fields.append('עלות')
-                if not company:
+                if not company_name:
                     missing_fields.append('חברה')
 
                 if missing_fields:
-                    invalid_coupons.append(
-                        f'בשורה {index + 2} חסרים שדות חובה: {", ".join(missing_fields)}'
-                    )
+                    invalid_coupons.append(f'שורה {index + 2}: חסרים שדות חובה: {", ".join(missing_fields)}')
                     continue
 
-                # Set 'used_value' based on status
-                if status == 'נוצל':
-                    used_value = value
-                else:
-                    used_value = 0.0
-
-                # Process optional fields
-                missing_optional_fields = []
-                description = '' if pd.isna(description) else description
-
-                if pd.isna(expiration) or not str(expiration).strip():
-                    expiration = None
-                    missing_optional_fields.append('תאריך תפוגה')
-                else:
+                # עיבוד נתונים אופציונליים
+                if expiration:
                     try:
-                        if isinstance(expiration, str):
-                            expiration_date = datetime.strptime(expiration, '%d/%m/%Y').date()
-                        else:
-                            expiration_date = expiration.date()
-                        expiration = expiration_date
+                        expiration = datetime.strptime(expiration, '%d/%m/%Y').date()
                     except ValueError:
-                        missing_optional_fields.append('תאריך תפוגה (פורמט לא תקין)')
                         expiration = None
+                        missing_optional_fields_messages.append(f'שורה {index + 2}: תאריך תפוגה בפורמט לא תקין.')
 
-                tags_input = '' if pd.isna(tags_input) else tags_input
-
-                if missing_optional_fields:
-                    missing_fields_str = ', '.join(missing_optional_fields)
-                    missing_optional_fields_messages.append(
-                        f'בשורה {index + 2} חסרו שדות: {missing_fields_str}. הערכים עלו כריקים.'
+                # מציאת החברה או יצירת חברה חדשה
+                company = Company.query.filter_by(name=company_name).first()
+                if not company:
+                    company = Company(
+                        name=company_name,
+                        image_path="default_logo.png"  # הוספת ערך ברירת מחדל ל-image_path
                     )
+                    db.session.add(company)
 
-                # Create the coupon
+                # זיהוי תגית אוטומטית
+                most_common_tag = db.session.query(Tag).join(coupon_tags, Tag.id == coupon_tags.c.tag_id) \
+                    .join(Coupon, Coupon.id == coupon_tags.c.coupon_id) \
+                    .filter(func.lower(Coupon.company) == func.lower(company_name)) \
+                    .group_by(Tag.id) \
+                    .order_by(func.count(Tag.id).desc()) \
+                    .first()
+
+                if not most_common_tag:
+                    # אם לא נמצאה תגית, ניצור אחת חדשה
+                    tag_name = f"Tag for {company_name}"
+                    most_common_tag = Tag(name=tag_name, count=1)
+                    db.session.add(most_common_tag)
+                else:
+                    most_common_tag.count += 1
+
+                # יצירת הקופון
                 new_coupon = Coupon(
                     code=code,
                     value=value,
                     cost=cost,
-                    company=company,
+                    company=company.name,
                     description=description,
                     expiration=expiration,
                     user_id=user.id,
-                    is_one_time=is_one_time,
-                    purpose=purpose,
-                    status=status,
-                    used_value=used_value  # Set 'used_value' accordingly
+                    status='פעיל',  # ברירת מחדל
                 )
-
-                # Handle tags
-                if tags_input:
-                    tag_names = [tag.strip() for tag in str(tags_input).split(',')]
-                    for name in tag_names:
-                        if name:
-                            tag = cache_tags.get(name)
-                            if not tag:
-                                tag = Tag(name=name, count=1)
-                                db.session.add(tag)
-                                cache_tags[name] = tag
-                            else:
-                                tag.count += 1
-                            new_coupon.tags.append(tag)
+                new_coupon.tags.append(most_common_tag)
 
                 db.session.add(new_coupon)
-                # NOTE:
-                # לא עושים כאן db.session.commit() בפנים כדי לשמור על יעילות,
-                # אלא רק בסוף (אלא אם רוצים "קומיט לכל שורה" כדי להתגונן מפני כשל בשורה בודדת).
-
-                # מוסיפים לרשימה כדי להחזיר בסוף
                 new_coupons.append(new_coupon)
 
             except Exception as e:
-                traceback.print_exc()
-                invalid_coupons.append(f'בשורה {index + 2}: {str(e)}')
-                continue
+                invalid_coupons.append(f'שורה {index + 2}: {str(e)}')
 
-        # קומיט אחד מרוכז בסיום
+        # שמירת כל הנתונים למסד
         db.session.commit()
 
-        # מסירים את הקובץ
+        # מחיקת הקובץ לאחר עיבוד
         os.remove(file_path)
 
-        # כעת מחזירים גם את רשימת הקופונים החדשים
+        # Flash Messages
+        if new_coupons:
+            flash(f"הקופונים הבאים נטענו בהצלחה: {[coupon.code for coupon in new_coupons]}", "success")
+
+        if invalid_coupons:
+            flash(f"טעינת הקופונים נכשלה עבור השורות הבאות:<br>{'<br>'.join(invalid_coupons)}", "danger")
+
+        if missing_optional_fields_messages:
+            flash(f"הערות בנוגע לשדות אופציונליים:<br>{'<br>'.join(missing_optional_fields_messages)}", "warning")
+
         return invalid_coupons, missing_optional_fields_messages, new_coupons
 
     except Exception as e:
         db.session.rollback()
-        traceback.print_exc()
+        flash(f"אירעה שגיאה כללית: {str(e)}", "danger")
         raise e  # Re-raise exception to handle it in the calling function
 
 def complete_transaction(transaction):

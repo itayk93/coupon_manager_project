@@ -207,7 +207,7 @@ class BulkCouponForm(FlaskForm):
         'תגית',
         choices=[],
         coerce=str,
-        validators=[DataRequired(message="יש לבחור תגית.")]
+        validators=[Optional()]
     )
     other_tag = StringField(
         'תגית חדשה',
@@ -439,6 +439,10 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Optional, Length, NumberRange
 
+from flask_wtf import FlaskForm
+from wtforms import StringField, DecimalField, TextAreaField, SelectField, SubmitField
+from wtforms.validators import DataRequired, Optional, Length, NumberRange
+
 class RequestCouponForm(FlaskForm):
     company = SelectField(
         'שם החברה',
@@ -477,6 +481,10 @@ class RequestCouponForm(FlaskForm):
         'קוד קופון',
         validators=[Optional(), Length(max=255)]  # קוד אינו חובה
     )
+    description = TextAreaField(
+        'הסבר נוסף על הבקשה',
+        validators=[Optional(), Length(max=1000)]
+    )
     submit = SubmitField('בקש קופון')
 
     def validate(self, extra_validators=None):
@@ -497,7 +505,6 @@ class RequestCouponForm(FlaskForm):
             return False
 
         return True
-
 
 class UpdateMultipassForm(FlaskForm):
     submit = SubmitField('עדכן נתונים מ-Multipass')

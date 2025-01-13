@@ -5,32 +5,34 @@ from datetime import datetime
 import logging
 
 from app.models import CouponRequest, User, Company, db
-from app.forms import DeleteCouponRequestForm
+from app.forms import DeleteCouponRequestForm,RequestCouponForm
 from app.helpers import send_coupon_purchase_request_email, get_geo_location  # או הגדר כאן את get_geo_location
 
 requests_bp = Blueprint('requests', __name__)
 logger = logging.getLogger(__name__)
 from sqlalchemy.sql import text
 
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask_login import login_required, current_user
+from datetime import datetime
+import logging
+
+from app.models import CouponRequest, User, Company, db
+from app.forms import RequestCouponForm, DeleteCouponRequestForm
+from app.helpers import get_geo_location  # פונקציה אופציונלית לדוגמה
+from sqlalchemy.sql import text
+
+requests_bp = Blueprint('requests', __name__)
+logger = logging.getLogger(__name__)
+
 def log_user_activity(action, coupon_id=None):
     """
-    פונקציה מרכזית לרישום activity log.
+    פונקציה לרישום פעילות המשתמש (activity log).
     """
     try:
         ip_address = request.remote_addr
         user_agent = request.headers.get('User-Agent', '')
         geo_location = get_geo_location(ip_address) if ip_address else None
-
-        activity = {
-            "user_id": current_user.id if current_user.is_authenticated else None,
-            "coupon_id": coupon_id,
-            "timestamp": datetime.utcnow(),
-            "action": action,
-            "device": user_agent[:50] if user_agent else None,
-            "browser": user_agent.split(' ')[0][:50] if user_agent else None,
-            "ip_address": ip_address[:45] if ip_address else None,
-            "geo_location": geo_location[:100] if geo_location else None
-        }
 
         db.session.execute(
             db.text("""
@@ -39,7 +41,16 @@ def log_user_activity(action, coupon_id=None):
                 VALUES
                     (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
             """),
-            activity
+            {
+                "user_id": current_user.id if current_user.is_authenticated else None,
+                "coupon_id": coupon_id,
+                "timestamp": datetime.utcnow(),
+                "action": action,
+                "device": user_agent[:50] if user_agent else None,
+                "browser": user_agent.split(' ')[0][:50] if user_agent else None,
+                "ip_address": ip_address[:45] if ip_address else None,
+                "geo_location": geo_location[:100] if geo_location else None
+            }
         )
         db.session.commit()
     except Exception as e:
@@ -106,54 +117,79 @@ def delete_coupon_request(id):
 
     return redirect(url_for('marketplace.marketplace'))
 
+
 @requests_bp.route('/request_coupon', methods=['GET', 'POST'])
 @login_required
 def request_coupon():
+    """
+    מסך בקשת קופון:
+    - המשתמש בוחר חברה קיימת או 'other' להזנת חברה חדשה.
+    - ממלא עלות מבוקשת, ערך מבוקש, אחוז הנחה, קוד קופון (לא חובה) והסבר נוסף.
+    - נשמר לטבלת coupon_requests.
+    """
     log_user_activity("request_coupon_view")
 
-    if request.method == 'POST':
-        from app.models import Coupon, Transaction, Notification  # import כאן לצורך הדגמה
-        coupon_id = request.form.get('coupon_id', type=int)
-        coupon = Coupon.query.get_or_404(coupon_id)
+    form = RequestCouponForm()
 
-        if coupon.user_id == current_user.id:
-            flash('אינך יכול לקנות את הקופון שלך.', 'warning')
-            return redirect(url_for('marketplace.marketplace'))
+    # שליפת חברות קיימות מה-DB והכנסתן ל-choices
+    companies = Company.query.all()
+    # נוסיף אופציה של "אחר" בסוף הרשימה
+    form.company.choices = [(str(c.id), c.name) for c in companies] + [('other', 'אחר')]
 
-        if not coupon.is_available or not coupon.is_for_sale:
-            flash('קופון זה אינו זמין למכירה.', 'danger')
-            return redirect(url_for('marketplace.marketplace'))
+    if form.validate_on_submit():
+        # מקבלים ערכים מהטופס
+        selected_company_id = form.company.data
+        other_company_name = form.other_company.data.strip() if form.other_company.data else ''
+        cost = form.cost.data
+        value = form.value.data
+        discount_percentage = form.discount_percentage.data
+        code = form.code.data.strip() if form.code.data else ''
+        description = form.description.data.strip() if form.description.data else ''
 
-        transaction = Transaction(
-            coupon_id=coupon.id,
-            buyer_id=current_user.id,
-            seller_id=coupon.user_id,
-            status='ממתין לאישור המוכר'
+        # קובעים את שם החברה (אם בחרו "other" - ניקח מהטקסט, אחרת ניקח מה-DB)
+        if selected_company_id == 'other':
+            # משתמש הזין חברה חדשה
+            company_name = other_company_name
+            # אפשר לשמור גם כ-company object חדש, במידה ורוצים לעדכן בטבלת companies:
+            # new_company = Company(name=company_name, image_path='default.png')
+            # db.session.add(new_company)
+            # db.session.flush()
+            # ואז company_name = new_company.name
+        else:
+            # משתמש בחר חברה קיימת
+            existing_company = Company.query.get_or_404(int(selected_company_id))
+            company_name = existing_company.name
+
+        # נרשום ל-DB את הבקשה
+        coupon_req = CouponRequest(
+            company=company_name,
+            other_company=other_company_name,  # אם המשתמש באמת הזין משהו
+            code=code,
+            value=value if value else 0.0,
+            cost=cost if cost else 0.0,
+            description=description,
+            user_id=current_user.id,
+            date_requested=datetime.utcnow(),
+            fulfilled=False
         )
-        db.session.add(transaction)
-        coupon.is_available = False
+        # אם רוצים גם לשמור discount_percentage ב-DB, צריך לוודא שיש עמודה כזו ב-CouponRequest
+        # לדוגמה:
+        # coupon_req.discount_percentage = discount_percentage
 
-        notification = Notification(
-            user_id=coupon.user_id,
-            message=f"{current_user.first_name} {current_user.last_name} מבקש לקנות את הקופון שלך.",
-            link=url_for('marketplace.my_transactions')
-        )
-        db.session.add(notification)
-        db.session.commit()
-
-        seller = coupon.user
-        buyer = current_user
         try:
-            send_coupon_purchase_request_email(seller, buyer, coupon)
-            flash('בקשתך נשלחה והמוכר יקבל הודעה גם במייל.', 'success')
-            log_user_activity("request_coupon_submitted", coupon_id=coupon.id)
+            db.session.add(coupon_req)
+            db.session.commit()
+            flash('בקשת הקופון נרשמה בהצלחה!', 'success')
+            log_user_activity("request_coupon_submitted")
+            return redirect(url_for('marketplace.marketplace'))
+
         except Exception as e:
-            requests_bp.logger.error(f'שגיאה בשליחת מייל למוכר: {e}')
-            flash('הבקשה נשלחה אך לא הצלחנו לשלוח הודעה למוכר במייל.', 'warning')
+            db.session.rollback()
+            logger.error(f"Error creating coupon request: {e}")
+            flash('אירעה שגיאה בעת שמירת הבקשה למסד הנתונים.', 'danger')
 
-        return redirect(url_for('marketplace.my_transactions'))
-
-    return render_template('request_coupon.html')
+    # אם GET או נפלה שגיאת ולידציה, נציג את הטופס
+    return render_template('request_coupon.html', form=form, companies=companies)
 
 @requests_bp.route('/buy_slots', methods=['GET', 'POST'])
 @login_required

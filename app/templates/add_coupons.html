@@ -59,8 +59,8 @@
 
                 <!-- תגית -->
                 <div class="form-group">
-                    <label for="coupons-{{ loop.index0 }}-tag_id">תגית:<span class="required">*</span></label>
-                    <select id="coupons-{{ loop.index0 }}-tag_id" name="coupons-{{ loop.index0 }}-tag_id" class="input-field tag-select" required>
+                    <label for="coupons-{{ loop.index0 }}-tag_id">תגית:</label>
+                    <select id="coupons-{{ loop.index0 }}-tag_id" name="coupons-{{ loop.index0 }}-tag_id" class="input-field tag-select">
                         <option value="" disabled {% if not coupon_form.tag_id.data %}selected{% endif %}>בחר</option>
                         {% for tag in tags %}
                             <option value="{{ tag.id }}" {% if coupon_form.tag_id.data == tag.id|string %}selected{% endif %}>{{ tag.name }}</option>

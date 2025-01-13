@@ -71,7 +71,7 @@
                     {% if coupon.user_id|int == current_user.id|int %}
                         <p class="your-coupon">זהו הקופון שלך שמוצע למכירה</p>
 
-                    {# 2. אם המשתמש כבר שלח בקשה לרכוש את הקופון => כפתור מיותם (מנוטרל) #}
+                    {# 2. אם המשתמש כבר שלח בקשה לרכוש את הקופון => כפתור מנוטרל #}
                     {% elif coupon.id in requested_coupon_ids %}
                         <button class="action-button danger" disabled>נשלחה בקשה לקופון זה</button>
 
@@ -82,7 +82,6 @@
                             <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
                             <button type="submit" class="action-button">בקש לקנות</button>
                         </form>
-
                     {% endif %}
                 </div>
             {% endfor %}
@@ -97,37 +96,50 @@
             <div class="coupon-container">
                 {% for request in coupon_requests %}
                     <div class="coupon-card">
-                        <a href="{{ url_for('coupons.coupon_request_detail', id=request.id) }}">
-                            {% if request.company.isdigit() %}
-                                {% set req_comp_id = request.company|int %}
-                                {% if req_comp_id in company_logo_mapping_by_id %}
-                                    <img src="{{ url_for('static', filename=company_logo_mapping_by_id[req_comp_id]) }}"
-                                         alt="{{ company_name_mapping_by_id[req_comp_id] }} Logo"
-                                         class="company-logo">
-                                    <p class="company-name">{{ company_name_mapping_by_id[req_comp_id] }}</p>
-                                {% else %}
-                                    <img src="{{ url_for('static', filename='images/default.png') }}"
-                                         alt="Default Logo"
-                                         class="company-logo">
-                                    <p class="company-name">{{ request.company }}</p>
-                                {% endif %}
-                            {% else %}
-                                {% set company_lower = request.company.lower() %}
-                                {% if company_lower in company_logo_mapping %}
-                                    <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}"
-                                         alt="{{ request.company }} Logo"
-                                         class="company-logo">
-                                    <p class="company-name">{{ request.company }}</p>
-                                {% else %}
-                                    <img src="{{ url_for('static', filename='images/default.png') }}"
-                                         alt="Default Logo"
-                                         class="company-logo">
-                                    <p class="company-name">{{ request.company }}</p>
-                                {% endif %}
-                            {% endif %}
-                            <p>נשלח על ידי: {{ request.user.first_name }} {{ request.user.last_name }}</p>
-                        </a>
+                        {# נחשב את אחוז ההנחה לפי value ו-cost, אם אין discount_percentage בעמודה #}
+                        {% set discount = 0 %}
+                        {% if request.value > 0 %}
+                            {% set discount = ((request.value - request.cost) / request.value) * 100 %}
+                        {% endif %}
+                        {% if discount < 0 %}
+                            {% set discount = 0 %}
+                        {% endif %}
 
+                        {# הצגת לוגו החברה - נשמר מהקוד המקורי, למי שרוצה לוגו #}
+                        {% if request.company.isdigit() %}
+                            {% set req_comp_id = request.company|int %}
+                            {% if req_comp_id in company_logo_mapping_by_id %}
+                                <img src="{{ url_for('static', filename=company_logo_mapping_by_id[req_comp_id]) }}"
+                                     alt="{{ company_name_mapping_by_id[req_comp_id] }} Logo"
+                                     class="company-logo">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='images/default.png') }}"
+                                     alt="Default Logo"
+                                     class="company-logo">
+                            {% endif %}
+                        {% else %}
+                            {% set company_lower = request.company.lower() %}
+                            {% if company_lower in company_logo_mapping %}
+                                <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}"
+                                     alt="{{ request.company }} Logo"
+                                     class="company-logo">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='images/default.png') }}"
+                                     alt="Default Logo"
+                                     class="company-logo">
+                            {% endif %}
+                        {% endif %}
+
+                        {# הטקסט המבוקש #}
+                        <p>
+                            {{ request.user.first_name }} מבקש לקנות קופון ל{{ request.company }}
+                            בשווי {{ '%.2f'|format(request.value) }} ש"ח
+                            במחיר של {{ '%.2f'|format(request.cost) }} ש"ח
+                            ({{ '%.2f'|format(discount) }}% הנחה)
+                        </p>
+                        <p>הסבר: {{ request.description if request.description else '---' }}</p>
+
+                        {# בדיקה האם זה הבקשה של המשתמש הנוכחי #}
                         {% if request.user_id == current_user.id %}
                             <p class="your-request">זו הבקשה שלך</p>
                         {% else %}

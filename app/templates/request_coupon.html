@@ -1,4 +1,3 @@
-<!-- templates/request_coupon.html -->
 {% extends 'base.html' %}
 
 {% block title %}בקשת קופון{% endblock %}
@@ -56,6 +55,15 @@
             <label for="desired_value">ערך מבוקש:</label>
             {{ form.value(class="input-field", id="desired_value") }}
             {% for error in form.value.errors %}
+                <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+
+        <!-- Additional Explanation Field -->
+        <div class="form-group">
+            <label for="description_input">הסבר נוסף (אופציונלי):</label>
+            {{ form.description(class="input-field", id="description_input") }}
+            {% for error in form.description.errors %}
                 <span class="error-message">{{ error }}</span><br>
             {% endfor %}
         </div>
@@ -219,4 +227,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

@@ -161,12 +161,12 @@ def sell_coupon():
 
         # המרת קלט מהטופס
         try:
-            face_value = float(form.value.data)  # כמה הקופון שווה בפועל
+            face_value = float(form.cost.data)  # כמה הקופון שווה בפועל
         except:
             face_value = 0.0
 
         try:
-            asked_price = float(form.cost.data)  # כמה המשתמש רוצה לקבל
+            asked_price = float(form.value.data)  # כמה המשתמש רוצה לקבל
         except:
             asked_price = 0.0
 
@@ -601,6 +601,7 @@ def add_coupons_bulk():
     return render_template('add_coupons.html', form=form, companies=companies, tags=tags)
 
 
+"""""""""
 def get_most_common_tag_for_company(company_name):
     results = db.session.query(Tag, func.count(Tag.id).label('tag_count')) \
         .join(coupon_tags, Tag.id == coupon_tags.c.tag_id) \
@@ -613,6 +614,7 @@ def get_most_common_tag_for_company(company_name):
         return results[0][0]
     else:
         return None
+"""""""""
 
 
 def get_most_common_tag_for_company(company_name):

@@ -344,8 +344,9 @@ class CouponRequest(db.Model):
     code = db.Column(db.String(255), nullable=True)           # אפשר ערך NULL
     value = db.Column(db.Float, nullable=False)
     cost = db.Column(db.Float, nullable=False)
+    description = db.Column(db.Text, nullable=True)          # שדה הסבר
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    date_requested = db.Column(db.DateTime, nullable=False)
+    date_requested = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     fulfilled = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', back_populates='coupon_requests')
