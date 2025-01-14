@@ -600,22 +600,7 @@ def add_coupons_bulk():
 
     return render_template('add_coupons.html', form=form, companies=companies, tags=tags)
 
-
-"""""""""
-def get_most_common_tag_for_company(company_name):
-    results = db.session.query(Tag, func.count(Tag.id).label('tag_count')) \
-        .join(coupon_tags, Tag.id == coupon_tags.c.tag_id) \
-        .join(Coupon, Coupon.id == coupon_tags.c.coupon_id) \
-        .filter(func.lower(Coupon.company) == func.lower(company_name)) \
-        .group_by(Tag.id) \
-        .order_by(func.count(Tag.id).desc(), Tag.id.asc()) \
-        .all()
-    if results:
-        return results[0][0]
-    else:
-        return None
-"""""""""
-
+ 
 
 def get_most_common_tag_for_company(company_name):
     results = db.session.query(Tag, func.count(Tag.id).label('tag_count')) \
@@ -2035,41 +2020,6 @@ def export_pdf():
     output.seek(0)
     return send_file(output, download_name='coupons.pdf', as_attachment=True, mimetype='application/pdf')
 
-
-@coupons_bp.route('/coupon_request/<int:id>', methods=['GET', 'POST'])
-@login_required
-def coupon_request_detail(id):
-    coupon_request = CouponRequest.query.get_or_404(id)
-
-    # אם הבקשה כבר טופלה, חזרה לשוק הקופונים
-    if coupon_request.fulfilled:
-        flash('בקשת הקופון כבר טופלה.', 'danger')
-        return redirect(url_for('coupons.marketplace'))
-
-    delete_form = DeleteCouponRequestForm()
-
-    if delete_form.validate_on_submit():
-        db.session.delete(coupon_request)
-        db.session.commit()
-        flash('הבקשה נמחקה בהצלחה.', 'success')
-        return redirect(url_for('marketplace.marketplace'))
-
-    requester = User.query.get(coupon_request.user_id)
-    company = Company.query.get(coupon_request.company)
-    if not company:
-        flash('החברה לא נמצאה.', 'danger')
-        return redirect(url_for('coupons.marketplace'))
-
-    company_logo_mapping = {company.name.lower(): company.image_path for company in Company.query.all()}
-
-    return render_template(
-        'coupon_request_detail.html',
-        coupon_request=coupon_request,
-        requester=requester,
-        company=company,
-        company_logo_mapping=company_logo_mapping,
-        delete_form=delete_form
-    )
 
 
 @coupons_bp.route('/delete_coupon_request/<int:id>', methods=['POST'])

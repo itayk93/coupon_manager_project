@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>מישהו מעוניין בקופון שלך</title>
+</head>
+<body dir="rtl">
+    <h1>יש לך קונה פוטנציאלי!</h1>
+    <p>שלום {{ seller.first_name }},</p>
+    <p>
+        המשתמש {{ buyer.first_name }} {{ buyer.last_name }} מעוניין לרכוש ממך את הקופון:
+        <strong>{{ coupon.code }}</strong> מחברת "{{ coupon.company }}".
+    </p>
+    <p>כדי לאשר או לדחות את העסקה, אנא התחבר למערכת דרך "העסקאות שלי":</p>
+    <p>
+        <a href="{{ url_for('transactions.my_transactions', _external=True) }}">
+            צפה בעסקאות
+        </a>
+    </p>
+    <p>תודה,<br>צוות MaCoupon</p>
+</body>
+</html>

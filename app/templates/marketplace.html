@@ -6,6 +6,7 @@
 {% block content %}
 <section class="marketplace">
 
+    <!-- תיבה לעסקאות ממתינות (אם יש) -->
     {% if pending_as_seller_count > 0 or pending_as_buyer_count > 0 %}
     <div class="pending-transactions-box">
         {% if pending_as_seller_count > 0 and pending_as_buyer_count > 0 %}
@@ -19,13 +20,17 @@
     </div>
     {% endif %}
 
+    <!-- כותרת העמוד -->
     <div class="marketplace-header">
         <h2>שוק הקופונים</h2>
     </div>
+
+    <!-- הצגת מספר הסלוטים של המשתמש -->
     <div class="slots-container">
         <p class="slots-available">מספר הסלוטים הזמינים: {{ current_user.slots }}</p>
     </div>
 
+    <!-- רשימת הקופונים הזמינים למכירה -->
     {% if coupons %}
         <div class="coupon-container">
             {% for coupon in coupons %}
@@ -67,15 +72,11 @@
                         <p>עלות: {{ '%.2f'|format(coupon.cost) }} ש"ח</p>
                     </a>
 
-                    {# 1. אם הקופון שייך למשתמש הנוכחי => מציגים הודעה שזה הקופון שלו #}
+                    {# התנהגות הכפתור בהתאם לסטטוס הקופון והמשתמש #}
                     {% if coupon.user_id|int == current_user.id|int %}
                         <p class="your-coupon">זהו הקופון שלך שמוצע למכירה</p>
-
-                    {# 2. אם המשתמש כבר שלח בקשה לרכוש את הקופון => כפתור מנוטרל #}
                     {% elif coupon.id in requested_coupon_ids %}
                         <button class="action-button danger" disabled>נשלחה בקשה לקופון זה</button>
-
-                    {# 3. אחרת => המשתמש יכול לבקש לקנות #}
                     {% else %}
                         <form action="{{ url_for('transactions.buy_coupon') }}" method="post" class="buy-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -90,22 +91,24 @@
         <p class="no-coupons">אין קופונים זמינים בשוק כרגע.</p>
     {% endif %}
 
+    <!-- בקשות לקופונים (רשימת אנשים שמעוניינים לקנות) -->
     <section class="coupon-section">
         <h2 class="coupon-section-title">בקשות לקופונים</h2>
         {% if coupon_requests %}
             <div class="coupon-container">
                 {% for request in coupon_requests %}
-                    <div class="coupon-card">
-                        {# נחשב את אחוז ההנחה לפי value ו-cost, אם אין discount_percentage בעמודה #}
+                    <div class="coupon-card request-card">
+
+                        {# חישוב אחוז ההנחה (אם אין discount_percentage בעמודה) #}
                         {% set discount = 0 %}
                         {% if request.value > 0 %}
-                            {% set discount = ((request.value - request.cost) / request.value) * 100 %}
+                            {% set discount = ((request.cost - request.value) / request.cost) * 100 %}
                         {% endif %}
                         {% if discount < 0 %}
                             {% set discount = 0 %}
                         {% endif %}
 
-                        {# הצגת לוגו החברה - נשמר מהקוד המקורי, למי שרוצה לוגו #}
+                        {# לוגו החברה #}
                         {% if request.company.isdigit() %}
                             {% set req_comp_id = request.company|int %}
                             {% if req_comp_id in company_logo_mapping_by_id %}
@@ -130,21 +133,30 @@
                             {% endif %}
                         {% endif %}
 
-                        {# הטקסט המבוקש #}
-                        <p>
-                            {{ request.user.first_name }} מבקש לקנות קופון ל{{ request.company }}
-                            בשווי {{ '%.2f'|format(request.value) }} ש"ח
-                            במחיר של {{ '%.2f'|format(request.cost) }} ש"ח
-                            ({{ '%.2f'|format(discount) }}% הנחה)
+                        <!-- טקסט משודרג לתיאור הבקשה -->
+                        <p class="request-details">
+                            <span class="request-user">{{ request.user.first_name }}</span>
+                            מבקש לקנות קופון ל
+                            <span class="request-company">{{ request.company }}</span>
+                            במחיר של
+                            <span class="request-cost">{{ '%.2f'|format(request.cost) }} ש"ח</span>
+                            בשווי
+                            <span class="request-value">{{ '%.2f'|format(request.value) }} ש"ח</span>
+                            (
+                            <span class="request-discount">{{ '%.2f'|format(discount) }}% הנחה</span>
+                            )
                         </p>
-                        <p>הסבר: {{ request.description if request.description else '---' }}</p>
+                        <p class="request-explanation">
+                            הסבר: {{ request.description if request.description else '---' }}
+                        </p>
 
-                        {# בדיקה האם זה הבקשה של המשתמש הנוכחי #}
+                        {# אם זה הבקשה של המשתמש הנוכחי, רק כיתוב. אחרת, כפתור "הצע למכירה" שמוביל לרוט החדש #}
                         {% if request.user_id == current_user.id %}
                             <p class="your-request">זו הבקשה שלך</p>
                         {% else %}
-                            <form action="{{ url_for('marketplace.offer_coupon', request_id=request.id) }}"
-                                  method="post" class="offer-form">
+                            <!-- כאן התיקון: מפנה ל- offer_coupon_selection (החדש) -->
+                            <form action="{{ url_for('marketplace.offer_coupon_selection', request_id=request.id) }}"
+                                  method="get" class="offer-form">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="action-button">הצע למכירה</button>
                             </form>
@@ -158,15 +170,198 @@
     </section>
 </section>
 
+<!-- סקריפט לסגירת התיבה של העסקאות הממתינות -->
 <script>
     function closeNotification(button) {
         const notificationBox = button.parentElement;
-        notificationBox.style.transition = "opacity 0.3s ease, height 0.3s ease";
-        notificationBox.style.opacity = "0";
-        notificationBox.style.height = "0";
+        notificationBox.classList.add('closing');
         setTimeout(() => {
             notificationBox.remove();
         }, 300);
     }
 </script>
+
+<!-- =======================
+     CSS בסוף הקובץ
+======================= -->
+<style>
+    /* כיוון טקסט כללי בעברית */
+    body {
+        direction: rtl;
+        margin: 0;
+        padding: 0;
+        font-family: "Alef", Arial, sans-serif; /* דוגמה לפונט עברי נעים */
+    }
+
+    /* מבנה כללי לאזור ה-Marketplace */
+    .marketplace {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    .marketplace-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    /* תיבה עליונה של עסקאות ממתינות */
+    .pending-transactions-box {
+        background-color: #fff8c2;
+        border: 1px solid #f5d876;
+        border-radius: 8px;
+        padding: 15px 20px;
+        position: relative;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
+    .pending-transactions-box p {
+        margin: 0;
+    }
+    .close-btn {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: none;
+        border: none;
+        font-weight: bold;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    .close-btn:hover {
+        color: #cc0000;
+    }
+    .pending-transactions-box.closing {
+        opacity: 0;
+        height: 0;
+        transition: opacity 0.3s ease, height 0.3s ease;
+    }
+
+    /* מספר הסלוטים הקיימים */
+    .slots-container {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .slots-available {
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+
+    /* כרטיסי הקופונים: תצוגה + מרכז */
+    .coupon-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center; /* ממקם את הכרטיסים במרכז */
+        margin: 0 auto;
+    }
+
+    .coupon-card {
+        width: 300px; /* גודל אחיד לכרטיס */
+        background-color: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        transition: box-shadow 0.3s ease;
+        position: relative;
+    }
+    .coupon-card:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* תמונת הלוגו והטקסט */
+    .company-logo {
+        max-height: 60px;
+        margin-bottom: 10px;
+    }
+    .company-name {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .coupon-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    /* מציין שזה הקופון שלי */
+    .your-coupon {
+        color: #a00;
+        font-weight: bold;
+    }
+
+    /* כפתורי פעולה */
+    .action-button {
+        background-color: #007BFF;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background-color 0.3s ease;
+    }
+    .action-button:hover {
+        background-color: #0056b3;
+    }
+    .action-button.danger {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+
+    /* הודעה כשאין קופונים/בקשות */
+    .no-coupons, .no-requests {
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.1rem;
+        margin: 40px 0;
+    }
+
+    /* אזור בקשות לקופונים */
+    .coupon-section {
+        margin-top: 40px;
+    }
+    .coupon-section-title {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    /* כרטיס הבקשות (מעט שונה מהקופונים למכירה) */
+    .request-card {
+        background-color: #fffefe;
+    }
+
+    /* טקסט הבקשה: שורת תיאור מורחבת עם אלמנטים מודגשים */
+    .request-details {
+        font-size: 1rem;
+        line-height: 1.6;
+        margin: 10px 0;
+    }
+    .request-user {
+        font-weight: bold;
+        color: #007BFF;
+    }
+    .request-company {
+        font-weight: bold;
+        color: #007BFF;
+    }
+    .request-cost, .request-value {
+        font-weight: 600;
+        color: #333;
+    }
+    .request-discount {
+        color: #28a745;
+        font-weight: 600;
+    }
+    .request-explanation {
+        margin-bottom: 10px;
+        font-style: italic;
+        color: #666;
+    }
+    .your-request {
+        color: #a00;
+        font-weight: bold;
+    }
+</style>
 {% endblock %}

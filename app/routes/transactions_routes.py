@@ -26,12 +26,10 @@ def log_user_activity(action, coupon_id=None):
     רישום פעולות משתמש.
     """
     try:
-        # קבלת נתוני IP וגיאוגרפיה
         ip_address = get_public_ip() or '0.0.0.0'
         geo_data = get_geo_location(ip_address)
         user_agent = request.headers.get('User-Agent', '')
 
-        # בניית נתוני הפעולה
         activity = {
             "user_id": current_user.id if current_user.is_authenticated else None,
             "coupon_id": coupon_id,
@@ -49,11 +47,12 @@ def log_user_activity(action, coupon_id=None):
             "timezone": geo_data.get("timezone"),
         }
 
-        # כתיבה למסד הנתונים
         db.session.execute(
             text("""
-                INSERT INTO user_activities (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, lat, lon, timezone)
-                VALUES (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, :lat, :lon, :timezone)
+                INSERT INTO user_activities
+                (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, lat, lon, timezone)
+                VALUES
+                (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, :lat, :lon, :timezone)
             """),
             activity
         )
@@ -70,14 +69,15 @@ def my_transactions():
     - עסקאות פעילות (מוכר/קונה) שהסטטוס שלהן לא 'הושלם' ולא 'מבוטל'
     - עסקאות שהסתיימו (הושלמו או בוטלו)
     """
+
     # עסקאות פעילות של המשתמש כמוכר
-    transactions_as_seller = Transaction.query.filter(
+    active_seller_transactions = Transaction.query.filter(
         Transaction.seller_id == current_user.id,
         ~Transaction.status.in_(["הושלם", "מבוטל"])
     ).all()
 
     # עסקאות פעילות של המשתמש כקונה
-    transactions_as_buyer = Transaction.query.filter(
+    active_buyer_transactions = Transaction.query.filter(
         Transaction.buyer_id == current_user.id,
         ~Transaction.status.in_(["הושלם", "מבוטל"])
     ).all()
@@ -90,14 +90,24 @@ def my_transactions():
 
     # שליפת כל החברות לצורך לוגו
     companies = Company.query.all()
-    # יצירת מיפוי שם חברה -> נתיב תמונה (באות קטנות)
+    company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
+
+    # שליפת בקשות למשתמש הנוכחי כמבקש
+    coupon_requests = CouponRequest.query.filter_by(user_id=current_user.id).all()
+
+    # שליפת קופונים של המשתמש הנוכחי
+    user_coupons = Coupon.query.filter_by(user_id=current_user.id).all()
+
+    # יצירת מיפוי עבור שם חברה לנתיב לוגו (באותיות קטנות)
     company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
 
     return render_template(
         'my_transactions.html',
-        transactions_as_seller=transactions_as_seller,
-        transactions_as_buyer=transactions_as_buyer,
+        transactions_as_seller=active_seller_transactions,
+        transactions_as_buyer=active_buyer_transactions,
         completed_transactions=completed_transactions,
+        coupon_requests=coupon_requests,
+        user_coupons=user_coupons,
         company_logo_mapping=company_logo_mapping
     )
 
@@ -649,3 +659,89 @@ def buyer_confirm_transfer(transaction_id):
     # אם זו בקשת GET או שהייתה שגיאה, מציגים את התבנית buyer_confirm_transfer.html
     current_app.logger.debug("Rendering buyer_confirm_transfer template.")
     return render_template('buyer_confirm_transfer.html', transaction=transaction)
+
+@transactions_bp.route('/buy_coupon_direct')
+@login_required
+def buy_coupon_direct():
+    """
+    הקונה לוחץ על "לרכישה" במייל שקיבל.
+    נוצרת Transaction, נשלחת למוכר התראה ומייל.
+    כמו כן, אם יש בקשת קופון שהביאה להצעה הזאת - נסמן אותה כ-fulfilled.
+    """
+    log_user_activity("buy_coupon_direct_attempt")
+
+    coupon_id = request.args.get('coupon_id', type=int)
+    if not coupon_id:
+        flash('לא זוהה קופון לרכישה.', 'danger')
+        return redirect(url_for('marketplace.marketplace'))
+
+    coupon = Coupon.query.get_or_404(coupon_id)
+    if not coupon.is_for_sale or not coupon.is_available:
+        flash('קופון זה אינו זמין יותר למכירה.', 'danger')
+        return redirect(url_for('marketplace.marketplace'))
+
+    if coupon.user_id == current_user.id:
+        flash('לא ניתן לקנות קופון של עצמך.', 'danger')
+        return redirect(url_for('marketplace.marketplace'))
+
+    new_transaction = Transaction(
+        coupon_id=coupon.id,
+        buyer_id=current_user.id,
+        seller_id=coupon.user_id,
+        status='ממתין לאישור המוכר',
+    )
+    db.session.add(new_transaction)
+
+    coupon.is_available = False
+    db.session.commit()
+
+    # כעת צריך למצוא אם קיימת בקשת קופון רלוונטית => נסמן fulfilled
+    # נניח הגענו מהצעה שקישרה בין coupon_request.id->coupon.
+    # בפועל אין ID ישיר, אבל אפשר לזהות לפי user_id + company (או לשמור reference).
+    # להלן דוגמה:
+    coupon_request = CouponRequest.query.filter_by(
+        user_id=current_user.id,
+        company=coupon.company,
+        fulfilled=False
+    ).first()
+    if coupon_request:
+        coupon_request.fulfilled = True
+        db.session.commit()
+
+    # שליחת נוטיפיקציה למוכר
+    seller_notification = Notification(
+        user_id=coupon.user_id,
+        message=f"{current_user.first_name} {current_user.last_name} מעוניין לרכוש את הקופון שלך.",
+        link=url_for('transactions.my_transactions')
+    )
+    db.session.add(seller_notification)
+    db.session.commit()
+
+    # שליחת מייל למוכר
+    try:
+        seller = User.query.get(coupon.user_id)
+        buyer = current_user
+        subject = "יש לך קונה חדש!"
+        html_content = render_template(
+            'emails/seller_new_buyer.html',
+            seller=seller,
+            buyer=buyer,
+            coupon=coupon,
+            transaction=new_transaction
+        )
+
+        send_email(
+            sender_email='itayk93@gmail.com',
+            sender_name='MaCoupon',
+            recipient_email=seller.email,
+            recipient_name=f"{seller.first_name} {seller.last_name}",
+            subject=subject,
+            html_content=html_content
+        )
+        current_app.logger.info(f"[DEBUG] email sent to seller {seller.email} about new buyer")
+    except Exception as e:
+        current_app.logger.error(f"[ERROR] sending email to seller: {e}")
+        flash('נוצרה העסקה, אך לא הצלחנו לשלוח מייל למוכר.', 'warning')
+
+    flash('נוצרה בקשת רכישה. על המוכר לאשר זאת.', 'success')
+    return redirect(url_for('transactions.my_transactions'))

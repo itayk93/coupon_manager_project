@@ -1,0 +1,160 @@
+<!-- templates/select_coupon_offer_options.html -->
+{% extends 'base.html' %}
+
+{% block title %}הצע קופון למשתמש{% endblock %}
+
+{% block content %}
+<section class="offer-coupon-section">
+    <h2>הצע קופון למשתמש שביקש</h2>
+
+    <form action="{{ url_for('marketplace.offer_coupon_process', request_id=coupon_request.id) }}" method="post">
+        {{ form.hidden_tag() }}
+
+        <!-- הודעה אישית (אופציונלי) -->
+        <div class="form-group">
+            <label for="seller_message">הודעה למבקש הקופון (אופציונלי):</label>
+            {{ form.seller_message(class="input-field", id="seller_message") }}
+            {% for error in form.seller_message.errors %}
+                <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+
+        <!-- רדיובטן: existing / new -->
+        <div class="form-group">
+            <label>בחר איך תרצה להציע קופון:</label><br>
+            {{ form.offer_choice }}
+            {% for error in form.offer_choice.errors %}
+                <span class="error-message">{{ error }}</span><br>
+            {% endfor %}
+        </div>
+
+        <!-- כרטיס "קופון קיים" -->
+        <div id="existing_coupon_div" style="display: block;">
+            <label for="existing_coupon_select">בחר קופון קיים:</label>
+            <select id="existing_coupon_select" name="existing_coupon_id" class="input-field">
+                <option value="">בחר קופון</option>
+                {% for c in seller_coupons %}
+                  <option value="{{ c.id }}">
+                    {{ c.company }} | ערך={{ '%.2f'|format(c.value) }} ש"ח | עלות={{ '%.2f'|format(c.cost) }} ש"ח
+                  </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- כרטיס "קופון חדש" -->
+        <div id="new_coupon_div" style="display: none;">
+            <h4>צור קופון חדש למכירה</h4>
+
+            <div class="form-group">
+                <label for="company_select">שם חברה:</label>
+                {{ form.company_select(class="input-field", id="company_select") }}
+                {% for error in form.company_select.errors %}
+                    <span class="error-message">{{ error }}</span><br>
+                {% endfor %}
+            </div>
+
+            <div class="form-group" id="other_company_group" style="display: none;">
+                <label for="other_company">שם חברה חדשה:</label>
+                {{ form.other_company(class="input-field", id="other_company") }}
+                {% for error in form.other_company.errors %}
+                    <span class="error-message">{{ error }}</span><br>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                <label for="value">ערך מקורי (ש"ח):</label>
+                {{ form.value(class="input-field", id="value") }}
+                {% for error in form.value.errors %}
+                    <span class="error-message">{{ error }}</span><br>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                <label for="cost">מחיר מבוקש (ש"ח):</label>
+                {{ form.cost(class="input-field", id="cost") }}
+                {% for error in form.cost.errors %}
+                    <span class="error-message">{{ error }}</span><br>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="action-button">{{ form.submit.label.text }}</button>
+        </div>
+    </form>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const radios = document.getElementsByName("offer_choice");
+    const existingDiv = document.getElementById("existing_coupon_div");
+    const newDiv = document.getElementById("new_coupon_div");
+
+    function toggleOfferChoice() {
+        let choice = null;
+        for (const r of radios) {
+            if (r.checked) {
+                choice = r.value;
+                break;
+            }
+        }
+        existingDiv.style.display = (choice === "existing") ? "block" : "none";
+        newDiv.style.display = (choice === "new") ? "block" : "none";
+    }
+
+    for (const r of radios) {
+        r.addEventListener('change', toggleOfferChoice);
+    }
+    toggleOfferChoice(); // למקרה שברירת המחדל היא existing
+
+    // טיפול בחברה חדשה
+    const companySelect = document.getElementById("company_select");
+    const otherCompanyGroup = document.getElementById("other_company_group");
+    const otherCompanyInput = document.getElementById("other_company");
+
+    function toggleOtherCompany() {
+        if (companySelect && companySelect.value === 'other') {
+            otherCompanyGroup.style.display = 'block';
+        } else {
+            otherCompanyGroup.style.display = 'none';
+            if (otherCompanyInput) {
+                otherCompanyInput.value = '';
+            }
+        }
+    }
+    if (companySelect) {
+        companySelect.addEventListener('change', toggleOtherCompany);
+        toggleOtherCompany();
+    }
+});
+</script>
+
+<style>
+.offer-coupon-section {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.input-field {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.action-button {
+    padding: 10px 15px;
+    background-color: #2E86C1;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.error-message {
+    color: red;
+    font-size: 0.9em;
+}
+</style>
+{% endblock %}

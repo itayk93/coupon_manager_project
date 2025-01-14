@@ -1,0 +1,137 @@
+<!-- templates/emails/offer_coupon_email.html -->
+<!DOCTYPE html>
+<html lang="he" dir="rtl" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>המוכר מציע לך קופון!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+        }
+        .email-container {
+            width: 100%;
+            background-color: #f9f9f9;
+            padding: 20px 0;
+        }
+        .email-content {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            background-color: #2E86C1;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .body {
+            padding: 20px;
+            color: #2C3E50;
+            text-align: right;
+        }
+        .body p {
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        .highlight {
+            color: #2E86C1;
+            font-weight: bold;
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .button {
+            background-color: #2E86C1;
+            color: #ffffff;
+            padding: 15px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #A9CCE3;
+        }
+        .footer {
+            background-color: #f0f0f0;
+            color: #7f8c8d;
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+        }
+        .footer p {
+            margin: 0;
+        }
+        @media only screen and (max-width: 600px) {
+            .email-content {
+                width: 100% !important;
+            }
+            .button {
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body dir="rtl">
+    <div class="email-container">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+                <td align="center">
+                    <div class="email-content">
+                        <div class="header">
+                            <h1>המוכר מציע לך קופון!</h1>
+                        </div>
+                        <div class="body">
+                            <p>שלום {{ buyer.first_name }},</p>
+                            <p>המוכר <strong>{{ seller.first_name }} {{ seller.last_name }}</strong> מציע לך קופון חדש:</p>
+
+                            <p>
+                                <strong class="highlight">חברה:</strong> {{ coupon.company }}<br>
+                                <strong class="highlight">קוד קופון:</strong> {{ coupon.code }}<br>
+                                <strong class="highlight">ערך הקופון:</strong> {{ coupon.value }} ש"ח<br>
+                                <strong class="highlight">מחיר מבוקש:</strong> {{ coupon.cost }} ש"ח
+                            </p>
+
+                            {% if seller_message %}
+                            <p>
+                                <strong>הודעה אישית מהמוכר:</strong><br>
+                                {{ seller_message }}
+                            </p>
+                            {% endif %}
+
+                            <p>כדי לצפות בפרטי ההצעה או להשלים את הרכישה, לחץ על הכפתור:</p>
+                            <div class="button-container">
+                                <a href="{{ buy_link }}" class="button">לרכישה</a>
+                            </div>
+                            <p>אם יש לך שאלות או צורך בעזרה נוספת, אל תהסס ליצור איתנו קשר.</p>
+                            <p>בברכה,<br>צוות MaCoupon</p>
+                        </div>
+                        <div class="footer">
+                            <p>© 2025 MaCoupon. כל הזכויות שמורות.</p>
+                            <p>כתובת: רחוב הדוגמא 123, תל אביב</p>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

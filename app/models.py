@@ -267,6 +267,7 @@ class Transaction(db.Model):
     seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     buyer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     status = db.Column(db.String(20), nullable=False, default='ממתין לאישור המוכר')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)  # הוסף שדה זה
     timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     buyer_phone = db.Column(db.String(20), nullable=True)
     seller_phone = db.Column(db.String(20), nullable=True)

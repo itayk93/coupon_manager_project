@@ -661,3 +661,51 @@ class ReviewSellerForm(FlaskForm):
     )
     comment = TextAreaField('הערה (אופציונלי)', validators=[Optional()])
     submit = SubmitField('שלח ביקורת')
+
+# app/forms.py
+from flask_wtf import FlaskForm
+from wtforms import (
+    StringField, FloatField, RadioField, TextAreaField, SelectField, SubmitField
+)
+from wtforms.validators import DataRequired, Optional, Length, NumberRange
+
+class OfferCouponForm(FlaskForm):
+    seller_message = TextAreaField(
+        "הודעה למבקש הקופון (אופציונלי)",
+        validators=[Optional()]  # לא חובה
+    )
+    # רדיובטן לבחירה בין "existing" או "new"
+    offer_choice = RadioField(
+        "בחר אופן הצעת קופון",
+        choices=[('existing', 'קופון קיים'), ('new', 'קופון חדש')],
+        default='existing',
+        validators=[DataRequired(message="יש לבחור קופון קיים או חדש.")]
+    )
+
+    # שדות כשבוחרים "new"
+    company_select = SelectField(
+        'שם החברה',
+        choices=[],
+        validators=[Optional()]
+    )
+    other_company = StringField(
+        'שם חברה חדשה',
+        validators=[Optional(), Length(max=255)]
+    )
+    value = FloatField(
+        "ערך מקורי (בש\"ח)",
+        validators=[
+            Optional(),
+            NumberRange(min=0, message="הערך חייב להיות >= 0.")
+        ]
+    )
+    cost = FloatField(
+        "מחיר מבוקש (בש\"ח)",
+        validators=[
+            Optional(),
+            NumberRange(min=0, message="המחיר חייב להיות >= 0.")
+        ]
+    )
+
+    submit = SubmitField("שלח הצעה")
+
