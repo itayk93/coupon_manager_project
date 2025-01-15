@@ -1,19 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
-from sqlalchemy.exc import IntegrityError
-from datetime import datetime
-import logging
-
-from app.models import CouponRequest, User, Company, db
-from app.forms import DeleteCouponRequestForm,RequestCouponForm
-from app.helpers import send_coupon_purchase_request_email, get_geo_location  # או הגדר כאן את get_geo_location
-
-requests_bp = Blueprint('requests', __name__)
-logger = logging.getLogger(__name__)
-from sqlalchemy.sql import text
-
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
-from flask_login import login_required, current_user
 from datetime import datetime
 import logging
 
@@ -27,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def log_user_activity(action, coupon_id=None):
     """
-    פונקציה לרישום פעילות המשתמש (activity log).
+    Function to log user activity.
     """
     try:
         ip_address = request.remote_addr
@@ -122,10 +108,10 @@ def delete_coupon_request(id):
 @login_required
 def request_coupon():
     """
-    מסך בקשת קופון:
-    - המשתמש בוחר חברה קיימת או 'other' להזנת חברה חדשה.
-    - ממלא עלות מבוקשת, ערך מבוקש, אחוז הנחה, קוד קופון (לא חובה) והסבר נוסף.
-    - נשמר לטבלת coupon_requests.
+    Coupon Request Screen:
+    - The user selects an existing company or 'other' to enter a new company.
+    - Fills in the requested cost, requested value, discount percentage, coupon code (optional), and additional description.
+    - Saved to the coupon_requests table.
     """
     log_user_activity("request_coupon_view")
 
@@ -146,21 +132,16 @@ def request_coupon():
         code = form.code.data.strip() if form.code.data else ''
         description = form.description.data.strip() if form.description.data else ''
 
-        # קובעים את שם החברה (אם בחרו "other" - ניקח מהטקסט, אחרת ניקח מה-DB)
+        # Determine the company name (if "other" is selected - take from the text, otherwise take from the DB)
         if selected_company_id == 'other':
-            # משתמש הזין חברה חדשה
+            # User entered a new company
             company_name = other_company_name
-            # אפשר לשמור גם כ-company object חדש, במידה ורוצים לעדכן בטבלת companies:
-            # new_company = Company(name=company_name, image_path='default.png')
-            # db.session.add(new_company)
-            # db.session.flush()
-            # ואז company_name = new_company.name
         else:
-            # משתמש בחר חברה קיימת
+            # User selected an existing company
             existing_company = Company.query.get_or_404(int(selected_company_id))
             company_name = existing_company.name
 
-        # נרשום ל-DB את הבקשה
+        # Save the request to the DB
         coupon_req = CouponRequest(
             company=company_name,
             other_company=other_company_name,  # אם המשתמש באמת הזין משהו
@@ -172,9 +153,6 @@ def request_coupon():
             date_requested=datetime.utcnow(),
             fulfilled=False
         )
-        # אם רוצים גם לשמור discount_percentage ב-DB, צריך לוודא שיש עמודה כזו ב-CouponRequest
-        # לדוגמה:
-        # coupon_req.discount_percentage = discount_percentage
 
         try:
             db.session.add(coupon_req)
@@ -188,7 +166,7 @@ def request_coupon():
             logger.error(f"Error creating coupon request: {e}")
             flash('אירעה שגיאה בעת שמירת הבקשה למסד הנתונים.', 'danger')
 
-    # אם GET או נפלה שגיאת ולידציה, נציג את הטופס
+    # If GET or validation error occurred, display the form
     return render_template('request_coupon.html', form=form, companies=companies)
 
 @requests_bp.route('/buy_slots', methods=['GET', 'POST'])

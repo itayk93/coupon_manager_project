@@ -12,66 +12,30 @@ import traceback
 import re
 from io import BytesIO
 from datetime import datetime, timezone
-from sqlalchemy.sql import text
-
-from datetime import datetime
-from flask import request, current_app
-from app.helpers import get_geo_location
-from flask_login import current_user
-from sqlalchemy.sql import text
-from app.extensions import db
-from app.forms import MarkCouponAsFullyUsedForm
-from app.helpers import get_geo_location, get_public_ip
-
-from datetime import datetime
+import pytz
+import logging
+from fuzzywuzzy import fuzz
 
 from app.extensions import db
 from app.models import (
-    Coupon, Company, Tag, CouponUsage, Transaction, Notification, CouponRequest, GptUsage, CouponTransaction
+    Coupon, Company, Tag, CouponUsage, Transaction, Notification, CouponRequest, GptUsage, CouponTransaction, coupon_tags
 )
 from app.forms import (
     ProfileForm, SellCouponForm, UploadCouponsForm, AddCouponsBulkForm, CouponForm,
     DeleteCouponsForm, ConfirmDeleteForm, MarkCouponAsUsedForm, EditCouponForm,
-    ApproveTransactionForm, SMSInputForm, UpdateCouponUsageForm, DeleteCouponForm
+    ApproveTransactionForm, SMSInputForm, UpdateCouponUsageForm, DeleteCouponForm,
+    UploadImageForm, DeleteCouponRequestForm, RateUserForm
 )
-from app.helpers import (
-    update_coupon_status, get_coupon_data, process_coupons_excel,
-    extract_coupon_detail_sms, extract_coupon_detail_image_proccess
-)
-from app.helpers import send_coupon_purchase_request_email, send_email
-from fuzzywuzzy import fuzz
-
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
-from app.extensions import db
-from app.models import Coupon, Notification, CouponUsage, CouponTransaction
-from app.helpers import send_email, update_coupon_status, get_coupon_data
-from datetime import datetime, timezone
-import logging
-from app.forms import UploadImageForm
-from app.forms import DeleteCouponRequestForm
-from app.forms import RateUserForm
-from app.models import User
-from app.helpers import get_most_common_tag_for_company
-from app.models import coupon_tags
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
-from flask_login import login_required, current_user
-from app.extensions import db
 from app.helpers import (
     update_coupon_status, get_coupon_data, process_coupons_excel,
     extract_coupon_detail_sms, extract_coupon_detail_image_proccess,
-    create_notification, update_coupon_usage, update_all_active_coupons
+    send_email, get_most_common_tag_for_company, get_geo_location,
+    get_public_ip, update_coupon_usage, update_all_active_coupons
 )
-import logging
-from app.helpers import get_geo_location, get_public_ip
-import traceback
-import traceback
 
 logger = logging.getLogger(__name__)
 
 coupons_bp = Blueprint('coupons', __name__)
-import pytz
-
 def to_israel_time_filter(dt):
     """Converts UTC datetime to Israel time and formats as string."""
     if not dt:
@@ -86,14 +50,14 @@ def add_coupon_transaction(coupon):
     הוספת רשומה לטבלת coupon_transaction כאשר מתווסף קופון חדש.
     """
     new_transaction = CouponTransaction(
-        coupon_id=coupon.id,  # מזהה הקופון
-        transaction_date=datetime.utcnow(),  # התאריך והשעה הנוכחיים
-        card_number='',  # אין מספר כרטיס
-        recharge_amount=coupon.value,  # הערך המקורי של הקופון
-        usage_amount=0,  # עדיין לא נעשה שימוש
-        location="קופון שהוזן ידנית",  # מיקום ידני
-        reference_number="ManualEntry",  # רפרנס ספציפי לתוספת ידנית
-        source="User"  # המשתמש שהוסיף
+        coupon_id=coupon.id,  # Coupon ID
+        transaction_date=datetime.utcnow(),  # Current date and time
+        card_number='',  # No card number
+        recharge_amount=coupon.value,  # Original value of the coupon
+        usage_amount=0,  # No usage yet
+        location="Manually entered coupon",  # Manual location
+        reference_number="ManualEntry",  # Specific reference for manual entry
+        source="User"  # User who added
     )
     db.session.add(new_transaction)
     db.session.commit()
@@ -135,10 +99,10 @@ def log_user_activity(action, coupon_id=None):
 @login_required
 def sell_coupon():
     """
-    מסך/נקודת קצה למכירת קופון. מאפשר הזנת פרטי הקופון,
-    מחשב אוטומטית את אחוז ההנחה,
-    ומוסיף תגית באופן אוטומטי לפי שם החברה (אם נמצאה).
-    אין אפשרות ידנית לבחירת תגית.
+    Endpoint for selling a coupon. Allows entering coupon details,
+    automatically calculates the discount percentage,
+    and adds a tag automatically based on the company name (if found).
+    There is no manual option for selecting a tag.
     """
     # -- activity log snippet --
     log_user_activity("sell_coupon_view", None)
@@ -224,15 +188,15 @@ def sell_coupon():
         )
 
         # ------------------------------------------------------------
-        # זיהוי תגית אוטומטי לפי שם החברה
+        # Automatic tag identification based on company name
         # ------------------------------------------------------------
         chosen_company_name = company.name
-        current_app.logger.info(f"[DEBUG] sell_coupon => chosen_company_name = '{chosen_company_name}'")
+        current_app.logger.info(f"[DEBUG] sell_coupon => chosen_company = '{chosen_company_name}'")
 
-        found_tag = get_most_common_tag_for_company(chosen_company_name)
+        # Retrieve the most common tag for the chosen company
         current_app.logger.info(f"[DEBUG] sell_coupon => auto found_tag = '{found_tag}'")
 
-        # אם נמצאה תגית תואמת, מוסיפים אותה
+        # If a matching tag is found, add it to the coupon
         if found_tag:
             new_coupon.tags.append(found_tag)
 
@@ -241,8 +205,7 @@ def sell_coupon():
         try:
             db.session.commit()
 
-            # הוספת שורה ל-coupon_transaction
-            add_coupon_transaction(new_coupon)
+            # הוספת שורה ל-co        # אם נמצאה תגית תואמת, מוסיפים אותה  add_coupon_transaction(new_coupon)
 
             # -- activity log snippet --
             try:
