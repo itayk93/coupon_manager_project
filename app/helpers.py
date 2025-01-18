@@ -29,7 +29,7 @@ load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 IMGUR_CLIENT_ID = os.getenv("IMGUR_CLIENT_ID")
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
-SENDER_NAME = "MaCoupon"
+SENDER_NAME = "Coupon Master"
 
 logger = logging.getLogger(__name__)
 
@@ -1391,9 +1391,9 @@ def send_password_reset_email(user):
         reset_url=reset_url
     )
 
-    subject = "בקשת שחזור סיסמה - MaCoupon"
+    subject = "בקשת שחזור סיסמה - Coupon Master"
     sender_email = 'CouponMasterIL2@gmail.com'
-    sender_name = 'MaCoupon'
+    sender_name = 'Coupon Master'
     recipient_email = user.email
     recipient_name = user.first_name or 'משתמש יקר'
 

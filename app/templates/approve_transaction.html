@@ -21,13 +21,15 @@
                        class="input-field"
                        name="code"
                        value="{{ transaction.coupon.code if transaction.coupon.code else '' }}"
-                       placeholder="הכנס קוד קופון">
+                       placeholder="הכנס קוד קופון" required>
                 <span class="error-message" id="code-error" style="display:none;">קוד קופון הוא שדה חובה</span>
             </div>
         
             <div class="form-group">
                 {{ form.seller_phone.label }}<span class="required">*</span>
-                <input type="tel" id="seller_phone" class="input-field" maxlength="11" placeholder="0__-_______" dir="ltr" style="text-align: left; direction: ltr;" pattern="[0-9]{3}-[0-9]{7}" inputmode="tel" autocomplete="tel">
+                <input type="tel" id="seller_phone" name="seller_phone" class="input-field" maxlength="11"
+                       placeholder="0__-_______" dir="ltr" style="text-align: left; direction: ltr;"
+                       pattern="[0-9]{3}-[0-9]{7}" inputmode="tel" autocomplete="tel" required>
                 {% for error in form.seller_phone.errors %}
                     <span class="error-message">{{ error }}</span><br>
                 {% endfor %}
@@ -41,7 +43,7 @@
             <div id="card_fields_container" style="display: none;">
                 <div class="form-group">
                     {{ form.card_exp.label }}
-                    {{ form.card_exp(class="input-field", id="card_exp") }}
+                    <input type="text" id="card_exp" name="card_exp" class="input-field">
                     {% for error in form.card_exp.errors %}
                         <span class="error-message">{{ error }}</span><br>
                     {% endfor %}
@@ -49,7 +51,7 @@
         
                 <div class="form-group">
                     {{ form.cvv.label }}
-                    {{ form.cvv(class="input-field", id="cvv") }}
+                    <input type="text" id="cvv" name="cvv" class="input-field">
                     {% for error in form.cvv.errors %}
                         <span class="error-message">{{ error }}</span><br>
                     {% endfor %}
@@ -57,7 +59,7 @@
             </div>
         
             <div class="form-group">
-                {{ form.submit(class="submit-button") }}
+                <button type="submit" class="submit-button">אשר עסקה</button>
             </div>
         </form>        
     {% elif transaction.status == 'ממתין לאישור הקונה' or transaction.seller_approved %}
@@ -76,6 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const codeField = document.getElementById('code-field');
     const codeError = document.getElementById('code-error');
+    const phoneField = document.getElementById('seller_phone');
 
     form.addEventListener('submit', function (event) {
         codeError.style.display = 'none';
@@ -84,7 +87,6 @@ document.addEventListener('DOMContentLoaded', function () {
             event.preventDefault();
         }
 
-        const phoneField = document.getElementById('seller_phone');
         const phoneValue = phoneField.value.trim();
         const phonePattern = /^0\d{2}-\d{7}$/;
         if (!phonePattern.test(phoneValue)) {
@@ -93,8 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    const phoneField = document.getElementById('seller_phone');
-    phoneField.addEventListener('input', function (event) {
+    phoneField.addEventListener('input', function () {
         let value = phoneField.value.replace(/\D/g, '');
         if (value.length > 1) {
             value = value.substring(0, 1) + value.substring(1, 3) + '-' + value.substring(3, 10);

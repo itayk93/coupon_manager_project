@@ -268,7 +268,7 @@ def seller_cancel_transaction(transaction_id):
     try:
         send_email(
             sender_email='CouponMasterIL2@gmail.com',
-            sender_name='MaCoupon',
+            sender_name='Coupon Master',
             recipient_email=buyer.email,
             recipient_name=f'{buyer.first_name} {buyer.last_name}',
             subject='המוכר ביטל את העסקה',
@@ -545,7 +545,7 @@ def offer_coupon_process(request_id):
     try:
         send_email(
             sender_email='CouponMasterIL2@gmail.com',
-            sender_name='MaCoupon',
+            sender_name='Coupon Master',
             recipient_email=buyer.email,
             recipient_name=f"{buyer.first_name} {buyer.last_name}",
             subject='המוכר מציע לך קופון!',

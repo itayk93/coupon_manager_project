@@ -243,6 +243,15 @@
         vertical-align: middle;
     }
 
+    /* הסתרת עמודת "תאריך עדכון" במסכים קטנים */
+    @media (max-width: 768px) {
+        .transaction-table th:nth-child(6),
+        .transaction-table td:nth-child(6) {
+            display: none;
+        }
+    }
+
+
     .transaction-table th {
         background-color: var(--secondary-color);
         color: var(--text-color);

@@ -14,7 +14,7 @@ from send_mail import send_email
 
 # טוען משתני סביבה (אם צריך)
 load_dotenv()
-SENDER_NAME = "MaCoupon"
+SENDER_NAME = "Coupon Master"
 
 scheduler = BackgroundScheduler()
 

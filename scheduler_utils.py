@@ -62,7 +62,7 @@ def update_company_counts_and_send_email(app):
             subject = "עדכון יומי: company_count"
             send_email(
                 sender_email="CouponMasterIL2@gmail.com",
-                sender_name="MaCoupon",
+                sender_name="Coupon Master",
                 recipient_email=recipient_email,
                 recipient_name="Itay",
                 subject=subject,

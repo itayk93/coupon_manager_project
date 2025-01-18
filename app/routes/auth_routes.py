@@ -173,10 +173,10 @@ def register():
         html = render_template('emails/account_confirmation.html', user=new_user, confirmation_link=confirm_url)
 
         sender_email = 'itayk93@gmail.com'
-        sender_name = 'MaCoupon'
+        sender_name = 'Coupon Master'
         recipient_email = new_user.email
         recipient_name = new_user.first_name
-        subject = 'אישור חשבון ב-MaCoupon'
+        subject = 'אישור חשבון ב-Coupon Master'
 
         try:
             send_email(
