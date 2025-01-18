@@ -150,6 +150,7 @@ def update_coupon_usage(coupon, usage_amount, details='עדכון שימוש'):
         logger.error(f"Error updating coupon usage for coupon {coupon.id}: {e}")
         raise
 
+'''''''''''''''
 # ----------------------------------------------------------------
 #  פונקציית עזר לעדכון מרוכז של כל הקופונים הפעילים של משתמש
 # ----------------------------------------------------------------
@@ -183,6 +184,7 @@ def update_all_active_coupons(user_id):
             failed_coupons.append(coupon.code)
 
     return updated_coupons, failed_coupons
+'''''''''''''''
 
 
 
@@ -220,8 +222,12 @@ def get_coupon_data(coupon_number, save_directory="multipass/input_html"):
             EC.visibility_of_element_located((By.ID, "newcardid"))
         )
         card_number_field.clear()
-        card_number_field.send_keys(str(coupon_number).split("-")[0])
 
+        # matching the coupon type of multipass
+        cleaned_coupon_number = str(coupon_number[:-4]).replace("-", "")  # לוקח את כל הספרות חוץ מה-4 האחרונות
+        card_number_field.send_keys(cleaned_coupon_number)
+
+        #card_number_field.send_keys(str(coupon_number).split("-")[0])
         print("Coupon number entered.")
 
         recaptcha_iframe = wait.until(
@@ -479,10 +485,10 @@ def convert_coupon_data(file_path):
     df['transaction_date'] = df['transaction_date'].where(pd.notnull(df['transaction_date']), None)
 
     # שמירת ה-DataFrame כ-Excel
-    save_directory = "/Users/itaykarkason/Desktop/coupon_manager_project/multipass/input_html"
-    xlsx_filename = f"coupon_test.xlsx"
-    xlsx_path = os.path.join(save_directory, xlsx_filename)
-    df.to_excel(xlsx_path, index=False)
+    #save_directory = "/Users/itaykarkason/Desktop/coupon_manager_project/multipass/input_html"
+    #xlsx_filename = f"coupon_test.xlsx"
+    #xlsx_path = os.path.join(save_directory, xlsx_filename)
+    #df.to_excel(xlsx_path, index=False)
 
     return df
 
@@ -1014,6 +1020,7 @@ def update_coupon_status(coupon):
     except Exception as e:
         logger.error(f"Error in update_coupon_status for coupon {coupon.id}: {e}")
 
+
 def process_coupons_excel(file_path, user):
     """
     Processes an Excel file containing coupon data and adds the coupons to the database.
@@ -1025,9 +1032,22 @@ def process_coupons_excel(file_path, user):
        2) missing_optional_fields_messages: רשימת התראות על שדות אופציונליים חסרים,
        3) new_coupons: רשימת אובייקטי Coupon שהתווספו בהצלחה לדאטהבייס.
     """
+    from app.models import Coupon, Company, Tag, coupon_tags
+    from datetime import datetime
+    import pandas as pd
+    import os
+    from sqlalchemy import func
+    from app.extensions import db
+    from flask import flash
+    from sqlalchemy.exc import IntegrityError
+
     try:
-        # קריאת הקובץ לאובייקט DataFrame
-        df = pd.read_excel(file_path)
+        # במקום להשתמש ב-parse_dates=["תאריך תפוגה"] (שעלול להחזיר NaT),
+        # נקרא כטקסט ונמיר ידנית (אם קיים).
+        df = pd.read_excel(file_path, dtype=str)  # קורא את כל העמודות כמחרוזות
+        # אם בכל זאת אתה רוצה לקרוא את חלק מהשדות כמספרים, אפשר אח"כ להמיר אותם.
+        # כאן, לקריאה פשוטה, נשתמש במחרוזות בלבד.
+
         existing_tags = {tag.name: tag for tag in Tag.query.all()}  # טעינת תגיות קיימות
         cache_tags = existing_tags.copy()
 
@@ -1037,75 +1057,134 @@ def process_coupons_excel(file_path, user):
 
         for index, row in df.iterrows():
             try:
-                # קריאת נתונים מהשורה
+                # 1. קריאת הנתונים מהשדות (במחרוזת).
                 code = str(row.get('קוד קופון', '')).strip()
-                value = row.get('ערך מקורי', None)
-                cost = row.get('עלות', None)
+                value_str = row.get('ערך מקורי', '')  # מחרוזת
+                cost_str = row.get('עלות', '')  # מחרוזת
                 company_name = str(row.get('חברה', '')).strip()
                 description = row.get('תיאור', '') or ''
-                expiration = row.get('תאריך תפוגה', None)
+                date_str = row.get('תאריך תפוגה', '') or ''
 
-                # בדיקת ערכים חסרים
+                # 2. קריאה של שדות בוליאניים/טקסט נוספים (אם יש).
+                one_time_str = row.get('קוד לשימוש חד פעמי', 'False')  # בדיפולט False
+                purpose = row.get('מטרת הקופון', '') or ''
+                tags_field = row.get('תגיות', '') or ''
+
+                # 3. בדיקת ערכים חסרים
                 missing_fields = []
                 if not code:
                     missing_fields.append('קוד קופון')
-                if value is None or pd.isna(value):
+                if not value_str:
                     missing_fields.append('ערך מקורי')
-                if cost is None or pd.isna(cost):
+                if not cost_str:
                     missing_fields.append('עלות')
                 if not company_name:
                     missing_fields.append('חברה')
 
                 if missing_fields:
-                    invalid_coupons.append(f'שורה {index + 2}: חסרים שדות חובה: {", ".join(missing_fields)}')
+                    invalid_coupons.append(
+                        f'שורה {index + 2}: חסרים שדות חובה: {", ".join(missing_fields)}'
+                    )
                     continue
 
-                # עיבוד נתונים אופציונליים
-                if expiration:
-                    try:
-                        expiration = datetime.strptime(expiration, '%d/%m/%Y').date()
-                    except ValueError:
-                        expiration = None
-                        missing_optional_fields_messages.append(f'שורה {index + 2}: תאריך תפוגה בפורמט לא תקין.')
+                # 4. המרת value ו-cost למספרים (אם לא ניתנים להמרה, תופס ValueError)
+                try:
+                    value = float(value_str)
+                except ValueError:
+                    invalid_coupons.append(
+                        f'שורה {index + 2}: ערך מקורי אינו מספר תקין ({value_str}).'
+                    )
+                    continue
 
-                # מציאת החברה או יצירת חברה חדשה
+                try:
+                    cost = float(cost_str)
+                except ValueError:
+                    invalid_coupons.append(
+                        f'שורה {index + 2}: עלות אינה מספר תקין ({cost_str}).'
+                    )
+                    continue
+
+                # 5. המרת תאריך תפוגה
+                # === זהו החלק הקריטי לתיקון "strptime() argument 1 must be str, not NaTType" ===
+                # אם date_str ריק => expiration = None
+                # אם לא ריק => ננסה פרסינג בפורמט אחר (כמו %d/%m/%Y או %Y-%m-%d).
+                try:
+                    if not date_str.strip():
+                        # לא הוזן תאריך, פשוט נגדיר None
+                        expiration = None
+                    else:
+                        # כן הוזן ערך => ננסה להמיר
+                        # אפשר לנסות קודם %Y-%m-%d, ואם נכשל - %d/%m/%Y, וכו'.
+                        expiration = None
+                        # ננסה מערך פורמטים רלוונטיים
+                        possible_formats = ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y']
+                        for fmt in possible_formats:
+                            try:
+                                dt = datetime.strptime(date_str, fmt)
+                                expiration = dt.date()
+                                break
+                            except ValueError:
+                                pass
+                        if expiration is None:
+                            # לא הצלחנו להמיר => נתייחס כאל אין תאריך
+                            # או אם אתה רוצה לציין בשגיאה => תלוי בך.
+                            missing_optional_fields_messages.append(
+                                f'שורה {index + 2}: תאריך תפוגה בפורמט לא תקין (הוזן "{date_str}"). הוגדר כ-None.'
+                            )
+                            expiration = None
+                except Exception as e:
+                    expiration = None
+                # 6. המרת one_time_str לבוליאני
+                is_one_time = False
+                if isinstance(one_time_str, bool):
+                    is_one_time = one_time_str
+                else:
+                    # ננסה לראות אם זה "True"/"False" או "1"/"0"
+                    lower_str = one_time_str.lower().strip()
+                    if lower_str in ['true', '1', 'כן']:
+                        is_one_time = True
+                    else:
+                        is_one_time = False
+
+                # 7. טיפול בחברה: אם לא קיימת, ניצור
+                from app.models import Company
                 company = Company.query.filter_by(name=company_name).first()
                 if not company:
-                    company = Company(
-                        name=company_name,
-                        image_path="default_logo.png"  # הוספת ערך ברירת מחדל ל-image_path
-                    )
+                    company = Company(name=company_name, image_path="default_logo.png")
                     db.session.add(company)
 
-                # זיהוי תגית אוטומטית
-                most_common_tag = db.session.query(Tag).join(coupon_tags, Tag.id == coupon_tags.c.tag_id) \
+                # 8. מציאת / יצירת תגית אוטומטית (כמו שעשינו בעבר)
+                from app.models import Tag, coupon_tags, Coupon
+                most_common_tag = db.session.query(Tag) \
+                    .join(coupon_tags, Tag.id == coupon_tags.c.tag_id) \
                     .join(Coupon, Coupon.id == coupon_tags.c.coupon_id) \
                     .filter(func.lower(Coupon.company) == func.lower(company_name)) \
                     .group_by(Tag.id) \
                     .order_by(func.count(Tag.id).desc()) \
                     .first()
-
                 if not most_common_tag:
-                    # אם לא נמצאה תגית, ניצור אחת חדשה
-                    tag_name = f"Tag for {company_name}"
-                    most_common_tag = Tag(name=tag_name, count=1)
+                    # אם לא נמצאה תגית, ניצור אחת עם שם גנרי
+                    tag_name_for_company = f"Tag for {company_name}"
+                    most_common_tag = Tag(name=tag_name_for_company, count=1)
                     db.session.add(most_common_tag)
                 else:
                     most_common_tag.count += 1
 
-                # יצירת הקופון
+                # 9. יצירת הקופון ושמירתו
                 new_coupon = Coupon(
                     code=code,
                     value=value,
                     cost=cost,
                     company=company.name,
-                    description=description,
+                    description=str(description),
                     expiration=expiration,
                     user_id=user.id,
                     status='פעיל',  # ברירת מחדל
+                    is_one_time=is_one_time,
+                    purpose=purpose
                 )
+                # מוסיפים את התגית
                 new_coupon.tags.append(most_common_tag)
-
                 db.session.add(new_coupon)
                 new_coupons.append(new_coupon)
 
@@ -1134,6 +1213,7 @@ def process_coupons_excel(file_path, user):
         db.session.rollback()
         flash(f"אירעה שגיאה כללית: {str(e)}", "danger")
         raise e  # Re-raise exception to handle it in the calling function
+
 
 def complete_transaction(transaction):
     try:
@@ -1291,4 +1371,66 @@ def get_geo_location(ip_address):
             "as": None,
             "query": None,
         }
+
+# app/helpers.py
+
+def send_password_reset_email(user):
+    """
+    שולח מייל שחזור סיסמה למשתמש.
+    """
+    from flask import url_for, render_template
+    from app.helpers import send_email
+
+    # כאן נשתמש בפונקציה החדשה
+    token = generate_password_reset_token(user.email)
+    reset_url = url_for('auth.reset_password', token=token, _external=True)
+
+    html = render_template(
+        'emails/password_reset_email.html',
+        user=user,
+        reset_url=reset_url
+    )
+
+    subject = "בקשת שחזור סיסמה - MaCoupon"
+    sender_email = 'CouponMasterIL2@gmail.com'
+    sender_name = 'MaCoupon'
+    recipient_email = user.email
+    recipient_name = user.first_name or 'משתמש יקר'
+
+    send_email(
+        sender_email=sender_email,
+        sender_name=sender_name,
+        recipient_email=recipient_email,
+        recipient_name=recipient_name,
+        subject=subject,
+        html_content=html
+    )
+
+# app/helpers.py
+
+def generate_password_reset_token(email, expiration=3600):
+    """
+    יוצרת טוקן מסוג Time-Limited עבור שחזור סיסמה.
+    :param email: האימייל שאליו משוייך הטוקן
+    :param expiration: משך התוקף בשניות (ברירת מחדל: 3600 = שעה)
+    :return: מחרוזת טוקן חתום
+    """
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    return s.dumps(email, salt=current_app.config['SECURITY_PASSWORD_SALT'])
+
+def confirm_password_reset_token(token, expiration=3600):
+    """
+    בודקת את תקינות הטוקן ותוקפו עבור שחזור סיסמה.
+
+    :param token: המחרוזת שהגיעה ב-URL
+    :param expiration: פג תוקף בשניות (ברירת מחדל: 3600 = שעה)
+    :return: כתובת האימייל אם תקין, אחרת יזרק חריג (Exception)
+    """
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    email = s.loads(
+        token,
+        salt=current_app.config['SECURITY_PASSWORD_SALT'],
+        max_age=expiration
+    )
+    return email
 

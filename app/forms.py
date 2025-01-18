@@ -35,6 +35,7 @@ from wtforms import (
 from wtforms.validators import (
     DataRequired, Optional, Email, EqualTo, InputRequired, Length, NumberRange
 )
+from wtforms.validators import DataRequired, Optional, Length, NumberRange, Regexp
 
 # forms.py
 
@@ -172,6 +173,24 @@ class CouponForm(FlaskForm):
     )
     coupon_image = FileField('תמונה של הקופון', validators=[Optional()])  # הוסף שדה העלאת תמונה
     upload_image = SubmitField('העלה תמונה')  # כפתור להעלאת תמונה
+    
+    # Relevant for specific coupons
+    cvv = StringField(
+        'CVV',
+        validators=[
+            Optional(),
+            Length(min=3, max=4, message="CVV צריך להיות בין 3 ל-4 ספרות.")
+        ]
+    )
+    card_exp = StringField(
+        'תאריך כרטיס (MM/YY)',
+        validators=[
+            Optional(),
+            Regexp(r'^(0[1-9]|1[0-2])/[0-9]{2}$',
+                   message="יש להזין תאריך בפורמט MM/YY (לדוגמה: 12/29).")
+        ]
+    )
+
     submit_coupon = SubmitField('הוסף קופון')  # כפתור להוספת קופון
 
     def validate(self, extra_validators=None):
@@ -243,9 +262,27 @@ class BulkCouponForm(FlaskForm):
         validators=[Optional(), Length(max=255)]
     )
 
+    # Relevant for specific coupons
+    cvv = StringField(
+        'CVV',
+        validators=[
+            Optional(),
+            Length(min=3, max=4, message="CVV צריך להיות בין 3 ל-4 ספרות.")
+        ]
+    )
+    card_exp = StringField(
+        'תאריך כרטיס (MM/YY)',
+        validators=[
+            Optional(),
+            Regexp(r'^(0[1-9]|1[0-2])/[0-9]{2}$',
+                   message="יש להזין תאריך כרטיס בפורמט MM/YY.")
+        ]
+    )
 
 class AddCouponsBulkForm(FlaskForm):
     coupons = FieldList(FormField(CouponForm), min_entries=1)
+    cvv = StringField('CVV', validators=[Optional()])
+    card_exp = StringField('תוקף כרטיס', validators=[Optional()])
     submit = SubmitField('הוסף קופונים')
 
 
@@ -340,6 +377,23 @@ class SellCouponForm(FlaskForm):
         'מטרת הקופון',
         validators=[Optional(), Length(max=255)]
     )
+
+    # Relevant for specific coupons
+    cvv = StringField(
+        'CVV',
+        validators=[
+            Optional(),
+            Length(min=3, max=4, message="CVV צריך להיות בין 3 ל-4 ספרות.")
+        ]
+    )
+    card_exp = StringField(
+        'תאריך כרטיס (MM/YY)',
+        validators=[
+            Optional(),
+            Regexp(r'^(0[1-9]|1[0-2])/[0-9]{2}$',
+                   message="יש להזין תאריך כרטיס בפורמט MM/YY.")
+        ]
+    )
     submit = SubmitField('הוסף קופון למכירה')
 
     def validate(self, **kwargs):
@@ -372,17 +426,48 @@ class EditCouponForm(FlaskForm):
     description = TextAreaField('תיאור הקופון:', validators=[Optional()])
     is_one_time = BooleanField('קוד לשימוש חד פעמי')
     purpose = StringField('מטרת הקופון:', validators=[Optional()])
+    
+    # Relevant for specific coupons
+    cvv = StringField(
+        'CVV',
+        validators=[
+            Optional(),
+            Length(min=3, max=4, message="CVV צריך להיות בין 3 ל-4 ספרות.")
+        ]
+    )
+    card_exp = StringField(
+        'תאריך כרטיס (MM/YY)',
+        validators=[
+            Optional(),
+            Regexp(r'^(0[1-9]|1[0-2])/[0-9]{2}$',
+                   message="יש להזין תאריך בפורמט MM/YY.")
+        ]
+    )
+
     submit = SubmitField('שמור שינויים')
 
 
+# forms.py
+
 class RegisterForm(FlaskForm):
-    first_name = StringField('שם פרטי', validators=[InputRequired(), Length(min=2, max=150)])
-    last_name = StringField('שם משפחה', validators=[InputRequired(), Length(min=2, max=150)])
-    email = StringField('Email', validators=[InputRequired(), Email(message='אימייל לא תקין'), Length(max=150)])
-    password = PasswordField('סיסמה',
-                             validators=[InputRequired(), Length(min=8, message='סיסמה חייבת להכיל לפחות 8 תווים')])
+    first_name = StringField('שם פרטי', validators=[DataRequired(), Length(min=2, max=150)])
+    last_name = StringField('שם משפחה', validators=[DataRequired(), Length(min=2, max=150)])
+    email = StringField('Email', validators=[DataRequired(), Email(message='אימייל לא תקין'), Length(max=150)])
+    password = PasswordField('סיסמה', validators=[DataRequired(), Length(min=8, message='סיסמה חייבת לפחות 8 תווים')])
     confirm_password = PasswordField('אישור סיסמה',
-                                     validators=[InputRequired(), EqualTo('password', message='הסיסמאות לא תואמות')])
+                                     validators=[DataRequired(), EqualTo('password', message='סיסמאות לא תואמות')])
+
+    # gender - ערך חובה
+    gender = SelectField(
+        'מין',
+        choices=[
+            ('male', 'זכר'),
+            ('female', 'נקבה'),
+            ('other', 'אחר')
+        ],
+        validators=[DataRequired(message="יש לבחור מין")]
+    )
+
     submit = SubmitField('הרשמה')
 
 
@@ -394,14 +479,19 @@ class LoginForm(FlaskForm):
 
 
 class ProfileForm(FlaskForm):
-    first_name = StringField('שם פרטי', validators=[DataRequired()])  # שם פרטי
-    last_name = StringField('שם משפחה', validators=[DataRequired()])  # שם משפחה
+    first_name = StringField('שם פרטי', validators=[DataRequired()])
+    last_name = StringField('שם משפחה', validators=[DataRequired()])
     age = IntegerField('גיל', validators=[Optional()])
-    gender = SelectField('מין', choices=[
-        ('male', 'זכר'),
-        ('female', 'נקבה'),
-        ('other', 'אחר')
-    ], validators=[Optional()])
+    gender = SelectField(
+        'מין',
+        # הערך (value) הוא באנגלית, התווית (label) בעברית
+        choices=[
+            ('male', 'זכר'),
+            ('female', 'נקבה'),
+            ('other', 'אחר')
+        ],
+        validators=[Optional()]
+    )
     submit = SubmitField('שמור')
 
 
@@ -410,6 +500,22 @@ from app.models import Coupon  # הוסף שורה זו בראש הקובץ, י�
 class ApproveTransactionForm(FlaskForm):
     seller_phone = StringField('מספר טלפון', validators=[DataRequired()])
     code = StringField('קוד קופון', validators=[DataRequired(), Length(max=255)])
+        # Relevant for specific coupons
+    cvv = StringField(
+        'CVV',
+        validators=[
+            Optional(),
+            Length(min=3, max=4, message="CVV צריך להיות בין 3 ל-4 ספרות.")
+        ]
+    )
+    card_exp = StringField(
+        'תאריך כרטיס (MM/YY)',
+        validators=[
+            Optional(),
+            Regexp(r'^(0[1-9]|1[0-2])/[0-9]{2}$',
+                   message="יש להזין תאריך בפורמט MM/YY (לדוגמה: 12/29).")
+        ]
+    )
     submit = SubmitField('אשר עסקה')
 
     def validate_code(self, field):
@@ -510,7 +616,7 @@ class UpdateMultipassForm(FlaskForm):
     submit = SubmitField('עדכן נתונים מ-Multipass')
 
 class SMSInputForm(FlaskForm):
-    sms_text = TextAreaField('תוכן ההודעה שקיבלת ב-SMS:', validators=[Optional()])
+    sms_text = TextAreaField('תוכן ההודעה שהתקבלה ב-SMS:', validators=[Optional()])
     submit_sms = SubmitField('הבא')
 
 
@@ -709,3 +815,21 @@ class OfferCouponForm(FlaskForm):
 
     submit = SubmitField("שלח הצעה")
 
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Email, EqualTo, Length
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('אימייל', validators=[DataRequired(), Email(message="כתובת אימייל לא תקינה")])
+    submit = SubmitField('שלח בקשת שחזור סיסמה')
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('סיסמה חדשה', validators=[
+        DataRequired(),
+        Length(min=8, message='הסיסמה צריכה להיות באורך של 8 תווים לפחות.')
+    ])
+    confirm_password = PasswordField('אישור סיסמה חדשה', validators=[
+        DataRequired(),
+        EqualTo('password', message='הסיסמאות לא תואמות.')
+    ])
+    submit = SubmitField('אפס סיסמה')

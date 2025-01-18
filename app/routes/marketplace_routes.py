@@ -118,7 +118,7 @@ def marketplace():
         logger.error(f"Error fetching marketplace data: {e}")
         traceback.print_exc()
         flash("אירעה שגיאה בעת טעינת שוק הקופונים. אנא נסה שוב מאוחר יותר.", "danger")
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('marketplace.marketplace'))
 
 
 @marketplace_bp.route('/marketplace/coupon/<int:id>')

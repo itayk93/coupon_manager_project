@@ -30,7 +30,7 @@ from app.helpers import (
     update_coupon_status, get_coupon_data, process_coupons_excel,
     extract_coupon_detail_sms, extract_coupon_detail_image_proccess,
     send_email, get_most_common_tag_for_company, get_geo_location,
-    get_public_ip, update_coupon_usage, update_all_active_coupons
+    get_public_ip, update_coupon_usage
 )
 
 logger = logging.getLogger(__name__)
@@ -109,21 +109,21 @@ def sell_coupon():
 
     form = SellCouponForm()
 
-    # מביאים רק חברות (אין צורך בשליפת תגיות עבור בחירה ידנית)
+    # Fetch only companies (no need to fetch tags for manual selection)
     companies = Company.query.all()
 
-    # מכינים רשימת אפשרויות לבחירת חברה
+    # Prepare a list of options for company selection
     company_choices = [('', 'בחר חברה')]
     company_choices += [(str(company.id), company.name) for company in companies]
     company_choices.append(('other', 'אחר'))
     form.company_select.choices = company_choices
 
     if form.validate_on_submit():
-        # איסוף נתונים מהטופס
+        # Collect data from the form
         expiration = form.expiration.data
         purpose = form.purpose.data.strip() if form.is_one_time.data and form.purpose.data else None
 
-        # המרת קלט מהטופס
+        # Convert input from the form
         try:
             face_value = float(form.cost.data)  # כמה הקופון שווה בפועל
         except:
@@ -134,13 +134,13 @@ def sell_coupon():
         except:
             asked_price = 0.0
 
-        # חישוב אחוז ההנחה
+        # Calculate discount percentage
         if face_value > 0:
             discount_percentage = ((face_value - asked_price) / face_value) * 100
         else:
             discount_percentage = 0.0
 
-        # טיפול בבחירת חברה
+        # Handle company selection
         selected_company_id = form.company_select.data
         if selected_company_id == '':
             flash('יש לבחור חברה.', 'danger')
@@ -171,11 +171,11 @@ def sell_coupon():
                 flash('החברה שנבחרה אינה תקפה.', 'danger')
                 return redirect(url_for('coupons.sell_coupon'))
 
-        # יצירת אובייקט קופון (ללא discount_percentage, כי לא קיים בעמודות המודל)
+        # Create a coupon object (without discount_percentage, as it doesn't exist in the model columns)
         new_coupon = Coupon(
             code=form.code.data.strip(),
             value=face_value,    # face value
-            cost=asked_price,    # כמה המשתמש מבקש
+            cost=asked_price,    # user's asking price
             company=company.name,
             description=form.description.data.strip() if form.description.data else '',
             expiration=expiration,
@@ -184,7 +184,6 @@ def sell_coupon():
             is_for_sale=True,
             is_one_time=form.is_one_time.data,
             purpose=purpose
-            # אין discount_percentage כי הוא לא בעמודות Coupon
         )
 
         # ------------------------------------------------------------
@@ -205,9 +204,6 @@ def sell_coupon():
         try:
             db.session.commit()
 
-            # הוספת שורה ל-co        # אם נמצאה תגית תואמת, מוסיפים אותה  add_coupon_transaction(new_coupon)
-
-            # -- activity log snippet --
             try:
                 new_activity = {
                     "user_id": current_user.id,
@@ -232,7 +228,6 @@ def sell_coupon():
             except Exception as e:
                 db.session.rollback()
                 current_app.logger.error(f"Error logging activity [sell_coupon_created]: {e}")
-            # -- end snippet --
 
             flash('קופון למכירה נוסף בהצלחה!', 'success')
             return redirect(url_for('coupons.show_coupons'))
@@ -246,7 +241,7 @@ def sell_coupon():
             current_app.logger.error(f"Error adding coupon: {e}")
 
     else:
-        # אם הגענו ב־POST ויש שגיאות, מדפיסים log
+        # If we reached here with a POST request and there are errors, log them
         if request.method == 'POST':
             for field, errors in form.errors.items():
                 for error in errors:
@@ -313,7 +308,7 @@ def show_coupons():
 @login_required
 def upload_coupons():
     """
-    מסך העלאת קובץ אקסל וביצוע הוספה גורפת של קופונים למשתמש הנוכחי.
+    Excel file upload screen and bulk addition of coupons for the current user.
     """
     # -- activity log snippet --
     log_user_activity("upload_coupons_view", None)
@@ -326,18 +321,18 @@ def upload_coupons():
         file.save(file_path)
 
         try:
-            # כעת אנו מקבלים 3 ערכים: רשימת שגיאות, רשימת אזהרות, ורשימת קופונים חדשים.
+            # Now we receive 3 values: list of errors, list of warnings, and list of new coupons.
             invalid_coupons, missing_optional_fields_messages, new_coupons = process_coupons_excel(file_path, current_user)
 
-            # מציגים אזהרות לגבי שדות אופציונליים חסרים
+            # Display warnings about missing optional fields
             for msg in missing_optional_fields_messages:
                 flash(msg, 'warning')
 
-            # אם יש קופונים שלא נוספו - מציגים אותם
+            # If there are coupons that were not added - display them
             if invalid_coupons:
                 flash('הקופונים הבאים לא היו תקינים ולא נוספו:<br>' + '<br>'.join(invalid_coupons), 'danger')
             else:
-                # עבור כל קופון חדש שנוסף בהצלחה – יוצרים רשומת coupon_transaction
+                # For each new coupon successfully added, create a coupon_transaction record
                 for c in new_coupons:
                     add_coupon_transaction(c)
 
@@ -347,7 +342,6 @@ def upload_coupons():
             flash('אירעה שגיאה בעת עיבוד הקובץ.', 'danger')
             traceback.print_exc()
 
-        # -- activity log snippet --
         try:
             new_activity = {
                 "user_id": current_user.id,
@@ -372,7 +366,6 @@ def upload_coupons():
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error logging activity [upload_coupons_submit]: {e}")
-        # -- end snippet --
 
         return redirect(url_for('coupons.show_coupons'))
 
@@ -383,145 +376,121 @@ def upload_coupons():
 @login_required
 def add_coupons_bulk():
     """
-    טופס המאפשר למשתמש להוסיף מספר קופונים באופן ידני (בלי להעלות קובץ),
-    ואחר כך ליצור אקסל זמני – שאותו מעבירים ל־process_coupons_excel לצורך עיבוד.
+    Form that allows the user to manually add multiple coupons (without uploading a file),
+    and then create a temporary Excel file – which is then passed to process_coupons_excel for processing.
     """
-    # -- activity log snippet --
+    # הגדרת הכתובת IP והפעילות
+    ip_address = get_public_ip() or '127.0.0.1'
     log_user_activity("add_coupons_bulk_view", None)
 
     form = AddCouponsBulkForm()
     companies = Company.query.all()
     tags = Tag.query.all()
 
-    # התאמת רשימת החברות והתגיות לכל קופון בטופס
+    # הגדרת choices לחברות (ולא לתגיות, כי בחרנו להתעלם משדות ה-Tag)
     for coupon_entry in form.coupons.entries:
         coupon_form = coupon_entry.form
         company_choices = [(str(company.id), company.name) for company in companies]
         company_choices.append(('other', 'אחר'))
         coupon_form.company_id.choices = company_choices
-
-        tag_choices = [(str(tag.id), tag.name) for tag in tags]
-        tag_choices.append(('other', 'אחר'))
-        coupon_form.tag_id.choices = tag_choices
+        # אם לא מעוניינים לטפל בתגיות, אפשר להשאירן ריקות/לא להגדיר:
+        # coupon_form.tag_id.choices = []
 
     if form.validate_on_submit():
         current_app.logger.info("טופס add_coupons_bulk אומת בהצלחה")
         try:
             new_coupons_data = []
-            # עובר על כל השורות בטופס הריק/דינמי
             for idx, coupon_entry in enumerate(form.coupons.entries):
                 coupon_form = coupon_entry.form
 
-                # טיפול בשם החברה
+                # === 1. עיבוד שם החברה (company_id / other_company) ===
                 if coupon_form.company_id.data == 'other':
-                    company_name = coupon_form.other_company.data.strip()
+                    company_name = (coupon_form.other_company.data or '').strip()
                     if not company_name:
                         flash(f'שם החברה חסר בקופון #{idx + 1}.', 'danger')
-                        current_app.logger.warning(f"Empty company name for coupon #{idx + 1}.")
                         continue
                 else:
-                    company_id = coupon_form.company_id.data
                     try:
-                        company = db.session.get(Company, int(company_id))
+                        company_id = int(coupon_form.company_id.data)
+                        company = Company.query.get(company_id)
                         if company:
                             company_name = company.name
                         else:
-                            flash(f'חברה עם ID {company_id} לא נמצאה בקופון #{idx + 1}.', 'danger')
-                            current_app.logger.warning(f"Company ID {company_id} not found for coupon #{idx + 1}.")
+                            flash(f'חברה ID={company_id} לא נמצאה בקופון #{idx + 1}.', 'danger')
                             continue
                     except ValueError:
                         flash(f'ID החברה אינו תקין בקופון #{idx + 1}.', 'danger')
-                        current_app.logger.warning(f"Invalid company ID format for coupon #{idx + 1}.")
                         continue
 
-                # טיפול בתגיות
-                if coupon_form.tag_id.data == 'other':
-                    tag_name = coupon_form.other_tag.data.strip()
-                    if not tag_name:
-                        flash(f'שם התגית חסר בקופון #{idx + 1}.', 'danger')
-                        current_app.logger.warning(f"Empty tag name for coupon #{idx + 1}.")
-                        continue
-                else:
-                    tag_id = coupon_form.tag_id.data
-                    try:
-                        tag = db.session.get(Tag, int(tag_id))
-                        if tag:
-                            tag_name = tag.name
-                        else:
-                            flash(f'תגית עם ID {tag_id} לא נמצאה בקופון #{idx + 1}.', 'danger')
-                            current_app.logger.warning(f"Tag ID {tag_id} not found for coupon #{idx + 1}.")
-                            continue
-                    except ValueError:
-                        flash(f'ID התגית אינו תקין בקופון #{idx + 1}.', 'danger')
-                        current_app.logger.warning(f"Invalid tag ID format for coupon #{idx + 1}.")
-                        continue
-
-                # נסיונות המרה למספרים
+                # === 2. עיבוד ערכים בסיסיים: code, value, cost, expiration, וכו' ===
+                code = coupon_form.code.data.strip()
                 try:
                     value = float(coupon_form.value.data) if coupon_form.value.data else 0.0
-                except ValueError:
-                    flash(f'ערך הקופון אינו תקין בקופון #{idx + 1}.', 'danger')
-                    continue
-                try:
                     cost = float(coupon_form.cost.data) if coupon_form.cost.data else 0.0
                 except ValueError:
-                    flash(f'עלות הקופון אינה תקינה בקופון #{idx + 1}.', 'danger')
+                    flash(f"ערך או עלות לא תקינים בקופון #{idx+1}.", "danger")
                     continue
 
-                # תאריך תפוגה בפורמט String לאקסל
                 expiration_str = ''
                 if coupon_form.expiration.data:
-                    expiration_str = coupon_form.expiration.data.strftime('%Y-%m-%d')
+                    # כאן צריך להיזהר מ-NaT; WTForms בדרך כלל מחזירה datetime.date תקין או None
+                    expiration_date = coupon_form.expiration.data
+                    # הפיכה למחרוזת בפורמט אחיד (YYYY-MM-DD)
+                    expiration_str = expiration_date.strftime('%Y-%m-%d')
 
-                # קוד לשימוש חד פעמי + מטרת הקופון (purpose)
                 is_one_time = coupon_form.is_one_time.data
-                purpose = coupon_form.purpose.data.strip() if is_one_time and coupon_form.purpose.data else ''
+                purpose = (coupon_form.purpose.data or '').strip() if is_one_time else ''
 
-                description = coupon_form.description.data.strip() if coupon_form.description.data else ''
+                # === 3. איתור תגית אוטומטית (כמו ב-add_coupon) ===
+                found_tag = get_most_common_tag_for_company(company_name)
 
-                # יוצרים "שורת מידע" שתיכנס ל־DataFrame
+                # ✅ הוספת CVV ותוקף כרטיס
+                cvv = coupon_form.cvv.data.strip() if coupon_form.cvv.data else ''
+                card_exp = coupon_form.card_exp.data.strip() if coupon_form.card_exp.data else ''
+
+                # === 4. בניית "שורת דאטה" שתלך אחר כך ל-process_coupons_excel ===
                 coupon_data = {
-                    'קוד קופון': coupon_form.code.data.strip(),
-                    'חברה': company_name,
+                    'קוד קופון': code,
                     'ערך מקורי': value,
                     'עלות': cost,
+                    'חברה': company_name,
+                    'תיאור': '',              # אם רוצים לתמוך בטופס description, אפשר להוסיף
                     'תאריך תפוגה': expiration_str,
                     'קוד לשימוש חד פעמי': is_one_time,
                     'מטרת הקופון': purpose,
-                    'תיאור': description,
-                    'תגיות': tag_name if tag_name else ''
+                    'תגיות': found_tag.name if found_tag else '',
+                    'CVV': cvv,  # ✅ שמירת CVV
+                    'תוקף כרטיס': card_exp  # ✅ שמירת תוקף כרטיס
                 }
                 new_coupons_data.append(coupon_data)
 
             if new_coupons_data:
-                # ממירים את הרשימה ל-DataFrame ומייצאים לאקסל זמני
+                # 4א. יצירת DF, ייצוא לאקסל => process_coupons_excel
                 df_new_coupons = pd.DataFrame(new_coupons_data)
                 export_folder = 'exports'
                 os.makedirs(export_folder, exist_ok=True)
                 export_filename = f"new_coupons_{current_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
                 export_path = os.path.join(export_folder, export_filename)
-
                 df_new_coupons.to_excel(export_path, index=False)
                 current_app.logger.info(f"Exported new coupons to {export_path}")
 
-                # כעת נקרא ל-process_coupons_excel שמחזיר 3 ערכים
-                invalid_coupons, missing_optional_fields_messages, new_coupons = process_coupons_excel(export_path, current_user)
+                invalid_coupons, missing_optional_fields_messages, newly_created_coupons = process_coupons_excel(
+                    export_path, current_user
+                )
 
+                # הצגת הודעות בהתאם לפלט
                 for msg in missing_optional_fields_messages:
                     flash(msg, 'warning')
                 if invalid_coupons:
-                    flash('הקופונים הבאים לא היו תקינים ולא נוספו:<br>' + '<br>'.join(invalid_coupons), 'danger')
+                    flash(
+                        'הקופונים הבאים לא היו תקינים ולא נוספו:<br>' + '<br>'.join(invalid_coupons),
+                        'danger'
+                    )
                 else:
-                    # לכל קופון חדש – מוסיפים transaction ראשוני
-                    for c in new_coupons:
-                        add_coupon_transaction(c)
-
-                    flash('כל הקופונים נוספו בהצלחה!', 'success')
-
-                current_app.logger.info("All coupons successfully processed and imported.")
-                return redirect(url_for('coupons.show_coupons'))
+                    # אם אין קופונים פסולים, יכול להיות שכולם נוספו בהצלחה
+                    if newly_created_coupons:
+                        flash('כל הקופונים נוספו בהצלחה!', 'success')
             else:
-                current_app.logger.info("No new coupons were added, so no export or import was made.")
                 flash('לא נוספו קופונים חדשים.', 'info')
                 return redirect(url_for('coupons.show_coupons'))
 
@@ -530,24 +499,30 @@ def add_coupons_bulk():
             traceback.print_exc()
             flash('אירעה שגיאה בעת עיבוד הקופונים. אנא נסה שוב.', 'danger')
 
-        # -- activity log snippet --
+        # === הוספת לוג פעילות (תיקון unhashable type: 'slice') ===
         try:
+            geo_data_str = str(get_geo_location(ip_address))  # הופך את המילון למחרוזת
+            # אפשר לחתוך כדי לא לעבור מגבלת תווים:
+            geo_data_str = geo_data_str[:100] if geo_data_str else None
+
             new_activity = {
                 "user_id": current_user.id,
                 "coupon_id": None,
                 "timestamp": datetime.utcnow(),
                 "action": "add_coupons_bulk_submit",
                 "device": request.headers.get('User-Agent', '')[:50],
-                "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                "browser": request.headers.get('User-Agent', '').split(' ')[0][:50]
+                           if request.headers.get('User-Agent', '') else None,
                 "ip_address": ip_address[:45] if ip_address else None,
-                "geo_location": get_geo_location(ip_address)[:100]
+                "geo_location": geo_data_str
             }
+
             db.session.execute(
                 text("""
                     INSERT INTO user_activities
-                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                        (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
                     VALUES
-                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                        (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
                 """),
                 new_activity
             )
@@ -555,15 +530,17 @@ def add_coupons_bulk():
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error logging activity [add_coupons_bulk_submit]: {e}")
-        # -- end snippet --
+
+        # בכל מקרה, נחזור ל-show_coupons
+        return redirect(url_for('coupons.show_coupons'))
 
     else:
+        # אם הטופס לא אומת (או שזו בקשת GET)
         if form.is_submitted():
             current_app.logger.warning(f"Form validation failed: {form.errors}")
 
     return render_template('add_coupons.html', form=form, companies=companies, tags=tags)
 
- 
 
 def get_most_common_tag_for_company(company_name):
     results = db.session.query(Tag, func.count(Tag.id).label('tag_count')) \
@@ -916,7 +893,7 @@ def add_coupon():
                     try:
                         db.session.commit()
 
-                        # הוספת שורה ל-coupon_transaction
+                        # Add a row to coupon_transaction
                         add_coupon_transaction(new_coupon)
 
                         # -- activity log snippet --
@@ -944,7 +921,6 @@ def add_coupon():
                         except Exception as e:
                             db.session.rollback()
                             current_app.logger.error(f"Error logging activity [add_coupon_manual_submit]: {e}")
-                        # -- end snippet --
 
                         flash('קופון נוסף בהצלחה!', 'success')
                         return redirect(url_for('coupons.show_coupons'))
@@ -980,7 +956,7 @@ def add_coupon_with_image_html():
 
     form = CouponForm()
     if request.method == 'POST':
-        # שלב א: אם העלו תמונה
+        # Step A: If an image was uploaded
         image_file = request.files.get('coupon_image')
         if image_file and image_file.filename != '':
             upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
@@ -1001,7 +977,7 @@ def add_coupon_with_image_html():
                 return render_template('add_coupon_with_image.html', form=form)
 
             if not coupon_df.empty:
-                # ממלאים את השדות לפי מה שהוחזר מעיבוד התמונה
+                # Fill in the fields based on what was returned from image processing
                 form.company_id.data = coupon_df.loc[0, 'חברה']
                 form.code.data = coupon_df.loc[0, 'קוד קופון']
                 form.cost.data = coupon_df.loc[0, 'עלות']
@@ -1018,15 +994,15 @@ def add_coupon_with_image_html():
             else:
                 flash("לא ניתן היה לחלץ פרטי קופון מהתמונה.", "danger")
 
-        # שלב ב: אם המשתמש שלח את הטופס הסופי (למשל כפתור שנקרא 'submit_coupon') => נשמור את הקופון
+        # Step B: If the user submitted the final form (e.g., a button called 'submit_coupon') => save the coupon
         elif 'submit_coupon' in request.form and form.validate_on_submit():
-            # שלבי יצירת הקופון בדיוק כמו ב-`add_coupon_with_image`,
-            # כולל מציאת החברה, שמירה במסד, ואז צירוף התגית (get_most_common_tag_for_company).
+            # Steps to create the coupon exactly like in `add_coupon_with_image`,
+            # including finding the company, saving to the database, and then adding the tag (get_most_common_tag_for_company).
             selected_company_id = form.company_id.data
             other_company_name = (form.other_company.data or '').strip()
 
             if selected_company_id == 'other':
-                # טיפול בחברה 'אחר'
+                # Handle 'other' company
                 if not other_company_name:
                     flash('יש להזין שם חברה חדשה.', 'danger')
                     return redirect(url_for('coupons.add_coupon_with_image_html'))
@@ -1066,12 +1042,12 @@ def add_coupon_with_image_html():
             is_one_time = form.is_one_time.data
             purpose = form.purpose.data.strip() if is_one_time and form.purpose.data else None
 
-            # בדיקת ייחודיות הקוד
+            # Check for unique code
             if Coupon.query.filter_by(code=code).first():
                 flash('קוד קופון זה כבר קיים. אנא בחר קוד אחר.', 'danger')
                 return redirect(url_for('coupons.add_coupon_with_image_html'))
 
-            # בדיקת תאריך תפוגה
+            # Expiration date check
             current_date = datetime.utcnow().date()
             if expiration and expiration < current_date:
                 flash('תאריך התפוגה של הקופון כבר עבר. אנא בחר תאריך תקין.', 'danger')
@@ -1091,7 +1067,7 @@ def add_coupon_with_image_html():
                 status='פעיל'
             )
 
-            # שלב צירוף התגית הנפוצה (כמו ב-manual flow)
+            # Step of adding the most common tag (like in the manual flow)
             chosen_company_name = company.name
             found_tag = get_most_common_tag_for_company(chosen_company_name)
             if found_tag:
@@ -1130,13 +1106,13 @@ def add_coupon_with_image():
     coupon_form = CouponForm()
     show_coupon_form = False
 
-    # שליפת רשימת החברות מהדאטהבייס
+    # Fetch the list of companies from the database
     companies = Company.query.all()
 
-    # הגדרת האפשרויות בשדה company_id בלבד (בלי תגיות)
+    # Set the choices for the company_id field only (without tags)
     coupon_form.company_id.choices = [('', 'בחר')] + [(str(company.id), company.name) for company in companies] + [('other', 'אחר')]
 
-    # אם העלו תמונה באמצעות הטופס העלאת תמונה
+    # If an image was uploaded using the upload image form
     if upload_image_form.validate_on_submit() and upload_image_form.submit_upload_image.data:
         image_file = upload_image_form.coupon_image.data
         if image_file:
@@ -1164,8 +1140,7 @@ def add_coupon_with_image():
             if not coupon_df.empty:
                 coupon_data = coupon_df.iloc[0].to_dict()
                 company_name = coupon_data.get('חברה', '').strip()
-
-                # חיפוש החברה המתאימה ביותר (Fuzzy Matching)
+                # Find the best matching company (Fuzzy Matching)
                 best_match_ratio = 0
                 best_company = None
                 for comp in companies:
@@ -1174,7 +1149,7 @@ def add_coupon_with_image():
                         best_match_ratio = ratio
                         best_company = comp
 
-                # אם נמצא match מספיק טוב לחברה
+                # If a good enough match is found for the company
                 if best_company and best_match_ratio >= 90:
                     coupon_form.company_id.data = str(best_company.id)
                     coupon_form.other_company.data = ''
@@ -1414,10 +1389,14 @@ def edit_coupon(id):
             coupon.code = form.code.data.strip()
             coupon.value = float(form.value.data)
             coupon.cost = float(form.cost.data)
+            coupon.cvv = form.cvv.data            # שורה חדשה
+            coupon.card_exp = form.card_exp.data  # שורה חדשה
             coupon.description = form.description.data or ''
             coupon.is_one_time = form.is_one_time.data
             coupon.purpose = form.purpose.data.strip() if form.is_one_time.data else None
             coupon.expiration = form.expiration.data if form.expiration.data else None
+            coupon.cvv = form.cvv.data.strip() if form.cvv.data else None
+            coupon.card_exp = form.card_exp.data.strip() if form.card_exp.data else None
 
             if form.tags.data:
                 if isinstance(form.tags.data, str) and form.tags.data:
@@ -1690,7 +1669,9 @@ ORDER BY
         update_form=update_form,
         consolidated_rows=consolidated_rows,
         discount_percentage=discount_percentage,
-        company_logo=company_logo
+        company_logo=company_logo,
+        cvv=coupon.cvv,
+        card_exp=coupon.card_exp
     )
 
 
@@ -1932,7 +1913,9 @@ def export_excel():
             'סטטוס': coupon.status,
             'תאריך תפוגה': coupon.expiration or '',
             'תאריך הוספה': coupon.date_added.strftime('%Y-%m-%d %H:%M'),
-            'תיאור': coupon.description or ''
+            'תיאור': coupon.description or '',
+            'CVV': coupon.cvv if coupon.cvv else '', 
+            'תוקף כרטיס': coupon.card_exp if coupon.card_exp else ''
         })
 
     df = pd.DataFrame(data)
@@ -2276,7 +2259,7 @@ def update_coupon_usage_route(id):
 
 @coupons_bp.route('/update_all_active_coupons', methods=['POST'])
 @login_required
-def update_all_active_coupons(user_id):
+def update_all_active_coupons():
     if not current_user.is_admin:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('index'))
@@ -2295,13 +2278,10 @@ def update_all_active_coupons(user_id):
             failed_coupons.append(coupon.code)
             continue
 
-        print(valid_coupon_pattern.match(coupon.code))
         try:
-            print(f"Updating {coupon.code}")
             df = get_coupon_data(coupon.code)
             if df is not None:
-                total_usage = df['usage_amount'].sum()
-                total_usage = float(total_usage)
+                total_usage = float(df['usage_amount'].sum())
                 coupon.used_value = total_usage
                 update_coupon_status(coupon)
 
@@ -2326,7 +2306,7 @@ def update_all_active_coupons(user_id):
                 failed_coupons.append(coupon.code)
         except Exception as e:
             db.session.rollback()
-            app.logger.error(f"Error updating coupon {coupon.code}: {e}")
+            current_app.logger.error(f"Error updating coupon {coupon.code}: {e}")
             failed_coupons.append(coupon.code)
 
     db.session.commit()
@@ -2378,7 +2358,7 @@ def update_coupon_transactions():
         for index, row in df.iterrows():
             t = Transaction(
                 coupon_id=coupon.id,
-                card_number='',
+                #card_number='',
                 transaction_date=row['transaction_date'],
                 location=row['location'],
                 recharge_amount=row['recharge_amount'] or 0,

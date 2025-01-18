@@ -44,7 +44,12 @@
         {% endif %}
     {% endwith %}
 
-    <p style="text-align: center;">אין לך חשבון? <a href="{{ url_for('auth.register') }}">הירשם כאן</a>.</p>
+    <p style="text-align: center;">
+        אין לך חשבון? <a href="{{ url_for('auth.register') }}">הירשם כאן</a>.
+    </p>
+    <p style="text-align: center;">
+        <a href="{{ url_for('auth.forgot_password') }}">שחזור סיסמה</a>
+    </p>
 </section>
 {% endblock %}
 

@@ -77,3 +77,38 @@ def update_coupon_transactions():
         flash(f'אירעה שגיאה בעת עדכון הנתונים עבור הקופון {coupon.code}.', 'danger')
 
     return redirect(url_for('coupon_detail', id=coupon.id))
+
+# app/routes/admin_routes.py
+from flask import render_template, request, flash, redirect, url_for
+from flask_login import login_required, current_user
+from app.models import User
+from app.helpers import send_password_reset_email
+
+@admin_bp.route('/manage_users', methods=['GET'])
+@login_required
+def manage_users():
+    # וידוא שהמשתמש הוא אדמין
+    if not current_user.is_admin:
+        flash('אין לך הרשאה לצפות בדף זה.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    users = User.query.all()
+    return render_template('admin_manage_users.html', users=users)
+
+@admin_bp.route('/reset_user_password', methods=['POST'])
+@login_required
+def reset_user_password():
+    if not current_user.is_admin:
+        flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    user_id = request.form.get('user_id')
+    user = User.query.get(user_id)
+    if not user:
+        flash('משתמש לא נמצא.', 'error')
+        return redirect(url_for('admin.manage_users'))
+
+    # שליחת מייל שחזור סיסמה
+    send_password_reset_email(user)
+    flash(f'נשלח מייל שחזור סיסמה ל-{user.email} בהצלחה!', 'success')
+    return redirect(url_for('admin.manage_users'))

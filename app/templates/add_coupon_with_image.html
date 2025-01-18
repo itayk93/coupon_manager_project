@@ -102,6 +102,24 @@
             {% endfor %}
         </div>
 
+        <!-- CVV Field -->
+        <div class="form-group">
+            {{ coupon_form.cvv.label(class="form-label") }}
+            {{ coupon_form.cvv(class="input-field", id="cvv") }}
+            {% for error in coupon_form.cvv.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Card Exp Field -->
+        <div class="form-group">
+            {{ coupon_form.card_exp.label(class="form-label") }}
+            {{ coupon_form.card_exp(class="input-field", id="card_exp") }}
+            {% for error in coupon_form.card_exp.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
         <!-- One-Time Use Checkbox -->
         <div class="form-group">
             <label for="is_one_time">

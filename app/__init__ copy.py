@@ -11,8 +11,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.config import Config
 from app.extensions import db, login_manager, csrf, migrate
 
+# לצורכי שליחה (אם יש לך פונקציה send_email וכו')
+# from app.mail import send_email
+
 # מודלים לדוגמה
-from app.models import User, Coupon
+from app.models import User, Tag, Coupon
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,7 +23,7 @@ scheduler = BackgroundScheduler()
 
 
 def create_app():
-    # טוען משתני סביבה (ליתר ביטחון, אפשר גם ב-wsgi.py)
+    # טוען משתני סביבה (ליתר בטחון, אפשר גם ב-wsgi.py)
     load_dotenv()
 
     app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -42,7 +45,7 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # רישום פילטר לזמן ישראל
+    # רישום הפילטר
     from app.routes.coupons_routes import to_israel_time_filter
     app.add_template_filter(to_israel_time_filter, 'to_israel_time')
 
@@ -59,7 +62,7 @@ def create_app():
     from app.routes.admin_routes.admin_tags_routes import admin_tags_bp
     from app.routes.admin_routes.admin_companies_routes import admin_companies_bp
     from app.routes.admin_routes.admin_coupon_tags_routes import admin_coupon_tags_bp
-    # from app.routes.profile_routes import profile_bp
+    #from app.routes.profile_routes import profile_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(profile_bp)
@@ -73,15 +76,33 @@ def create_app():
     app.register_blueprint(admin_companies_bp)
     app.register_blueprint(admin_coupon_tags_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
-    # app.register_blueprint(profile_bp, url_prefix='/')
+    #app.register_blueprint(profile_bp, url_prefix='/')
 
-    # אם צריך - יצירת תיקיית instance
+    # אם צריך - יצירת instance folder
     if not os.path.exists('instance'):
         os.makedirs('instance')
 
     # הרצת פעולות עם context
     with app.app_context():
         db.create_all()
+
+        # יצירת תגיות דוגמה
+        predefined_tags = [
+            {'name': 'מבצע', 'count': 10},
+            {'name': 'הנחה', 'count': 8},
+            {'name': 'חדש', 'count': 5},
+        ]
+        for tag_data in predefined_tags:
+            tag = Tag.query.filter_by(name=tag_data['name']).first()
+            if not tag:
+                tag = Tag(name=tag_data['name'], count=tag_data['count'])
+                db.session.add(tag)
+                logger.info(f"נוספה תגית חדשה: {tag.name}")
+            else:
+                if tag.count != tag_data['count']:
+                    tag.count = tag_data['count']
+                    logger.info(f"עודכנה ספירת תגית: {tag.name} ל-{tag.count}")
+        db.session.commit()
 
         # יצירת תיקיית העלאות
         try:
@@ -95,10 +116,8 @@ def create_app():
 
     return app
 
-
 def send_expiration_warnings(app):
     """פונקציה לדוגמה: שולחת התראות על קופונים שעומדים לפוג."""
-    from app.models import Coupon  # אם צריך להבטיח שהמודל נטען
     with app.app_context():
         today = datetime.utcnow().date()
         one_month_ahead = today + timedelta(days=30)
@@ -136,9 +155,9 @@ def send_expiration_warnings(app):
 
         # דומה גם ל-7 ימים, 1 יום וכו'...
 
-
 def configure_scheduler(app):
     """מגדיר את כל עבודות ה-Scheduler."""
+    # הוספת Job שחוזר כל יום
     scheduler.add_job(
         func=send_expiration_warnings,
         trigger="interval",
@@ -150,3 +169,4 @@ def configure_scheduler(app):
     )
     scheduler.start()
     logger.info("Scheduler configured and started.")
+

@@ -26,23 +26,29 @@
             <span class="info-title">ממוצע דירוג:</span>
             <span class="info-value">
                 <div class="star-rating">
-                    {% for i in range(1,6) %}
-                        {% if avg_rating >= i %}
-                            <i class="fa fa-star" style="color:#ffca08"></i>
-                        {% elif avg_rating > i - 1 and (avg_rating - (i - 1)) >= 0.5 %}
-                            <i class="fa fa-star-half-o" style="color:#ffca08"></i>
-                        {% else %}
+                    {% if avg_rating is not none %}
+                        {% for i in range(1, 6) %}
+                            {% if avg_rating >= i %}
+                                <i class="fa fa-star" style="color:#ffca08"></i>
+                            {% elif avg_rating > i - 1 and (avg_rating - (i - 1)) >= 0.5 %}
+                                <i class="fa fa-star-half-o" style="color:#ffca08"></i>
+                            {% else %}
+                                <i class="fa fa-star-o" style="color:#ccc"></i>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <!-- במקרה שאין דירוג -->
+                        {% for i in range(1, 6) %}
                             <i class="fa fa-star-o" style="color:#ccc"></i>
-                        {% endif %}
-                    {% endfor %}
+                        {% endfor %}
+                    {% endif %}
                 </div>
             </span>
         </div>
         <div class="info-box">
-    <span class="info-title">תיאור פרופיל:</span>
-    <span class="info-value">{{ user.profile_description or '...' }}</span>
-</div>
-
+            <span class="info-title">תיאור פרופיל:</span>
+            <span class="info-value">{{ user.profile_description or '...' }}</span>
+        </div>
     </div>
 
     {% if is_owner %}
@@ -121,7 +127,6 @@
                     <th>תאריך</th>
                     <th>תגובה</th>
                     <th>דירוג</th>
-                    <th>פעולה</th>
                 </tr>
             </thead>
             <tbody>
@@ -142,15 +147,6 @@
                                 {% endfor %}
                             </div>
                         </td>
-                        <td>
-                            {% if not review_already_exists(review.transaction_id) %}
-                                <a href="{{ url_for('profile.rate_user', user_id=user.id, transaction_id=review.transaction_id) }}" class="action-button">
-                                    כתוב ביקורת
-                                </a>
-                            {% else %}
-                                <span>ביקורת נכתבה</span>
-                            {% endif %}
-                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -160,6 +156,7 @@
     {% endif %}
 </section>
 {% endblock %}
+
 
 {% block scripts %}
 <script>

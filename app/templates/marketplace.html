@@ -26,10 +26,11 @@
     </div>
 
     <!-- הצגת מספר הסלוטים של המשתמש -->
+    <!--
     <div class="slots-container">
         <p class="slots-available">מספר הסלוטים הזמינים: {{ current_user.slots }}</p>
     </div>
-
+    -->
     <!-- רשימת הקופונים הזמינים למכירה -->
     {% if coupons %}
         <div class="coupon-container">
@@ -136,15 +137,18 @@
                         <!-- טקסט משודרג לתיאור הבקשה -->
                         <p class="request-details">
                             <span class="request-user">{{ request.user.first_name }}</span>
-                            מבקש לקנות קופון ל
-                            <span class="request-company">{{ request.company }}</span>
+                            {% if request.user.gender == 'female' %}
+                                מבקשת
+                            {% else %}
+                                מבקש
+                            {% endif %}
+                            לקנות קופון ל<span class="request-company">{{ request.company }}</span>
                             במחיר של
-                            <span class="request-cost">{{ '%.2f'|format(request.cost) }} ש"ח</span>
+                            <span class="request-cost">{{ '%.0f'|format(request.cost) }}₪</span>
                             בשווי
-                            <span class="request-value">{{ '%.2f'|format(request.value) }} ש"ח</span>
-                            (
-                            <span class="request-discount">{{ '%.2f'|format(discount) }}% הנחה</span>
-                            )
+                            <span class="request-value">{{ '%.0f'|format(request.value) }}₪</span>
+                            <br>
+                            (<span class="request-discount">{{ '%.0f'|format(discount) }}% הנחה</span>)
                         </p>
                         <p class="request-explanation">
                             הסבר: {{ request.description if request.description else '---' }}

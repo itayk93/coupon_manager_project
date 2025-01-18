@@ -177,6 +177,10 @@ class Coupon(db.Model):
     tags = db.relationship('Tag', secondary=coupon_tags, back_populates='coupons')
     usages = db.relationship('CouponUsage', backref='coupon', lazy=True, cascade='all, delete-orphan')
 
+    # Relevant for specific coupons
+    cvv = db.Column(EncryptedString(4), nullable=True)       # אורך מקסימלי 4 (3 או 4 ספרות)
+    card_exp = db.Column(EncryptedString(5), nullable=True)  # אורך מקסימלי 5 (פורמט "MM/YY")
+
     # **הוספת היחס multipass_transactions**
     multipass_transactions = db.relationship(
         'CouponTransaction',
@@ -268,6 +272,7 @@ class Transaction(db.Model):
     buyer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     status = db.Column(db.String(20), nullable=False, default='ממתין לאישור המוכר')
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)  # הוסף שדה זה
+    source = db.Column(db.String(50), nullable=True)  # ✅ הוסף את השדה כאן
     timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     buyer_phone = db.Column(db.String(20), nullable=True)
     seller_phone = db.Column(db.String(20), nullable=True)
@@ -277,6 +282,7 @@ class Transaction(db.Model):
     coupon_code_entered = db.Column(db.Boolean, default=False)
     action = db.Column(db.String(50), nullable=True)
     details = db.Column(db.String(255), nullable=True)
+    transaction_date = db.Column(db.DateTime(timezone=True), nullable=True)
 
     # הוספת העמודות החדשות
     buyer_request_sent_at = db.Column(db.DateTime(timezone=True), nullable=True)
@@ -536,6 +542,7 @@ class UserReview(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # מי שנתן את הביקורת
     reviewed_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # המשתמש שמקבל את הביקורת
+    transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=True)  # עמודה חדשה
     rating = db.Column(db.Integer, nullable=True)  # דירוג 1-5
     comment = db.Column(db.Text, nullable=True)    # הערה טקסטואלית
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

@@ -308,9 +308,46 @@ def buy_slots():
             return redirect(url_for('profile.buy_slots'))
     return render_template('buy_slots.html', slots=current_user.slots, form=form)
 
-@profile_bp.route('/edit_profile')
+@profile_bp.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
+    """
+    עריכת פרופיל המשתמש המחובר: תיאור קצר + תמונת פרופיל.
+    """
+    form = UserProfileForm()
+
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            # עדכון התיאור
+            current_user.profile_description = form.profile_description.data
+
+            # העלאת תמונה (אם הועלתה)
+            if form.profile_image.data:
+                file = form.profile_image.data
+                if allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    # שמירה בנתיב קבוע בתוך static/uploads, למשל
+                    upload_path = os.path.join('app', 'static', 'uploads', 'profiles')
+                    os.makedirs(upload_path, exist_ok=True)
+                    save_path = os.path.join(upload_path, filename)
+                    file.save(save_path)
+
+                    # שמירת הנתיב בבסיס הנתונים
+                    current_user.profile_image = f'static/uploads/profiles/{filename}'
+                else:
+                    flash('סוג קובץ לא תקין. יש להעלות תמונה בפורמט jpg/png/gif', 'danger')
+                    return redirect(url_for('profile.edit_profile'))
+
+            db.session.commit()
+            flash('פרופיל עודכן בהצלחה!', 'success')
+            return redirect(url_for('profile.profile_view', user_id=current_user.id))
+        else:
+            flash('נא לתקן את השגיאות בטופס.', 'danger')
+
+    # מילוי ערכים קיימים
+    if request.method == 'GET':
+        form.profile_description.data = current_user.profile_description
+
     return render_template('profile/edit_profile.html', form=form)
 
 
@@ -325,7 +362,7 @@ def rate_user(user_id, transaction_id):
         flash('You cannot rate yourself!', 'warning')
         return redirect(url_for('profile.user_profile', user_id=user_id))
 
-    # לוודא שהעסקה קיימת בין המשתמשים
+    # לוודא שהעסקה קיימת בין המשתמשים (transaction)
     transaction = Transaction.query.filter_by(
         id=transaction_id,
         buyer_id=current_user.id,
@@ -347,7 +384,6 @@ def rate_user(user_id, transaction_id):
         flash('You have already written a review for this transaction.', 'warning')
         return redirect(url_for('profile.user_profile', user_id=user_id))
 
-    # טיפול בשליחת הטופס
     if form.validate_on_submit():
         new_review = UserReview(
             reviewer_id=current_user.id,
@@ -369,49 +405,64 @@ def user_profile(user_id):
     user = User.query.get_or_404(user_id)
     form = ProfileForm()
 
-    # האם זהו המשתמש המחובר עצמו?
-    is_own_profile = (user.id == current_user.id)
+    # בדיקה האם המשתמש הנוכחי הוא בעל הפרופיל
+    if current_user.id != user.id:
+        flash('אין לך הרשאה לערוך פרופיל זה.', 'danger')
+        return redirect(url_for('profile.index'))
 
-    if is_own_profile:
-        # המידע בפרופיל שייך למשתמש המחובר, ניתן לעדכן
-        if form.validate_on_submit():
-            user.first_name = form.first_name.data
-            user.last_name = form.last_name.data
-            user.age = form.age.data
-            user.gender = form.gender.data
-            db.session.commit()
-            flash('פרטי הפרופיל עודכנו בהצלחה.', 'success')
-            return redirect(url_for('profile.user_profile', user_id=user.id))
-
-        if request.method == 'GET':
-            # מילוי שדות הטופס עם הנתונים הקיימים
-            form.first_name.data = user.first_name
-            form.last_name.data = user.last_name
-            form.age.data = user.age
-            form.gender.data = user.gender
+    # 1) מחשבים דירוג ממוצע של המשתמש (אם יש ביקורות)
+    avg_rating = db.session.query(func.avg(UserReview.rating)).filter(
+        UserReview.reviewed_user_id == user.id
+    ).scalar()
+    if avg_rating is not None:
+        avg_rating = round(avg_rating, 1)  # עיגול לעשרון אחד
     else:
-        # מדובר במשתמש אחר, הופכים את השדות ל־read-only
-        for field in form:
-            field.render_kw = {'readonly': True}
+        avg_rating = None  # אם אין ביקורות בכלל
 
-        # מניעת עדכון פרופיל של משתמש אחר
-        if request.method == 'POST':
-            flash('אין לך הרשאה לעדכן פרופיל של משתמש אחר.', 'error')
-            return redirect(url_for('profile.user_profile', user_id=user.id))
+    # 2) קובעים האם המשתמש הנוכחי הוא בעל הפרופיל
+    is_owner = (current_user.id == user.id)
 
-    # שליפת כל הביקורות שהמשתמש קיבל
-    all_reviews = UserReview.query.filter_by(reviewed_user_id=user.id).all()
+    # 3) שליפת כל הביקורות שהמשתמש (user) קיבל, כדי להציגן בתבנית
+    ratings = UserReview.query.filter_by(reviewed_user_id=user.id)\
+                              .order_by(UserReview.created_at.desc())\
+                              .all()
 
-    # חישוב ממוצע דירוג אם יש ביקורות
-    avg_rating = sum(r.rating for r in all_reviews) / len(all_reviews) if all_reviews else None
+    # פונקציית עזר לבדיקת האם המשתמש הנוכחי כתב כבר ביקורת על עסקה ספציפית
+    def review_already_exists(transaction_id):
+        existing = UserReview.query.filter_by(
+            reviewer_id=current_user.id,
+            reviewed_user_id=user.id,
+            transaction_id=transaction_id
+        ).first()
+        return existing is not None
 
+    # 4) אתחול הטופס עם ערכי המשתמש (GET)
+    if request.method == 'GET':
+        form.first_name.data = user.first_name
+        form.last_name.data = user.last_name
+        form.age.data = user.age
+        form.gender.data = user.gender
+
+    # 5) טיפול ב-POST: שמירת ערכי הטופס
+    if form.validate_on_submit():
+        user.first_name = form.first_name.data
+        user.last_name = form.last_name.data
+        user.age = form.age.data
+        user.gender = form.gender.data
+
+        db.session.commit()
+        flash('פרופיל עודכן בהצלחה!', 'success')
+        return redirect(url_for('profile.user_profile', user_id=user.id))
+
+    # 6) העברת כל הנתונים לתבנית
     return render_template(
         'profile/user_profile.html',
-        user=user,
         form=form,
-        ratings=all_reviews,
-        avg_rating=avg_rating,
-        is_owner=is_own_profile  # התאמת המשתנה לתבנית
+        user=user,
+        avg_rating=avg_rating,      # נוספו
+        is_owner=is_owner,          # נוספו
+        ratings=ratings,            # נוספו
+        review_already_exists=review_already_exists  # נוספו
     )
 
 @profile_bp.route('/user_profile')

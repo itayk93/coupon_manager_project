@@ -158,12 +158,30 @@
                 <span class="info-value">{{ coupon.expiration }}</span>
             </div>
         {% endif %}
+
+        <!-- Show Card Exp, if present -->
+        {% if coupon.card_exp %}
+        <div class="info-box">
+            <span class="info-title">תאריך כרטיס (MM/YY):</span>
+            <span class="info-value">{{ coupon.card_exp }}</span>
+        </div>
+        {% endif %}
+
         {% if coupon.description %}
             <div class="info-box">
                 <span class="info-title">תיאור:</span>
                 <span class="info-value">{{ coupon.description }}</span>
             </div>
         {% endif %}
+
+        <!-- CVV - אם באמת רוצים להציג, (בפועל רגיש!). -->
+        {% if coupon.cvv %}
+        <div class="info-box">
+            <span class="info-title">CVV:</span>
+            <span class="info-value">{{ coupon.cvv }}</span>
+        </div>
+        {% endif %}
+
     </div>
 
     <h3 class="usage-history-title">היסטוריית טעינות / שימושים</h3>

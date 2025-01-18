@@ -147,11 +147,13 @@ def register():
             log_user_activity(ip_address,"register_email_already_exists")
             return redirect(url_for('auth.register'))
 
+        # <-- הוספנו gender=form.gender.data -->
         new_user = User(
             email=email,
             password=generate_password_hash(form.password.data),
             first_name=form.first_name.data.strip(),
             last_name=form.last_name.data.strip(),
+            gender=form.gender.data,    # הוסף שורה זו!
             is_confirmed=False
         )
         try:
@@ -164,6 +166,7 @@ def register():
             logger.error(f"Error during user creation: {e}")
             log_user_activity(ip_address,"register_user_creation_failed")
             return redirect(url_for('auth.register'))
+
 
         token = generate_confirmation_token(new_user.email)
         confirm_url = url_for('auth.confirm_email', token=token, _external=True)
@@ -327,3 +330,50 @@ def check_location():
     if country not in [None, "Israel", "Italy", "United States"]:
         log_user_activity(ip_address,"access_blocked_due_to_location")
         return render_template("access_denied.html", country=country), 403
+
+# app/routes/auth_routes.py
+
+from flask import render_template, request, flash, url_for, redirect
+from app.forms import ForgotPasswordForm, ResetPasswordForm
+from app.helpers import send_password_reset_email, confirm_token, generate_confirmation_token
+from app.models import User
+from werkzeug.security import generate_password_hash
+from app.helpers import confirm_password_reset_token
+
+@auth_bp.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        email = form.email.data.strip().lower()
+        user = User.query.filter_by(email=email).first()
+        if user:
+            # שולח מייל שחזור סיסמה
+            send_password_reset_email(user)
+            flash('נשלח אליך מייל שחזור סיסמה אם המשתמש קיים במערכת.', 'success')
+            return redirect(url_for('auth.login'))
+        else:
+            flash('האימייל שהוזן לא קיים במערכת.', 'error')
+    return render_template('forgot_password.html', form=form)
+
+@auth_bp.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    try:
+        email = confirm_password_reset_token(token)  # <-- קריאה לפונקציה החדשה
+    except SignatureExpired:
+        flash('קישור שחזור הסיסמה פג תוקף.', 'error')
+        return redirect(url_for('auth.login'))
+    except BadTimeSignature:
+        flash('קישור שחזור הסיסמה אינו תקין.', 'error')
+        return redirect(url_for('auth.login'))
+
+    user = User.query.filter_by(email=email).first_or_404()
+
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        new_password = form.password.data
+        user.password = generate_password_hash(new_password)
+        db.session.commit()
+        flash('הסיסמה אופסה בהצלחה! אנא התחבר עם הסיסמה החדשה.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('reset_password_form.html', form=form, token=token)

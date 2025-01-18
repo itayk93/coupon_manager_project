@@ -114,24 +114,6 @@
                     {% endfor %}
                 </div>
 
-                <div class="form-group checkbox-inline">
-                    <label for="coupons-__INDEX__-include_card_info">
-                        <input type="checkbox" id="coupons-__INDEX__-include_card_info" name="coupons-__INDEX__-include_card_info">
-                        האם להכניס תוקף כרטיס ו-CVV?
-                    </label>
-                </div>
-
-                <div id="card_fields_container___INDEX__" style="display: none;">
-                    <div class="form-group">
-                        <label for="coupons-__INDEX__-cvv">CVV</label>
-                        <input type="text" id="coupons-__INDEX__-cvv" name="coupons-__INDEX__-cvv" class="input-field" maxlength="3">
-                    </div>
-                    <div class="form-group">
-                        <label for="coupons-__INDEX__-card_exp">תוקף כרטיס</label>
-                        <input type="text" id="coupons-__INDEX__-card_exp" name="coupons-__INDEX__-card_exp" class="input-field" maxlength="5" placeholder="MM/YY">
-                    </div>
-                </div>
-
                 <div class="form-group">
                     <label>
                         {{ coupon_form.is_one_time() }}
@@ -270,9 +252,11 @@
 .center-text {
     text-align: center;
 }
+
 .flash-messages {
     margin-bottom: 20px;
 }
+
 .flash {
     padding: 10px;
     margin: 5px 0;
@@ -286,6 +270,7 @@
     background-color: #d4edda;
     color: #155724;
 }
+
 .add-coupons-buttons {
     display: flex;
     flex-direction: column;
@@ -293,14 +278,17 @@
     align-items: center;
     margin-bottom: 20px;
 }
+
 .button-row {
     display: flex;
     gap: 10px;
     justify-content: center;
 }
+
 .button-row.full-width {
     width: 100%;
 }
+
 .wide-button {
     flex-grow: 1;
     text-align: center;
@@ -308,43 +296,52 @@
     width: 100%;
     max-width: 320px;
 }
+
 .add-coupon-button {
-    border: none;
-    box-shadow: none;
-    outline: none;
+    border: none; /* מסיר מסגרת */
+    box-shadow: none; /* מסיר צל */
+    outline: none; /* מסיר קו חיצוני */
 }
+
 .coupon-fieldset {
     margin-bottom: 20px;
     border: 1px solid #ccc;
     padding: 15px;
     border-radius: 5px;
 }
+
 .coupon-actions {
     display: flex;
     gap: 10px;
     margin-bottom: 10px;
 }
+
 .form-group {
     margin-bottom: 15px;
 }
+
 .form-group label {
     display: block;
     margin-bottom: 5px;
 }
+
 .required {
     color: red;
 }
+
 .input-field {
     width: 100%;
     padding: 6px;
     box-sizing: border-box;
     margin-top: 5px;
 }
+
 .error {
     color: red;
     font-size: 0.9em;
     margin-top: 3px;
 }
+
 .submit-button {
     background-color: #2c7be5;
     color: #fff;
@@ -364,30 +361,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function initializeCouponFieldset(fieldset, idx) {
         fieldset.dataset.index = idx;
-
-        const includeCardInfoCheckbox = fieldset.querySelector(
-            `input[type="checkbox"][name="coupons-${idx}-include_card_info"]`
-        );
-        const cardFieldsContainer = fieldset.querySelector(
-            `#card_fields_container_${idx}`
-        );
-
-        function toggleCardFields() {
-            if (!includeCardInfoCheckbox || !cardFieldsContainer) return;
-            if (includeCardInfoCheckbox.checked) {
-                cardFieldsContainer.style.display = 'block';
-            } else {
-                cardFieldsContainer.style.display = 'none';
-                cardFieldsContainer.querySelectorAll('input').forEach(input => {
-                    input.value = '';
-                });
-            }
-        }
-
-        if (includeCardInfoCheckbox && cardFieldsContainer) {
-            includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
-            toggleCardFields();
-        }
 
         const companySelect = fieldset.querySelector('.company-select');
         const otherCompanyGroup = fieldset.querySelector('.other-company-group');
@@ -435,60 +408,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function updateLegends() {
-        const fieldsets = document.querySelectorAll('.coupon-fieldset');
-        fieldsets.forEach(function(fieldset, idx) {
-            fieldset.dataset.index = idx;
-            updateFieldsetIndex(fieldset, idx);
-        });
-        index = fieldsets.length;
-    }
+    const existingFieldsets = document.querySelectorAll('.coupon-fieldset');
+    existingFieldsets.forEach(function(fieldset, idx) {
+        initializeCouponFieldset(fieldset, idx);
+    });
 
-    function updateFieldsetIndex(fieldset, newIndex) {
-        const oldIndex = fieldset.dataset.index || '__INDEX__';
-        const regex = new RegExp(`(coupons-)(?:${oldIndex}|__INDEX__)(-)`, 'g');
+    function addCoupon() {
+        const container = document.getElementById('coupons-container');
+        const template = document.getElementById('coupon-template').content.cloneNode(true);
+        const newFieldset = template.querySelector('.coupon-fieldset');
 
-        fieldset.querySelectorAll('[name], [id], [for]').forEach(element => {
-            if (element.name) {
-                element.name = element.name.replace(regex, `$1${newIndex}$2`);
-                element.name = element.name.replace('___INDEX__', newIndex);
-            }
-            if (element.id) {
-                element.id = element.id.replace(regex, `$1${newIndex}$2`);
-                element.id = element.id.replace('___INDEX__', newIndex);
-                element.id = element.id.replace('__INDEX__', newIndex);
-            }
-            if (element.htmlFor) {
-                element.htmlFor = element.htmlFor.replace(regex, `$1${newIndex}$2`);
-                element.htmlFor = element.htmlFor.replace('___INDEX__', newIndex);
-                element.htmlFor = element.htmlFor.replace('__INDEX__', newIndex);
-            }
-        });
+        updateFieldsetIndex(newFieldset, index);
+        initializeCouponFieldset(newFieldset, index);
 
-        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"]').forEach(element => {
-            element.id = element.id.replace(`_${oldIndex}`, `_${newIndex}`);
-            element.id = element.id.replace(`__INDEX__`, newIndex);
-            element.id = element.id.replace(`___INDEX__`, newIndex);
-        });
-
-        fieldset.querySelectorAll('[id^="card_fields_container_"]').forEach(element => {
-            element.id = element.id.replace('___INDEX__', newIndex);
-            element.id = element.id.replace('__INDEX__', newIndex);
-        });
-
-        const legend = fieldset.querySelector('legend');
-        if (legend) {
-            legend.textContent = 'קופון ' + (newIndex + 1);
-        }
+        container.appendChild(newFieldset);
+        index++;
+        updateLegends();
     }
 
     function duplicateCoupon(fieldset) {
         const container = document.getElementById('coupons-container');
         const clonedFieldset = fieldset.cloneNode(true);
+
         updateFieldsetIndex(clonedFieldset, index);
 
         const originalInputs = fieldset.querySelectorAll('input, select, textarea');
         const clonedInputs = clonedFieldset.querySelectorAll('input, select, textarea');
+
         clonedInputs.forEach((input, i) => {
             if (input.type === 'checkbox') {
                 input.checked = originalInputs[i].checked;
@@ -498,27 +444,47 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         initializeCouponFieldset(clonedFieldset, index);
+
         container.appendChild(clonedFieldset);
         index++;
         updateLegends();
     }
 
-    function addCoupon() {
-        const container = document.getElementById('coupons-container');
-        const template = document.getElementById('coupon-template').content.cloneNode(true);
-        const newFieldset = template.querySelector('.coupon-fieldset');
+    function updateFieldsetIndex(fieldset, newIndex) {
+        const oldIndex = fieldset.dataset.index || '__INDEX__';
+        fieldset.dataset.index = newIndex;
 
-        updateFieldsetIndex(newFieldset, index);
-        initializeCouponFieldset(newFieldset, index);
-        container.appendChild(newFieldset);
-        index++;
-        updateLegends();
+        const regex = new RegExp(`(coupons-)(?:${oldIndex}|__INDEX__)(-)`, 'g');
+        fieldset.querySelectorAll('[name], [id], [for]').forEach(element => {
+            if (element.name) {
+                element.name = element.name.replace(regex, `$1${newIndex}$2`);
+            }
+            if (element.id) {
+                element.id = element.id.replace(regex, `$1${newIndex}$2`);
+            }
+            if (element.htmlFor) {
+                element.htmlFor = element.htmlFor.replace(regex, `$1${newIndex}$2`);
+            }
+        });
+
+        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"]').forEach(element => {
+            element.id = element.id.replace(/_(?:\d+|__INDEX__)/, `_${newIndex}`);
+        });
+
+        const legend = fieldset.querySelector('legend');
+        if (legend) {
+            legend.textContent = 'קופון ' + (newIndex + 1);
+        }
     }
 
-    const existingFieldsets = document.querySelectorAll('.coupon-fieldset');
-    existingFieldsets.forEach(function(fieldset, idx) {
-        initializeCouponFieldset(fieldset, idx);
-    });
+    function updateLegends() {
+        const fieldsets = document.querySelectorAll('.coupon-fieldset');
+        fieldsets.forEach(function(fieldset, idx) {
+            fieldset.dataset.index = idx;
+            updateFieldsetIndex(fieldset, idx);
+        });
+        index = fieldsets.length;
+    }
 
     const addCouponButton = document.querySelector('.add-coupon-button');
     addCouponButton.addEventListener('click', addCoupon);
