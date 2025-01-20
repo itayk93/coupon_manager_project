@@ -28,7 +28,13 @@
         <div class="header-left">
             <!-- אייקון הבית -->
             <a href="{{ url_for('profile.index') }}" class="home-icon"><i class="fa fa-home"></i></a>
-            <span>ברוך הבא, {{ current_user.first_name }}</span>
+            <span>
+                {% if current_user.gender == 'female' %}
+                    ברוכה הבאה, {{ current_user.first_name }}
+                {% else %}
+                    ברוך הבא, {{ current_user.first_name }}
+                {% endif %}
+            </span>            
         </div>
         {% endif %}
         <div class="header-center">

@@ -1434,3 +1434,4 @@ def confirm_password_reset_token(token, expiration=3600):
     )
     return email
 
+

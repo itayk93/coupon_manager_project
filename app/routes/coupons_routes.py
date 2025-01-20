@@ -2095,7 +2095,7 @@ def send_coupon_expiration_warning(coupon_id):
                                    coupon_detail_link=coupon_detail_link)
 
     send_email(
-        sender_email='itayk93@gmail.com',
+        sender_email='CouponMasterIL2@gmail.com',
         sender_name='Coupon Master',
         recipient_email=user.email,
         recipient_name=f'{user.first_name} {user.last_name}',

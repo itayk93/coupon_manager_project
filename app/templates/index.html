@@ -1,21 +1,22 @@
 {% extends 'base.html' %}
 
-{% block title %}ניהול הקופונים שלך{% endblock %}
+{% block title %}Coupon Master{% endblock %}
 
 {% block content %}
 <section class="hero">
     <h2>היי, {{ current_user.first_name }}!</h2>
     <p>איזה כיף לראות אותך כאן! בוא נבדוק כמה חסכת ומה נשאר לך להוציא.</p>
     <div class="total-value">
-        <p>נשאר לך להוציא מתוך כל הקופונים שאינם חד פעמיים:</p>
-        <h1>{{ '%.2f'|format(total_value) }} ש"ח</h1>
+        <p>נשאר לך להוציא:</p>
+        <h1>{{ '%.2f'|format(total_value) }} ₪</h1>
     </div>
     <p class="total-savings-line">
-        סך הכל חסכת מתוך כל הקופונים שאינם חד פעמיים: {{ '%.2f'|format(total_savings) }} ש"ח
-        מתוך {{ '%.2f'|format(total_coupons_value) }} ש"ח
-        (חיסכון של {{ '%.2f'|format(percentage_savings) }}%)
+        סך הכל חסכת: {{ '%.0f'|format(total_savings) }} ₪
+        מתוך {{ '%.0f'|format(total_coupons_value) }} ₪
+        (חיסכון של {{ '%.0f'|format(percentage_savings) }}%)
+        <span class="total-savings-subtext">(מתוך הקופונים הפעילים שאינם חד פעמיים ושאינם למכירה)</span>
     </p>
-</section>
+    </section>
 
 <div class="export-buttons">
     <a href="{{ url_for('export.export_excel') }}" class="export-button">

@@ -821,7 +821,7 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length
 
 class ForgotPasswordForm(FlaskForm):
     email = StringField('אימייל', validators=[DataRequired(), Email(message="כתובת אימייל לא תקינה")])
-    submit = SubmitField('שלח בקשת שחזור סיסמה')
+    submit = SubmitField('שליחת הבקשה לשחזור הסיסמה')
 
 class ResetPasswordForm(FlaskForm):
     password = PasswordField('סיסמה חדשה', validators=[

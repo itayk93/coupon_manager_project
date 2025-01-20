@@ -26,6 +26,15 @@
             {% endfor %}
         </div>
 
+        <!-- שדה בחירת מגדר -->
+        <div class="form-group">
+            {{ form.gender.label }}
+            {{ form.gender(class="input-field") }}
+            {% for error in form.gender.errors %}
+                <span class="error-message">{{ error }}</span>
+            {% endfor %}
+        </div>
+
         <!-- שדה אימייל -->
         <div class="form-group">
             {{ form.email.label }}
@@ -78,8 +87,12 @@
         {% endif %}
     {% endwith %}
 
-    <p style="text-align: center;">כבר יש לך חשבון? <a href="{{ url_for('auth.login') }}">התחבר כאן</a>.</p>
-</section>
+    <div class="auth-buttons">
+        <a href="{{ url_for('auth.login') }}" class="secondary-button">
+            <i class="fa fa-sign-in" aria-hidden="true"></i> כבר יש לך חשבון? זה הזמן להתחבר
+        </a>
+    </div>
+    </section>
 {% endblock %}
 
 {% block scripts %}
@@ -133,4 +146,35 @@
         });
     });
 </script>
+
+<style>
+.auth-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.secondary-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    background-color: #f3f3f3;
+    color: #333;
+    font-size: 14px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+    width: auto;
+    min-width: 150px;
+}
+
+.secondary-button:hover {
+    background-color: #e0e0e0;
+}
+</style>
 {% endblock %}

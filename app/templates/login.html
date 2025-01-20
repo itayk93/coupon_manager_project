@@ -44,12 +44,14 @@
         {% endif %}
     {% endwith %}
 
-    <p style="text-align: center;">
-        אין לך חשבון? <a href="{{ url_for('auth.register') }}">הירשם כאן</a>.
-    </p>
-    <p style="text-align: center;">
-        <a href="{{ url_for('auth.forgot_password') }}">שחזור סיסמה</a>
-    </p>
+    <div class="auth-buttons">
+        <a href="{{ url_for('auth.register') }}" class="secondary-button">
+            <i class="fa fa-user-plus" aria-hidden="true"></i> הירשם כאן
+        </a>
+        <a href="{{ url_for('auth.forgot_password') }}" class="secondary-button">
+            <i class="fa fa-key" aria-hidden="true"></i> שחזור סיסמה
+        </a>
+    </div>
 </section>
 {% endblock %}
 
@@ -64,7 +66,7 @@
                 const passwordField = document.getElementById(fieldId);
                 if (passwordField.type === 'password') {
                     passwordField.type = 'text';
-                    this.textContent = '🙈'; // שינוי אייקון אם רוצים
+                    this.textContent = '🙈';
                 } else {
                     passwordField.type = 'password';
                     this.textContent = '👁️';
@@ -73,4 +75,35 @@
         });
     });
 </script>
+
+<style>
+.auth-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.secondary-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    background-color: #f3f3f3;
+    color: #333;
+    font-size: 14px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+    width: auto;
+    min-width: 150px;
+}
+
+.secondary-button:hover {
+    background-color: #e0e0e0;
+}
+</style>
 {% endblock %}

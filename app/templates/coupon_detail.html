@@ -48,6 +48,22 @@
             <span class="info-title">חברה:</span>
             <span class="info-value">{{ coupon.company }}</span>
         </div>
+
+        <!-- Show Card Exp, if present -->
+        {% if coupon.card_exp %}
+        <div class="info-box">
+            <span class="info-title">תוקף הכרטיס:</span>
+            <span class="info-value">{{ coupon.card_exp }}</span>
+        </div>
+        {% endif %}
+
+        <!-- CVV - אם באמת רוצים להציג, (בפועל רגיש!). -->
+        {% if coupon.cvv %}
+        <div class="info-box">
+            <span class="info-title">CVV:</span>
+            <span class="info-value">{{ coupon.cvv }}</span>
+        </div>
+        {% endif %}
         {% if coupon.is_one_time %}
             <div class="info-box">
                 <span class="info-title">מטרת הקופון:</span>
@@ -159,27 +175,12 @@
             </div>
         {% endif %}
 
-        <!-- Show Card Exp, if present -->
-        {% if coupon.card_exp %}
-        <div class="info-box">
-            <span class="info-title">תאריך כרטיס (MM/YY):</span>
-            <span class="info-value">{{ coupon.card_exp }}</span>
-        </div>
-        {% endif %}
-
+        
         {% if coupon.description %}
             <div class="info-box">
                 <span class="info-title">תיאור:</span>
                 <span class="info-value">{{ coupon.description }}</span>
             </div>
-        {% endif %}
-
-        <!-- CVV - אם באמת רוצים להציג, (בפועל רגיש!). -->
-        {% if coupon.cvv %}
-        <div class="info-box">
-            <span class="info-title">CVV:</span>
-            <span class="info-value">{{ coupon.cvv }}</span>
-        </div>
         {% endif %}
 
     </div>

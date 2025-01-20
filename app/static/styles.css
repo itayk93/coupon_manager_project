@@ -696,6 +696,17 @@ h3 {
     font-weight: bold;
 }
 
+/* Specific style for the index page */
+.total-savings-subtext {
+    font-size: 0.4em; /* כתב ממש קטן */
+    color: var(--gray);
+    text-align: center;
+    display: block;
+    margin-top: -8px; /* מקרב אותו לטקסט הראשי */
+    line-height: 3; /* מצמיד את השורות */
+    /*transform: translateX(9.5%);*/ /* מזיז חצי דרך ימינה */
+}
+
 /* ===================================================
    10. Notification Styles
    =================================================== */

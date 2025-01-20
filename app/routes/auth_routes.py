@@ -172,7 +172,7 @@ def register():
         confirm_url = url_for('auth.confirm_email', token=token, _external=True)
         html = render_template('emails/account_confirmation.html', user=new_user, confirmation_link=confirm_url)
 
-        sender_email = 'itayk93@gmail.com'
+        sender_email = 'CouponMasterIL2@gmail.com'
         sender_name = 'Coupon Master'
         recipient_email = new_user.email
         recipient_name = new_user.first_name
