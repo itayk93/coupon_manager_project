@@ -35,51 +35,76 @@
     {% if coupons %}
         <div class="coupon-container">
             {% for coupon in coupons %}
-                <div class="coupon-card">
-                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}">
-                        {# זיהוי לוגו החברה #}
-                        {% set comp_id = coupon.company %}
-                        {% if comp_id.isdigit() %}
-                            {% set comp_id = comp_id|int %}
-                            {% if comp_id in company_logo_mapping_by_id %}
-                                <img src="{{ url_for('static', filename=company_logo_mapping_by_id[comp_id]) }}"
-                                     alt="{{ company_name_mapping_by_id[comp_id] }} Logo"
-                                     class="company-logo">
-                                <p class="company-name">{{ company_name_mapping_by_id[comp_id] }}</p>
-                            {% else %}
-                                <img src="{{ url_for('static', filename='images/default.png') }}"
-                                     alt="Default Logo"
-                                     class="company-logo">
-                                <p class="company-name">חברה לא מזוהה</p>
-                            {% endif %}
-                        {% else %}
-                            {% set company_lower = coupon.company.lower() %}
-                            {% if company_lower in company_logo_mapping %}
-                                <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}"
-                                     alt="{{ coupon.company }} Logo"
-                                     class="company-logo">
-                                <p class="company-name">{{ coupon.company }}</p>
-                            {% else %}
-                                <img src="{{ url_for('static', filename='images/default.png') }}"
-                                     alt="Default Logo"
-                                     class="company-logo">
-                                <p class="company-name">{{ coupon.company }}</p>
-                            {% endif %}
+                <!-- הפכנו את ה-DIV לחיץ (onclick ל-detailed view) -->
+                <div class="coupon-card request-card"
+                     style="cursor: pointer;"
+                     onclick="window.location.href='{{ url_for('coupons.coupon_detail', id=coupon.id) }}'">
+
+                    {% set discount = 0 %}
+                    {% if coupon.value > 0 %}
+                        {% set calculated_discount = ((coupon.value - coupon.cost) / coupon.value) * 100 %}
+                        {% if calculated_discount > 0 %}
+                            {% set discount = calculated_discount %}
                         {% endif %}
+                    {% endif %}
 
-                        <p class="coupon-name">{{ coupon.name }}</p>
-                        <p>קוד: {{ coupon.code }}</p>
-                        <p>ערך: {{ '%.2f'|format(coupon.value) }} ש"ח</p>
-                        <p>עלות: {{ '%.2f'|format(coupon.cost) }} ש"ח</p>
-                    </a>
-
-                    {# התנהגות הכפתור בהתאם לסטטוס הקופון והמשתמש #}
-                    {% if coupon.user_id|int == current_user.id|int %}
-                        <p class="your-coupon">זהו הקופון שלך שמוצע למכירה</p>
-                    {% elif coupon.id in requested_coupon_ids %}
-                        <button class="action-button danger" disabled>נשלחה בקשה לקופון זה</button>
+                    {% if coupon.company.isdigit() %}
+                        {% set comp_id = coupon.company|int %}
+                        {% if comp_id in company_logo_mapping_by_id %}
+                            <img src="{{ url_for('static', filename=company_logo_mapping_by_id[comp_id]) }}"
+                                 alt="{{ company_name_mapping_by_id[comp_id] }} Logo"
+                                 class="company-logo">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/default.png') }}"
+                                 alt="Default Logo"
+                                 class="company-logo">
+                        {% endif %}
                     {% else %}
-                        <form action="{{ url_for('transactions.buy_coupon') }}" method="post" class="buy-form">
+                        {% set company_lower = coupon.company.lower() %}
+                        {% if company_lower in company_logo_mapping %}
+                            <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}"
+                                 alt="{{ coupon.company }} Logo"
+                                 class="company-logo">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/default.png') }}"
+                                 alt="Default Logo"
+                                 class="company-logo">
+                        {% endif %}
+                    {% endif %}
+
+                    <p class="request-details">
+                        <span class="request-user">{{ coupon.user.first_name }}</span>
+                        {% if coupon.user.gender == 'female' %}
+                            מוכרת
+                        {% else %}
+                            מוכר
+                        {% endif %}
+                        קופון ל<span class="request-company">{{ coupon.company }}</span>
+                        בשווי
+                        <span class="request-value">{{ '%.0f'|format(coupon.value) }}₪</span>
+                        תמורת
+                        <span class="request-cost">{{ '%.0f'|format(coupon.cost) }}₪</span>
+                        <br>
+                        (<span class="request-discount">{{ '%.0f'|format(discount) }}% הנחה</span>)
+                    </p>
+
+                    {% if coupon.user_id|int == current_user.id|int %}
+                        <p class="your-coupon"
+                           onclick="event.stopPropagation();">
+                           זהו הקופון שלך שמוצע למכירה
+                        </p>
+                    {% elif coupon.id in requested_coupon_ids %}
+                        <!-- גם פה עושים stopPropagation -->
+                        <button class="action-button danger"
+                                disabled
+                                onclick="event.stopPropagation();">
+                            נשלחה בקשה לקופון זה
+                        </button>
+                    {% else %}
+                        <form action="{{ url_for('transactions.buy_coupon') }}"
+                              method="post"
+                              class="buy-form"
+                              onclick="event.stopPropagation();">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
                             <button type="submit" class="action-button">בקש לקנות</button>
@@ -92,15 +117,17 @@
         <p class="no-coupons">אין קופונים זמינים בשוק כרגע.</p>
     {% endif %}
 
-    <!-- בקשות לקופונים (רשימת אנשים שמעוניינים לקנות) -->
+    <!-- בקשות לקופונים -->
     <section class="coupon-section">
         <h2 class="coupon-section-title">בקשות לקופונים</h2>
         {% if coupon_requests %}
             <div class="coupon-container">
                 {% for request in coupon_requests %}
-                    <div class="coupon-card request-card">
+                    <!-- הופכים את הבקשה ל-clickable לפרטי הבקשה -->
+                    <div class="coupon-card request-card"
+                         style="cursor: pointer;"
+                         onclick="window.location.href='{{ url_for('marketplace.coupon_request_detail_view', id=request.id) }}'">
 
-                        {# חישוב אחוז ההנחה (אם אין discount_percentage בעמודה) #}
                         {% set discount = 0 %}
                         {% if request.value > 0 %}
                             {% set discount = ((request.cost - request.value) / request.cost) * 100 %}
@@ -109,7 +136,6 @@
                             {% set discount = 0 %}
                         {% endif %}
 
-                        {# לוגו החברה #}
                         {% if request.company.isdigit() %}
                             {% set req_comp_id = request.company|int %}
                             {% if req_comp_id in company_logo_mapping_by_id %}
@@ -134,7 +160,6 @@
                             {% endif %}
                         {% endif %}
 
-                        <!-- טקסט משודרג לתיאור הבקשה -->
                         <p class="request-details">
                             <span class="request-user">{{ request.user.first_name }}</span>
                             {% if request.user.gender == 'female' %}
@@ -143,9 +168,9 @@
                                 מבקש
                             {% endif %}
                             לקנות קופון ל<span class="request-company">{{ request.company }}</span>
-                            במחיר של
-                            <span class="request-cost">{{ '%.0f'|format(request.cost) }}₪</span>
                             בשווי
+                            <span class="request-cost">{{ '%.0f'|format(request.cost) }}₪</span>
+                            תמורת
                             <span class="request-value">{{ '%.0f'|format(request.value) }}₪</span>
                             <br>
                             (<span class="request-discount">{{ '%.0f'|format(discount) }}% הנחה</span>)
@@ -154,13 +179,16 @@
                             הסבר: {{ request.description if request.description else '---' }}
                         </p>
 
-                        {# אם זה הבקשה של המשתמש הנוכחי, רק כיתוב. אחרת, כפתור "הצע למכירה" שמוביל לרוט החדש #}
                         {% if request.user_id == current_user.id %}
-                            <p class="your-request">זו הבקשה שלך</p>
+                            <p class="your-request"
+                               onclick="event.stopPropagation();">
+                               זו הבקשה שלך
+                            </p>
                         {% else %}
-                            <!-- כאן התיקון: מפנה ל- offer_coupon_selection (החדש) -->
                             <form action="{{ url_for('marketplace.offer_coupon_selection', request_id=request.id) }}"
-                                  method="get" class="offer-form">
+                                  method="get"
+                                  class="offer-form"
+                                  onclick="event.stopPropagation();">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="action-button">הצע למכירה</button>
                             </form>

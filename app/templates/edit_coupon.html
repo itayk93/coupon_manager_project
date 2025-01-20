@@ -45,7 +45,7 @@
         <!-- שדה הערך -->
         <div class="form-group">
             {{ form.value.label }}
-            {{ form.value(class="input-field") }}
+            {{ form.value(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
             {% for error in form.value.errors %}
                 <span class="error">{{ error }}</span>
             {% endfor %}
@@ -54,11 +54,12 @@
         <!-- שדה העלות -->
         <div class="form-group">
             {{ form.cost.label }}
-            {{ form.cost(class="input-field") }}
+            {{ form.cost(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
             {% for error in form.cost.errors %}
                 <span class="error">{{ error }}</span>
             {% endfor %}
         </div>
+
 
         <!-- שדה תאריך תפוגה -->
         <div class="form-group">

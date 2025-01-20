@@ -138,7 +138,7 @@
         <!-- Coupon Cost Field -->
         <div class="form-group">
             {{ coupon_form.cost.label(class="form-label") }}
-            {{ coupon_form.cost(class="input-field", id="coupon_cost", required=True) }}
+            {{ coupon_form.cost(class="input-field", id="coupon_cost", required=True, type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
             {% for error in coupon_form.cost.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
@@ -147,7 +147,7 @@
         <!-- Discount Percentage Field -->
         <div class="form-group">
             {{ coupon_form.discount_percentage.label(class="form-label") }}
-            {{ coupon_form.discount_percentage(class="input-field", id="discount_percentage_input") }}
+            {{ coupon_form.discount_percentage(class="input-field", id="discount_percentage_input", type="number", inputmode="numeric", pattern="[0-9]*", min="0", max="100", step="0.01") }}
             {% for error in coupon_form.discount_percentage.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
@@ -156,7 +156,7 @@
         <!-- Desired Value Field -->
         <div class="form-group">
             {{ coupon_form.value.label(class="form-label") }}
-            {{ coupon_form.value(class="input-field", id="desired_value", required=True) }}
+            {{ coupon_form.value(class="input-field", id="desired_value", required=True, type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
             {% for error in coupon_form.value.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}

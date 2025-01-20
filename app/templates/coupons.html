@@ -158,18 +158,18 @@
         <!-- כפתורי פעולה -->
         <div class="action-buttons">
             <a href="{{ url_for('export.export_excel') }}" class="export-button">
-                <i class="fa fa-file-excel-o" aria-hidden="true"></i> ייצא ל-Excel
+                <i class="fa fa-file-excel-o" aria-hidden="true"></i> ייצוא ל-Excel
             </a>
             <a href="{{ url_for('export.export_pdf') }}" class="export-button">
-                <i class="fa fa-file-pdf-o" aria-hidden="true"></i> ייצא ל-PDF
+                <i class="fa fa-file-pdf-o" aria-hidden="true"></i> ייצוא ל-PDF
             </a>
             {% if current_user.is_admin %}
                 <a href="{{ url_for('coupons.update_all_coupons_route') }}" class="export-button">
-                    <i class="fa fa-refresh" aria-hidden="true"></i> עדכן קופונים מ-Multipass
+                    <i class="fa fa-refresh" aria-hidden="true"></i> עדכון קופונים מ-Multipass
                 </a>
             {% endif %}
             <a href="{{ url_for('coupons.select_coupons_to_delete') }}" class="export-button">
-                <i class="fa fa-trash" aria-hidden="true"></i> בחר קופונים למחיקה
+                <i class="fa fa-trash" aria-hidden="true"></i> בחירת קופונים למחיקה
             </a>
         </div>
     </section>

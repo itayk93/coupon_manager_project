@@ -37,7 +37,7 @@
             <a href="{{ url_for('marketplace.marketplace') }}" class="action-button">חזרה לשוק הקופונים</a>
 
             <!-- Delete Button -->
-            <form action="{{ url_for('coupons.coupon_request_detail', id=coupon_request.id) }}" method="POST" onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את בקשת הקופון הזו?');" style="display: inline;">
+            <form action="{{ url_for('marketplace.coupon_request_detail_view', id=coupon_request.id) }}" method="POST" onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את בקשת הקופון הזו?');" style="display: inline;">
                 {{ delete_form.hidden_tag() }}
                 <button type="submit" class="action-button delete-button">מחק בקשת קופון</button>
             </form>

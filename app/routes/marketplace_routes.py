@@ -132,7 +132,7 @@ def marketplace_coupon_detail(id):
         return redirect(url_for('marketplace.marketplace'))
 
     seller = User.query.get(coupon.user_id)
-    return render_template('marketplace_coupon_detail.html', coupon=coupon, seller=seller)
+    return render_template('coupon_detail.html', coupon=coupon, seller=seller)
 
 
 @marketplace_bp.route('/request_coupon/<int:id>', methods=['GET', 'POST'])

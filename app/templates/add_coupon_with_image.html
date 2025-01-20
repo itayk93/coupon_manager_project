@@ -60,7 +60,11 @@
         <!-- Coupon Cost Field -->
         <div class="form-group">
             {{ coupon_form.cost.label(class="form-label") }}
-            {{ coupon_form.cost(class="input-field", id="coupon_cost") }}
+            {{ coupon_form.cost(class="input-field", id="coupon_cost",
+                type="number",
+                inputmode="numeric",
+                pattern="[0-9]*",
+                step="0.01") }}
             {% for error in coupon_form.cost.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
@@ -69,7 +73,11 @@
         <!-- Desired Value Field -->
         <div class="form-group">
             {{ coupon_form.value.label(class="form-label") }}
-            {{ coupon_form.value(class="input-field", id="desired_value") }}
+            {{ coupon_form.value(class="input-field", id="desired_value",
+                type="number",
+                inputmode="numeric",
+                pattern="[0-9]*",
+                step="0.01") }}
             {% for error in coupon_form.value.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
@@ -78,7 +86,13 @@
         <!-- Discount Percentage Field -->
         <div class="form-group">
             {{ coupon_form.discount_percentage.label(class="form-label") }}
-            {{ coupon_form.discount_percentage(class="input-field", id="discount_percentage_input") }}
+            {{ coupon_form.discount_percentage(class="input-field", id="discount_percentage_input",
+                type="number",
+                inputmode="numeric",
+                pattern="[0-9]*",
+                min="0",
+                max="100",
+                step="0.01") }}
             {% for error in coupon_form.discount_percentage.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
@@ -102,22 +116,33 @@
             {% endfor %}
         </div>
 
-        <!-- CVV Field -->
-        <div class="form-group">
-            {{ coupon_form.cvv.label(class="form-label") }}
-            {{ coupon_form.cvv(class="input-field", id="cvv") }}
-            {% for error in coupon_form.cvv.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
+        <!-- Checkbox: האם להכניס תוקף כרטיס ו-CVV -->
+        <div class="form-group checkbox-inline">
+            <label for="include_card_info">
+                <input type="checkbox" id="include_card_info" name="include_card_info">
+                האם להכניס תוקף כרטיס ו-CVV?
+            </label>
         </div>
 
-        <!-- Card Exp Field -->
-        <div class="form-group">
-            {{ coupon_form.card_exp.label(class="form-label") }}
-            {{ coupon_form.card_exp(class="input-field", id="card_exp") }}
-            {% for error in coupon_form.card_exp.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
+        <!-- עוטפים את שני השדות במכלול אחד ונגדיר display:none כברירת מחדל -->
+        <div id="card_fields_container" style="display: none;">
+            <!-- CVV Field -->
+            <div class="form-group">
+                {{ coupon_form.cvv.label(class="form-label") }}
+                {{ coupon_form.cvv(class="input-field", id="cvv") }}
+                {% for error in coupon_form.cvv.errors %}
+                    <div class="error">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <!-- Card Exp Field -->
+            <div class="form-group">
+                {{ coupon_form.card_exp.label(class="form-label") }}
+                {{ coupon_form.card_exp(class="input-field", id="card_exp") }}
+                {% for error in coupon_form.card_exp.errors %}
+                    <div class="error">{{ error }}</div>
+                {% endfor %}
+            </div>
         </div>
 
         <!-- One-Time Use Checkbox -->
@@ -280,7 +305,30 @@ document.addEventListener('DOMContentLoaded', function() {
         checkbox.addEventListener('change', togglePurposeField);
     }
 
-    // Variables
+        // === ניהול תצוגת שדות הכרטיס (CVV + תוקף) ושמירת המצב ===
+        const includeCardInfoCheckbox = document.getElementById('include_card_info');
+    const cardFieldsContainer = document.getElementById('card_fields_container');
+
+    function toggleCardFields() {
+        if (includeCardInfoCheckbox.checked) {
+            cardFieldsContainer.style.display = 'block';
+        } else {
+            cardFieldsContainer.style.display = 'none';
+
+            // אופציונלי: ניקוי השדות בעת ביטול הסימון
+            const cardExpInput = document.getElementById('card_exp');
+            const cvvInput = document.getElementById('cvv');
+            if (cardExpInput) cardExpInput.value = '';
+            if (cvvInput) cvvInput.value = '';
+        }
+    }
+
+    if (includeCardInfoCheckbox && cardFieldsContainer) {
+        includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
+        toggleCardFields(); // הפעלה ראשונית
+    }
+
+    // === ניהול חישובי מחיר והנחה ===
     const desiredValueInput = document.getElementById('desired_value');
     const couponCostInput = document.getElementById('coupon_cost');
     const discountPercentageInput = document.getElementById('discount_percentage_input');
@@ -374,5 +422,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 });
+
 </script>
 {% endblock %}

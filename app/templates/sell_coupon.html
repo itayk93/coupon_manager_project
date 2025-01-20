@@ -35,23 +35,25 @@
         <!-- Coupon Cost Field -->
         <div class="form-group">
             {{ form.cost.label }}<span class="required">*</span>
-            {{ form.cost(class="input-field") }}
+            {{ form.cost(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
             {% for error in form.cost.errors %}
             <span class="error-message">{{ error }}</span><br>
             {% endfor %}
         </div>
+
         <!-- Desired Value Field -->
         <div class="form-group">
             {{ form.value.label }}
-            {{ form.value(class="input-field") }}
+            {{ form.value(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
             {% for error in form.value.errors %}
             <span class="error-message">{{ error }}</span><br>
             {% endfor %}
         </div>
+
         <!-- Discount Percentage Field -->
         <div class="form-group">
             {{ form.discount_percentage.label }}
-            {{ form.discount_percentage(class="input-field") }}
+            {{ form.discount_percentage(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", min="0", max="100", step="0.01") }}
             {% for error in form.discount_percentage.errors %}
             <span class="error-message">{{ error }}</span><br>
             {% endfor %}

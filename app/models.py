@@ -417,7 +417,6 @@ class CouponTransaction(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=False)
-    card_number = db.Column(db.String(50), nullable=False)
     transaction_date = db.Column(db.DateTime, nullable=True)
     location = db.Column(db.String(255), nullable=True)
     recharge_amount = db.Column(db.Float, nullable=True)

@@ -529,12 +529,12 @@ class MarkCouponAsUsedForm(FlaskForm):
 
 class UpdateCouponUsageForm(FlaskForm):
     used_amount = FloatField('כמות שימוש', validators=[DataRequired(), NumberRange(min=0.0)])
-    submit = SubmitField('עדכן שימוש עם MultiPass')
+    submit = SubmitField('עדכון שימוש עם MultiPass')
 
 
 class BuySlotsForm(FlaskForm):
     slot_amount = HiddenField('slot_amount', validators=[DataRequired()])
-    submit = SubmitField('רכוש סלוטים')
+    submit = SubmitField('רכישת סלוטים')
 
 
 # forms.py
@@ -613,7 +613,7 @@ class RequestCouponForm(FlaskForm):
         return True
 
 class UpdateMultipassForm(FlaskForm):
-    submit = SubmitField('עדכן נתונים מ-Multipass')
+    submit = SubmitField('עדכון נתונים מ-Multipass')
 
 class SMSInputForm(FlaskForm):
     sms_text = TextAreaField('תוכן ההודעה שהתקבלה ב-SMS:', validators=[Optional()])

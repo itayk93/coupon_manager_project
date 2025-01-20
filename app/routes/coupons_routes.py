@@ -50,14 +50,13 @@ def add_coupon_transaction(coupon):
     הוספת רשומה לטבלת coupon_transaction כאשר מתווסף קופון חדש.
     """
     new_transaction = CouponTransaction(
-        coupon_id=coupon.id,  # Coupon ID
-        transaction_date=datetime.utcnow(),  # Current date and time
-        card_number='',  # No card number
-        recharge_amount=coupon.value,  # Original value of the coupon
-        usage_amount=0,  # No usage yet
-        location="Manually entered coupon",  # Manual location
-        reference_number="ManualEntry",  # Specific reference for manual entry
-        source="User"  # User who added
+        coupon_id=coupon.id,
+        transaction_date=datetime.utcnow(),
+        recharge_amount=coupon.value,
+        usage_amount=0,
+        location="Manually entered coupon",
+        reference_number="ManualEntry",
+        source="User"
     )
     db.session.add(new_transaction)
     db.session.commit()
@@ -193,7 +192,11 @@ def sell_coupon():
         current_app.logger.info(f"[DEBUG] sell_coupon => chosen_company = '{chosen_company_name}'")
 
         # Retrieve the most common tag for the chosen company
-        current_app.logger.info(f"[DEBUG] sell_coupon => auto found_tag = '{found_tag}'")
+        found_tag = get_most_common_tag_for_company(chosen_company_name)  # וודא שהפונקציה מחזירה ערך
+        if found_tag:
+            current_app.logger.info(f"[DEBUG] sell_coupon => auto found_tag = '{found_tag.name}'")
+        else:
+            current_app.logger.info("[DEBUG] sell_coupon => auto found_tag = 'None'")
 
         # If a matching tag is found, add it to the coupon
         if found_tag:
@@ -1430,7 +1433,6 @@ def edit_coupon(id):
                 else:
                     initial_transaction = CouponTransaction(
                         coupon_id=coupon.id,
-                        card_number=coupon.code,
                         transaction_date=datetime.utcnow(),
                         location='הטענה ראשונית',
                         recharge_amount=coupon.value,
@@ -1584,7 +1586,6 @@ CombinedData AS (
         timestamp,
         action,
         details,
-        NULL AS card_number,
         NULL AS location,
         0 AS recharge_amount,
         NULL AS reference_number,
@@ -1607,7 +1608,6 @@ CombinedData AS (
             WHEN location IS NOT NULL AND location != '' THEN location
             ELSE NULL
         END AS details,
-        card_number,
         location,
         recharge_amount,
         reference_number,
@@ -1697,7 +1697,7 @@ def delete_coupon(id):
                 if tag.count < 0:
                     tag.count = 0
 
-            data_directory = "multipass/input_html"
+            data_directory = "automatic_coupon_update/input_html"
             xlsx_filename = f"coupon_{coupon.code}_{coupon.id}.xlsx"
             xlsx_path = os.path.join(data_directory, xlsx_filename)
             if os.path.exists(xlsx_path):
@@ -1767,7 +1767,7 @@ def confirm_delete_coupon(id):
                     if tag.count < 0:
                         tag.count = 0
 
-                data_directory = "multipass/input_html"
+                data_directory = "automatic_coupon_update/input_html"
                 xlsx_filename = f"coupon_{coupon.code}_{coupon.id}.xlsx"
                 xlsx_path = os.path.join(data_directory, xlsx_filename)
                 if os.path.exists(xlsx_path):
@@ -2156,27 +2156,36 @@ def mark_coupon_as_used(id):
 @coupons_bp.route('/update_coupon_usage_from_multipass/<int:id>', methods=['GET', 'POST'])
 @login_required
 def update_coupon_usage_from_multipass(id):
+    """
+    מושך נתונים מ־Multipass עבור קופון קיים ומעדכן ב־DB,
+    רק אם המשתמש בעל ההרשאה (לצורך הדוגמה: רק אימייל ספציפי).
+    """
+    # קודם נשלוף את הקופון:
+    coupon = Coupon.query.get_or_404(id)
+    # כעת יש לנו coupon.id, אפשר ללוגג
     log_user_activity("update_coupon_usage_from_multipass", coupon.id)
 
+    # בדיקת הרשאה לדוגמה:
     if current_user.email != 'itayk93@gmail.com':
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('coupons.coupon_detail', id=id))
 
-    coupon = Coupon.query.get_or_404(id)
     if coupon.is_one_time:
-        flash('הקופון הוא חד-פעמי ואין צורך בעדכון שימוש מ-Multipass.', 'warning')
+        flash('קופון חד-פעמי – אין צורך בעדכון שימוש מ-Multipass.', 'warning')
         return redirect(url_for('coupons.coupon_detail', id=id))
 
-    df = get_coupon_data(coupon.code)
+    # מעבירים את אובייקט הקופון, ולא רק את code
+    df = get_coupon_data(coupon)
     if df is None:
         flash('לא ניתן לעדכן את השימוש מ-Multipass.', 'danger')
         return redirect(url_for('coupons.coupon_detail', id=id))
 
     try:
-        total_usage = df['שימוש'].sum()
-        total_usage = float(total_usage)
-        coupon.used_value = total_usage
+        # לפי הסכמה החדשה, "usage_amount" בעמודה
+        total_usage = df['usage_amount'].sum()
+        coupon.used_value = float(total_usage)
         update_coupon_status(coupon)
+
         usage = CouponUsage(
             coupon_id=coupon.id,
             used_amount=total_usage,
@@ -2185,6 +2194,7 @@ def update_coupon_usage_from_multipass(id):
             details='שימוש מעודכן מ-Multipass.'
         )
         db.session.add(usage)
+
         notification = Notification(
             user_id=coupon.user_id,
             message=f"השימוש בקופון {coupon.code} עודכן מ-Multipass.",
@@ -2192,6 +2202,7 @@ def update_coupon_usage_from_multipass(id):
         )
         db.session.add(notification)
         db.session.commit()
+
         flash('השימוש עודכן בהצלחה מ-Multipass.', 'success')
     except Exception as e:
         db.session.rollback()
@@ -2260,11 +2271,14 @@ def update_coupon_usage_route(id):
 @coupons_bp.route('/update_all_active_coupons', methods=['POST'])
 @login_required
 def update_all_active_coupons():
+    """
+    עדכון מרוכז של כל הקופונים הפעילים שאינם חד-פעמיים, רק אם המשתמש הנוכחי הוא admin.
+    מושך נתונים מ־Multipass עבור כל קופון בנפרד.
+    """
     if not current_user.is_admin:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('index'))
 
-    valid_coupon_pattern = re.compile(r'^\d{8,9}-\d{4}$')
     active_coupons = Coupon.query.filter(
         Coupon.status == 'פעיל',
         Coupon.is_one_time == False
@@ -2273,20 +2287,16 @@ def update_all_active_coupons():
     updated_coupons = []
     failed_coupons = []
 
-    for coupon in active_coupons:
-        if not valid_coupon_pattern.match(coupon.code):
-            failed_coupons.append(coupon.code)
-            continue
-
+    for cpn in active_coupons:
         try:
-            df = get_coupon_data(coupon.code)
+            df = get_coupon_data(cpn)  # מעבירים קופון שלם
             if df is not None:
                 total_usage = float(df['usage_amount'].sum())
-                coupon.used_value = total_usage
-                update_coupon_status(coupon)
+                cpn.used_value = total_usage
+                update_coupon_status(cpn)
 
                 usage = CouponUsage(
-                    coupon_id=coupon.id,
+                    coupon_id=cpn.id,
                     used_amount=total_usage,
                     timestamp=datetime.now(timezone.utc),
                     action='עדכון מרוכז',
@@ -2295,19 +2305,19 @@ def update_all_active_coupons():
                 db.session.add(usage)
 
                 notification = Notification(
-                    user_id=coupon.user_id,
-                    message=f"השימוש בקופון {coupon.code} עודכן מ-Multipass.",
-                    link=url_for('coupons.coupon_detail', id=coupon.id)
+                    user_id=cpn.user_id,
+                    message=f"השימוש בקופון {cpn.code} עודכן מ-Multipass.",
+                    link=url_for('coupons.coupon_detail', id=cpn.id)
                 )
                 db.session.add(notification)
 
-                updated_coupons.append(coupon.code)
+                updated_coupons.append(cpn.code)
             else:
-                failed_coupons.append(coupon.code)
+                failed_coupons.append(cpn.code)
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Error updating coupon {coupon.code}: {e}")
-            failed_coupons.append(coupon.code)
+            current_app.logger.error(f"Error updating coupon {cpn.code}: {e}")
+            failed_coupons.append(cpn.code)
 
     db.session.commit()
 
@@ -2321,6 +2331,10 @@ def update_all_active_coupons():
 @coupons_bp.route('/update_coupon_transactions', methods=['POST'])
 @login_required
 def update_coupon_transactions():
+    """
+    פעולה ידנית לאדמין: עדכון נתוני שימוש/הטענות של קופון מסויים
+    לפי מזהה קופון או code שמגיע ב-POST.
+    """
     log_user_activity("update_coupon_transactions_attempt")
 
     if not current_user.is_admin:
@@ -2328,6 +2342,7 @@ def update_coupon_transactions():
         coupon_id = request.form.get('coupon_id')
         coupon_code = request.form.get('coupon_code')
 
+        # לא מאתרים? מפנים חזרה
         coupon = None
         if coupon_id:
             coupon = Coupon.query.get(coupon_id)
@@ -2340,9 +2355,11 @@ def update_coupon_transactions():
             flash('לא ניתן לעדכן נתונים ללא מזהה קופון תקין.', 'danger')
             return redirect(url_for('transactions.my_transactions'))
 
+    # אם אנחנו כן אדמין, מנסים לאתר את הקופון
     coupon_id = request.form.get('coupon_id')
     coupon_code = request.form.get('coupon_code')
     coupon = None
+
     if coupon_id:
         coupon = Coupon.query.get(coupon_id)
     elif coupon_code:
@@ -2350,31 +2367,37 @@ def update_coupon_transactions():
 
     if not coupon:
         flash('לא ניתן לעדכן נתונים ללא מזהה קופון תקין.', 'danger')
-        return redirect(url_for('transactions.my_transactions'))
+        return redirect(url_for('coupons.coupon_detail'))
 
-    df = get_coupon_data(coupon.code)
-    if df is not None:
-        Transaction.query.filter_by(coupon_id=coupon.id, source='Multipass').delete()
-        for index, row in df.iterrows():
-            t = Transaction(
+    try:
+        df = get_coupon_data(coupon)  # מעבירים את האובייקט
+        if df is not None:
+            total_usage = float(df['usage_amount'].sum())
+            coupon.used_value = total_usage
+            update_coupon_status(coupon)
+
+            usage = CouponUsage(
                 coupon_id=coupon.id,
-                #card_number='',
-                transaction_date=row['transaction_date'],
-                location=row['location'],
-                recharge_amount=row['recharge_amount'] or 0,
-                usage_amount=row['usage_amount'] or 0,
-                reference_number=row.get('reference_number', ''),
-                source='Multipass'
+                used_amount=total_usage,
+                timestamp=datetime.now(timezone.utc),
+                action='עדכון מרוכז',
+                details='עדכון מתוך Multipass'
             )
-            db.session.add(t)
+            db.session.add(usage)
 
-        total_used = df['usage_amount'].sum()
-        coupon.used_value = total_used
-        db.session.commit()
+            notification = Notification(
+                user_id=coupon.user_id,
+                message=f"השימוש בקופון {coupon.code} עודכן מ-Multipass.",
+                link=url_for('coupons.coupon_detail', id=coupon.id)
+            )
+            db.session.add(notification)
+            flash(f'הקופון עודכן בהצלחה: {coupon.code}', 'success')
+        else:
+            current_app.logger.error(f"Error updating coupon {coupon.code} (no DataFrame returned).")
+            db.session.rollback()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating coupon {coupon.code}: {e}")
 
-        flash(f'הנתונים עבור הקופון {coupon.code} עודכנו בהצלחה.', 'success')
-        log_user_activity("update_coupon_transactions_success", coupon.id)
-    else:
-        flash(f'אירעה שגיאה בעת עדכון הנתונים עבור הקופון {coupon.code}.', 'danger')
-
+    db.session.commit()
     return redirect(url_for('coupons.coupon_detail', id=coupon.id))

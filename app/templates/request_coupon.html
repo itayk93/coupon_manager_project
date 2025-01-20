@@ -35,7 +35,7 @@
         <!-- Coupon Cost Field -->
         <div class="form-group">
             <label for="coupon_cost">מחיר קופון:<span class="required">*</span></label>
-            {{ form.cost(class="input-field", id="coupon_cost") }}
+            {{ form.cost(class="input-field", id="coupon_cost", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
             {% for error in form.cost.errors %}
                 <span class="error-message">{{ error }}</span><br>
             {% endfor %}
@@ -44,7 +44,7 @@
         <!-- Discount Percentage Field -->
         <div class="form-group">
             <label for="discount_percentage_input">אחוז הנחה מבוקש:</label>
-            {{ form.discount_percentage(class="input-field", id="discount_percentage_input") }}
+            {{ form.discount_percentage(class="input-field", id="discount_percentage_input", type="number", inputmode="numeric", pattern="[0-9]*", min="0", max="100", step="0.01") }}
             {% for error in form.discount_percentage.errors %}
                 <span class="error-message">{{ error }}</span><br>
             {% endfor %}
@@ -53,11 +53,12 @@
         <!-- Desired Value Field -->
         <div class="form-group">
             <label for="desired_value">ערך מבוקש:</label>
-            {{ form.value(class="input-field", id="desired_value") }}
+            {{ form.value(class="input-field", id="desired_value", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
             {% for error in form.value.errors %}
                 <span class="error-message">{{ error }}</span><br>
             {% endfor %}
         </div>
+
 
         <!-- Additional Explanation Field -->
         <div class="form-group">

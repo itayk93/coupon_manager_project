@@ -48,8 +48,8 @@
                     <button class="dropbtn"><i class="fa fa-bars"></i></button>
                     <div class="dropdown-content">
                         <a href="{{ url_for('coupons.show_coupons') }}">הקופונים שלי</a>
-                        <a href="{{ url_for('coupons.add_coupon') }}">הוסף קופון</a>
-                        <a href="{{ url_for('auth.logout') }}">התנתק</a>
+                        <a href="{{ url_for('coupons.add_coupon') }}">הוספת קופון</a>
+                        <a href="{{ url_for('auth.logout') }}">יציאה מהחשבון</a>
                     </div>
                 </div>
                 <!-- תפריט שוק הקופונים -->
@@ -57,8 +57,8 @@
                     <button class="dropbtn"><i class="fa fa-shopping-cart"></i></button>
                     <div class="dropdown-content">
                         <a href="{{ url_for('marketplace.marketplace') }}">שוק הקופונים</a>
-                        <a href="{{ url_for('coupons.sell_coupon') }}">הוסף קופון למכירה</a>
-                        <a href="{{ url_for('requests.request_coupon') }}">הוסף בקשת קופון</a>
+                        <a href="{{ url_for('coupons.sell_coupon') }}">הוספת קופון למכירה</a>
+                        <a href="{{ url_for('requests.request_coupon') }}">הוספת בקשת קופון</a>
                         <!--<a href="{{ url_for('requests.buy_slots') }}">רכישת סלוטים</a>-->
                         <a href="{{ url_for('transactions.my_transactions') }}">העסקאות שלי</a>
                     </div>

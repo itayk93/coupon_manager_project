@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 from flask import current_app, render_template, url_for, flash
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+#from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -24,6 +26,7 @@ from app.models import (
 )
 from itsdangerous import URLSafeTimedSerializer
 from app.models import Company
+import numpy as np
 
 load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
@@ -189,20 +192,48 @@ def update_all_active_coupons(user_id):
 
 
 
-def get_coupon_data(coupon_number, save_directory="multipass/input_html"):
+def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html"):
     """
-    Fetches coupon data from the Multipass website using Selenium, parses the HTML,
-    saves data to Excel, and updates the database and coupon_transaction table.
+    מפעילה Selenium כדי להיכנס לאתר Multipass, מזינה את קוד הקופון (coupon.code),
+    מורידה את דף ה-HTML, הופכת אותו ל-DataFrame, ושומרת/מעבדת את המידע ב-DB
+    בטבלת coupon_transaction, בהתאם ל-coupon.id.
 
     Parameters:
-    coupon_number (str): The coupon number to query.
-    save_directory (str): Directory where the HTML and Excel files will be saved.
+    -----------
+    coupon : Coupon
+        אובייקט קופון מתוך ה-DB.
+    save_directory : str
+        נתיב לתיקייה בה יישמרו קבצי HTML/Excel זמניים.
 
     Returns:
-    pd.DataFrame: DataFrame containing the coupon data, or None in case of an error.
+    --------
+    pd.DataFrame או None
+        מחזירה DataFrame עם המידע המעודכן על ההטענות/השימוש בקופון,
+        או None במקרה של כישלון.
     """
+    import os
+    import time
+    import re
+    import traceback
+    import pandas as pd
+    from datetime import datetime, timezone
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from sqlalchemy import func
+
+    from app.extensions import db
+    from app.models import CouponTransaction
+    from app.helpers import update_coupon_status
+
     os.makedirs(save_directory, exist_ok=True)
 
+    # נשתמש ב-coupon.code
+    coupon_number = coupon.code
+
+    # הגדרת אופציות ל-Selenium
     chrome_options = Options()
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
@@ -217,18 +248,14 @@ def get_coupon_data(coupon_number, save_directory="multipass/input_html"):
     try:
         driver.get("https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/")
         wait = WebDriverWait(driver, 30)
+        time.sleep(5)  # שנייה להמתין לטעינה מלאה
 
-        card_number_field = wait.until(
-            EC.visibility_of_element_located((By.ID, "newcardid"))
-        )
+        card_number_field = driver.find_element(By.XPATH, "//input[@id='newcardid']")
         card_number_field.clear()
 
-        # matching the coupon type of multipass
-        cleaned_coupon_number = str(coupon_number[:-4]).replace("-", "")  # לוקח את כל הספרות חוץ מה-4 האחרונות
+        # הנחת סוג קופון Multipass
+        cleaned_coupon_number = str(coupon_number[:-4]).replace("-", "")
         card_number_field.send_keys(cleaned_coupon_number)
-
-        #card_number_field.send_keys(str(coupon_number).split("-")[0])
-        print("Coupon number entered.")
 
         recaptcha_iframe = wait.until(
             EC.presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'recaptcha')]"))
@@ -251,13 +278,12 @@ def get_coupon_data(coupon_number, save_directory="multipass/input_html"):
             print("'Check Balance' button is enabled. Clicking the button...")
             check_balance_button.click()
         else:
-            print("Submit button is still disabled. Please ensure the CAPTCHA is solved correctly.")
+            print("Submit button is still disabled. CAPTCHA not solved properly?")
+            driver.quit()
             return None
 
-        wait.until(
-            EC.presence_of_element_located((By.XPATH, "//table"))  # עדכון לפי המבנה הנוכחי
-        )
-
+        # ממתינים לטבלת התוצאות
+        wait.until(EC.presence_of_element_located((By.XPATH, "//table")))
         time.sleep(10)
 
         page_html = driver.page_source
@@ -275,32 +301,20 @@ def get_coupon_data(coupon_number, save_directory="multipass/input_html"):
         print(f"An error occurred during Selenium operations: {e}")
         driver.quit()
         return None
-
     finally:
         driver.quit()
 
     try:
-        # קריאת ה-HTML ל-DataFrame
-        import pandas as pd
+        # קוראים את ה-HTML כ-DataFrame
         dfs = pd.read_html(file_path)
-        # Assuming the table we need is the first one
+        os.remove(file_path)  # מוחקים את קובץ ה-HTML הזמני
+        if not dfs:
+            print("No tables found in HTML.")
+            return None
+
         df = dfs[0]
 
-        # Extract the card number from the HTML
-        with open(file_path, 'r', encoding='utf-8') as file:
-            html_content = file.read()
-        # card_number_pattern = r'כרטיס: </div> <div class="cardnumber">(\d+)</div>'
-        # card_number_match = re.search(card_number_pattern, html_content)
-        # card_number_extracted = int(card_number_match.group(1)) if card_number_match else coupon_number
-
-        # Add the card number as a column
-        df['card_number'] = coupon_number
-
-        # בדיקה אם העמודה 'שימוש' קיימת ואם לא, יוצרים אותה
-        if 'שימוש' not in df.columns:
-            df['שימוש'] = 0  # או כל ערך התחלתי אחר שתרצה לתת לעמודה
-
-        # Reorder columns if needed
+        # מיפוי עמודות בהתאם למבנה Multipass הנוכחי
         df = df.rename(columns={
             'שם בית עסק': 'location',
             'סכום טעינת תקציב': 'recharge_amount',
@@ -308,133 +322,103 @@ def get_coupon_data(coupon_number, save_directory="multipass/input_html"):
             'תאריך': 'transaction_date',
             'מספר אסמכתא': 'reference_number',
         })
+
+        # הוספת עמודות חסרות
         if 'recharge_amount' not in df.columns:
-            df['recharge_amount'] = None
-
+            df['recharge_amount'] = 0.0
         if 'usage_amount' not in df.columns:
-            df['usage_amount'] = None
-        df = df[['card_number', 'transaction_date', 'location', 'recharge_amount', 'usage_amount', 'reference_number']]
+            df['usage_amount'] = 0.0
 
-        # הוספת העמודה 'card_number' מתוך קוד הקופון אם לא קיימת
-        if 'card_number' not in df.columns:
-            # card_number_extracted = str(coupon_number).split("-")[0]
-            df['card_number'] = coupon_number
+        # מוודאים רק את העמודות החשובות
+        expected_cols = ['transaction_date', 'location',
+                         'recharge_amount', 'usage_amount', 'reference_number']
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = None
 
-        # בדיקה האם העמודה 'card_number' קיימת
-        print("Columns in DataFrame:", df.columns)
-        if 'card_number' not in df.columns:
-            print("Error: 'card_number' column is missing in the DataFrame.")
-            return None
+        # מנסים להמיר תאריכים
+        df['transaction_date'] = pd.to_datetime(
+            df['transaction_date'],
+            format='%H:%M %d/%m/%Y',
+            errors='coerce'
+        )
+        df['transaction_date'] = df['transaction_date'].apply(
+            lambda x: x.to_pydatetime() if pd.notnull(x) else None
+        )
 
-        # המרת תאריך
-        df['transaction_date'] = pd.to_datetime(df['transaction_date'], format='%H:%M %d/%m/%Y', errors='coerce')
-        df['transaction_date'] = df['transaction_date'].apply(lambda x: x.to_pydatetime() if pd.notnull(x) else None)
-
-        # המרת עמודות מספריות, החלפה של ערכים לא חוקיים ב-0.0
-        numeric_columns = ['recharge_amount', 'usage_amount', 'discount_amount', 'benefit_loaded', 'benefit_used']
-
+        # המרת עמודות מספריות
+        numeric_columns = ['recharge_amount', 'usage_amount']
         for col in numeric_columns:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
 
-        # הדפסת עמודות לאחר הניקוי
-        print("DataFrame after cleaning:")
-        print(df.head())
-
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        xlsx_filename = f"coupon_{coupon_number}_{timestamp}.xlsx"
-        xlsx_path = os.path.join(save_directory, xlsx_filename)
-        df.to_excel(xlsx_path, index=False)
-        print(f"DataFrame saved to {xlsx_path}")
-
-        # --- עדכון מסד הנתונים ---
-        coupon = Coupon.query.filter_by(code=coupon_number).first()
-        if not coupon:
-            print(f"Coupon with code {coupon_number} not found in database.")
-            return df
-
-        import pandas as pd
-
-        # שליפת כל השורות מהדאטהבייס עבור הקופון
+        # -------------- עדכון מסד הנתונים --------------
+        # 1) שולפים את כל הנתוני transaction הקיימים ל-coupon.id
         sql_query = """
         SELECT *
         FROM coupon_transaction
         WHERE coupon_id = %(coupon_id)s;
         """
-
-        # משיכת כל הנתונים הקיימים מהדאטהבייס ל-DataFrame
         existing_data = pd.read_sql_query(
             sql_query,
-            db.engine,  # שימוש ב-db.engine
+            db.engine,
             params={'coupon_id': coupon.id}
         )
 
-        existing_data = existing_data.drop(['id'], axis=1)
-        existing_data = existing_data.drop(['coupon_id'], axis=1)
-        df = pd.concat([df, existing_data])
+        # נשמיט עמודות שלא צריכים להשוות
+        if 'id' in existing_data.columns:
+            existing_data = existing_data.drop(['id'], axis=1)
+        if 'coupon_id' in existing_data.columns:
+            existing_data = existing_data.drop(['coupon_id'], axis=1)
 
-        # Convert transaction_date to datetime and sort
-        df['transaction_date'] = pd.to_datetime(df['transaction_date'])
-        df = df.sort_values(by='transaction_date')
+        # מאחדים DF חדש עם DF קיים (ומסננים כפילויות)
+        combined_df = pd.concat([df, existing_data], ignore_index=True)
+        combined_df['transaction_date'] = pd.to_datetime(combined_df['transaction_date'])
+        combined_df = combined_df.sort_values(by='transaction_date')
+        combined_df = combined_df.drop_duplicates(subset=[
+            'transaction_date', 'location',
+            'recharge_amount', 'usage_amount', 'reference_number'
+        ])
 
-        # Drop duplicates
-        df = df.drop_duplicates(
-            subset=['card_number', 'transaction_date', 'location', 'recharge_amount', 'usage_amount'])
-
-        # Fill NaN values in specific columns with 0
-        df[['recharge_amount', 'usage_amount']] = df[['recharge_amount', 'usage_amount']].fillna(0)
-
-        # עיבוד השוואת הנתונים
-        for index, row in df.iterrows():
-            # יצירת סדרת נתונים לשורה החדשה
-            new_row = pd.Series({
-                'coupon_id': coupon.id,
-                'card_number': row['card_number'],
-                'transaction_date': row['transaction_date'],
-                'location': row['location'],
-                'recharge_amount': row['recharge_amount'],
-                'usage_amount': row['usage_amount'],
-                'reference_number': row['reference_number']
-            })
-            existing_row = existing_data[existing_data['card_number'] == row['card_number']]
-            existing_row = existing_row[existing_row['transaction_date'] == row['transaction_date']]
-            existing_row = existing_row[existing_row['location'] == row['location']]
-            existing_row = existing_row[existing_row['recharge_amount'] == row['recharge_amount']]
-            existing_row = existing_row[existing_row['usage_amount'] == row['usage_amount']]
-
+        # מוסיפים שורות חדשות ל-DB (coupon_transaction)
+        for idx, row in combined_df.iterrows():
+            # בודקים אם השורה קיימת כבר ב-DB
+            existing_row = existing_data[
+                (existing_data['transaction_date'] == row['transaction_date']) &
+                (existing_data['location'] == row['location']) &
+                (existing_data['recharge_amount'] == row['recharge_amount']) &
+                (existing_data['usage_amount'] == row['usage_amount']) &
+                (existing_data['reference_number'] == row['reference_number'])
+            ]
             if len(existing_row) == 0:
                 transaction = CouponTransaction(
                     coupon_id=coupon.id,
-                    card_number=new_row['card_number'],
-                    transaction_date=new_row['transaction_date'],
-                    location=new_row['location'],
-                    recharge_amount=new_row['recharge_amount'],
-                    usage_amount=new_row['usage_amount'],
-                    reference_number=new_row['reference_number']
+                    transaction_date=row['transaction_date'],
+                    location=row['location'],
+                    recharge_amount=row['recharge_amount'],
+                    usage_amount=row['usage_amount'],
+                    reference_number=row['reference_number']
                 )
                 db.session.add(transaction)
 
-        # עדכון הערך הכולל
-        total_used = db.session.query(db.func.sum(CouponTransaction.usage_amount)).filter_by(
-            coupon_id=coupon.id).scalar() or 0.0
-        coupon.used_value = total_used
+        # 2) מעדכנים בשדה used_value של הקופון את הסכום הכולל של usage_amount
+        total_used = db.session.query(func.sum(CouponTransaction.usage_amount)) \
+            .filter_by(coupon_id=coupon.id).scalar() or 0.0
+        coupon.used_value = float(total_used)
 
-        # עדכון סטטוס הקופון
+        # 3) קוראים לפונקציה שמעדכנת סטטוס
         update_coupon_status(coupon)
 
-        # שמירה סופית של כל השינויים
+        # 4) שמירה סופית
         db.session.commit()
 
         print(f"Transactions for coupon {coupon.code} have been updated in the database.")
-
-        return df
+        return combined_df
 
     except Exception as e:
         print(f"An error occurred during data parsing or database operations: {e}")
         traceback.print_exc()
         db.session.rollback()
         return None
-
 
 def convert_coupon_data(file_path):
     # קריאת ה-HTML ל-DataFrame
@@ -450,9 +434,6 @@ def convert_coupon_data(file_path):
     card_number_match = re.search(card_number_pattern, html_content)
     card_number_extracted = int(card_number_match.group(1)) if card_number_match else coupon_number
 
-    # Add the card number as a column
-    df['card_number'] = card_number_extracted
-
     # עדכון מיפוי העמודות בהתאם לעמודות הנוכחיות
     df = df.rename(columns={
         'שם בית עסק': 'location',
@@ -463,7 +444,7 @@ def convert_coupon_data(file_path):
     })
 
     # בדיקה אם העמודות קיימות
-    expected_columns = ['card_number', 'transaction_date', 'location', 'usage_amount', 'recharge_amount',
+    expected_columns = ['transaction_date', 'location', 'usage_amount', 'recharge_amount',
                         'reference_number']
     missing_columns = [col for col in expected_columns if col not in df.columns]
     if missing_columns:
@@ -475,7 +456,7 @@ def convert_coupon_data(file_path):
                 df[col] = None  # או ערך ברירת מחדל מתאים
 
     # סידור העמודות
-    df = df[['card_number', 'transaction_date', 'location', 'usage_amount', 'recharge_amount', 'reference_number']]
+    df = df[['transaction_date', 'location', 'usage_amount', 'recharge_amount', 'reference_number']]
 
     # המרת תאריך עם פורמט מותאם
     df['transaction_date'] = pd.to_datetime(df['transaction_date'], format='%H:%M %d/%m/%Y', errors='coerce')
@@ -485,7 +466,7 @@ def convert_coupon_data(file_path):
     df['transaction_date'] = df['transaction_date'].where(pd.notnull(df['transaction_date']), None)
 
     # שמירת ה-DataFrame כ-Excel
-    #save_directory = "/Users/itaykarkason/Desktop/coupon_manager_project/multipass/input_html"
+    #save_directory = "/Users/itaykarkason/Desktop/coupon_manager_project/automatic_coupon_update/input_html"
     #xlsx_filename = f"coupon_test.xlsx"
     #xlsx_path = os.path.join(save_directory, xlsx_filename)
     #df.to_excel(xlsx_path, index=False)

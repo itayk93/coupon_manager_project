@@ -60,7 +60,7 @@ def get_coupon_data(coupon_number, card_exp, cvv, save_directory="automatic_coup
 
         # זמן המתנה לטעינת הדף החדש
         time.sleep(5)
-        input()
+
         # שמירת ה-HTML של הדף החדש
         html_content = driver.page_source
         html_file_path = os.path.join(save_directory, f"coupon_{coupon_number}.html")
@@ -80,7 +80,7 @@ def get_coupon_data(coupon_number, card_exp, cvv, save_directory="automatic_coup
 # קריאה לפונקציה עם הנתונים והנתיב
 coupon_number = "7221301011968146"
 card_exp = "1229"
-cvv = "466"
+cvv = "566"
 save_directory = "/Users/itaykarkason/Desktop/coupon_manager_project/automatic_coupon_update/input_html"
 
 get_coupon_data(coupon_number, card_exp, cvv, save_directory)

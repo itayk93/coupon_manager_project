@@ -451,7 +451,7 @@ def update_all_coupons():
                 update_coupon_status(coupon)
                 db.session.commit()
 
-                data_directory = "multipass/input_html"
+                data_directory = "automatic_coupon_update/input_html"
                 os.makedirs(data_directory, exist_ok=True)
                 xlsx_filename = f"coupon_{coupon.code}_{coupon.id}.xlsx"
                 xlsx_path = os.path.join(data_directory, xlsx_filename)
