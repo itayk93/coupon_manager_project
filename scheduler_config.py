@@ -8,9 +8,9 @@ from apscheduler.triggers.cron import CronTrigger
 from flask import url_for, render_template
 from dotenv import load_dotenv
 
-from extantions import db
-from models import Coupon
-from send_mail import send_email
+from app.extensions import db
+from app.models import Coupon
+from app.send_mail import send_html_email
 
 # טוען משתני סביבה (אם צריך)
 load_dotenv()
@@ -84,7 +84,7 @@ def daily_email_flow():
 
     # כי אנחנו צריכים app.context
     from app import create_app
-    from app.scheduler_utils import update_company_counts_and_send_email
+    #from app.scheduler_utils import update_company_counts_and_send_email
 
     app = create_app()
     # שליחת המייל בפועל
@@ -126,4 +126,4 @@ def configure_scheduler():
     )
 
     scheduler.start()
-    logging.info("Scheduler configured and started.")
+    logging.info(f"Scheduler configured and started with jobs: {scheduler.get_jobs()}")  # לוג של רשימת המשימות

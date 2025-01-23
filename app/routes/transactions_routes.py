@@ -319,7 +319,7 @@ def mark_coupon_as_fully_used(id):
 
     remaining_amount = coupon.value - coupon.used_value
     if remaining_amount <= 0:
-        flash('אין ערך נותר בקופון, הוא כבר נוצל במלואו.', 'info')
+        flash('אין יתרה לניצול בקופון, הוא כבר נוצל במלואו.', 'info')
         return redirect(url_for('transactions.coupon_detail', id=id))
 
     try:

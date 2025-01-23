@@ -25,20 +25,16 @@
             <span class="info-value">{{ coupon.code }}</span>
         </div>
         <div class="info-box">
-            <span class="info-title">ערך הקופון:</span>
+            <span class="info-title">שווי הקופון:</span>
             <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
         </div>
         <div class="info-box">
-            <span class="info-title">סטטוס:</span>
-            <span class="info-value">{{ coupon.status }}</span>
-        </div>
-        <div class="info-box">
-            <span class="info-title">סה״כ מנוצל:</span>
+            <span class="info-title">סכום מנוצל:</span>
             <span class="info-value">{{ '%.2f'|format(coupon.used_value) }} ש"ח</span>
         </div>
         {% if not coupon.is_one_time %}
             <div class="info-box">
-                <span class="info-title">ערך נותר:</span>
+                <span class="info-title">יתרה לניצול:</span>
                 <span class="info-value">{{ '%.2f'|format(coupon.value - coupon.used_value) }} ש"ח</span>
             </div>
         {% endif %}

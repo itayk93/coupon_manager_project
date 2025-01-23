@@ -492,6 +492,7 @@ class ProfileForm(FlaskForm):
         ],
         validators=[Optional()]
     )
+    usage_explanation = TextAreaField('Usage Explanation')  # Add this if missing
     submit = SubmitField('שמור')
 
 
@@ -833,3 +834,8 @@ class ResetPasswordForm(FlaskForm):
         EqualTo('password', message='הסיסמאות לא תואמות.')
     ])
     submit = SubmitField('אפס סיסמה')
+
+# forms.py
+class UsageExplanationForm(FlaskForm):
+    usage_explanation = TextAreaField('פירוט שימוש', validators=[DataRequired()])
+    submit_usage_explanation = SubmitField('שלח')

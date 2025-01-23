@@ -71,32 +71,31 @@ def index():
         Coupon.exclude_saving != True  # סינון קופונים מסומנים כ-excluded
     ).all()
 
-    print("קופונים פעילים שנכנסו לחישוב:")
-    for coupon in all_non_one_time_coupons:
-        print(
-            f"קוד: {coupon.code}, ערך: {coupon.value}, שימוש עד כה: {coupon.used_value}, נשאר להוציא: {coupon.remaining_value}")
+    #print("קופונים פעילים שנכנסו לחישוב:")
+    #for coupon in all_non_one_time_coupons:
+    #    print(f"קוד: {coupon.code}, ערך: {coupon.value}, שימוש עד כה: {coupon.used_value}, נשאר להוציא: {coupon.remaining_value}")
 
     # חישוב סך הקופונים
     total_remaining = sum(coupon.value - coupon.used_value for coupon in all_non_one_time_coupons)
-    print(f"סה\"כ נשאר: {total_remaining:.2f} ש\"ח")
+    #print(f"סה\"כ נשאר: {total_remaining:.2f} ש\"ח")
 
     # חישוב סך החיסכון
     total_savings = sum(
         coupon.used_value * (coupon.value - coupon.cost) / coupon.value
         for coupon in all_non_one_time_coupons if coupon.cost > 0
     )
-    print(f"סה\"כ חיסכון: {total_savings:.2f} ש\"ח")
+    #print(f"סה\"כ חיסכון: {total_savings:.2f} ש\"ח")
 
     # חישוב סך ערך הקופונים
     total_coupons_value = sum(coupon.value for coupon in all_non_one_time_coupons)
-    print(f"סך ערך הקופונים: {total_coupons_value:.2f} ש\"ח")
+    #print(f"סך ערך הקופונים: {total_coupons_value:.2f} ש\"ח")
 
     # חישוב אחוז החיסכון
     if total_coupons_value > 0:
         percentage_savings = (total_savings / total_coupons_value) * 100
     else:
         percentage_savings = 0
-    print(f"אחוז החיסכון: {percentage_savings:.2f}%")
+    #print(f"אחוז החיסכון: {percentage_savings:.2f}%")
 
     # סינון קופונים חד פעמיים פעילים
     active_one_time_coupons = Coupon.query.filter(
@@ -154,9 +153,9 @@ def index():
     else:
         percentage_savings = 0
 
-    print(f"סה\"כ חיסכון: {total_savings:.2f} ש\"ח")
-    print(f"סך ערך הקופונים: {total_coupons_value:.2f} ש\"ח")
-    print(f"אחוז החיסכון: {percentage_savings:.2f}%")
+    #print(f"סה\"כ חיסכון: {total_savings:.2f} ש\"ח")
+    #print(f"סך ערך הקופונים: {total_coupons_value:.2f} ש\"ח")
+    #print(f"אחוז החיסכון: {percentage_savings:.2f}%")
 
     # שליפת הקופונים לפי קטגוריות
     active_coupons = Coupon.query.filter(

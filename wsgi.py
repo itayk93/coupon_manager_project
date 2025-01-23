@@ -10,6 +10,7 @@ load_dotenv()
 # יוצר מופע Flask מהפונקציה create_app שבקובץ app/__init__.py
 app = create_app()
 
+
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.DEBUG)

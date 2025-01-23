@@ -32,6 +32,7 @@ from app.helpers import (
     send_email, get_most_common_tag_for_company, get_geo_location,
     get_public_ip, update_coupon_usage
 )
+from flask import session
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def add_coupon_transaction(coupon):
         transaction_date=datetime.utcnow(),
         recharge_amount=coupon.value,
         usage_amount=0,
-        location="Manually entered coupon",
+        location="הוזן באופן ידני",
         reference_number="ManualEntry",
         source="User"
     )
@@ -632,7 +633,7 @@ def add_coupon():
                     chosen_company_name = company_name
 
                 coupon_form.code.data = extracted_data.get('קוד קופון')
-                coupon_form.cost.data = extracted_data.get('ערך מקורי', 0) or 0
+                coupon_form.cost.data = extracted_data.get('עלות', 0) or 0
                 try:
                     if extracted_data.get('תאריך תפוגה'):
                         coupon_form.expiration.data = datetime.strptime(
@@ -644,7 +645,7 @@ def add_coupon():
                 coupon_form.is_one_time.data = bool(extracted_data.get('קוד לשימוש חד פעמי'))
                 coupon_form.purpose.data = extracted_data.get('מטרת הקופון', '')
                 coupon_form.description.data = extracted_data.get('תיאור', '')
-                coupon_form.value.data = 0
+                coupon_form.value.data = extracted_data.get('ערך מקורי', 0) or 0
                 coupon_form.discount_percentage.data = 0
 
                 if current_user.slots_automatic_coupons > 0:
@@ -1954,7 +1955,7 @@ def export_pdf():
 
     y = 750
     for coupon in coupons:
-        text = f"קוד קופון: {coupon.code}, חברה: {coupon.company}, ערך נותר: {coupon.remaining_value} ש\"ח"
+        text = f"קוד קופון: {coupon.code}, חברה: {coupon.company}, יתרה לניצול: {coupon.remaining_value} ₪"
         p.drawRightString(550, y, text)
         y -= 20
         if y < 50:
@@ -2238,7 +2239,7 @@ def update_coupon_usage_route(id):
         return redirect(url_for('coupons.coupon_detail', id=id))
 
     form = UpdateCouponUsageForm()
-    mark_fully_used_form = MarkCouponAsFullyUsedForm()
+    mark_fully_used_form = MarkCouponAsUsedForm()
 
     if form.validate_on_submit():
         new_used_amount = form.used_amount.data
@@ -2277,7 +2278,7 @@ def update_all_active_coupons():
     """
     if not current_user.is_admin:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
-        return redirect(url_for('index'))
+        return redirect(url_for('profile.index'))
 
     active_coupons = Coupon.query.filter(
         Coupon.status == 'פעיל',
@@ -2401,3 +2402,255 @@ def update_coupon_transactions():
 
     db.session.commit()
     return redirect(url_for('coupons.coupon_detail', id=coupon.id))
+
+
+####################################################################################################
+# טיפול בטקסט לקופון שמשתמש מזין במסך הראשי ועובר דרך gpt
+####################################################################################################
+from app.forms import UsageExplanationForm
+from app.helpers import parse_user_usage_text
+
+@coupons_bp.route('/parse_usage_text', methods=['POST'])
+@login_required
+def parse_usage_text():
+    # שלב 1: בדיקת טופס
+    form = UsageExplanationForm()
+    if form.validate_on_submit():
+        usage_text = form.usage_explanation.data.strip()
+        if not usage_text:
+            flash("לא הוזן טקסט.", "danger")
+            return redirect(url_for('profile.index'))
+
+        # שלב 2: קריאה ל-GPT
+        # פונקציה דומה ל-extract_coupon_detail_sms אבל מותאמת לשימוש מרובה בקופונים
+        # נניח נקרא לה parse_user_usage_text
+        try:
+            usage_df, gpt_usage_df = parse_user_usage_text(usage_text, current_user)
+
+            # נשמור את שורת ה-GPT בטבלת GptUsage אם תרצה
+            # (כמו שאתה עושה במחלקות נוספות)
+            if not gpt_usage_df.empty:
+                from app.models import GptUsage
+                row = gpt_usage_df.iloc[0]
+                new_gpt = GptUsage(
+                    user_id=current_user.id,
+                    created=datetime.strptime(row['created'], '%Y-%m-%d %H:%M:%S'),
+                    id=row['id'],
+                    object=row['object'],
+                    model=row['model'],
+                    prompt_tokens=int(row['prompt_tokens']),
+                    completion_tokens=int(row['completion_tokens']),
+                    total_tokens=int(row['total_tokens']),
+                    cost_usd=float(row['cost_usd']),
+                    cost_ils=float(row['cost_ils']),
+                    exchange_rate=float(row['exchange_rate']),
+                    prompt_text=str(row['prompt_text']),
+                    response_text=str(row['response_text'])
+                )
+                db.session.add(new_gpt)
+                db.session.commit()
+
+            # כאן נקבל ב-usage_df שורות כמו:
+            # עמודות: coupon_company, used_amount, maybe some description וכו'.
+            if usage_df.empty:
+                flash("לא זוהו שימושים בקופונים מהטקסט שהוזן.", "danger")
+                return redirect(url_for('profile.index'))
+
+            # שלב 3: שמירת usage_df ב-Session או ב-Cache
+            # לדוגמה, usage_df.to_dict(orient='records')
+            session['parsed_usages'] = usage_df.to_dict(orient='records')
+
+            return redirect(url_for('coupons.review_usage_findings'))
+        except Exception as e:
+            current_app.logger.error(f"Error in parse_usage_text: {e}")
+            traceback.print_exc()
+            flash("אירעה שגיאה בעת ניתוח הטקסט עם GPT.", "danger")
+            return redirect(url_for('profile.index'))
+    else:
+        flash("יש למלא את הטופס כראוי.", "danger")
+        return redirect(url_for('profile.index'))
+
+from thefuzz import fuzz
+
+from app.forms import UsageExplanationForm
+
+# app/routes/coupons_routes.py
+
+# app/routes/coupons_routes.py
+
+@coupons_bp.route('/review_usage', methods=['GET', 'POST'])
+@login_required
+def review_usage_findings():
+    form = UsageExplanationForm()  # או שם הטופס המתאים
+    usage_list = session.get('parsed_usages', [])
+
+    current_app.logger.info(f"[DEBUG] Entered review_usage_findings. usage_list={usage_list}")
+
+    if not usage_list:
+        flash("לא נמצאו נתוני שימוש. הזן טקסט תחילה.", "danger")
+        return redirect(url_for('profile.index'))
+
+    if request.method == 'GET':
+        # שולפים את כל הקופונים הפעילים של המשתמש
+        all_user_coupons = [cpn for cpn in current_user.coupons if cpn.status == "פעיל"]
+        current_app.logger.info(f"[DEBUG] Fetched {len(all_user_coupons)} active coupons for user {current_user.id}")
+
+        # מחפשים קופונים מתאימים לפי דמיון >= 95%, אחרת מוסיפים את כולם
+        for row in usage_list:
+            row_company = row.get('company', '').lower()
+            matched_coupons = []
+            for cpn in all_user_coupons:
+                similarity = fuzz.ratio(row_company, cpn.company.lower())
+                remaining_balance = cpn.value - cpn.used_value
+                if similarity >= 95:
+                    matched_coupons.append({
+                        'id': cpn.id,
+                        'company': cpn.company,
+                        'code': cpn.code,
+                        'remaining_balance': remaining_balance
+                    })
+            if matched_coupons:
+                row['matched_coupons'] = matched_coupons
+                current_app.logger.info(
+                    f"[DEBUG] row.company={row_company}, found {len(matched_coupons)} matched_coupons (>=95%)."
+                )
+            else:
+                # אם אין דמיון >= 95, נותנים למשתמש לבחור מכל הקופונים הפעילים
+                row['matched_coupons'] = [{
+                    'id': cpn.id,
+                    'company': cpn.company,
+                    'code': cpn.code,
+                    'remaining_balance': cpn.value - cpn.used_value
+                } for cpn in all_user_coupons]
+                current_app.logger.info(
+                    f"[DEBUG] row.company={row_company}, matched_coupons=ALL because similarity <95%."
+                )
+
+        # מציגים את התבנית עם הטבלה ועם הכפתור "נוצל"
+        return render_template('review_usage.html', usage_list=usage_list, form=form)
+
+    elif request.method == 'POST':
+        # זה השלב שבו המשתמש לחץ על "הבא", ואנחנו מעדכנים ב-session את הבחירות שלו
+        updated_rows = []
+        for i, row in enumerate(usage_list):
+            checked = request.form.get(f"row-{i}-checked")
+            if not checked:
+                current_app.logger.info(f"[DEBUG] row-{i} was not checked, skipping.")
+                continue
+
+            # הקופון הנבחר
+            coupon_id_str = request.form.get(f"row-{i}-company", "")
+            # הסכום שהוזן
+            amount_str = request.form.get(f"row-{i}-amount", "0")
+
+            current_app.logger.info(f"[DEBUG] row-{i} => coupon_id_str={coupon_id_str}, amount_str={amount_str}")
+
+            try:
+                used_amount = float(amount_str)
+            except ValueError:
+                used_amount = 0.0
+                current_app.logger.warning(f"[DEBUG] row-{i} => failed to convert '{amount_str}' to float. Using 0.0")
+
+            row['used_amount'] = used_amount
+            row['company_final'] = coupon_id_str
+            updated_rows.append(row)
+
+        session['confirmed_usages'] = updated_rows
+        current_app.logger.info(f"[DEBUG] confirm_usage_update => {updated_rows}")
+        return redirect(url_for('coupons.confirm_usage_update'))
+
+
+@coupons_bp.route('/confirm_usage_update', methods=['GET', 'POST'])
+@login_required
+def confirm_usage_update():
+    confirmed_usages = session.get('confirmed_usages', [])
+    current_app.logger.info(f"[DEBUG] Entered confirm_usage_update. confirmed_usages={confirmed_usages}")
+
+    if not confirmed_usages:
+        flash("אין שימושים לאישור.", "danger")
+        return redirect(url_for('profile.index'))
+
+    errors = []
+    successes = []
+
+    from app.models import Coupon, CouponUsage
+
+    # נשרשר לכל שורה את הסכום שהמשתמש הכניס
+    # ונעדכן בפועל ב־DB
+    for row in confirmed_usages:
+        coupon_id_str = row.get('company_final', '')
+        used_amount = row.get('used_amount', 0.0)
+
+        current_app.logger.info(f"[DEBUG] Processing usage => coupon_id_str={coupon_id_str}, used_amount={used_amount}")
+
+        # אם המשתמש בחר "other" ולא בחר בפועל חדש => אין עדכון
+        if coupon_id_str in ("", "other"):
+            msg = "לא נבחר קופון לשימוש."
+            errors.append(msg)
+            current_app.logger.warning(f"[DEBUG] {msg}")
+            continue
+
+        # מוודאים שאפשר להמיר ל-int
+        try:
+            coupon_id = int(coupon_id_str)
+        except ValueError:
+            msg = f"ID הקופון אינו תקין: {coupon_id_str}"
+            errors.append(msg)
+            current_app.logger.warning(f"[DEBUG] {msg}")
+            continue
+
+        # מאתרים את הקופון במסד
+        coupon = Coupon.query.get(coupon_id)
+        if not coupon or coupon.user_id != current_user.id:
+            msg = f"לא נמצא קופון עם מזהה {coupon_id_str} או שאינו שייך למשתמש הנוכחי."
+            errors.append(msg)
+            current_app.logger.warning(f"[DEBUG] {msg}")
+            continue
+
+        # בדיקת יתרה
+        remaining = coupon.value - coupon.used_value
+        if used_amount > remaining:
+            msg = f"ניסית להשתמש ב-{used_amount} ש\"ח, אבל בקופון {coupon.code} נותר רק {remaining}."
+            errors.append(msg)
+            current_app.logger.warning(f"[DEBUG] {msg}")
+            continue
+
+        # עדכון הסכום
+        coupon.used_value += used_amount
+        new_usage = CouponUsage(
+            coupon_id=coupon.id,
+            used_amount=used_amount,
+            timestamp=datetime.now(),
+            action="שימוש ממסך סיכום GPT",
+            details=row.get('additional_info', 'שימוש שהוזן ידנית')
+        )
+        db.session.add(new_usage)
+
+        # נוודא שהסטטוס מעודכן
+        update_coupon_status(coupon)
+
+        successes.append(f"עודכן שימוש של {used_amount} ₪ בקופון {coupon.code}.")
+        current_app.logger.info(f"[DEBUG] Successfully updated usage in coupon={coupon.code} (+{used_amount}).")
+
+    # ניסיון לשמור ב־DB
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in confirm_usage_update: {e}")
+        flash("שגיאה בעת שמירת הנתונים.", "danger")
+        return redirect(url_for('coupons.review_usage_findings'))
+
+    # הצגת הודעות
+    if errors:
+        flash("חלק מהשימושים לא עודכנו:\n" + "\n".join(errors), "danger")
+        current_app.logger.info(f"[DEBUG] Errors occurred: {errors}")
+    if successes:
+        flash("הקופונים הבאים עודכנו:\n" + "\n".join(successes), "success")
+        current_app.logger.info(f"[DEBUG] Successes: {successes}")
+
+    # ניקוי הנתונים מה־Session
+    session.pop('parsed_usages', None)
+    session.pop('confirmed_usages', None)
+
+    return redirect(url_for('profile.index'))

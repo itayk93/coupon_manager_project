@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap');
+
 /* ===================================================
    1. CSS Variables for Consistency
    =================================================== */
@@ -16,7 +18,7 @@
     --danger-text: #ffffff;
     --warning-color: #F39C12;
     --warning-text: #ffffff;
-    --font-family: 'Arial', sans-serif;
+    --font-family: 'Rubik', Arial, sans-serif;
     --transition-speed: 0.3s;
     --max-width: 1200px;
 }
@@ -344,6 +346,7 @@ header {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+
 /* Secondary Buttons */
 .secondary-button {
     display: flex;
@@ -605,56 +608,70 @@ h3 {
 /* ===================================================
    9. Card Styles
    =================================================== */
+
 /* Hero Section */
+/* זה המסך בעמוד הראשי בו כתוב ״איזה כיף לראות אותך! בוא נראה כמה הוצאת״ */
 .hero {
     text-align: center;
-    padding: 20px;
+    padding: 20px 15px; /* היה 30px, עכשיו יותר קומפקטי */
     background-color: var(--white);
-    margin: 20px auto;
+    margin: 15px auto; /* היה 20px, עכשיו מצמצם רווחים */
+    margin-top: 10px;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    width: 60%;
-    max-width: 800px;
+    width: 55%;
+    max-width: 750px;
+    line-height: 1.2; /* היה 1, קצת יותר מאוזן */
 }
 
 .hero h2 {
-    font-size: 2.5em;
-    margin-bottom: 20px;
+    margin-top: 0px; /* או אפילו 0px אם רוצים ממש להצמיד */
+    font-size: 2.2em; /* היה 2.5em, הקטנתי קצת */
     color: var(--primary-color);
 }
 
 .hero p {
-    font-size: 1.2em;
+    font-size: 1.1em;
     color: var(--text-color);
+    margin-bottom: 0px; /* הוספתי טיפה ריווח */
 }
 
 /* Total Value and Savings Sections */
 .total-value, .total-savings {
     background-color: var(--white);
-    padding: 30px 0px;
-    margin: 30px auto;
+    padding: 20px 0px; /* היה 30px, הקטנתי כדי למנוע מרווח מוגזם */
+    margin: 25px auto; /* היה 30px, מצמצם */
     border-radius: 10px;
     border: 1px solid var(--light-gray);
-    width: 400px;
+    width: 350px; /* היה 400px, עכשיו קצת קטן יותר */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .total-value p, .total-savings p {
-    font-size: 1.1em;
+    font-size: 1em; /* היה 1.1em, התאמה למראה עדין יותר */
     color: var(--text-color);
+    margin-bottom: 10px; /* ניתן להגדיל את הערך */
+    text-align: center; /* מיישר את הטקסט למרכז */
 }
 
+/* עיצוב מחדש של תיבת הסכום */
 .total-value h1, .total-savings h1 {
-    font-size: 3.5em;
-    margin: 10px 0 0 0;
+    font-size: 3em; /* היה 3.5em, עכשיו יותר מאוזן */
+    margin: 0 auto; /* מבטיח יישור מרכזי */
     color: var(--success-color);
+    text-align: center; /* מוודא שמיושר בדיוק לאמצע */
+    display: flex;
+    justify-content: center; /* מוודא שגם אם האלמנט היה רחב מדי, הכל יהיה ממורכז */
+    align-items: center; /* למקרה של גובה משתנה */
+    margin-bottom: 0.3em; /* הוספת מרווח תחתון של 1em */
 }
+
 
 .total-savings-line {
     text-align: center;
-    font-size: 1.2em;
+    font-size: 1.1em; /* היה 1.2em */
     color: var(--text-color);
-    margin-top: 20px;
+    margin-top: 15px; /* היה 20px, הקטנתי */
 }
 
 /* Coupon Container */
@@ -662,15 +679,15 @@ h3 {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 20px;
+    gap: 15px; /* היה 20px, מצמצם ריווח */
 }
 
 /* Coupon Card */
 .coupon-card {
-    flex: 1 1 calc(20% - 20px); /* 5 cards per row with spacing */
-    max-width: calc(20% - 20px);
+    flex: 1 1 calc(22% - 15px); /* היה 20%, עכשיו יותר גמיש */
+    max-width: calc(22% - 15px);
     box-sizing: border-box;
-    padding: 15px 20px;
+    padding: 12px 18px; /* היה 15px 20px */
     border: 1px solid var(--light-gray);
     border-radius: 8px;
     background-color: var(--white);
@@ -683,12 +700,12 @@ h3 {
 }
 
 .coupon-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px); /* היה -3px */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08); /* הקטנתי קצת */
 }
 
 .coupon-card p {
-    margin: 10px 0;
+    margin: 8px 0; /* היה 10px */
     color: black;
 }
 
@@ -697,14 +714,76 @@ h3 {
 }
 
 /* Specific style for the index page */
+/* זה לחלק שכותב כמה נשאר בארנק */
 .total-savings-subtext {
-    font-size: 0.4em; /* כתב ממש קטן */
+    font-size: 0.5em; /* היה 0.4em, הקטנתי פחות מדי */
     color: var(--gray);
     text-align: center;
     display: block;
-    margin-top: -8px; /* מקרב אותו לטקסט הראשי */
-    line-height: 3; /* מצמיד את השורות */
-    /*transform: translateX(9.5%);*/ /* מזיז חצי דרך ימינה */
+    margin-top: -5px; /* היה -8px, פחות צמוד */
+    line-height: 2.5; /* היה 3 */
+}
+
+/* Specific style for the תיבה להזנת שימוש אוטומטי לקופון במסך הראשי */
+.usage-form-wrapper {
+    max-width: 750px; /* היה 500px */
+    margin: 35px auto; /* היה 40px */
+    padding: 18px; /* היה 20px */
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); /* היה 0.1 */
+    text-align: center;
+}
+
+.usage-form-wrapper h2 {
+    font-size: 1.4em; /* היה 1.5em */
+    color: var(--primary-color);
+    margin-bottom: 12px; /* היה 15px */
+}
+
+.usage-form-wrapper form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.usage-form-wrapper label {
+    font-size: 1em; /* היה 1.1em */
+    font-weight: bold;
+    margin-bottom: 8px; /* היה 10px */
+    text-align: center;
+}
+
+.input-field {
+    width: 100%;
+    padding: 9px; /* היה 10px */
+    border: 1px solid var(--light-gray);
+    border-radius: 5px;
+    font-size: 0.95em; /* היה 1em */
+    text-align: right;
+}
+
+.submit-button {
+    background-color: var(--accent-color);
+    color: var(--white);
+    border: none;
+    padding: 9px 18px; /* היה 10px 20px */
+    margin-top: 12px; /* היה 15px */
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.95em; /* היה 1em */
+    font-weight: bold;
+    transition: background-color var(--transition-speed);
+}
+
+.submit-button:hover {
+    background-color: #e67e22;
+}
+
+/* כפתור שליחה במסך הראשי */
+.usage-form-wrapper .submit-button {
+    width: auto;
+    min-width: 150px;
 }
 
 /* ===================================================

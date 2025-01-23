@@ -27,6 +27,7 @@ from app.models import (
 from itsdangerous import URLSafeTimedSerializer
 from app.models import Company
 import numpy as np
+from sqlalchemy.sql import text
 
 load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
@@ -190,33 +191,19 @@ def update_all_active_coupons(user_id):
 '''''''''''''''
 
 
-
-
 def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html"):
     """
     מפעילה Selenium כדי להיכנס לאתר Multipass, מזינה את קוד הקופון (coupon.code),
     מורידה את דף ה-HTML, הופכת אותו ל-DataFrame, ושומרת/מעבדת את המידע ב-DB
     בטבלת coupon_transaction, בהתאם ל-coupon.id.
 
-    Parameters:
-    -----------
-    coupon : Coupon
-        אובייקט קופון מתוך ה-DB.
-    save_directory : str
-        נתיב לתיקייה בה יישמרו קבצי HTML/Excel זמניים.
-
-    Returns:
-    --------
-    pd.DataFrame או None
-        מחזירה DataFrame עם המידע המעודכן על ההטענות/השימוש בקופון,
-        או None במקרה של כישלון.
+    מחזירה DataFrame עם עסקאות חדשות בלבד, או None אם אין חדשות או אם הייתה שגיאה.
     """
     import os
     import time
-    import re
     import traceback
     import pandas as pd
-    from datetime import datetime, timezone
+    from datetime import datetime
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.common.by import By
@@ -230,7 +217,6 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
 
     os.makedirs(save_directory, exist_ok=True)
 
-    # נשתמש ב-coupon.code
     coupon_number = coupon.code
 
     # הגדרת אופציות ל-Selenium
@@ -248,12 +234,11 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     try:
         driver.get("https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/")
         wait = WebDriverWait(driver, 30)
-        time.sleep(5)  # שנייה להמתין לטעינה מלאה
+        time.sleep(5)
 
         card_number_field = driver.find_element(By.XPATH, "//input[@id='newcardid']")
         card_number_field.clear()
 
-        # הנחת סוג קופון Multipass
         cleaned_coupon_number = str(coupon_number[:-4]).replace("-", "")
         card_number_field.send_keys(cleaned_coupon_number)
 
@@ -275,27 +260,22 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
         )
 
         if check_balance_button.is_enabled():
-            print("'Check Balance' button is enabled. Clicking the button...")
             check_balance_button.click()
         else:
             print("Submit button is still disabled. CAPTCHA not solved properly?")
             driver.quit()
             return None
 
-        # ממתינים לטבלת התוצאות
         wait.until(EC.presence_of_element_located((By.XPATH, "//table")))
         time.sleep(10)
 
         page_html = driver.page_source
-
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"coupon_{coupon_number}_{timestamp}.html"
         file_path = os.path.join(save_directory, filename)
 
         with open(file_path, "w", encoding="utf-8") as file:
             file.write(page_html)
-
-        print(f"Page HTML saved to {file_path}")
 
     except Exception as e:
         print(f"An error occurred during Selenium operations: {e}")
@@ -305,16 +285,15 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
         driver.quit()
 
     try:
-        # קוראים את ה-HTML כ-DataFrame
         dfs = pd.read_html(file_path)
-        os.remove(file_path)  # מוחקים את קובץ ה-HTML הזמני
+        os.remove(file_path)
+
         if not dfs:
             print("No tables found in HTML.")
             return None
 
         df = dfs[0]
 
-        # מיפוי עמודות בהתאם למבנה Multipass הנוכחי
         df = df.rename(columns={
             'שם בית עסק': 'location',
             'סכום טעינת תקציב': 'recharge_amount',
@@ -323,96 +302,81 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             'מספר אסמכתא': 'reference_number',
         })
 
-        # הוספת עמודות חסרות
         if 'recharge_amount' not in df.columns:
             df['recharge_amount'] = 0.0
         if 'usage_amount' not in df.columns:
             df['usage_amount'] = 0.0
 
-        # מוודאים רק את העמודות החשובות
-        expected_cols = ['transaction_date', 'location',
-                         'recharge_amount', 'usage_amount', 'reference_number']
-        for col in expected_cols:
-            if col not in df.columns:
-                df[col] = None
-
-        # מנסים להמיר תאריכים
         df['transaction_date'] = pd.to_datetime(
             df['transaction_date'],
             format='%H:%M %d/%m/%Y',
             errors='coerce'
         )
-        df['transaction_date'] = df['transaction_date'].apply(
-            lambda x: x.to_pydatetime() if pd.notnull(x) else None
-        )
 
-        # המרת עמודות מספריות
         numeric_columns = ['recharge_amount', 'usage_amount']
         for col in numeric_columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
 
-        # -------------- עדכון מסד הנתונים --------------
-        # 1) שולפים את כל הנתוני transaction הקיימים ל-coupon.id
-        sql_query = """
-        SELECT *
-        FROM coupon_transaction
-        WHERE coupon_id = %(coupon_id)s;
-        """
+        # **תיקון השגיאה בסינטקס של ה-SQL**
         existing_data = pd.read_sql_query(
-            sql_query,
+            """
+            SELECT reference_number
+            FROM coupon_transaction
+            WHERE coupon_id = %(coupon_id)s
+            """,
             db.engine,
-            params={'coupon_id': coupon.id}
+            params={"coupon_id": coupon.id}
         )
 
-        # נשמיט עמודות שלא צריכים להשוות
-        if 'id' in existing_data.columns:
-            existing_data = existing_data.drop(['id'], axis=1)
-        if 'coupon_id' in existing_data.columns:
-            existing_data = existing_data.drop(['coupon_id'], axis=1)
-
-        # מאחדים DF חדש עם DF קיים (ומסננים כפילויות)
-        combined_df = pd.concat([df, existing_data], ignore_index=True)
-        combined_df['transaction_date'] = pd.to_datetime(combined_df['transaction_date'])
-        combined_df = combined_df.sort_values(by='transaction_date')
-        combined_df = combined_df.drop_duplicates(subset=[
-            'transaction_date', 'location',
-            'recharge_amount', 'usage_amount', 'reference_number'
-        ])
-
-        # מוסיפים שורות חדשות ל-DB (coupon_transaction)
-        for idx, row in combined_df.iterrows():
-            # בודקים אם השורה קיימת כבר ב-DB
-            existing_row = existing_data[
-                (existing_data['transaction_date'] == row['transaction_date']) &
-                (existing_data['location'] == row['location']) &
-                (existing_data['recharge_amount'] == row['recharge_amount']) &
-                (existing_data['usage_amount'] == row['usage_amount']) &
-                (existing_data['reference_number'] == row['reference_number'])
-            ]
-            if len(existing_row) == 0:
-                transaction = CouponTransaction(
-                    coupon_id=coupon.id,
-                    transaction_date=row['transaction_date'],
-                    location=row['location'],
-                    recharge_amount=row['recharge_amount'],
-                    usage_amount=row['usage_amount'],
-                    reference_number=row['reference_number']
+        # המקרה פה נועד להתמודד לאם נוספה קניה אחת. כי במקרה הזה צריך לעדכן שורה אחת. בלי זה כאשר עושים את עדכון אחוז השימוש הוא לא תואם למציאות
+        if len(existing_data) != len(df):
+            if len(existing_data) > 0:
+                db.session.execute(
+                    text("DELETE FROM coupon_transaction WHERE coupon_id = :coupon_id"),
+                    {"coupon_id": coupon.id}
                 )
-                db.session.add(transaction)
+                db.session.commit()
 
-        # 2) מעדכנים בשדה used_value של הקופון את הסכום הכולל של usage_amount
+                existing_data = pd.read_sql_query(
+                    """
+                    SELECT reference_number
+                    FROM coupon_transaction
+                    WHERE coupon_id = %(coupon_id)s
+                    """,
+                    db.engine,
+                    params={"coupon_id": coupon.id}
+                )
+
+        existing_refs = set(existing_data['reference_number'].astype(str))
+
+        df['reference_number'] = df['reference_number'].astype(str)
+        df = df[~df['reference_number'].isin(existing_refs)]
+
+        if df.empty:
+            print("No new transactions to add (all references already exist in DB).")
+            return None
+
+        for idx, row in df.iterrows():
+            transaction = CouponTransaction(
+                coupon_id=coupon.id,
+                transaction_date=row['transaction_date'],
+                location=row.get('location', ''),
+                recharge_amount=row.get('recharge_amount', 0.0),
+                usage_amount=row.get('usage_amount', 0.0),
+                reference_number=row.get('reference_number', '')
+            )
+            db.session.add(transaction)
+
         total_used = db.session.query(func.sum(CouponTransaction.usage_amount)) \
             .filter_by(coupon_id=coupon.id).scalar() or 0.0
         coupon.used_value = float(total_used)
 
-        # 3) קוראים לפונקציה שמעדכנת סטטוס
         update_coupon_status(coupon)
 
-        # 4) שמירה סופית
         db.session.commit()
 
         print(f"Transactions for coupon {coupon.code} have been updated in the database.")
-        return combined_df
+        return df
 
     except Exception as e:
         print(f"An error occurred during data parsing or database operations: {e}")
@@ -671,9 +635,10 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
     - סטטוס
 
     בנוסף, ודא שהמידע נכון ומלא, במיוחד:
-    - 'ערך מקורי' חייב להיות בערך המשוער של המוצר או השירות.
+    - 'ערך מקורי' חייב להיות בערך המשוער של המוצר או השירות. ככה שאם כתוב לדוגמא: ״שובר בסך 100 ש״ח״ אז הערך המקורי יהיה 100.
     - 'חברה' היא הרשת או הארגון המספק את ההטבה, תוך שימוש בהנחיה שלעיל לגבי רשימת החברות.
     - 'תגיות' כוללות רק מילה אחת רלוונטית, כגון 'מבצע' או 'הנחה'.
+    - אם לא מצויין בפועל מילים שאומרות בכמה הקופון נקנה. אז הערך של ״עלות״ צריך להיות 0. אם כתוב לדוגמא: ״קניתי ב88 שקל״, אז הערך של עלות יהיה 88.
     """
 
     # קריאה ל-API של OpenAI
@@ -697,7 +662,7 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
 
     # המרת הפלט ל-DataFrame
     coupon_df = pd.DataFrame([coupon_data])
-
+    coupon_df.to_excel("sdfsd.xlsx", index=False)
     # יצירת DataFrame נוסף עם פרטי העלות
     pricing_data = {
         "prompt_tokens": response['usage']['prompt_tokens'],
@@ -1416,3 +1381,121 @@ def confirm_password_reset_token(token, expiration=3600):
     return email
 
 
+import openai
+import json
+import pandas as pd
+import os
+from datetime import datetime
+from app.models import Company  # נניח שזה מביא את החברות מה-DB
+
+def parse_user_usage_text(usage_text, user):
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+
+    # שליפת רשימת החברות המותרות מהמערכת
+    companies = {c.name.lower(): c.name for c in Company.query.all()}  # מילון לשמירה על התאמה בשם
+    companies_str = ", ".join(companies.keys())
+
+    # פרומפט מותאם שמכריח שימוש בחברות הקיימות בלבד
+    prompt = f"""
+    להלן טקסט המתאר שימוש בקופונים:
+    \"\"\"{usage_text}\"\"\"
+
+    יש להחזיר רק חברות מהרשימה הקיימת:
+    {companies_str}
+
+    כל אובייקט בפלט מכיל:
+    - company: שם החברה **כפי שהוא מופיע** ברשימה (אין להמציא שמות!)
+    - amount_used: סכום השימוש בש"ח
+    - coupon_value: הערך המלא של הקופון (אם קיים בטקסט, אחרת ריק)
+    - additional_info: תיאור נוסף מהמשתמש
+
+    דוגמה לפלט:
+    [
+      {{"company": "איקאה", "coupon_value": 50, "amount_paid": 25, "additional_info": "קניית כיסא"}},
+      {{"company": "קסטרו", "coupon_value": "", "amount_paid": "", "additional_info": "חולצה במבצע"}}
+    ]
+    """
+
+    # קריאה ל-GPT
+    response = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        functions=[
+            {
+                "name": "parse_coupon_usage",
+                "description": "Extracts coupon usage details from the text.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "usages": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "company": {
+                                        "type": "string",
+                                        "description": "שם החברה מתוך הרשימה בלבד"
+                                    },
+                                    "amount_used": {
+                                        "type": "number",
+                                        "description": "כמה ש\"ח נוצלו"
+                                    },
+                                    "coupon_value": {
+                                        "type": ["number", "null"],
+                                        "description": "כמה המשתמש שילם על הקופון (אם מופיע בטקסט, אחרת ריק)"
+                                    },
+                                    "additional_info": {
+                                        "type": "string",
+                                        "description": "פירוט נוסף על העסקה"
+                                    }
+                                },
+                                "required": [
+                                    "company",
+                                    "amount_used",
+                                    "coupon_value",
+                                    "additional_info"
+                                ]
+                            }
+                        }
+                    },
+                    "required": ["usages"]
+                }
+            }
+        ]
+    )
+
+    # חילוץ ה-arguments
+    content = response["choices"][0]["message"]["function_call"]["arguments"]
+
+    # ניסיון להמיר את התשובה ל-JSON
+    try:
+        usage_data = json.loads(content)
+        usage_list = usage_data.get("usages", [])
+    except json.JSONDecodeError:
+        usage_list = []
+
+    # סינון רשומות עם חברות שאינן ברשימה
+    print(usage_list)
+
+    # יצירת DataFrame
+    usage_df = pd.DataFrame(usage_list)
+
+    usage_df.to_excel("usage_df.xlsx", index=False)
+    # עיבוד מידע נוסף עבור חישוב עלויות
+    usage_record = {
+        "id": response["id"],
+        "object": response["object"],
+        "created": datetime.utcfromtimestamp(response["created"]).strftime('%Y-%m-%d %H:%M:%S'),
+        "model": response["model"],
+        "prompt_tokens": response["usage"]["prompt_tokens"],
+        "completion_tokens": response["usage"]["completion_tokens"],
+        "total_tokens": response["usage"]["total_tokens"],
+        "cost_usd": 0.0,  # תחשב לפי הנוסחה שלך
+        "cost_ils": 0.0,
+        "exchange_rate": 3.75,  # נניח
+        "prompt_text": prompt,
+        "response_text": content
+    }
+    pricing_df = pd.DataFrame([usage_record])
+
+    return usage_df, pricing_df

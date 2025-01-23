@@ -18,6 +18,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler()
 
+# ייבוא ה-Scheduler
+from scheduler_config import configure_scheduler  # ← שינוי הייבוא בהתאם למיקום הקובץ
 
 def create_app():
     # טוען משתני סביבה (ליתר ביטחון, אפשר גם ב-wsgi.py)
@@ -91,7 +93,7 @@ def create_app():
             logger.error(f"שגיאה ביצירת תיקיית ההעלאה: {e}")
 
     # מגדיר ומפעיל את ה-Scheduler (למשל לשליחת התראות על תפוגה)
-    configure_scheduler(app)
+    configure_scheduler()
 
     return app
 
@@ -136,17 +138,3 @@ def send_expiration_warnings(app):
 
         # דומה גם ל-7 ימים, 1 יום וכו'...
 
-
-def configure_scheduler(app):
-    """מגדיר את כל עבודות ה-Scheduler."""
-    scheduler.add_job(
-        func=send_expiration_warnings,
-        trigger="interval",
-        days=1,
-        args=[app],  # מוסר את ה־app לפונקציה
-        id='send_expiration_warnings',
-        name='Send expiration warnings daily',
-        replace_existing=True
-    )
-    scheduler.start()
-    logger.info("Scheduler configured and started.")

@@ -5,9 +5,9 @@
 {% block content %}
 <section class="hero">
     <h2>היי, {{ current_user.first_name }}!</h2>
-    <p>איזה כיף לראות אותך כאן! בוא נבדוק כמה חסכת ומה נשאר לך להוציא.</p>
+    <p>איזה כיף לראות אותך כאן! בוא נבדוק כמה חסכת וכמה נשאר לך בארנק.</p>
     <div class="total-value">
-        <p>נשאר לך להוציא:</p>
+        <p>נשאר בארנק:</p>
         <h1>{{ '%.2f'|format(total_value) }} ₪</h1>
     </div>
     <p class="total-savings-line">
@@ -17,6 +17,18 @@
         <span class="total-savings-subtext">(מתוך הקופונים הפעילים שאינם חד פעמיים ושאינם למכירה)</span>
     </p>
     </section>
+
+<!-- טופס להזנת פירוט השימוש בקופונים -->
+<section class="usage-form-wrapper">
+    <form method="POST" action="{{ url_for('coupons.parse_usage_text') }}">
+        {{ form.hidden_tag() }}
+        <div class="input-wrapper">
+            <label for="usage_explanation">השלמה אוטומטית של השימוש בקופנים</label>
+            <textarea id="usage_explanation" name="usage_explanation" rows="2" class="input-field">כאן ניתן להקליד באופן חופשי את פירוט השימוש בקופונים</textarea>
+        </div>
+        <button type="submit" class="submit-button">שלח</button>
+    </form>
+</section>
 
 <div class="export-buttons">
     <a href="{{ url_for('export.export_excel') }}" class="export-button">
@@ -223,5 +235,7 @@
     .export-button .fa {
         font-size: 1.2em;
     }
+
+
 </style>
 {% endblock %}
