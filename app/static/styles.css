@@ -714,15 +714,7 @@ h3 {
 }
 
 /* Specific style for the index page */
-/* זה לחלק שכותב כמה נשאר בארנק */
-.total-savings-subtext {
-    font-size: 0.5em; /* היה 0.4em, הקטנתי פחות מדי */
-    color: var(--gray);
-    text-align: center;
-    display: block;
-    margin-top: -5px; /* היה -8px, פחות צמוד */
-    line-height: 2.5; /* היה 3 */
-}
+
 
 /* Specific style for the תיבה להזנת שימוש אוטומטי לקופון במסך הראשי */
 .usage-form-wrapper {

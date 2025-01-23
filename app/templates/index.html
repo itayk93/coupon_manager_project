@@ -10,11 +10,21 @@
         <p>נשאר בארנק:</p>
         <h1>{{ '%.2f'|format(total_value) }} ₪</h1>
     </div>
-    <p class="total-savings-line">
+    <p class="total-savings-line" style="position: relative;">
         סך הכל חסכת: {{ '%.0f'|format(total_savings) }} ₪
         מתוך {{ '%.0f'|format(total_coupons_value) }} ₪
         (חיסכון של {{ '%.0f'|format(percentage_savings) }}%)
-        <span class="total-savings-subtext">(מתוך הקופונים הפעילים שאינם חד פעמיים ושאינם למכירה)</span>
+
+        <!-- אלמנט קליקבילי שפותח את הטולטיפ -->
+        <span class="tooltip-trigger">
+            מידע נוסף
+        </span>
+
+        <!-- הטולטיפ עצמו, מוסתר בהתחלה -->
+        <div class="tooltip-box">
+            <span class="close-tooltip">×</span>
+            מתוך הקופונים הפעילים שאינם חד פעמיים ושאינם למכירה
+        </div>
     </p>
     </section>
 
@@ -40,8 +50,6 @@
 </div>
 
 <section class="coupon-list">
-    <h2>הקופונים שלך</h2>
-
     <!-- קופונים פעילים -->
     {% if active_coupons %}
         <h3 class="coupon-section-title">קופונים פעילים</h3>
@@ -237,5 +245,112 @@
     }
 
 
+    /* האלמנט שמפעילים עליו קליק */
+    .tooltip-trigger {
+        margin-left: 8px;
+        color: #007bff;
+        text-decoration: underline;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    /* התיבה שתוצג כטולטיפ, בהתחלה מוסתרת */
+    .tooltip-box {
+        display: none;
+        position: absolute;
+        top: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: #fff;
+        padding: 10px 15px;
+        border-radius: 5px;
+        width: 250px;
+        font-size: 14px;
+        text-align: center;
+        z-index: 1000;
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+        white-space: nowrap;
+    }
+
+    /* החץ הקטן בטולטיפ */
+    .tooltip-box::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 6px;
+        border-style: solid;
+        border-color: #333 transparent transparent transparent;
+    }
+
+    /* כפתור סגירה X */
+    .close-tooltip {
+        position: absolute;
+        top: 5px;
+        right: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 16px;
+        background-color: transparent;
+        border: none;
+        color: #fff;
+        line-height: 1;
+    }
+
+    .close-tooltip:hover {
+        color: #ccc;
+    }
+
+    /* התאמות למסכים קטנים */
+    @media (max-width: 768px) {
+        .tooltip-box {
+            left: auto;
+            right: 0;
+            transform: none;
+            max-width: 200px;
+        }
+
+        .tooltip-box::after {
+            left: auto;
+            right: 10px;
+            transform: none;
+        }
+    }
+
 </style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const tooltipTriggers = document.querySelectorAll('.tooltip-trigger');
+    const tooltips = document.querySelectorAll('.tooltip-box');
+
+    tooltipTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function(e) {
+            e.stopPropagation(); // מונע מהאירוע לעלות למעלה ולסגור מיד
+            const tooltip = this.nextElementSibling;
+            tooltip.style.display = 'block';
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        tooltips.forEach(tooltip => {
+            if (!tooltip.contains(e.target) && !tooltip.previousElementSibling.contains(e.target)) {
+                tooltip.style.display = 'none';
+            }
+        });
+    });
+
+    document.querySelectorAll('.close-tooltip').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            this.parentElement.style.display = 'none';
+        });
+    });
+});
+</script>
 {% endblock %}
