@@ -5,7 +5,7 @@
 {% block content %}
 <section class="hero">
     <h2>היי, {{ current_user.first_name }}!</h2>
-    <p>איזה כיף לראות אותך כאן! בוא נבדוק כמה חסכת וכמה נשאר לך בארנק.</p>
+    <p>איזה כיף לראות אותך כאן!<br>בוא נבדוק כמה נשאר לך בארנק וכמה חסכת.</p>
     <div class="total-value">
         <p>נשאר בארנק:</p>
         <h1>{{ '%.2f'|format(total_value) }} ₪</h1>
@@ -34,20 +34,12 @@
         {{ form.hidden_tag() }}
         <div class="input-wrapper">
             <label for="usage_explanation">השלמה אוטומטית של השימוש בקופנים</label>
-            <textarea id="usage_explanation" name="usage_explanation" rows="2" class="input-field">כאן ניתן להקליד באופן חופשי את פירוט השימוש בקופונים</textarea>
+            <textarea id="usage_explanation" name="usage_explanation" rows="2" class="input-field"
+                      placeholder="כאן ניתן להקליד באופן חופשי את פירוט השימוש בקופונים"></textarea>
         </div>
         <button type="submit" class="submit-button">שלח</button>
     </form>
 </section>
-
-<div class="export-buttons">
-    <a href="{{ url_for('export.export_excel') }}" class="export-button">
-        <i class="fa fa-file-excel-o" aria-hidden="true"></i> ייצא ל-Excel
-    </a>
-    <a href="{{ url_for('export.export_pdf') }}" class="export-button">
-        <i class="fa fa-file-pdf-o" aria-hidden="true"></i> ייצא ל-PDF
-    </a>
-</div>
 
 <section class="coupon-list">
     <!-- קופונים פעילים -->
@@ -123,6 +115,16 @@
         <p style="text-align: center; color: var(--gray);">אין לך קופונים זמינים למכירה.</p>
     {% endif %}
 </section>
+
+
+<div class="export-buttons">
+    <a href="{{ url_for('export.export_excel') }}" class="export-button">
+        <i class="fa fa-file-excel-o" aria-hidden="true"></i> ייצא ל-Excel
+    </a>
+    <a href="{{ url_for('export.export_pdf') }}" class="export-button">
+        <i class="fa fa-file-pdf-o" aria-hidden="true"></i> ייצא ל-PDF
+    </a>
+</div>
 
 <!-- כפתור עדכון הקופונים בתחתית העמוד -->
 {% if current_user.is_admin %}
@@ -317,6 +319,10 @@
             right: 10px;
             transform: none;
         }
+    }
+
+    textarea.input-field, button.submit-button, label {
+    font-family: var(--font-family) !important;
     }
 
 </style>
