@@ -134,7 +134,7 @@ class CouponForm(FlaskForm):
         validators=[Optional(), Length(max=255)]
     )
     code = StringField(
-        'קוד קופון (שם מוצר)',
+        'קוד קופון',
         validators=[DataRequired(message="חובה למלא קוד קופון.")]
     )
     value = FloatField(
@@ -171,7 +171,7 @@ class CouponForm(FlaskForm):
         'מטרת הקופון',
         validators=[Optional(), Length(max=255)]
     )
-    coupon_image = FileField('תמונה של הקופון', validators=[Optional()])  # הוסף שדה העלאת תמונה
+    coupon_image = FileField('תמונה של הקופון', validators=[Optional()])
     upload_image = SubmitField('העלה תמונה')  # כפתור להעלאת תמונה
     
     # Relevant for specific coupons
@@ -191,7 +191,7 @@ class CouponForm(FlaskForm):
         ]
     )
 
-    submit_coupon = SubmitField('הוסף קופון')  # כפתור להוספת קופון
+    submit_coupon = SubmitField('הוספת קופון')  # כפתור להוספת קופון
 
     def validate(self, extra_validators=None):
         if not super(CouponForm, self).validate(extra_validators=extra_validators):
@@ -283,7 +283,7 @@ class AddCouponsBulkForm(FlaskForm):
     coupons = FieldList(FormField(CouponForm), min_entries=1)
     cvv = StringField('CVV', validators=[Optional()])
     card_exp = StringField('תוקף כרטיס', validators=[Optional()])
-    submit = SubmitField('הוסף קופונים')
+    submit = SubmitField('הוספת קופונים')
 
 
 class UploadCouponsForm(FlaskForm):
@@ -394,7 +394,7 @@ class SellCouponForm(FlaskForm):
                    message="יש להזין תאריך כרטיס בפורמט MM/YY.")
         ]
     )
-    submit = SubmitField('הוסף קופון למכירה')
+    submit = SubmitField('הוספת קופון למכירה')
 
     def validate(self, **kwargs):
         if not super(SellCouponForm, self).validate(**kwargs):
@@ -415,7 +415,7 @@ class SellCouponForm(FlaskForm):
     
 class EditCouponForm(FlaskForm):
     company = StringField('שם החברה:', validators=[InputRequired(message="חובה למלא את שם החברה.")])
-    code = StringField('קוד קופון (שם מוצר):', validators=[InputRequired(message="חובה למלא את קוד הקופון.")])
+    code = StringField('קוד קופון:', validators=[InputRequired(message="חובה למלא את קוד הקופון.")])
     value = FloatField('ערך הקופון (בש"ח):', validators=[InputRequired(message="חובה למלא את ערך הקופון."),
                                                          NumberRange(min=0, message="הערך חייב להיות 0 או גדול ממנו.")])
     cost = FloatField('כמה שילמת עבור הקופון (בש"ח):', validators=[InputRequired(message="חובה למלא את העלות."),
@@ -496,7 +496,7 @@ class ProfileForm(FlaskForm):
     submit = SubmitField('שמור')
 
 
-from app.models import Coupon  # הוסף שורה זו בראש הקובץ, יחד עם שאר הייבואים.
+from app.models import Coupon 
 
 class ApproveTransactionForm(FlaskForm):
     seller_phone = StringField('מספר טלפון', validators=[DataRequired()])
@@ -530,7 +530,7 @@ class MarkCouponAsUsedForm(FlaskForm):
 
 class UpdateCouponUsageForm(FlaskForm):
     used_amount = FloatField('כמות שימוש', validators=[DataRequired(), NumberRange(min=0.0)])
-    submit = SubmitField('עדכון שימוש עם MultiPass')
+    submit = SubmitField('עדכון אוטומטי')
 
 
 class BuySlotsForm(FlaskForm):

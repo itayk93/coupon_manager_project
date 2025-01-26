@@ -549,6 +549,49 @@ document.addEventListener('DOMContentLoaded', function() {
             slotsTooltip.style.display = 'none';
         });
     }
+    
+    // ===========================
+    // בדיקת תאריך תפוגה לפני שליחת הטופס
+    // ===========================
+    const form = document.querySelector('form'); // הטופס המרכזי בעמוד, ודא שזה אכן הטופס הנכון
+    const expirationInput = document.getElementById('expiration');
+
+    if (form && expirationInput) {
+        form.addEventListener('submit', function(e) {
+            // ניקוי הודעת השגיאה הקיימת (אם יש לך כזאת), לדוגמה:
+            // const validationMessage = document.getElementById('validation_message');
+            // if(validationMessage) validationMessage.style.display = 'none';
+
+            const expValue = expirationInput.value.trim();
+            if (!expValue) {
+                // אם לא הוזן תאריך בכלל, אין מה לבדוק
+                return;
+            }
+
+            // בהנחה שהפורמט הוא YYYY-MM-DD:
+            const parts = expValue.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // כי החודשים ב-JS הם 0-11
+                const day = parseInt(parts[2]);
+                const selectedDate = new Date(year, month, day);
+
+                // מכינים "היום" (בלי שעות)
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                // בדיקה אם הקופון פג או פג היום
+                if (selectedDate <= today) {
+                    // הצגת חלון אישור למשתמש
+                    const confirmMsg = "תאריך התפוגה הוא היום או לפני היום. האם ברצונך להמשיך?";
+                    if (!confirm(confirmMsg)) {
+                        e.preventDefault(); // המשתמש לחץ Cancel – ביטול השליחה
+                    }
+                }
+            }
+        });
+    }
+
 });
 </script>
 

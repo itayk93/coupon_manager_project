@@ -421,6 +421,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // ===========================
+    // בדיקת תאריך תפוגה לפני שליחת הטופס
+    // ===========================
+    // שים לב שבקובץ הזה קיימים שני טפסים: (1) להעלאת תמונה, (2) למילוי פרטי הקופון
+    // אנחנו רוצים להוסיף את הבדיקה לטופס שמוסיף את הקופון בפועל, כלומר:
+    
+    // הטופס למילוי הפרטים (קיים רק אם show_coupon_form == True)
+    const couponForm = document.querySelector('form'); 
+    const expirationInput = document.getElementById('expiration');
+
+    if (couponForm && expirationInput) {
+        couponForm.addEventListener('submit', function(e) {
+            const expValue = expirationInput.value.trim();
+            if (!expValue) {
+                return; // לא הוזן תאריך
+            }
+
+            const parts = expValue.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1;
+                const day = parseInt(parts[2]);
+                const selectedDate = new Date(year, month, day);
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                if (selectedDate <= today) {
+                    const confirmMsg = "תאריך התפוגה של הקופון הוא היום או תאריך שחלף. להמשיך?";
+                    if (!confirm(confirmMsg)) {
+                        e.preventDefault();
+                    }
+                }
+            }
+        });
+    }
+
 });
 
 </script>

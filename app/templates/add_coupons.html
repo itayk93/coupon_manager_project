@@ -520,8 +520,69 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeCouponFieldset(fieldset, idx);
     });
 
+    // כפתור הוספת קופון
     const addCouponButton = document.querySelector('.add-coupon-button');
     addCouponButton.addEventListener('click', addCoupon);
+
+    // ======================================
+    // בדיקת תאריך תפוגה לפני שליחת הטופס
+    // ======================================
+    const couponsForm = document.getElementById('coupons-form');
+    if (couponsForm) {
+        couponsForm.addEventListener('submit', function(e) {
+            const fieldsets = document.querySelectorAll('.coupon-fieldset');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            let expiredCoupons = [];
+
+            fieldsets.forEach((fieldset, idx) => {
+                const expirationInput = fieldset.querySelector('input[type="date"][name^="coupons-"][name$="-expiration"]');
+                if (expirationInput && expirationInput.value) {
+                    const parts = expirationInput.value.split('-'); // YYYY-MM-DD
+                    if (parts.length === 3) {
+                        const year = parseInt(parts[0]);
+                        const month = parseInt(parts[1]) - 1;
+                        const day = parseInt(parts[2]);
+                        const selectedDate = new Date(year, month, day);
+
+                        if (selectedDate <= today) {
+                            // עיצוב תאריך לפורמט DD/MM/YYYY
+                            const formattedDate = `${String(day).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
+
+                            // משיכת פרטי הקופון
+                            const companySelect = fieldset.querySelector('.company-select');
+                            const companyName = companySelect ? companySelect.options[companySelect.selectedIndex].text : 'לא ידוע';
+
+                            const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+                            const couponCode = codeInput ? codeInput.value : 'לא ידוע';
+
+                            const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                            const couponValue = valueInput ? valueInput.value : 'לא ידוע';
+
+                            expiredCoupons.push(
+                                `📌 קופון #${idx+1}:\n` +
+                                `- 🏢 חברה: ${companyName}\n` +
+                                `- 🔢 קוד קופון: ${couponCode}\n` +
+                                `- 💰 ערך: ${couponValue}\n` +
+                                `- ⏳ תוקף: ${formattedDate}`
+                            );
+                        }
+                    }
+                }
+            });
+
+            if (expiredCoupons.length > 0) {
+                const confirmMsg = 
+                    "⚠️ שים לב! הקופונים הבאים מכילים תאריך תפוגה שעבר או היום:\n\n" +
+                    expiredCoupons.join("\n\n") +
+                    "\n\n❓ האם להמשיך בכל זאת?";
+                if (!confirm(confirmMsg)) {
+                    e.preventDefault(); // המשתמש לחץ על ביטול
+                }
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

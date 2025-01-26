@@ -169,6 +169,7 @@ class Coupon(db.Model):
     is_one_time = db.Column(db.Boolean, default=False)
     purpose = db.Column(db.String(255), nullable=True)
     exclude_saving = db.Column(db.Boolean, default=False, nullable=False)  # מציין אם להחריג מהחישוב
+    auto_download_details = db.Column(db.Text, nullable=True)  # ניתן לשנות את סוג הנתונים בהתאם
 
     # Relationships
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -271,8 +272,8 @@ class Transaction(db.Model):
     seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     buyer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     status = db.Column(db.String(20), nullable=False, default='ממתין לאישור המוכר')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)  # הוסף שדה זה
-    source = db.Column(db.String(50), nullable=True)  # ✅ הוסף את השדה כאן
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    source = db.Column(db.String(50), nullable=True)
     timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     buyer_phone = db.Column(db.String(20), nullable=True)
     seller_phone = db.Column(db.String(20), nullable=True)
@@ -460,7 +461,7 @@ class UserConsent(db.Model):
 
     consent_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)  # הפך ללא חובה
-    ip_address = db.Column(db.String(45), nullable=True)  # הוסף שדה זה
+    ip_address = db.Column(db.String(45), nullable=True) 
     consent_status = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     version = db.Column(db.String(50), default="1.0")

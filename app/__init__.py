@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, url_for
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
+from app.routes.coupons_routes import to_israel_time_filter  # Import the function
+from scheduler_config import configure_scheduler
 
 # ייבוא הגדרות ו"הרחבות"
 from app.config import Config
@@ -32,6 +34,7 @@ def create_app():
 
     # הגדרת רמת הלוגים (debug וכו')
     app.logger.setLevel(logging.DEBUG)
+
 
     # אתחול ההרחבות
     db.init_app(app)
@@ -92,31 +95,32 @@ def create_app():
         except Exception as e:
             logger.error(f"שגיאה ביצירת תיקיית ההעלאה: {e}")
 
-    # מגדיר ומפעיל את ה-Scheduler (למשל לשליחת התראות על תפוגה)
+    # 📌 קרא למתזמן **רק אחרי שהאפליקציה נטענה**
+    from scheduler_config import configure_scheduler
     configure_scheduler()
 
     return app
 
 
-def send_expiration_warnings(app):
-    """פונקציה לדוגמה: שולחת התראות על קופונים שעומדים לפוג."""
-    from app.models import Coupon  # אם צריך להבטיח שהמודל נטען
+def send_expiration_warnings():
+    """שולחת התראות על קופונים שעומדים לפוג, תוך שימוש בקונטקסט של Flask."""
+    from app import create_app  # טעינת האפליקציה
+    app = create_app()
+
     with app.app_context():
+        from app.models import Coupon
         today = datetime.utcnow().date()
         one_month_ahead = today + timedelta(days=30)
-        one_week_ahead = today + timedelta(days=7)
-        one_day_ahead = today + timedelta(days=1)
 
-        # שליחת התראות 30 יום לפני
         coupons_month = Coupon.query.filter(
             Coupon.expiration == one_month_ahead.strftime('%Y-%m-%d'),
             Coupon.reminder_sent_30_days == False
         ).all()
+        
         for coupon in coupons_month:
             user = coupon.user
             if user:
                 try:
-                    # בונה תוכן מייל לדוגמה
                     expiration_date = coupon.expiration
                     coupon_detail_link = url_for('coupon_detail', id=coupon.id, _external=True)
                     html_content = render_template(
@@ -127,14 +131,21 @@ def send_expiration_warnings(app):
                         coupon_detail_link=coupon_detail_link,
                         days_left=30
                     )
-                    # send_email(sender_email=os.getenv('SENDER_EMAIL'), ...)
+
+                    # שליחת המייל
+                    send_email(
+                        sender_email="CouponMasterIL2@gmail.com",
+                        sender_name="Coupon Master",
+                        recipient_email=user.email,
+                        recipient_name=f"{user.first_name} {user.last_name}",
+                        subject="התראה על תפוגת קופון - 30 יום נותרו",
+                        html_content=html_content
+                    )
 
                     coupon.reminder_sent_30_days = True
                     db.session.commit()
                     logger.info(f"Sent 30-day expiration warning for coupon {coupon.code} to {user.email}")
+
                 except Exception as e:
-                    logger.error(f"Error sending 30-day expiration warning: {e}")
+                    logger.error(f"Error sending 30-day expiration warning for coupon {coupon.code}: {e}")
                     db.session.rollback()
-
-        # דומה גם ל-7 ימים, 1 יום וכו'...
-

@@ -1032,6 +1032,23 @@ h3 {
     margin-top: 10px; /* מוריד את הכפתור קצת למטה */
 }
 
+/* כדי שמתי שיש תיאור זה כתוב מימין לשמאל ובמרכז המסך */
+.description-box {
+    text-align: center; /* ממרכז את הטקסט */
+    direction: rtl; /* קובע את הכיוון מימין לשמאל */
+    display: flex; /* שימוש ב-Flexbox */
+    justify-content: center; /* ממרכז את האלמנטים בפנים */
+    align-items: center; /* ממרכז אנכית */
+    flex-direction: column; /* מסדר את התוכן בטור */
+    width: 100%; /* תופס את כל הרוחב */
+    margin: 0 auto; /* מבטיח שהאלמנט עצמו ממורכז */
+}
+.description-box span, 
+.description-box p {
+    display: block;
+    text-align: center !important;
+    width: 100%;
+}
 
 /* ===================================================
    12. Export Buttons
@@ -3029,11 +3046,11 @@ h3 {
     }
 }
 .input-field::placeholder {
-    text-align: right; /* יישור placeholder לימין */
+    text-align: center; /* יישור placeholder לימין */
     direction: rtl; /* קביעת כיוון כתיבה לימין */
 }
-.input-field {
-    text-align: right; /* מיישר את הטקסט לימין */
+.input-field_centered {
+    text-align: center; /* מיישר את הטקסט לימין */
     direction: rtl; /* קובע כיוון כתיבה לימין */
 }
 

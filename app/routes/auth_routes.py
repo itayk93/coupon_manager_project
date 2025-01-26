@@ -153,7 +153,7 @@ def register():
             password=generate_password_hash(form.password.data),
             first_name=form.first_name.data.strip(),
             last_name=form.last_name.data.strip(),
-            gender=form.gender.data,    # הוסף שורה זו!
+            gender=form.gender.data, 
             is_confirmed=False
         )
         try:

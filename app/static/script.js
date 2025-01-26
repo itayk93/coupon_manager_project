@@ -85,25 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // קוד לטיפול בתגיות מוצעות
-    const tagsInputInitial = document.getElementById('tags');
-    const suggestedTagsContainerInitial = document.getElementById('suggested-tags');
-    if (tagsInputInitial && suggestedTagsContainerInitial) {
-        suggestedTagsContainerInitial.querySelectorAll('.suggested-tag').forEach(tagElement => {
-            const tag = tagElement.textContent.trim();
-            tagElement.addEventListener('click', () => {
-                let currentTags = tagsInputInitial.value.split(',').map(t => t.trim()).filter(t => t);
-                if (!currentTags.includes(tag)) {
-                    if (currentTags.length > 0) {
-                        tagsInputInitial.value = currentTags.join(', ') + ', ' + tag + ', ';
-                    } else {
-                        tagsInputInitial.value = tag + ', ';
-                    }
-                }
-            });
-        });
-    }
-
     // Dropdown Menu Functionality with Responsive Behavior
     const dropdowns = document.querySelectorAll('.dropdown');
     const mobileBreakpoint = 768; // px
@@ -415,20 +396,5 @@ document.addEventListener('DOMContentLoaded', () => {
         checkbox.addEventListener('change', togglePurposeField);
     }
 
-    // קוד לטיפול בתגיות מוצעות
-    const tagsInputFinal = document.getElementById('tags');
-    const suggestedTagsContainerFinal = document.getElementById('suggested-tags');
-    if (tagsInputFinal && suggestedTagsContainerFinal) {
-        suggestedTagsContainerFinal.querySelectorAll('.suggested-tag').forEach(tagElement => {
-            const tag = tagElement.textContent.trim();
-            tagElement.addEventListener('click', () => {
-                let currentTags = tagsInputFinal.value.split(',').map(t => t.trim()).filter(t => t);
-                if (!currentTags.includes(tag)) {
-                    currentTags.push(tag);
-                    tagsInputFinal.value = currentTags.join(', ');
-                }
-            });
-        });
-    }
 
 });

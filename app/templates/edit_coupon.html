@@ -310,6 +310,34 @@
             includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
             toggleCardFields(); // הפעלה ראשונית
         }
+
+    const form = document.querySelector('form[action="{{ url_for('coupons.edit_coupon', id=coupon.id) }}"]');
+    const expirationInput = document.getElementById("{{ form.expiration.id }}");
+
+    if (form && expirationInput) {
+        form.addEventListener('submit', function(e) {
+            if (!expirationInput.value) return; // לא הוזן תאריך, אין מה לבדוק
+
+            const parts = expirationInput.value.split('-'); // ציפייה לפורמט YYYY-MM-DD
+            if (parts.length === 3) {
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1;
+                const day = parseInt(parts[2]);
+                const selectedDate = new Date(year, month, day);
+
+                const today = new Date();
+                today.setHours(0,0,0,0);
+
+                if (selectedDate <= today) {
+                    const confirmMsg = "שימו לב! תאריך התפוגה של הקופון הוא היום או קודם. האם להמשיך?";
+                    if (!confirm(confirmMsg)) {
+                        e.preventDefault();
+                    }
+                }
+            }
+        });
+    }
+
     });
 </script>
 {% endblock %}

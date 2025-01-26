@@ -48,7 +48,9 @@ def to_israel_time_filter(dt):
 
 def add_coupon_transaction(coupon):
     """
-    הוספת רשומה לטבלת coupon_transaction כאשר מתווסף קופון חדש.
+    בעת יצירת קופון חדש, אנו מוסיפים רשומת coupon_transaction. 
+    כדי שבעת עריכה לא יווצרו שתי רשומות שונות, 
+    מומלץ לשמור כאן תמיד את אותה ערך reference_number ('Initial' למשל).
     """
     new_transaction = CouponTransaction(
         coupon_id=coupon.id,
@@ -56,7 +58,7 @@ def add_coupon_transaction(coupon):
         recharge_amount=coupon.value,
         usage_amount=0,
         location="הוזן באופן ידני",
-        reference_number="ManualEntry",
+        reference_number="Initial",  # כאן במקום ManualEntry
         source="User"
     )
     db.session.add(new_transaction)
@@ -207,6 +209,7 @@ def sell_coupon():
         db.session.add(new_coupon)
         try:
             db.session.commit()
+            add_coupon_transaction(new_coupon)  # ✅ הוספת רשומה לטבלת CouponTransaction
 
             try:
                 new_activity = {
@@ -896,7 +899,6 @@ def add_coupon():
 
                     try:
                         db.session.commit()
-
                         # Add a row to coupon_transaction
                         add_coupon_transaction(new_coupon)
 
@@ -1080,6 +1082,7 @@ def add_coupon_with_image_html():
             db.session.add(new_coupon)
             try:
                 db.session.commit()
+                add_coupon_transaction(new_coupon)  # ואז ליצור את רשומת ה-CouponTransaction
                 notification = Notification(
                     user_id=current_user.id,
                     message=f"הקופון {new_coupon.code} נוסף בהצלחה.",
@@ -1371,10 +1374,10 @@ def convert_date_format(date_input):
     else:
         return None
 
-
+'''''''''''
 @coupons_bp.route('/edit_coupon/<int:id>', methods=['GET', 'POST'])
 @login_required
-def edit_coupon(id):
+def edit_coupon_old(id):
     coupon = Coupon.query.get_or_404(id)
 
     # -- activity log snippet --
@@ -1500,7 +1503,134 @@ def edit_coupon(id):
     top_tags = [tag.name for tag in top_tags]
 
     return render_template('edit_coupon.html', form=form, coupon=coupon, existing_tags=existing_tags, top_tags=top_tags)
+'''''''''''
 
+@coupons_bp.route('/edit_coupon/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_coupon(id):
+    coupon = Coupon.query.get_or_404(id)
+
+    # -- activity log snippet --
+    log_user_activity("edit_coupon_view", coupon.id)
+
+    if coupon.user_id != current_user.id:
+        flash('אינך מורשה לערוך קופון זה.', 'danger')
+        return redirect(url_for('coupons.show_coupons'))
+
+    form = EditCouponForm(obj=coupon)
+
+    if form.validate_on_submit():
+        try:
+            old_value = coupon.value
+            coupon.company = form.company.data.strip()
+            coupon.code = form.code.data.strip()
+            coupon.value = float(form.value.data)
+            coupon.cost = float(form.cost.data)
+            coupon.cvv = form.cvv.data
+            coupon.card_exp = form.card_exp.data
+            coupon.description = form.description.data or ''
+            coupon.is_one_time = form.is_one_time.data
+            coupon.purpose = form.purpose.data.strip() if form.is_one_time.data else None
+            coupon.expiration = form.expiration.data if form.expiration.data else None
+            coupon.cvv = form.cvv.data.strip() if form.cvv.data else None
+            coupon.card_exp = form.card_exp.data.strip() if form.card_exp.data else None
+
+            if form.tags.data:
+                if isinstance(form.tags.data, str) and form.tags.data:
+                    tag_names = [tag.strip() for tag in form.tags.data.split(',') if tag.strip()]
+                elif isinstance(form.tags.data, list):
+                    tag_names = [tag.strip() for tag in form.tags.data if isinstance(tag, str) and tag.strip()]
+                else:
+                    tag_names = []
+                coupon.tags.clear()
+                for name in tag_names:
+                    tag = Tag.query.filter_by(name=name).first()
+                    if not tag:
+                        tag = Tag(name=name, count=1)
+                        db.session.add(tag)
+                    else:
+                        tag.count += 1
+                    coupon.tags.append(tag)
+            else:
+                coupon.tags.clear()
+
+            db.session.commit()
+
+            if coupon.value != old_value:
+                initial_transaction = CouponTransaction.query.filter(
+                    CouponTransaction.coupon_id == coupon.id,
+                    CouponTransaction.source == 'User',
+                    CouponTransaction.reference_number.in_(["Initial", "ManualEntry"])
+                ).first()
+                if initial_transaction:
+                    initial_transaction.recharge_amount = coupon.value
+                else:
+                    initial_transaction = CouponTransaction(
+                        coupon_id=coupon.id,
+                        transaction_date=datetime.utcnow(),
+                        location='הטענה ראשונית',
+                        recharge_amount=coupon.value,
+                        usage_amount=0.0,
+                        reference_number='Initial',
+                        source='User'
+                    )
+                    db.session.add(initial_transaction)
+                db.session.commit()
+
+            try:
+                new_activity = {
+                    "user_id": current_user.id,
+                    "coupon_id": coupon.id,
+                    "timestamp": datetime.utcnow(),
+                    "action": "edit_coupon_submit",
+                    "device": request.headers.get('User-Agent', '')[:50],
+                    "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                    "ip_address": ip_address[:45] if ip_address else None,
+                    "geo_location": get_geo_location(ip_address)[:100]
+                }
+                db.session.execute(
+                    text("""
+                        INSERT INTO user_activities
+                            (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                        VALUES
+                            (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                    """),
+                    new_activity
+                )
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error logging activity [edit_coupon_submit]: {e}")
+
+            flash('הקופון עודכן בהצלחה.', 'success')
+            return redirect(url_for('coupons.coupon_detail', id=coupon.id))
+
+        except IntegrityError:
+            db.session.rollback()
+            flash('קוד קופון זה כבר קיים. אנא בחר קוד אחר.', 'danger')
+        except Exception as e:
+            db.session.rollback()
+            flash('אירעה שגיאה בעת עדכון הקופון. נסה שוב.', 'danger')
+            current_app.logger.error(f"Error updating coupon: {e}")
+
+    elif request.method == 'GET':
+        if coupon.expiration:
+            if isinstance(coupon.expiration, str):
+                try:
+                    coupon.expiration = datetime.strptime(coupon.expiration, '%Y-%m-%d').date()
+                except ValueError:
+                    try:
+                        coupon.expiration = datetime.strptime(coupon.expiration, '%d/%m/%Y').date()
+                    except ValueError:
+                        coupon.expiration = None
+        form.expiration.data = coupon.expiration
+        form.tags.data = ', '.join([tag.name for tag in coupon.tags])
+
+    existing_tags = ', '.join([tag.name for tag in coupon.tags])
+    top_tags = Tag.query.order_by(Tag.count.desc()).limit(3).all()
+    top_tags = [tag.name for tag in top_tags]
+
+    return render_template('edit_coupon.html', form=form, coupon=coupon, existing_tags=existing_tags, top_tags=top_tags)
 
 @coupons_bp.route('/delete_coupons', methods=['GET', 'POST'])
 @login_required
@@ -1570,7 +1700,11 @@ def coupon_detail(id):
     delete_form = DeleteCouponForm()
     update_form = UpdateCouponUsageForm()
 
+    # בדיקה האם auto_download_details אינו NULL
+    show_multipass_button = coupon.auto_download_details is not None
+
     log_user_activity("view_coupon", coupon.id)
+
 
     sql = text("""
 WITH CouponFilter AS (
@@ -1618,10 +1752,13 @@ CombinedData AS (
 ),
 SummedData AS (
     SELECT
+        source_table,
+        id,
         coupon_id,
         timestamp,
         transaction_amount,
-        details
+        details,
+        action
     FROM CombinedData
     WHERE NOT (
         coupon_id IN (SELECT coupon_id FROM CouponFilter) AND action = 'User'
@@ -1631,10 +1768,13 @@ SummedData AS (
     UNION ALL
 
     SELECT
+        'sum_row' AS source_table,
+        NULL AS id,
         coupon_id,
         NULL AS timestamp,
         SUM(transaction_amount) AS transaction_amount,
-        'יתרה בקופון' AS details
+        'יתרה בקופון' AS details,
+        NULL AS action
     FROM CombinedData
     WHERE NOT (
         coupon_id IN (SELECT coupon_id FROM CouponFilter) AND action = 'User'
@@ -1642,12 +1782,19 @@ SummedData AS (
     AND coupon_id = :coupon_id
     GROUP BY coupon_id
 )
-SELECT coupon_id, timestamp, transaction_amount, details
+SELECT
+    source_table,
+    id,
+    coupon_id,
+    timestamp,
+    transaction_amount,
+    details,
+    action
 FROM SummedData
-ORDER BY 
+ORDER BY
     CASE WHEN timestamp IS NULL THEN 1 ELSE 0 END,
     timestamp ASC;
-    """)
+""")
 
     result = db.session.execute(sql, {'coupon_id': coupon.id})
     consolidated_rows = result.fetchall()
@@ -1672,7 +1819,8 @@ ORDER BY
         discount_percentage=discount_percentage,
         company_logo=company_logo,
         cvv=coupon.cvv,
-        card_exp=coupon.card_exp
+        card_exp=coupon.card_exp,
+        show_multipass_button=show_multipass_button
     )
 
 
@@ -2166,11 +2314,6 @@ def update_coupon_usage_from_multipass(id):
     # כעת יש לנו coupon.id, אפשר ללוגג
     log_user_activity("update_coupon_usage_from_multipass", coupon.id)
 
-    # בדיקת הרשאה לדוגמה:
-    if current_user.email != 'itayk93@gmail.com':
-        flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
-        return redirect(url_for('coupons.coupon_detail', id=id))
-
     if coupon.is_one_time:
         flash('קופון חד-פעמי – אין צורך בעדכון שימוש מ-Multipass.', 'warning')
         return redirect(url_for('coupons.coupon_detail', id=id))
@@ -2282,7 +2425,8 @@ def update_all_active_coupons():
 
     active_coupons = Coupon.query.filter(
         Coupon.status == 'פעיל',
-        Coupon.is_one_time == False
+        Coupon.is_one_time == False,
+        Coupon.auto_download_details.isnot(None)  # רק קופונים שיש להם auto_download_details
     ).all()
 
     updated_coupons = []
@@ -2654,3 +2798,64 @@ def confirm_usage_update():
     session.pop('confirmed_usages', None)
 
     return redirect(url_for('profile.index'))
+
+@coupons_bp.route('/delete_transaction_record/<string:source_table>/<int:record_id>', methods=['POST'])
+@login_required
+def delete_transaction_record(source_table, record_id):
+    user_id = current_user.id
+
+    if source_table == 'coupon_usage':
+        usage = CouponUsage.query.get_or_404(record_id)
+        coupon = usage.coupon
+        if coupon.user_id != user_id:
+            flash("אין לך הרשאה למחוק שימוש זה.", "danger")
+            return redirect(url_for('coupons.coupon_detail', id=coupon.id))
+
+        coupon.used_value -= usage.used_amount
+        if coupon.used_value < 0:
+            coupon.used_value = 0
+
+        db.session.delete(usage)
+        update_coupon_status(coupon)
+
+    elif source_table == 'coupon_transaction':
+        transaction = CouponTransaction.query.get_or_404(record_id)
+        coupon = Coupon.query.get(transaction.coupon_id)
+        if not coupon or coupon.user_id != user_id:
+            flash("אין לך הרשאה למחוק טעינה זו.", "danger")
+            return redirect(url_for('coupons.coupon_detail', id=coupon.id if coupon else None))
+
+        # --- \u274C מניעת מחיקת הרשומה הראשונית ---
+        if transaction.reference_number in ["ManualEntry", "Initial"]:
+            flash("לא ניתן למחוק את הטעינה הראשונית של הקופון.", "danger")
+            return redirect(url_for('coupons.coupon_detail', id=coupon.id))
+
+        # אחרת, זו טעינה/שימוש רגילה – אפשר להמשיך בלוגיקה הרגילה:
+        if transaction.recharge_amount > 0:
+            new_value = coupon.value - transaction.recharge_amount
+            if new_value < coupon.used_value:
+                flash("לא ניתן למחוק טעינה שכבר נוצלה בחלקה.", "danger")
+                return redirect(url_for('coupons.coupon_detail', id=coupon.id))
+            coupon.value = new_value
+
+        if transaction.usage_amount > 0:
+            coupon.used_value -= transaction.usage_amount
+            if coupon.used_value < 0:
+                coupon.used_value = 0
+
+        db.session.delete(transaction)
+        update_coupon_status(coupon)
+
+    else:
+        flash("טבלה לא מוכרת, לא ניתן למחוק.", "danger")
+        return redirect(url_for('coupons.show_coupons'))
+
+    try:
+        db.session.commit()
+        flash("הרשומה נמחקה בהצלחה.", "success")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting transaction record: {e}")
+        flash("שגיאה בעת מחיקת הרשומה.", "danger")
+
+    return redirect(url_for('coupons.coupon_detail', id=coupon.id))

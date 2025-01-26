@@ -6,7 +6,7 @@
 
 {% block content %}
 <section class="add-coupon">
-    <h2>הוסף קופון למכירה</h2>
+    <h2>הוספת קופון למכירה</h2>
     <form method="post">
         {{ form.hidden_tag() }}
         <!-- Company Field -->
@@ -199,6 +199,35 @@ document.addEventListener('DOMContentLoaded', function() {
             updateDesiredValue();
         }
     });
+
+    // בדיקה לפני שליחת הטופס
+    const form = document.querySelector('form');
+    const expirationInput = document.getElementById('{{ form.expiration.id }}');
+
+    if (form && expirationInput) {
+        form.addEventListener('submit', function(e) {
+            if (!expirationInput.value) return; // לא הוזן תאריך
+
+            const parts = expirationInput.value.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1;
+                const day = parseInt(parts[2]);
+                const selectedDate = new Date(year, month, day);
+
+                const today = new Date();
+                today.setHours(0,0,0,0);
+
+                if (selectedDate <= today) {
+                    const confirmMsg = "תאריך התפוגה הוא היום או עבר. האם להמשיך?";
+                    if (!confirm(confirmMsg)) {
+                        e.preventDefault();
+                    }
+                }
+            }
+        });
+    }
+
 });
 </script>
 {% endblock %}

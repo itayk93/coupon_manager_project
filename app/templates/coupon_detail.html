@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-
 {% block title %}פרטי קופון{% endblock %}
 
 {% block content %}
@@ -49,7 +48,6 @@
             <span class="info-value">{{ coupon.company }}</span>
         </div>
 
-        <!-- Show Card Exp, if present -->
         {% if coupon.card_exp %}
         <div class="info-box">
             <span class="info-title">תוקף הכרטיס:</span>
@@ -57,13 +55,13 @@
         </div>
         {% endif %}
 
-        <!-- CVV - אם באמת רוצים להציג, (בפועל רגיש!). -->
         {% if coupon.cvv %}
         <div class="info-box">
             <span class="info-title">CVV:</span>
             <span class="info-value">{{ coupon.cvv }}</span>
         </div>
         {% endif %}
+
         {% if coupon.is_one_time %}
             <div class="info-box">
                 <span class="info-title">מטרת הקופון:</span>
@@ -175,17 +173,16 @@
             </div>
         {% endif %}
 
-        
         {% if coupon.description %}
-            <div class="info-box">
+            <div class="info-box description-box">
                 <span class="info-title">תיאור:</span>
                 <span class="info-value">{{ coupon.description }}</span>
             </div>
         {% endif %}
-
     </div>
 
     <h3 class="usage-history-title">היסטוריית טעינות / שימושים</h3>
+
     {% if consolidated_rows and consolidated_rows|length > 0 %}
         <table class="transaction-table">
             <thead>
@@ -193,6 +190,7 @@
                     <th>תאריך</th>
                     <th>סכום (₪)</th>
                     <th>פרטים</th>
+                    <th>פעולות</th>
                 </tr>
             </thead>
             <tbody>
@@ -205,14 +203,24 @@
                                 -
                             {% endif %}
                         </td>
+                        <td>{{ row.transaction_amount }}</td>
+                        <td>{{ row.details or '' }}</td>
                         <td>
-                            {{ '%.2f'|format(row.transaction_amount) }}
-                        </td>
-                        <td>
-                            {% if row.details %}
-                                {{ row.details }}
+                            {% if row.source_table == 'sum_row' %}
+                                <span style="color: #777;">סה״כ יתרה</span>
+                            {% elif row.source_table == 'coupon_transaction' and row.action == 'Multipass' %}
+                                <span style="color: #777;">לא ניתן למחוק (מ-Multipass)</span>
                             {% else %}
-                                -
+                                <form method="POST"
+                                      action="{{ url_for('coupons.delete_transaction_record',
+                                                         source_table=row.source_table,
+                                                         record_id=row.id) }}"
+                                      onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את הרשומה הזו?');">
+                                    <!-- במקום {{ csrf_token() }} -->
+                                    <!-- כך לא תוצג מחרוזת ארוכה למשתמש -->
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="action-button danger">מחק</button>
+                                </form>
                             {% endif %}
                         </td>
                     </tr>
@@ -233,23 +241,23 @@
         </form>
         <a href="{{ url_for('coupons.show_coupons') }}" class="action-button">חזור לקופונים</a>
     </div>
-    {% endif %}
 
-    {% if is_owner %}
     <div class="update-usage-button" style="margin-top: 10px;">
         <a href="{{ url_for('coupons.update_coupon_usage_route', id=coupon.id) }}" class="action-button">עדכון שימוש בקופון</a>
     </div>
     {% endif %}
 
     {% if current_user.is_admin %}
-    <div class="admin-actions">
-        <form action="{{ url_for('coupons.update_coupon_transactions') }}" method="POST" class="admin-actions-form">
-            <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
-            <input type="hidden" name="coupon_code" value="{{ coupon.code }}">
-            {{ update_form.hidden_tag() }}
-            {{ update_form.submit(class="action-button small-button") }}
-        </form>
-    </div>
+        {% if show_multipass_button %}
+        <div class="admin-actions">
+            <form action="/update_coupon_transactions" method="POST" class="admin-actions-form">
+                <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
+                <input type="hidden" name="coupon_code" value="{{ coupon.coupon_code }}">
+                <input id="csrf_token" name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                {{ update_form.submit(class="action-button small-button") }}  <!-- ✅ עדכון השם -->
+            </form>
+        </div>
+        {% endif %}
     {% endif %}
 </section>
 {% endblock %}
@@ -278,3 +286,4 @@
     });
 </script>
 {% endblock %}
+

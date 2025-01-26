@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .table {
+        width: 80%;
+        margin: auto;
+        text-align: center;
+    }
+    .table th, .table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+    select {
+        width: 100%;
+        text-align: center;
+    }
+    h2 {
+        text-align: center;
+    }
+    .submit-container {
+        text-align: center;
+        margin-top: 20px;
+    }
+    .btn-used {
+        margin-left: 5px;
+    }
+</style>
+
+<h2>אישור שימושים שאותרו</h2>
+<form method="POST" action="{{ url_for('coupons.review_usage_findings') }}">
+    {{ form.hidden_tag() }}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>סמן</th>
+                <th>חברה מה-GPT</th>
+                <th>קופון</th>
+                <th>סכום שימוש (ש"ח)</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in usage_list %}
+            <tr>
+                <td>
+                    <input type="checkbox" name="row-{{ loop.index0 }}-checked" value="yes" checked class="usage-checkbox">
+                </td>
+                <td>{{ row.company }}</td>
+                <td>
+                    <select name="row-{{ loop.index0 }}-company" class="coupon-select">
+                        {% for cpn in row.matched_coupons %}
+                            <option value="{{ cpn.id }}" data-remaining="{{ '%.2f' | format(cpn.remaining_balance) }}" {% if loop.first %}selected{% endif %}>
+                                {{ cpn.company }} ({{ cpn.code }}) - נותר: {{ '%.2f' | format(cpn.remaining_balance) }} ₪
+                            </option>
+                        {% endfor %}
+                        <option value="other">📌 בחר קופון אחר...</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="text" name="row-{{ loop.index0 }}-amount" value="{{ '%.2f' | format(row.amount_used or 0) }}" class="amount-input">
+                    <button type="button" class="btn btn-secondary btn-used">נוצל</button>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="submit-container">
+        <button type="submit" class="btn btn-primary">הבא</button>
+    </div>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".coupon-select").forEach(function(selectElem) {
+        selectElem.addEventListener("change", function () {
+            if (this.value === "other") {
+                let newOptions = `<option value="" disabled selected>בחר קופון...</option>`;
+                {% for cpn in current_user.coupons if cpn.status == "פעיל" %}
+                    newOptions += `<option value="{{ cpn.company }}" data-remaining="{{ ('%.2f' | format(cpn.value - cpn.used_value)) }}">
+                        {{ cpn.company }} ({{ cpn.code }}) - נותר: {{ ('%.2f' | format(cpn.value - cpn.used_value)) }} ₪
+                    </option>`;
+                {% endfor %}
+
+                this.innerHTML = newOptions;
+                this.classList.remove("d-none");
+            }
+        });
+    });
+
+    document.querySelectorAll(".btn-used").forEach(function(button) {
+        button.addEventListener("click", function () {
+            let row = this.closest("tr");
+            let selectElem = row.querySelector(".coupon-select");
+            let selectedOption = selectElem.options[selectElem.selectedIndex];
+            let remainingAmount = parseFloat(selectedOption.getAttribute("data-remaining")).toFixed(2);
+            let amountInput = row.querySelector(".amount-input");
+
+            if (remainingAmount !== null) {
+                amountInput.value = remainingAmount;
+            }
+        });
+    });
+
+    document.querySelector("form").addEventListener("submit", function (event) {
+        document.querySelectorAll("tbody tr").forEach(function (row) {
+            let checkbox = row.querySelector(".usage-checkbox");
+            if (!checkbox.checked) {
+                row.querySelectorAll("input, select").forEach(function (input) {
+                    input.disabled = true;
+                });
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}

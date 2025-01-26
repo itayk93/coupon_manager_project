@@ -1,84 +1,367 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<style>
-    .table {
-        width: 80%;
-        margin: auto;
-        text-align: center;
-    }
-    .table th, .table td {
-        text-align: center;
-        vertical-align: middle;
-    }
-    select {
-        width: 100%;
-        text-align: center;
-    }
-    h2 {
-        text-align: center;
-    }
-    .submit-container {
-        text-align: center;
-        margin-top: 20px;
-    }
-    .btn-used {
-        margin-left: 5px;
-    }
-</style>
+<div class="review-usage-section">
 
-<h2>אישור שימושים שאותרו</h2>
-<form method="POST" action="{{ url_for('coupons.review_usage_findings') }}">
-    {{ form.hidden_tag() }}
-    <table class="table">
+    <!-- התחלת החלק המשופר: הסטיילים המעודכנים לעמוד -->
+    <style>
+        /* מעטפת כללית לעמוד */
+        .review-usage-section {
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: var(--white);
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* כותרת העמוד */
+        .review-usage-section h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 2em;
+            position: relative;
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+
+        .review-usage-section h2::after {
+            content: "";
+            display: block;
+            width: 60%;
+            height: 4px;
+            background-color: var(--accent-color);
+            margin: 5px auto 0;
+            border-radius: 2px;
+        }
+
+        /* טבלת השימושים */
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px auto;
+            table-layout: auto;
+        }
+
+        /* עמודות */
+        .usage-table th, .usage-table td {
+            border: 1px solid var(--light-gray);
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .usage-table thead th {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            font-weight: bold;
+        }
+
+        /* התאמת רוחב עמודות */
+        .usage-table th:nth-child(1),
+        .usage-table td:nth-child(1) {
+            width: 5%;
+        }
+
+        .usage-table th:nth-child(2),
+        .usage-table td:nth-child(2) {
+            width: 20%;
+        }
+
+        .usage-table th:nth-child(3),
+        .usage-table td:nth-child(3) {
+            width: 40%;
+        }
+
+        .usage-table th:nth-child(4),
+        .usage-table td:nth-child(4) {
+            width: 15%;
+        }
+
+        /* הבלטת שורה */
+        .usage-table tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        /* שדות קלט */
+        .coupon-select, .amount-input {
+            width: 100%;
+            text-align: center;
+            border: 1px solid var(--light-gray);
+            border-radius: 4px;
+            padding: 8px;
+            outline: none;
+            font-size: 1em;
+        }
+
+        .coupon-select:focus,
+        .amount-input:focus {
+            border-color: var(--primary-color);
+        }
+
+        /* אזור סכום וכפתור נוצל */
+        .amount-wrapper {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* צ'קבוקסים */
+        .usage-checkbox {
+            transform: scale(1.3);
+            accent-color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        /* כפתור "נוצל" */
+        .btn-used {
+            background-color: var(--accent-color);
+            color: var(--white);
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            white-space: nowrap;
+            width: fit-content;
+            display: inline-block;
+        }
+
+        .btn-used:hover {
+            background-color: #e67e22;
+            transform: translateY(-1px);
+        }
+
+        .btn-used:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* אזור כפתור השליחה */
+        .submit-container {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        /* כפתור שליחה */
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color var(--transition-speed), transform var(--transition-speed);
+            font-size: 1em;
+        }
+
+        .btn-primary:hover {
+            background-color: #1A5A8D;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* רספונסיביות למסכים קטנים */
+        @media screen and (max-width: 768px) {
+            .usage-table {
+                font-size: 0.9em;
+            }
+
+            .btn-used {
+                font-size: 0.75em;
+                padding: 4px 8px;
+            }
+
+            .amount-input {
+                width: 70px;
+            }
+        }
+
+        /* עיצוב כללי של הטבלה */
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px auto;
+            table-layout: auto;
+        }
+
+        /* עיצוב כותרות העמודות */
+        .usage-table thead th {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            font-weight: bold;
+            padding: 10px;
+        }
+
+        /* עיצוב כללי לתאים */
+        .usage-table th, .usage-table td {
+            border: 1px solid var(--light-gray);
+            padding: 10px;
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* עיצוב קלט של סכום שימוש */
+        .amount-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            border: 1px solid var(--light-gray);
+            border-radius: 5px;
+            padding: 5px;
+            background-color: var(--white);
+        }
+
+        /* שדה קלט בתוך העיצוב של "כמה השתמשת" */
+        .amount-input {
+            flex: 1;
+            width: 70px;
+            text-align: center;
+            border: none;
+            outline: none;
+            font-size: 1em;
+        }
+
+        /* כפתור "נוצל" */
+        .btn-used {
+            background-color: var(--accent-color);
+            color: var(--white);
+            border: none;
+            padding: 5px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: bold;
+            transition: background-color 0.2s ease-in-out, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        .btn-used:hover {
+            background-color: #e67e22;
+            transform: translateY(-1px);
+        }
+
+        .btn-used:active {
+            transform: scale(0.98);
+        }
+
+        /* התאמות למסכים קטנים */
+        @media screen and (max-width: 768px) {
+            .usage-table {
+                font-size: 0.9em;
+            }
+
+            .amount-wrapper {
+                flex-direction: column;
+                padding: 8px;
+            }
+
+            .amount-input {
+                width: 100%;
+            }
+
+            .btn-used {
+                width: 100%;
+                font-size: 0.8em;
+            }
+        }
+
+    </style>
+    <!-- סוף החלק המשופר: הסטיילים המעודכנים לעמוד -->
+
+    <!-- כותרת העמוד -->
+    <h2>אישור שימושים שאותרו</h2>
+
+    <!-- טופס ניהול השימושים -->
+    <form method="POST" action="{{ url_for('coupons.review_usage_findings') }}">
+        {{ form.hidden_tag() }}
+
+    <table class="usage-table">
         <thead>
             <tr>
-                <th>סמן</th>
-                <th>חברה מה-GPT</th>
+                <th>סימון</th>
+                <th>חברה שזוהתה</th>
                 <th>קופון</th>
-                <th>סכום שימוש (ש"ח)</th>
+                <th>כמה השתמשת</th>
             </tr>
         </thead>
         <tbody>
         {% for row in usage_list %}
             <tr>
+                <!-- עמודה 1: סימון -->
                 <td>
-                    <input type="checkbox" name="row-{{ loop.index0 }}-checked" value="yes" checked class="usage-checkbox">
+                    <input type="checkbox"
+                           name="row-{{ loop.index0 }}-checked"
+                           value="yes"
+                           checked
+                           class="usage-checkbox">
                 </td>
+                <!-- עמודה 2: שם החברה כפי שה-GPT זיהה -->
                 <td>{{ row.company }}</td>
+                <!-- עמודה 3: בחירת הקופון של המשתמש -->
                 <td>
                     <select name="row-{{ loop.index0 }}-company" class="coupon-select">
                         {% for cpn in row.matched_coupons %}
-                            <option value="{{ cpn.id }}" data-remaining="{{ '%.2f' | format(cpn.remaining_balance) }}" {% if loop.first %}selected{% endif %}>
+                            <option value="{{ cpn.id }}"
+                                    data-remaining="{{ '%.2f' | format(cpn.remaining_balance) }}"
+                                    {% if loop.first %}selected{% endif %}>
                                 {{ cpn.company }} ({{ cpn.code }}) - נותר: {{ '%.2f' | format(cpn.remaining_balance) }} ₪
                             </option>
                         {% endfor %}
                         <option value="other">📌 בחר קופון אחר...</option>
                     </select>
                 </td>
+                <!-- עמודה 4: סכום השימוש והכפתור "נוצל" בתוך הקלט -->
                 <td>
-                    <input type="text" name="row-{{ loop.index0 }}-amount" value="{{ '%.2f' | format(row.amount_used or 0) }}" class="amount-input">
-                    <button type="button" class="btn btn-secondary btn-used">נוצל</button>
+                    <div class="amount-wrapper">
+                        <input type="text"
+                               name="row-{{ loop.index0 }}-amount"
+                               value="{{ '%.2f' | format(row.amount_used or 0) }}"
+                               class="amount-input">
+                        <button type="button" class="btn-used">ניצול מלא</button>
+                    </div>
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
-    <div class="submit-container">
-        <button type="submit" class="btn btn-primary">הבא</button>
-    </div>
-</form>
 
+        <!-- כפתור הגשה -->
+        <div class="submit-container">
+            <button type="submit" class="btn-primary">הבא</button>
+        </div>
+    </form>
+</div>
+
+<!-- סקריפטים הקשורים לטופס -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    // האזנה לבחירת "אחר" והחלפת האופציות
     document.querySelectorAll(".coupon-select").forEach(function(selectElem) {
         selectElem.addEventListener("change", function () {
             if (this.value === "other") {
                 let newOptions = `<option value="" disabled selected>בחר קופון...</option>`;
+
                 {% for cpn in current_user.coupons if cpn.status == "פעיל" %}
-                    newOptions += `<option value="{{ cpn.company }}" data-remaining="{{ ('%.2f' | format(cpn.value - cpn.used_value)) }}">
-                        {{ cpn.company }} ({{ cpn.code }}) - נותר: {{ ('%.2f' | format(cpn.value - cpn.used_value)) }} ₪
-                    </option>`;
+                newOptions += `<option value="{{ cpn.company }}"
+                                       data-remaining="{{ ('%.2f' | format(cpn.value - cpn.used_value)) }}">
+                                    {{ cpn.company }} ({{ cpn.code }}) - נותר: {{ ('%.2f' | format(cpn.value - cpn.used_value)) }} ₪
+                                </option>`;
                 {% endfor %}
 
                 this.innerHTML = newOptions;
@@ -87,6 +370,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    // האזנה לכפתור "נוצל": ממלא את סכום השימוש בסכום הנותר של הקופון
     document.querySelectorAll(".btn-used").forEach(function(button) {
         button.addEventListener("click", function () {
             let row = this.closest("tr");
@@ -101,6 +385,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    // לפני שליחה, אם התיבה לא מסומנת - מנטרלים את השדות באותה שורה
     document.querySelector("form").addEventListener("submit", function (event) {
         document.querySelectorAll("tbody tr").forEach(function (row) {
             let checkbox = row.querySelector(".usage-checkbox");
@@ -113,5 +398,4 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
-
 {% endblock %}

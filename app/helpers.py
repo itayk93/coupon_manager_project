@@ -193,9 +193,10 @@ def update_all_active_coupons(user_id):
 
 def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html"):
     """
-    מפעילה Selenium כדי להיכנס לאתר Multipass, מזינה את קוד הקופון (coupon.code),
-    מורידה את דף ה-HTML, הופכת אותו ל-DataFrame, ושומרת/מעבדת את המידע ב-DB
-    בטבלת coupon_transaction, בהתאם ל-coupon.id.
+    מפעילה Selenium כדי להיכנס לאתר Multipass או Max (לפי coupon.auto_download_details),
+    מורידה את המידע הרלוונטי וממירה אותו ל-DataFrame.
+    לאחר מכן, בודקת מה כבר קיים ב-DB בטבלת coupon_transaction ומשווה,
+    במטרה להוסיף עסקאות חדשות בלבד ולהתאים את הסטטוס של הקופון בהתאם.
 
     מחזירה DataFrame עם עסקאות חדשות בלבד, או None אם אין חדשות או אם הייתה שגיאה.
     """
@@ -209,7 +210,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
-    from sqlalchemy import func
+    from sqlalchemy import func, text
 
     from app.extensions import db
     from app.models import CouponTransaction
@@ -218,106 +219,261 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     os.makedirs(save_directory, exist_ok=True)
 
     coupon_number = coupon.code
+    coupon_kind = coupon.auto_download_details  # "Multipass" / "Max" (או אחר)
+    card_exp = coupon.card_exp
+    cvv = coupon.cvv
 
-    # הגדרת אופציות ל-Selenium
+    # הגדרת אופציות בסיסיות ל-Selenium
     chrome_options = Options()
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument("--disable-images")  # מניעת טעינת תמונות
+    chrome_options.add_argument("--disable-extensions")  # מניעת הרחבות מיותרות
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
 
-    driver = webdriver.Chrome(options=chrome_options)
+    # אם מדובר ב-Max, נוסיף מצב Headless
+    if coupon_kind == "Max":
+        chrome_options.add_argument("--headless=new")  # מצב Headless חדש יותר, תומך ביכולות מתקדמות
+        chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # חוסם תמונות מהדפדפן
 
-    try:
-        driver.get("https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/")
-        wait = WebDriverWait(driver, 30)
-        time.sleep(5)
+    df = None  # כאן נאחסן את ה-DataFrame המתקבל
 
-        card_number_field = driver.find_element(By.XPATH, "//input[@id='newcardid']")
-        card_number_field.clear()
+    # ----------------------------------------------------------------------
+    # טיפול במצב של Multipass
+    # ----------------------------------------------------------------------
+    if coupon_kind == "Multipass":
+        driver = None
+        try:
+            driver = webdriver.Chrome(options=chrome_options)
+            driver.get("https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/")
+            wait = WebDriverWait(driver, 30)
+            time.sleep(5)
 
-        cleaned_coupon_number = str(coupon_number[:-4]).replace("-", "")
-        card_number_field.send_keys(cleaned_coupon_number)
+            card_number_field = driver.find_element(By.XPATH, "//input[@id='newcardid']")
+            card_number_field.clear()
 
-        recaptcha_iframe = wait.until(
-            EC.presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'recaptcha')]"))
-        )
-        driver.switch_to.frame(recaptcha_iframe)
+            cleaned_coupon_number = str(coupon_number[:-4]).replace("-", "")
+            card_number_field.send_keys(cleaned_coupon_number)
 
-        checkbox = wait.until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, ".recaptcha-checkbox-border"))
-        )
-        checkbox.click()
-        print("reCAPTCHA checkbox clicked.")
+            # טיפול ב-reCAPTCHA
+            recaptcha_iframe = wait.until(
+                EC.presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'recaptcha')]"))
+            )
+            driver.switch_to.frame(recaptcha_iframe)
 
-        driver.switch_to.default_content()
+            checkbox = wait.until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, ".recaptcha-checkbox-border"))
+            )
+            checkbox.click()
+            print("reCAPTCHA checkbox clicked.")
 
-        check_balance_button = wait.until(
-            EC.element_to_be_clickable((By.ID, "submit"))
-        )
+            driver.switch_to.default_content()
 
-        if check_balance_button.is_enabled():
-            check_balance_button.click()
-        else:
-            print("Submit button is still disabled. CAPTCHA not solved properly?")
-            driver.quit()
+            check_balance_button = wait.until(
+                EC.element_to_be_clickable((By.ID, "submit"))
+            )
+
+            if check_balance_button.is_enabled():
+                check_balance_button.click()
+            else:
+                print("Submit button is still disabled. CAPTCHA not solved properly?")
+                driver.quit()
+                return None
+
+            wait.until(EC.presence_of_element_located((By.XPATH, "//table")))
+            time.sleep(10)
+
+            page_html = driver.page_source
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"coupon_{coupon_number}_{timestamp}.html"
+            file_path = os.path.join(save_directory, filename)
+
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(page_html)
+
+        except Exception as e:
+            print(f"An error occurred during Selenium operations (Multipass): {e}")
+            if driver:
+                driver.quit()
+            return None
+        finally:
+            if driver:
+                driver.quit()
+
+        # ניסיון לקרוא את הטבלה מתוך ה-HTML שנשמר
+        try:
+            dfs = pd.read_html(file_path)
+            os.remove(file_path)
+
+            if not dfs:
+                print("No tables found in HTML (Multipass).")
+                return None
+
+            df = dfs[0]
+
+            # שינוי שמות עמודות
+            df = df.rename(columns={
+                'שם בית עסק': 'location',
+                'סכום טעינת תקציב': 'recharge_amount',
+                'סכום מימוש תקציב': 'usage_amount',
+                'תאריך': 'transaction_date',
+                'מספר אסמכתא': 'reference_number',
+            })
+
+            # טיפול בעמודות חסרות
+            if 'recharge_amount' not in df.columns:
+                df['recharge_amount'] = 0.0
+            if 'usage_amount' not in df.columns:
+                df['usage_amount'] = 0.0
+
+            # המרת תאריך
+            df['transaction_date'] = pd.to_datetime(
+                df['transaction_date'],
+                format='%H:%M %d/%m/%Y',
+                errors='coerce'
+            )
+
+            # המרת עמודות מספריות
+            numeric_columns = ['recharge_amount', 'usage_amount']
+            for col in numeric_columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+
+        except Exception as e:
+            print(f"An error occurred during data parsing (Multipass): {e}")
+            traceback.print_exc()
             return None
 
-        wait.until(EC.presence_of_element_located((By.XPATH, "//table")))
-        time.sleep(10)
+    # ----------------------------------------------------------------------
+    # טיפול במצב של Max
+    # ----------------------------------------------------------------------
+    elif coupon_kind == "Max":
+        try:
+            # משתמשים ב-with כך ש-Selenium יסגר אוטומטית בסיום
+            with webdriver.Chrome(options=chrome_options) as driver:
+                wait = WebDriverWait(driver, 30)
+                driver.get("https://www.max.co.il/gift-card-transactions/main")
 
-        page_html = driver.page_source
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"coupon_{coupon_number}_{timestamp}.html"
-        file_path = os.path.join(save_directory, filename)
+                def safe_find(by, value, timeout=10):
+                    """ מנסה למצוא אלמנט עם זמן המתנה """
+                    return WebDriverWait(driver, timeout).until(EC.visibility_of_element_located((by, value)))
 
-        with open(file_path, "w", encoding="utf-8") as file:
-            file.write(page_html)
+                card_number_field = safe_find(By.ID, "giftCardNumber")
+                card_number_field.clear()
+                card_number_field.send_keys(coupon_number)
 
-    except Exception as e:
-        print(f"An error occurred during Selenium operations: {e}")
-        driver.quit()
+                exp_field = safe_find(By.ID, "expDate")
+                exp_field.clear()
+                exp_field.send_keys(card_exp)
+
+                cvv_field = safe_find(By.ID, "cvv")
+                cvv_field.clear()
+                cvv_field.send_keys(cvv)
+
+                continue_button = wait.until(EC.element_to_be_clickable((By.ID, "continue")))
+                continue_button.click()
+
+                time.sleep(7)
+
+                table = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "mat-table")))
+
+                headers = [header.text.strip() for header in table.find_elements(By.TAG_NAME, "th")]
+                rows = []
+
+                # שורות הטבלה
+                all_rows = table.find_elements(By.TAG_NAME, "tr")
+                # שורת הכותרות היא בדרך-כלל הראשונה, לכן נתחיל מ-1
+                for row in all_rows[1:]:
+                    cells = [cell.text.strip() for cell in row.find_elements(By.TAG_NAME, "td")]
+                    if cells:
+                        rows.append(cells)
+
+                df = pd.DataFrame(rows, columns=headers)
+
+                # ניקוי וטיוב נתונים
+                if "שולם בתאריך" in df.columns:
+                    df["שולם בתאריך"] = pd.to_datetime(df["שולם בתאריך"], format="%d.%m.%Y", errors='coerce')
+                else:
+                    df["שולם בתאריך"] = None
+
+                if "סכום בשקלים" in df.columns:
+                    df["סכום בשקלים"] = (
+                        df["סכום בשקלים"]
+                        .str.replace("₪", "", regex=False)
+                        .str.strip()
+                        .replace("", "0")
+                        .astype(float)
+                    )
+                else:
+                    df["סכום בשקלים"] = 0.0
+
+                if "יתרה" in df.columns:
+                    df["יתרה"] = (
+                        df["יתרה"]
+                        .str.replace("₪", "", regex=False)
+                        .str.strip()
+                        .replace("", "0")
+                        .astype(float)
+                    )
+                else:
+                    df["יתרה"] = 0.0
+
+                # שינוי שמות העמודות
+                col_map = {
+                    "שולם בתאריך": "transaction_date",
+                    "שם בית העסק": "location",
+                    "סכום בשקלים": "amount",
+                    "יתרה": "balance",
+                    "פעולה": "action",
+                    "הערות": "notes"
+                }
+                for k, v in col_map.items():
+                    if k in df.columns:
+                        df.rename(columns={k: v}, inplace=True)
+
+                # יצירת עמודות usage_amount ו-recharge_amount על-פי הפעולה
+                df["usage_amount"] = df.apply(
+                    lambda x: x["amount"] if ("action" in df.columns and x["action"] == "עסקה") else 0.0,
+                    axis=1
+                )
+                df["recharge_amount"] = df.apply(
+                    lambda x: -(x["amount"]) if ("action" in df.columns and x["action"] == "טעינה") else 0.0,
+                    axis=1
+                )
+
+                # הוספת עמודת reference_number
+                # *כדי שניתן יהיה לזהות רשומות חדשות מול DB*
+                # למשל - ניצור מזהות ייחודית ע"פ אינדקס השורה
+                df["reference_number"] = df.index.map(lambda i: f"max_ref_{int(time.time())}_{i}")
+
+                # הסרה של עמודות שלא צריך
+                for col_to_drop in ["action", "notes"]:
+                    if col_to_drop in df.columns:
+                        df.drop(columns=[col_to_drop], inplace=True)
+
+        except Exception as e:
+            print(f"An error occurred during Selenium operations (Max): {e}")
+            traceback.print_exc()
+            return None
+
+    else:
+        # אם יש מצב אחר שאיננו Multipass או Max, אפשר להחזיר None או לטפל אחרת
+        print(f"Unsupported coupon kind: {coupon_kind}")
         return None
-    finally:
-        driver.quit()
 
+    # בשלב זה, אמור להיות לנו df מוכן
+    if df is None or df.empty:
+        print("No data frame (df) was created or df is empty.")
+        return None
+
+    # ----------------------------------------------------------------------
+    # שלב משותף – בדיקת הנתונים מול ה-DB ועדכון
+    # ----------------------------------------------------------------------
     try:
-        dfs = pd.read_html(file_path)
-        os.remove(file_path)
-
-        if not dfs:
-            print("No tables found in HTML.")
-            return None
-
-        df = dfs[0]
-
-        df = df.rename(columns={
-            'שם בית עסק': 'location',
-            'סכום טעינת תקציב': 'recharge_amount',
-            'סכום מימוש תקציב': 'usage_amount',
-            'תאריך': 'transaction_date',
-            'מספר אסמכתא': 'reference_number',
-        })
-
-        if 'recharge_amount' not in df.columns:
-            df['recharge_amount'] = 0.0
-        if 'usage_amount' not in df.columns:
-            df['usage_amount'] = 0.0
-
-        df['transaction_date'] = pd.to_datetime(
-            df['transaction_date'],
-            format='%H:%M %d/%m/%Y',
-            errors='coerce'
-        )
-
-        numeric_columns = ['recharge_amount', 'usage_amount']
-        for col in numeric_columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-
-        # **תיקון השגיאה בסינטקס של ה-SQL**
+        # שליפת הקיימים מה-DB (reference_number בלבד)
         existing_data = pd.read_sql_query(
             """
             SELECT reference_number
@@ -328,7 +484,8 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             params={"coupon_id": coupon.id}
         )
 
-        # המקרה פה נועד להתמודד לאם נוספה קניה אחת. כי במקרה הזה צריך לעדכן שורה אחת. בלי זה כאשר עושים את עדכון אחוז השימוש הוא לא תואם למציאות
+        # נבדוק אם מספר השורות ב-DB שונה ממספר השורות החדשות
+        # אם כן (במקרה שיש יותר מ-0 ב-DB) - נמחק את כולן ונכניס מחדש
         if len(existing_data) != len(df):
             if len(existing_data) > 0:
                 db.session.execute(
@@ -337,6 +494,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 )
                 db.session.commit()
 
+                # עדכון אחרי מחיקה
                 existing_data = pd.read_sql_query(
                     """
                     SELECT reference_number
@@ -349,17 +507,21 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
 
         existing_refs = set(existing_data['reference_number'].astype(str))
 
+        # המרת reference_number ל-string כדי להשוות נכון
         df['reference_number'] = df['reference_number'].astype(str)
-        df = df[~df['reference_number'].isin(existing_refs)]
 
-        if df.empty:
+        # סינון רשומות שכבר קיימות (אם במקרה נשארו כאלה)
+        df_new = df[~df['reference_number'].isin(existing_refs)]
+
+        if df_new.empty:
             print("No new transactions to add (all references already exist in DB).")
             return None
 
-        for idx, row in df.iterrows():
+        # הוספת רשומות חדשות
+        for idx, row in df_new.iterrows():
             transaction = CouponTransaction(
                 coupon_id=coupon.id,
-                transaction_date=row['transaction_date'],
+                transaction_date=row.get('transaction_date'),
                 location=row.get('location', ''),
                 recharge_amount=row.get('recharge_amount', 0.0),
                 usage_amount=row.get('usage_amount', 0.0),
@@ -367,22 +529,24 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             )
             db.session.add(transaction)
 
+        # עדכון סה"כ שימוש בפועל
         total_used = db.session.query(func.sum(CouponTransaction.usage_amount)) \
-            .filter_by(coupon_id=coupon.id).scalar() or 0.0
+                         .filter_by(coupon_id=coupon.id).scalar() or 0.0
         coupon.used_value = float(total_used)
 
+        # קריאה לפונקציית עדכון הסטטוס (לדוגמה: האם הקופון אזל, עדיין פעיל וכו')
         update_coupon_status(coupon)
 
         db.session.commit()
 
         print(f"Transactions for coupon {coupon.code} have been updated in the database.")
-        return df
-
+        return df_new  # מחזירים את העסקאות החדשות
     except Exception as e:
         print(f"An error occurred during data parsing or database operations: {e}")
         traceback.print_exc()
         db.session.rollback()
         return None
+
 
 def convert_coupon_data(file_path):
     # קריאת ה-HTML ל-DataFrame
@@ -598,11 +762,9 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
                         "תיאור": {"type": "string"},
                         "תאריך תפוגה": {"type": "string", "format": "date"},
                         "תגיות": {"type": "string"},
-                        "קוד לשימוש חד פעמי": {"type": "boolean"},
-                        "מטרת הקופון": {"type": "string"},
                         "סטטוס": {"type": "string", "enum": ["פעיל", "נוצל"]}
                     },
-                    "required": ["קוד קופון", "ערך מקורי", "עלות", "חברה", "תיאור", "תאריך תפוגה", "קוד לשימוש חד פעמי",
+                    "required": ["קוד קופון", "ערך מקורי", "עלות", "חברה", "תיאור", "תאריך תפוגה",
                                  "סטטוס"]
                 }
             },
@@ -630,8 +792,6 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
     - תיאור
     - תאריך תפוגה
     - תגיות
-    - קוד לשימוש חד פעמי
-    - מטרת הקופון
     - סטטוס
 
     בנוסף, ודא שהמידע נכון ומלא, במיוחד:
@@ -1012,7 +1172,7 @@ def process_coupons_excel(file_path, user):
                 date_str = row.get('תאריך תפוגה', '') or ''
 
                 # 2. קריאה של שדות בוליאניים/טקסט נוספים (אם יש).
-                one_time_str = row.get('קוד לשימוש חד פעמי', 'False')  # בדיפולט False
+                one_time_str = row.get('קוד לשימוש חד פעמי', 'False')  # אם לא קיים, ברירת מחדל False
                 purpose = row.get('מטרת הקופון', '') or ''
                 tags_field = row.get('תגיות', '') or ''
 

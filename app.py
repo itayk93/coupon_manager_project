@@ -27,6 +27,16 @@ app.config['WTF_CSRF_ENABLED'] = True
 app.config['SECURITY_PASSWORD_SALT'] = os.getenv('SECURITY_PASSWORD_SALT')
 ALLOWED_EXTENSIONS = {'xlsx'}
 
+# 🔥 הוסף כאן את הגדרות ה-Session וה-Cookies 🔥
+from datetime import timedelta
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
+app.config['SESSION_PERMANENT'] = True
+app.config['SESSION_TYPE'] = "filesystem"  # אפשר גם Redis/Memcached
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['SESSION_COOKIE_SECURE'] = True  # True אם האתר עובד עם HTTPS
+app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
 # אתחול הרחבות
 db.init_app(app)
 migrate = Migrate(app, db)
