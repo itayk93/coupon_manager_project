@@ -335,8 +335,8 @@ def upload_coupons():
             for msg in missing_optional_fields_messages:
                 flash(msg, 'warning')
 
-            # If there are coupons that were not added - display them
             if invalid_coupons:
+                # מציג לכל משתמש הודעת שגיאה עם כל הקופונים הפגומים
                 flash('הקופונים הבאים לא היו תקינים ולא נוספו:<br>' + '<br>'.join(invalid_coupons), 'danger')
             else:
                 # For each new coupon successfully added, create a coupon_transaction record

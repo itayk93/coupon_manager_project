@@ -10,13 +10,13 @@
         <p>נשאר בארנק:</p>
         <h1>{{ '%.2f'|format(total_value) }} ₪</h1>
     </div>
-    <p class="total-savings-line tooltip-trigger" style="position: relative; display: inline-block;">
+    <p class="total-savings-line tooltip-trigger" style="position: relative;">
         סך הכל חסכת: {{ '%.0f'|format(total_savings) }} ₪ מתוך {{ '%.0f'|format(total_coupons_value) }} ₪
         (חיסכון של {{ '%.0f'|format(percentage_savings) }}%)
-        <span class="tooltip">
+        <div class="tooltip-box">
             <span class="close-tooltip">×</span>
             מתוך הקופונים הפעילים שאינם חד פעמיים ושאינם למכירה
-        </span>
+        </div>
     </p>
 </section>
 
@@ -93,7 +93,7 @@
 <section style="text-align: center; margin-top: 50px;">
     <div class="button-with-explanation">
         <button class="explanation-button">כפתור</button>
-        <div class="tooltip" id="Toolttooltipip">
+        <div class="explanation-tooltip" id="explanationTooltip">
             זה ההסבר שמופיע על מעבר עכבר
             <span class="close-tooltip" id="closeTooltip">×</span>
         </div>
@@ -102,93 +102,123 @@
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
-
 <style>
-.coupon-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-}
+    .coupon-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+    }
 
-.coupon-card {
-    flex: 1 1 calc(20% - 20px);
-    max-width: calc(20% - 20px);
-    padding: 15px 20px;
-    border: 1px solid var(--light-gray);
-    border-radius: 8px;
-    background-color: var(--white);
-    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
-    text-decoration: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
+    .coupon-card {
+        flex: 1 1 calc(20% - 20px);
+        max-width: calc(20% - 20px);
+        padding: 15px 20px;
+        border: 1px solid var(--light-gray);
+        border-radius: 8px;
+        background-color: var(--white);
+        transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
 
-.coupon-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
+    .coupon-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
 
-.company-logo {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
+    .company-logo {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
 
-.export-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin: 20px 0;
-}
+    .export-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin: 20px 0;
+    }
 
-
-.button-with-explanation {
-    position: relative;
-    display: inline-block;
-}
-
-.explanation-button {
-    padding: 10px 20px;
-    cursor: pointer;
-    background-color: #eee;
-    border: 1px solid #ccc;
-    transition: background-color 0.2s;
-}
-.explanation-button:hover {
-    background-color: #ddd;
-}
-
-/* זה חשוב להכניס כדי שהtooltip גם יעבוד */
-.button-with-explanation:hover .tooltip {
-    display: block;
-}
-/* זה חשוב להכניס כדי שהtooltip גם יעבוד */
-.tooltip-trigger:hover .tooltip {
-    display: block;
-}
-
-/* ניגשים ספציפית ל־tooltip שנמצא בתוך האלמנט עם המחלקה total-savings-line */
-.total-savings-line .tooltip {
-    top: -20px !important; /* הזזת ה-tooltip מעט למעלה */
-    left: 110% !important; /* שומר אותו מימין לטקסט */
-}
-
-.total-savings-line .tooltip:after {
-    top: 50%;
-    right: 100%;
-    margin-top: -5px;
-    border-color: transparent #333 transparent transparent !important;
-}
-
+    
+    .button-with-explanation {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .explanation-button {
+        padding: 10px 20px;
+        cursor: pointer;
+        background-color: #eee;
+        border: 1px solid #ccc;
+        transition: background-color 0.2s;
+    }
+    .explanation-button:hover {
+        background-color: #ddd;
+    }
+    
+    .explanation-tooltip {
+        display: none;
+        position: absolute;
+        top: -5px;
+        left: 105%;
+        background-color: #333;
+        color: #fff;
+        padding: 10px 30px 10px 10px;
+        border-radius: 5px;
+        width: 240px;
+        font-size: 14px;
+        text-align: center;
+        z-index: 1000;
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .explanation-tooltip:after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: 100%;
+        margin-top: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: transparent #333 transparent transparent;
+    }
+    
+    .button-with-explanation:hover .explanation-tooltip {
+        display: block;
+    }
+    
+    .close-tooltip {
+        position: absolute;
+        top: 5px;
+        right: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 16px;
+        background-color: transparent;
+        border: none;
+        color: #fff;
+    }
+    .close-tooltip:hover {
+        color: #ccc;
+    }
 </style>
-
-{{ super() }}
-<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+    
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltip = document.getElementById('explanationTooltip');
+    const closeBtn = document.getElementById('closeTooltip');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            tooltip.style.display = 'none';
+        });
+    }
+});
+</script>
     
 {% endblock %}

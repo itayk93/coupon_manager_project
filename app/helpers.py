@@ -1240,6 +1240,15 @@ def process_coupons_excel(file_path, user):
                             expiration = None
                 except Exception as e:
                     expiration = None
+
+                # 🟡 אם תאריך התפוגה הוא היום או תאריך שחלף - נוסיף אזהרה, אך עדיין נוסיף את הקופון למערכת 🟡
+                if expiration and expiration <= datetime.today().date():
+                    missing_optional_fields_messages.append(
+                        f'שורה {index + 2}: תאריך התפוגה של הקופון הוא היום או תאריך שחלף ({expiration}). '
+                        f'הקופון נכנס למערכת אך מוגדר כ"פג תוקף". '
+                        f'אם ברצונך לשנות את הסטטוס שלו, ניתן לערוך אותו ממסך "קופונים שנוצלו והלא פעילים".'
+                    )
+
                 # 6. המרת one_time_str לבוליאני
                 is_one_time = False
                 if isinstance(one_time_str, bool):

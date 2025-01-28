@@ -57,7 +57,7 @@
                 {{ sms_form.submit_sms(class="submit-button") }}
 
                 <!-- Tooltip לדסקטופ -->
-                <div class="tooltip" id="Tooltip">
+                <div class="slots-tooltip" id="slotsTooltip">
                     יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים להשתמש בהם למילוי הטופס באופן אוטומטי.
                     <span class="close-tooltip" id="closeTooltip">×</span>
                 </div>
@@ -250,11 +250,6 @@
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
-{{ super() }}
-<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
-
 <style>
 .center-text {
     text-align: center;
@@ -267,9 +262,41 @@
     margin-bottom: 5px;
 }
 
+/* סגנון ל-tooltip בדסקטופ: */
+#slotsTooltip {
+    display: none;
+    position: absolute;
+    top: -5px;
+    left: 105%;
+    background-color: #333;
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    width: 250px;
+    font-size: 14px;
+    text-align: center;
+    z-index: 1000;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+    padding-right: 20px;
+}
+
+/* החץ הקטן של tooltip בדסקטופ: */
+#slotsTooltip:after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent #333 transparent transparent;
+}
 
 /* במכשיר נייד: במקום tooltip, נציג טקסט קבוע מעל הכפתור */
 @media (max-width: 768px) {
+    #slotsTooltip {
+        display: none !important; /* לא מציגים tooltip במסך קטן */
+    }
     .slots-info-mobile {
         display: block; /* מציגים טקסט קטן מעל הכפתור */
     }
@@ -290,9 +317,29 @@
     }
 }
 
+/* כפתור הסגירה (X) ל-tooltip (משמש רק בדסקטופ) */
+.close-tooltip {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    background-color: transparent;
+    border: none;
+    color: #fff;
+}
+
+.close-tooltip:hover {
+    color: #ccc;
+}
 
 /* עיצוב עבור הכפתור בעת מעבר עכבר - בדסקטופ */
 @media (min-width: 769px) {
+    .form-group:hover #slotsTooltip {
+        display: block;
+    }
+}
     .add-coupons-buttons {
     display: flex;
     flex-direction: column;
@@ -482,6 +529,25 @@ document.addEventListener('DOMContentLoaded', function() {
             updateFields('cost');
         });
         updateFields(null);
+    }
+
+    // === ניהול tooltip של סלוטים בנייד ===
+    const slotsTooltip = document.getElementById('slotsTooltip');
+    const closeTooltip = document.getElementById('closeTooltip');
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+    if (isMobile && slotsTooltip && closeTooltip) {
+        const submitButtonMobile = document.querySelector('.submit-button');
+        if (submitButtonMobile) {
+            submitButtonMobile.addEventListener('click', function(e) {
+                e.preventDefault();
+                slotsTooltip.style.display = 'block';
+            });
+        }
+
+        closeTooltip.addEventListener('click', function() {
+            slotsTooltip.style.display = 'none';
+        });
     }
     
     // ===========================
