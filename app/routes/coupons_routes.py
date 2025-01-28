@@ -2600,6 +2600,15 @@ def parse_usage_text():
                 flash("לא זוהו שימושים בקופונים מהטקסט שהוזן.", "danger")
                 return redirect(url_for('profile.index'))
 
+            # בודקים אם יש למשתמש סלוטים פנויים לשימוש ב־GPT
+            if current_user.slots_automatic_coupons <= 0:
+                flash("אין לך מספיק סלוטים למילוי אוטומטי.", "danger")
+                return redirect(url_for('profile.index'))
+
+            # מנכים סלוט אחד
+            current_user.slots_automatic_coupons -= 1
+            db.session.commit()
+
             # שלב 3: שמירת usage_df ב-Session או ב-Cache
             # לדוגמה, usage_df.to_dict(orient='records')
             session['parsed_usages'] = usage_df.to_dict(orient='records')

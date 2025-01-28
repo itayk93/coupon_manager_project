@@ -28,7 +28,13 @@
             <textarea id="usage_explanation" name="usage_explanation" rows="2" class="input-field_centered"
                       placeholder="כאן ניתן להקליד באופן חופשי במה השתמשת וכמה"></textarea>
         </div>
-        <button type="submit" class="submit-button">שלח</button>
+        <div class="button-with-explanation">
+            <button type="submit" class="submit-button">שלח</button>
+            <div class="tooltip">
+                יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
+                <span class="close-tooltip">×</span>
+            </div>
+        </div>        
     </form>
 </section>
 
@@ -90,15 +96,6 @@
     </form>
 {% endif %}
 
-<section style="text-align: center; margin-top: 50px;">
-    <div class="button-with-explanation">
-        <button class="explanation-button">כפתור</button>
-        <div class="tooltip" id="Toolttooltipip">
-            זה ההסבר שמופיע על מעבר עכבר
-            <span class="close-tooltip" id="closeTooltip">×</span>
-        </div>
-    </div>
-</section>
 {% endblock %}
 
 {% block scripts %}
@@ -114,17 +111,43 @@
 }
 
 .coupon-card {
-    flex: 1 1 calc(20% - 20px);
-    max-width: calc(20% - 20px);
+    flex: 1 1 calc(25% - 20px); /* ברירת מחדל - 4 קופונים בשורה */
+    max-width: calc(25% - 20px);
+    box-sizing: border-box;
     padding: 15px 20px;
     border: 1px solid var(--light-gray);
     border-radius: 8px;
     background-color: var(--white);
     transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+    color: inherit;
     text-decoration: none;
     display: flex;
     flex-direction: column;
     align-items: center;
+}
+
+/* כאשר המסך קטן מ-1200px -> 3 קופונים בשורה */
+@media (max-width: 1200px) {
+    .coupon-card {
+        flex: 1 1 calc(33.333% - 20px);
+        max-width: calc(33.333% - 20px);
+    }
+}
+
+/* כאשר המסך קטן מ-992px -> 2 קופונים בשורה */
+@media (max-width: 992px) {
+    .coupon-card {
+        flex: 1 1 calc(50% - 20px);
+        max-width: calc(50% - 20px);
+    }
+}
+
+/* כאשר המסך קטן מ-600px -> קופון אחד בשורה */
+@media (max-width: 600px) {
+    .coupon-card {
+        flex: 1 1 calc(50% - 20px);
+        max-width: calc(50% - 20px);
+    }
 }
 
 .coupon-card:hover {
@@ -153,17 +176,6 @@
     display: inline-block;
 }
 
-.explanation-button {
-    padding: 10px 20px;
-    cursor: pointer;
-    background-color: #eee;
-    border: 1px solid #ccc;
-    transition: background-color 0.2s;
-}
-.explanation-button:hover {
-    background-color: #ddd;
-}
-
 /* זה חשוב להכניס כדי שהtooltip גם יעבוד */
 .button-with-explanation:hover .tooltip {
     display: block;
@@ -172,6 +184,7 @@
 .tooltip-trigger:hover .tooltip {
     display: block;
 }
+
 
 /* ניגשים ספציפית ל־tooltip שנמצא בתוך האלמנט עם המחלקה total-savings-line */
 .total-savings-line .tooltip {
@@ -184,6 +197,14 @@
     right: 100%;
     margin-top: -5px;
     border-color: transparent #333 transparent transparent !important;
+}
+
+/* אני מקטין עם זה את הרווח מתחת ״סך הכל חסכת:״ */
+.total-savings-line {
+    position: relative;
+    display: inline-block;
+    margin-top: 5px; /* הקטן את הרווח מעל השורה */
+    padding-top: 0;
 }
 
 </style>
