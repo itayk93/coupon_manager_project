@@ -32,11 +32,7 @@
             <!-- אייקון הבית -->
             <a href="{{ url_for('profile.index') }}" class="home-icon"><i class="fa fa-home"></i></a>
             <span>
-                {% if current_user.gender == 'female' %}
-                    ברוכה הבאה, {{ current_user.first_name }}
-                {% else %}
-                    ברוך הבא, {{ current_user.first_name }}
-                {% endif %}
+                {{ greeting }}, {{ current_user.first_name }}
             </span>            
         </div>
         {% endif %}
@@ -188,48 +184,72 @@
 
         // פונקציה להגדרת dropdowns בהתאם לגודל המסך
         function setupDropdowns() {
-        const isMobile = window.innerWidth < mobileBreakpoint;
+            const isMobile = window.innerWidth < mobileBreakpoint;
 
-        dropdowns.forEach(dropdown => {
-            const dropbtn = dropdown.querySelector('.dropbtn');
-            const dropdownContent = dropdown.querySelector('.dropdown-content');
+            dropdowns.forEach(dropdown => {
+                const dropbtn = dropdown.querySelector('.dropbtn');
+                const dropdownContent = dropdown.querySelector('.dropdown-content');
 
-            // הסרת כל האירועים הקודמים כדי למנוע כפילויות
-            dropdown.removeEventListener('click', toggleDropdownClick);
-            dropdown.removeEventListener('mouseenter', openDropdownHover);
-            dropdown.removeEventListener('mouseleave', closeDropdownHover);
+                // הסרת כל האירועים הקודמים כדי למנוע כפילויות
+                dropdown.removeEventListener('click', toggleDropdownClick);
+                dropdown.removeEventListener('mouseenter', openDropdownHover);
+                dropdown.removeEventListener('mouseleave', closeDropdownHover);
 
-            if (isMobile) {
-                // במכשירים ניידים: השתמש באירועי click על האלמנט dropdown
-                dropdown.addEventListener('click', toggleDropdownClick);
-            } else {
-                // במחשבים שולחניים: השתמש באירועי hover
-                dropdown.addEventListener('mouseenter', openDropdownHover);
-                dropdown.addEventListener('mouseleave', closeDropdownHover);
+                if (isMobile) {
+                    // במכשירים ניידים: השתמש באירועי click על האלמנט dropdown
+                    dropdown.addEventListener('click', toggleDropdownClick);
+                } else {
+                    // במחשבים שולחניים: השתמש באירועי hover
+                    dropdown.addEventListener('mouseenter', openDropdownHover);
+                    dropdown.addEventListener('mouseleave', closeDropdownHover);
+                }
+            });
+            function openDropdownHover() {
+                const dropdownContent = this.querySelector('.dropdown-content');
+
+                // ניקוי מחלקות קודמות
+                dropdownContent.classList.remove('adjust-left', 'adjust-right');
+
+                // בדיקת מיקום התפריט
+                const rect = dropdownContent.getBoundingClientRect();
+
+                if (rect.left < 0) {
+                    // אם התפריט חורג משמאל - מזיז אותו ימינה
+                    dropdownContent.classList.add('adjust-right');
+                } else if (rect.right > window.innerWidth) {
+                    // אם התפריט חורג מימין - מזיז אותו שמאלה
+                    dropdownContent.classList.add('adjust-left');
+                }
+
+                dropdownContent.classList.add('show');
             }
-        });
-        function openDropdownHover() {
-            const dropdownContent = this.querySelector('.dropdown-content');
-
-            // ניקוי מחלקות קודמות
-            dropdownContent.classList.remove('adjust-left', 'adjust-right');
-
-            // בדיקת מיקום התפריט
-            const rect = dropdownContent.getBoundingClientRect();
-
-            if (rect.left < 0) {
-                // אם התפריט חורג משמאל - מזיז אותו ימינה
-                dropdownContent.classList.add('adjust-right');
-            } else if (rect.right > window.innerWidth) {
-                // אם התפריט חורג מימין - מזיז אותו שמאלה
-                dropdownContent.classList.add('adjust-left');
-            }
-
-            dropdownContent.classList.add('show');
         }
-    }
-
     </script>
+
+    <!-- הוספתי כאן למטה את סגנונות ה-Grid עבור ההדר -->
+    <style>
+        header {
+            display: grid;
+            grid-template-columns: auto 1fr auto; /* שלוש עמודות: שמאל, אמצע, ימין */
+            align-items: center;
+            padding: 0 16px; /* אפשר לשחק עם ה־padding לפי העיצוב */
+        }
+
+        .header-left {
+            /* במקרה של RTL, start זה הצד הימני; אפשר להשאיר כך או להתאים */
+            justify-self: start;
+        }
+
+        .header-center {
+            justify-self: center;
+            /* אם רוצים למרכז את התמונה עצמה באופן מדויק, אפשר להוסיף עוד הגדרות,
+               לדוגמה max-width מסוים, או margin auto וכו'. */
+        }
+
+        .header-right {
+            justify-self: end;
+        }
+    </style>
 
     {% block scripts %}{% endblock %}
 </body>

@@ -59,17 +59,21 @@ a:hover {
    =================================================== */
 
 header {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto; /* שלוש עמודות: שמאל, אמצע, ימין */
     justify-content: space-between; /* Space between left, center, and right sections */
     align-items: center;
     background-color: var(--primary-color);
     color: var(--white);
-    padding: 5px 20px;
+    padding: 0 16px; /* אפשר לשחק עם ה־padding לפי העיצוב */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    position: sticky;
     top: 0;
     z-index: 1000;
     height: 50px;
+}
+/* טריק קטן: מוזיזים את התמונה קצת שמאלה כדי שלא תופיע לך "יותר מדי ימינה" */
+.header-center .header-logo {
+    transform: translateX(-20px); /* 20px שמאלה; אפשר לשנות פחות/יותר לפי הצורך */
 }
 
 /* Header Sections */
@@ -273,7 +277,7 @@ header {
     background-color: var(--secondary-color);
 }
 
-/* קו אפור שמפריד בין כפתורים שונים בתפריטים למעלה בעמוד */
+/* קו אפור שמפריד בין כפתורים שונים בתפריטים למעלה */
 .dropdown-divider {
     border: none;
     border-top: 1px solid #ccc; /* קו דק ואפור */

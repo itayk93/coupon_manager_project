@@ -4,14 +4,14 @@
 
 {% block content %}
 <section class="hero">
-    <h2>היי, {{ current_user.first_name }}!</h2>
-    <p>איזה כיף לראות אותך כאן!<br>בוא נבדוק כמה נשאר לך בארנק וכמה חסכת.</p>
+    <h2>{{ greeting }}, {{ current_user.first_name }}!</h2>
+    <!-- <p>איזה כיף לראות אותך כאן!<br>בוא נבדוק כמה נשאר לך בארנק וכמה חסכת.</p> -->
     <div class="total-value">
-        <p>נשאר בארנק:</p>
+        <p>נשאר לך בארנק:</p>
         <h1>{{ '%.2f'|format(total_value) }} ₪</h1>
     </div>
     <p class="total-savings-line tooltip-trigger" style="position: relative; display: inline-block;">
-        סך הכל חסכת: {{ '%.0f'|format(total_savings) }} ₪ מתוך {{ '%.0f'|format(total_coupons_value) }} ₪
+        עד כה חסכת: {{ '%.0f'|format(total_savings) }} ₪ מתוך {{ '%.0f'|format(total_coupons_value) }} ₪
         (חיסכון של {{ '%.0f'|format(percentage_savings) }}%)
         <span class="tooltip">
             <span class="close-tooltip">×</span>
@@ -103,6 +103,11 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
 
 <style>
+    .total-value p {
+    font-size: 1.25em; /* מגדיל את הכתב */
+    font-weight: bold; /* הופך ל-bold */
+}
+
 .coupon-container {
     display: flex;
     flex-wrap: wrap;
@@ -207,7 +212,7 @@
     border-color: transparent #333 transparent transparent !important;
 }
 
-/* אני מקטין עם זה את הרווח מתחת ״סך הכל חסכת:״ */
+/* אני מקטין עם זה את הרווח מתחת ״עד כה חסכת:״ */
 .total-savings-line {
     position: relative;
     display: inline-block;

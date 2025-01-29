@@ -9,6 +9,7 @@ import pandas as pd
 from io import BytesIO
 from datetime import datetime, timezone
 from werkzeug.utils import secure_filename
+import pytz  # ספרייה לניהול אזורי זמן
 
 from app.extensions import db
 from app.models import Coupon, Company, Tag, CouponUsage, Transaction, Notification, CouponRequest, GptUsage, CouponTransaction
@@ -41,6 +42,16 @@ def home():
     else:
         return redirect(url_for('auth.login'))
 
+def get_greeting():
+    israel_tz = pytz.timezone('Asia/Jerusalem')
+    current_hour = datetime.now(israel_tz).hour
+
+    if current_hour < 12:
+        return "בוקר טוב"
+    elif current_hour < 18:
+        return "צהריים טובים"
+    else:
+        return "ערב טוב"
 
 
 @profile_bp.route('/index', methods=['GET', 'POST'])
@@ -61,6 +72,8 @@ def index():
         form.last_name.data = current_user.last_name
         form.age.data = current_user.age
         form.gender.data = current_user.gender
+
+    greeting = get_greeting()  # קביעת הברכה לפי השעה בישראל
 
     # חישוב סך הקופונים והחיסכון לאחר עדכון הסטטוס
     all_non_one_time_coupons = Coupon.query.filter(
@@ -191,6 +204,7 @@ def index():
 
     return render_template(
         'index.html',
+        greeting=greeting, 
         total_value=total_remaining,
         total_savings=total_savings_all,
         total_coupons_value=total_coupons_value_all,
