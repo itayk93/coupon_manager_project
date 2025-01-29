@@ -258,6 +258,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             card_number_field.clear()
 
             cleaned_coupon_number = str(coupon_number[:-4]).replace("-", "")
+            #print(cleaned_coupon_number)
             card_number_field.send_keys(cleaned_coupon_number)
 
             # טיפול ב-reCAPTCHA
