@@ -33,13 +33,70 @@ from app import db
 logger = logging.getLogger(__name__)
 
 profile_bp = Blueprint('profile', __name__)
+from sqlalchemy.sql import text
+from flask import request, current_app
+from flask_login import current_user
+from app.helpers import get_geo_location, get_public_ip
+ip_address = get_public_ip()
 
+def log_user_activity(ip_address,action, coupon_id=None):
+    """
+    פונקציה מרכזית לרישום activity log.
+    """
+    try:
+        user_agent = request.headers.get('User-Agent', '')
+
+        geo_data = get_geo_location(ip_address)
+
+        # ודא ש-geo_data מחזירה ערכים נכונים
+        print(f"Geo Data: {geo_data}")
+
+        activity = {
+            "user_id": current_user.id if current_user and current_user.is_authenticated else None,
+            "coupon_id": coupon_id,
+            "timestamp": datetime.utcnow(),
+            "action": action,
+            "device": user_agent[:50] if user_agent else None,
+            "browser": user_agent.split(' ')[0][:50] if user_agent else None,
+            "ip_address": ip_address[:45] if ip_address else None,
+            "city": geo_data.get("city"),
+            "region": geo_data.get("region"),
+            "country": geo_data.get("country"),
+            "isp": geo_data.get("isp"),
+            "country_code": geo_data.get("country_code"),
+            "zip": geo_data.get("zip"),
+            "lat": geo_data.get("lat"),
+            "lon": geo_data.get("lon"),
+            "timezone": geo_data.get("timezone"),
+            "org": geo_data.get("org"),
+            "as_info": geo_data.get("as"),
+        }
+
+        db.session.execute(
+            text("""
+                INSERT INTO user_activities
+                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, 
+                     country_code, zip, lat, lon, timezone, org, as_info)
+                VALUES
+                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, 
+                     :country_code, :zip, :lat, :lon, :timezone, :org, :as_info)
+            """),
+            activity
+        )
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error logging activity [{action}]: {e}")
 
 @profile_bp.route('/')
 def home():
     if current_user.is_authenticated:
+        # רישום הפעולה
+        log_user_activity(ip_address, "authorized_index_access")
         return redirect(url_for('profile.index'))
     else:
+        log_user_activity(ip_address, "unauthorized_redirect_to_login")
         return redirect(url_for('auth.login'))
 
 def get_greeting():
@@ -57,6 +114,7 @@ def get_greeting():
 @profile_bp.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
+    log_user_activity(ip_address, "index")
     form = ProfileForm()
     if form.validate_on_submit():
         # עדכון פרטי המשתמש

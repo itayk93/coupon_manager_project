@@ -34,6 +34,7 @@ BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 IMGUR_CLIENT_ID = os.getenv("IMGUR_CLIENT_ID")
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 SENDER_NAME = "Coupon Master"
+API_KEY = os.getenv("IPINFO_API_KEY")
 
 logger = logging.getLogger(__name__)
 
@@ -1405,86 +1406,73 @@ def get_public_ip():
         print(f"An error occurred: {e}")
         return None
 
+from flask import request
+
+def get_public_ip_2():
+    """
+    מחזירה את כתובת ה-IP האמיתית של המשתמש, גם אם היישום רץ מאחורי Reverse Proxy כמו Render.
+    """
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()  # לוקח את ה-IP הראשון ברשימה (האמיתי)
+    
+    return request.remote_addr  # אם אין Proxy, מחזיר את ה-IP הרגיל
+
+
 def get_geo_location(ip_address):
     """
-    פונקציה לשליפת מידע גיאוגרפי מבוסס IP.
+    פונקציה לשליפת מידע גיאוגרפי מבוסס IP באמצעות ipinfo.io.
     """
-    if not ip_address:
+    if not ip_address or not API_KEY:
         return {
-            "status": None,
+            "city": None,
+            "region": None,
             "country": None,
             "country_code": None,
-            "region": None,
-            "region_name": None,
-            "city": None,
             "zip": None,
             "lat": None,
             "lon": None,
             "timezone": None,
-            "isp": None,
-            "org": None,
-            "as": None,
-            "query": None,
+            "org": None
         }
 
     try:
-        response = requests.get(f"http://ip-api.com/json/{ip_address}", timeout=5)
+        response = requests.get(f"https://ipinfo.io/{ip_address}/json?token={API_KEY}", timeout=5)
         response.raise_for_status()
-
         data = response.json()
 
-        if data.get('status') == 'success':
-            return {
-                "status": data.get("status"),
-                "country": data.get("country"),
-                "country_code": data.get("countryCode"),
-                "region": data.get("region"),
-                "region_name": data.get("regionName"),
-                "city": data.get("city"),
-                "zip": data.get("zip"),
-                "lat": data.get("lat"),
-                "lon": data.get("lon"),
-                "timezone": data.get("timezone"),
-                "isp": data.get("isp"),
-                "org": data.get("org"),
-                "as": data.get("as"),
-                "query": data.get("query"),
-            }
-        else:
-            current_app.logger.error(f"Error in geo-location response: {data.get('message')}")
-            return {
-                "status": data.get("status"),
-                "country": None,
-                "country_code": None,
-                "region": None,
-                "region_name": None,
-                "city": None,
-                "zip": None,
-                "lat": None,
-                "lon": None,
-                "timezone": None,
-                "isp": None,
-                "org": None,
-                "as": None,
-                "query": None,
-            }
+        # מפרק את ה-loc למיקום נפרד
+        lat, lon = (None, None)
+        if "loc" in data and data["loc"]:
+            try:
+                lat, lon = map(float, data["loc"].split(","))
+            except ValueError:
+                current_app.logger.error(f"Invalid lat/lon format for {ip_address}: {data['loc']}")
+
+        return {
+            "city": data.get("city", None),
+            "region": data.get("region", None),
+            "country": data.get("country", None),
+            "country_code": data.get("country", None),  # בדוק שהעמודה הנכונה!
+            "zip": data.get("postal", None),  # אולי בטבלה אצלך זה zip, בדוק!
+            "lat": lat,
+            "lon": lon,
+            "timezone": data.get("timezone", None),
+            "org": data.get("org", None)
+        }
+
     except requests.RequestException as e:
         current_app.logger.error(f"Error retrieving geo location: {e}")
         return {
-            "status": None,
+            "city": None,
+            "region": None,
             "country": None,
             "country_code": None,
-            "region": None,
-            "region_name": None,
-            "city": None,
             "zip": None,
             "lat": None,
             "lon": None,
             "timezone": None,
-            "isp": None,
-            "org": None,
-            "as": None,
-            "query": None,
+            "org": None
         }
 
 # app/helpers.py
