@@ -1406,20 +1406,10 @@ def get_public_ip():
         print(f"An error occurred: {e}")
         return None
 
-from flask import request
-
-def get_public_ip_2():
-    """
-    מחזירה את כתובת ה-IP האמיתית של המשתמש, גם אם היישום רץ מאחורי Reverse Proxy כמו Render.
-    """
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()  # לוקח את ה-IP הראשון ברשימה (האמיתי)
-    
-    return request.remote_addr  # אם אין Proxy, מחזיר את ה-IP הרגיל
 
 
 def get_geo_location(ip_address):
+    # טוען משתני סביבה מקובץ .env
     """
     פונקציה לשליפת מידע גיאוגרפי מבוסס IP באמצעות ipinfo.io.
     """
@@ -1428,12 +1418,9 @@ def get_geo_location(ip_address):
             "city": None,
             "region": None,
             "country": None,
-            "country_code": None,
-            "zip": None,
-            "lat": None,
-            "lon": None,
-            "timezone": None,
-            "org": None
+            "loc": None,
+            "org": None,
+            "timezone": None
         }
 
     try:
@@ -1441,24 +1428,13 @@ def get_geo_location(ip_address):
         response.raise_for_status()
         data = response.json()
 
-        # מפרק את ה-loc למיקום נפרד
-        lat, lon = (None, None)
-        if "loc" in data and data["loc"]:
-            try:
-                lat, lon = map(float, data["loc"].split(","))
-            except ValueError:
-                current_app.logger.error(f"Invalid lat/lon format for {ip_address}: {data['loc']}")
-
         return {
             "city": data.get("city", None),
             "region": data.get("region", None),
             "country": data.get("country", None),
-            "country_code": data.get("country", None),  # בדוק שהעמודה הנכונה!
-            "zip": data.get("postal", None),  # אולי בטבלה אצלך זה zip, בדוק!
-            "lat": lat,
-            "lon": lon,
-            "timezone": data.get("timezone", None),
-            "org": data.get("org", None)
+            "loc": data.get("loc", None),
+            "org": data.get("org", None),
+            "timezone": data.get("timezone", None)
         }
 
     except requests.RequestException as e:
@@ -1467,12 +1443,9 @@ def get_geo_location(ip_address):
             "city": None,
             "region": None,
             "country": None,
-            "country_code": None,
-            "zip": None,
-            "lat": None,
-            "lon": None,
-            "timezone": None,
-            "org": None
+            "loc": None,
+            "org": None,
+            "timezone": None
         }
 
 # app/helpers.py

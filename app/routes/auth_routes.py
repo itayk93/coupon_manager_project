@@ -16,15 +16,7 @@ from flask_login import current_user
 from sqlalchemy.sql import text
 from datetime import datetime
 from app.extensions import db
-from app.helpers import get_geo_location, get_public_ip_2
-from itsdangerous import SignatureExpired, BadTimeSignature
-from app.extensions import db
-from app.models import User, UserConsent
-from app.forms import LoginForm, RegisterForm
-from app.helpers import generate_confirmation_token, confirm_token, send_email
-from app.helpers import send_coupon_purchase_request_email, get_geo_location, get_public_ip_2
-import logging
-from sqlalchemy.sql import text
+from app.helpers import get_geo_location, get_public_ip
 
 
 auth_bp = Blueprint('auth', __name__)
@@ -34,15 +26,20 @@ from datetime import datetime
 from flask import request, current_app
 from flask_login import current_user
 
-def log_user_activity(action, coupon_id=None):
+ip_address = get_public_ip()
+
+def log_user_activity(ip_address, action, coupon_id=None, latitude=None, longitude=None):
     """
-    פונקציה לרישום פעילות המשתמש עם IP עדכני.
+    פונקציה מרכזית לרישום פעילות המשתמש.
     """
     try:
-        ip_address = get_public_ip_2()  # ✨ מקבלים את ה-IP בזמן אמת!
         user_agent = request.headers.get('User-Agent', '')
 
-        geo_data = get_geo_location(ip_address)
+        # ניסיון לקבל נתוני IP רק אם אין נתוני מיקום מהדפדפן
+        if latitude is None or longitude is None:
+            geo_data = get_geo_location(ip_address)
+            latitude = geo_data.get("lat")
+            longitude = geo_data.get("lon")
 
         activity = {
             "user_id": current_user.id if current_user.is_authenticated else None,
@@ -52,70 +49,59 @@ def log_user_activity(action, coupon_id=None):
             "device": user_agent[:50] if user_agent else None,
             "browser": user_agent.split(' ')[0][:50] if user_agent else None,
             "ip_address": ip_address[:45] if ip_address else None,
-            "city": geo_data.get("city"),
-            "region": geo_data.get("region"),
-            "country": geo_data.get("country"),
-            "isp": geo_data.get("isp"),
-            "country_code": geo_data.get("country_code"),
-            "zip": geo_data.get("zip"),
-            "lat": geo_data.get("lat"),
-            "lon": geo_data.get("lon"),
-            "timezone": geo_data.get("timezone"),
-            "org": geo_data.get("org"),
-            "as_info": geo_data.get("as"),
+            "lat": latitude,
+            "lon": longitude
         }
 
         db.session.execute(
             text("""
                 INSERT INTO user_activities
-                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, city, region, country, isp, 
-                     country_code, zip, lat, lon, timezone, org, as_info)
+                    (user_id, coupon_id, timestamp, action, device, browser, ip_address, lat, lon)
                 VALUES
-                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :city, :region, :country, :isp, 
-                     :country_code, :zip, :lat, :lon, :timezone, :org, :as_info)
+                    (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :lat, :lon)
             """),
             activity
         )
         db.session.commit()
-
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error logging activity [{action}]: {e}")
 
+
 @auth_bp.route('/confirm/<token>')
 def confirm_email(token):
-    log_user_activity("confirm_email_attempt")
+    log_user_activity(ip_address,"confirm_email_attempt")
 
     try:
         email = confirm_token(token)
     except SignatureExpired:
         flash('קישור האישור פג תוקף.', 'error')
-        log_user_activity("confirm_email_link_expired")
+        log_user_activity(ip_address,"confirm_email_link_expired")
         return redirect(url_for('auth.login'))
     except BadTimeSignature:
         flash('קישור האישור אינו תקין.', 'error')
-        log_user_activity("confirm_email_link_invalid")
+        log_user_activity(ip_address,"confirm_email_link_invalid")
         return redirect(url_for('auth.login'))
 
     user = User.query.filter_by(email=email).first_or_404()
 
     if user.is_confirmed:
         flash('החשבון כבר אושר. אנא התחבר.', 'success')
-        log_user_activity("confirm_email_already_confirmed")
+        log_user_activity(ip_address,"confirm_email_already_confirmed")
     else:
         user.is_confirmed = True
         user.confirmed_on = datetime.now()
         db.session.add(user)
         db.session.commit()
         flash('חשבון האימייל שלך אושר בהצלחה!', 'success')
-        log_user_activity("confirm_email_success")
+        log_user_activity(ip_address,"confirm_email_success")
 
     return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    log_user_activity("login_view")
+    log_user_activity(ip_address,"login_view")
 
     form = LoginForm()
     if form.validate_on_submit():
@@ -123,24 +109,24 @@ def login():
         if user and check_password_hash(user.password, form.password.data):
             if not user.is_confirmed:
                 flash('עליך לאשר את חשבונך לפני התחברות.', 'error')
-                log_user_activity("login_unconfirmed_user")
+                log_user_activity(ip_address,"login_unconfirmed_user")
                 return redirect(url_for('auth.login'))
             login_user(user, remember=form.remember.data)
-            log_user_activity("login_success")
+            log_user_activity(ip_address,"login_success")
             return redirect(url_for('profile.index'))
         else:
             flash('אימייל או סיסמה שגויים.', 'error')
-            log_user_activity("login_failed_credentials")
+            log_user_activity(ip_address,"login_failed_credentials")
     else:
         if request.method == 'POST':
-            log_user_activity("login_form_validation_failed")
+            log_user_activity(ip_address,"login_form_validation_failed")
 
     return render_template('login.html', form=form)
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    log_user_activity("register_view")
+    log_user_activity(ip_address,"register_view")
 
     form = RegisterForm()
     if form.validate_on_submit():
@@ -148,7 +134,7 @@ def register():
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
             flash('אימייל זה כבר רשום במערכת.', 'error')
-            log_user_activity("register_email_already_exists")
+            log_user_activity(ip_address,"register_email_already_exists")
             return redirect(url_for('auth.register'))
 
         # <-- הוספנו gender=form.gender.data -->
@@ -163,12 +149,12 @@ def register():
         try:
             db.session.add(new_user)
             db.session.commit()
-            log_user_activity("register_user_created")
+            log_user_activity(ip_address,"register_user_created")
         except Exception as e:
             db.session.rollback()
             flash('אירעה שגיאה בעת יצירת החשבון שלך.', 'error')
             logger.error(f"Error during user creation: {e}")
-            log_user_activity("register_user_creation_failed")
+            log_user_activity(ip_address,"register_user_creation_failed")
             return redirect(url_for('auth.register'))
 
 
@@ -192,16 +178,16 @@ def register():
                 html_content=html
             )
             flash('נשלח אליך מייל לאישור החשבון. אנא בדוק את תיבת הדואר שלך.', 'success')
-            log_user_activity("register_confirmation_email_sent")
+            log_user_activity(ip_address,"register_confirmation_email_sent")
         except Exception as e:
             logger.error(f"Error sending email: {e}")
             flash('אירעה שגיאה בשליחת המייל. נסה שוב מאוחר יותר.', 'error')
-            log_user_activity("register_confirmation_email_failed")
+            log_user_activity(ip_address,"register_confirmation_email_failed")
 
         return redirect(url_for('auth.login'))
     else:
         if request.method == 'POST':
-            log_user_activity("register_form_validation_failed")
+            log_user_activity(ip_address,"register_form_validation_failed")
             logger.warning(f"Form errors: {form.errors}")
 
     return render_template('register.html', form=form)
@@ -210,19 +196,19 @@ def register():
 @auth_bp.route('/logout')
 @login_required
 def logout():
-    log_user_activity("logout_attempt")
+    log_user_activity(ip_address,"logout_attempt")
 
     logout_user()
     flash('התנתקת בהצלחה.', 'info')
-    log_user_activity("logout_success")
+    log_user_activity(ip_address,"logout_success")
     return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/save_consent', methods=['POST'])
 def save_consent():
     # Retrieve the IP address at the beginning of the function
-    ip_address = get_public_ip_2()
-    log_user_activity( "save_consent_attempt")
+    ip_address = get_public_ip()
+    log_user_activity(ip_address, "save_consent_attempt")
 
     # Get data from the request
     data = request.json
@@ -255,18 +241,18 @@ def save_consent():
         db.session.add(new_consent)
 
     db.session.commit()
-    log_user_activity( "save_consent_success")
+    log_user_activity(ip_address, "save_consent_success")
     return jsonify({"message": "Consent saved successfully"}), 200
 
 @auth_bp.route('/privacy-policy')
 def privacy_policy():
-    log_user_activity("view_privacy_policy")
+    log_user_activity(ip_address,"view_privacy_policy")
     return render_template('privacy_policy.html')
 
 
 
 
-def log_user_activity( action, coupon_id=None):
+def log_user_activity(ip_address, action, coupon_id=None):
     """
     פונקציה מרכזית לרישום פעילות המשתמש.
     """
@@ -312,18 +298,47 @@ def log_user_activity( action, coupon_id=None):
         db.session.rollback()
         current_app.logger.error(f"Error logging activity [{action}]: {e}")
 
+@auth_bp.route('/update_location', methods=['POST'])
+def update_location():
+    """
+    ראוט לקבלת המיקום של המשתמש מהדפדפן ושמירתו בבסיס הנתונים.
+    """
+    if not request.is_json:
+        return jsonify({"error": "Invalid request"}), 400
+
+    data = request.get_json()
+    latitude = data.get("latitude")
+    longitude = data.get("longitude")
+
+    if latitude is None or longitude is None:
+        return jsonify({"error": "Missing coordinates"}), 400
+
+    # שמירת המיקום בטבלה המתאימה (user_activities למשל)
+    log_user_activity(ip_address=get_public_ip(), action="location_updated", coupon_id=None)
+
+    return jsonify({"message": "Location updated successfully"}), 200
+
 
 @auth_bp.before_app_request
 def check_location():
     """
     פונקציה לבדיקה לפני כל בקשה נכנסת.
     """
-    ip_address = get_public_ip_2()  # ✨ קבלת IP בזמן אמת!
+    from app.helpers import get_geo_location, get_public_ip
+
+    # קבלת כתובת ה-IP
+    ip_address = get_public_ip()
+
+    # רישום הפעולה
+    #log_user_activity(ip_address, "page_access")
+
+    # קבלת נתוני המיקום
     geo_data = get_geo_location(ip_address)
     country = geo_data.get("country")
 
+    # אם המיקום אינו ישראל או איטליה, חסום את הגישה
     if country not in [None, "IL", "IT", "US"]:
-        log_user_activity("access_blocked_due_to_location")
+        log_user_activity(ip_address,"access_blocked_due_to_location")
         return render_template("access_denied.html", country=country), 403
 
 # app/routes/auth_routes.py
