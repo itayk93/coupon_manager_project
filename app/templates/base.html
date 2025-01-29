@@ -52,6 +52,10 @@
                     <div class="dropdown-content">
                         <a href="{{ url_for('coupons.show_coupons') }}">הקופונים שלי</a>
                         <a href="{{ url_for('coupons.add_coupon') }}">הוספת קופון</a>
+                        <hr class="dropdown-divider">
+                        {% if current_user.is_admin %}
+                        <a href="{{ url_for('admin_bp.admin_dashboard') }}">עמוד ראשי אדמין</a>
+                        {% endif %}
                         <a href="{{ url_for('auth.logout') }}">יציאה מהחשבון</a>
                     </div>
                 </div>
@@ -63,6 +67,7 @@
                         <a href="{{ url_for('coupons.sell_coupon') }}">הוספת קופון למכירה</a>
                         <a href="{{ url_for('requests.request_coupon') }}">הוספת בקשת קופון</a>
                         <!--<a href="{{ url_for('requests.buy_slots') }}">רכישת סלוטים</a>-->
+                        <hr class="dropdown-divider">
                         <a href="{{ url_for('transactions.my_transactions') }}">העסקאות שלי</a>
                     </div>
                 </div>
@@ -172,6 +177,58 @@
             document.cookie = `cookies_accepted=false; expires=${d.toUTCString()}; path=/`;
             sendConsentToServer(false);
         };
+
+        // קריאה ראשונית להגדרת התפריטים
+        setupDropdowns();
+
+        // טיפול באירוע שינוי גודל המסך
+        window.addEventListener('resize', () => {
+            setupDropdowns();
+        });
+
+        // פונקציה להגדרת dropdowns בהתאם לגודל המסך
+        function setupDropdowns() {
+        const isMobile = window.innerWidth < mobileBreakpoint;
+
+        dropdowns.forEach(dropdown => {
+            const dropbtn = dropdown.querySelector('.dropbtn');
+            const dropdownContent = dropdown.querySelector('.dropdown-content');
+
+            // הסרת כל האירועים הקודמים כדי למנוע כפילויות
+            dropdown.removeEventListener('click', toggleDropdownClick);
+            dropdown.removeEventListener('mouseenter', openDropdownHover);
+            dropdown.removeEventListener('mouseleave', closeDropdownHover);
+
+            if (isMobile) {
+                // במכשירים ניידים: השתמש באירועי click על האלמנט dropdown
+                dropdown.addEventListener('click', toggleDropdownClick);
+            } else {
+                // במחשבים שולחניים: השתמש באירועי hover
+                dropdown.addEventListener('mouseenter', openDropdownHover);
+                dropdown.addEventListener('mouseleave', closeDropdownHover);
+            }
+        });
+        function openDropdownHover() {
+            const dropdownContent = this.querySelector('.dropdown-content');
+
+            // ניקוי מחלקות קודמות
+            dropdownContent.classList.remove('adjust-left', 'adjust-right');
+
+            // בדיקת מיקום התפריט
+            const rect = dropdownContent.getBoundingClientRect();
+
+            if (rect.left < 0) {
+                // אם התפריט חורג משמאל - מזיז אותו ימינה
+                dropdownContent.classList.add('adjust-right');
+            } else if (rect.right > window.innerWidth) {
+                // אם התפריט חורג מימין - מזיז אותו שמאלה
+                dropdownContent.classList.add('adjust-left');
+            }
+
+            dropdownContent.classList.add('show');
+        }
+    }
+
     </script>
 
     {% block scripts %}{% endblock %}

@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <h1 class="text-center mb-4">ניהול משתמשים (Admin)</h1>
+
+            <!-- טבלת משתמשים -->
+            <div class="table-responsive">
+                <table class="table table-bordered shadow">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>אימייל</th>
+                            <th>שם פרטי</th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.first_name }}</td>
+                            <td>
+                                <!-- כפתור שחזור סיסמה -->
+                                <form method="POST" action="{{ url_for('admin.reset_user_password') }}" style="display:inline;">
+                                    {{ csrf_token() }}
+                                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                                    <button type="submit" class="btn btn-warning btn-sm">
+                                        שחזור סיסמה
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,61 +1,109 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <h1 class="text-center mb-4">ניהול חברות (Admin)</h1>
+<section class="admin-companies">
+    <h2 class="page-title">ניהול חברות (Admin)</h2>
 
-            <!-- טופס להוספת חברה חדשה -->
-            <div class="card p-4 mb-4 shadow">
-                <form method="POST">
-                    {{ form.hidden_tag() }}
+    <div class="company-form card">
+        <h3 class="form-title">הוספת חברה חדשה</h3>
+        <form method="POST">
+            {{ form.hidden_tag() }}
 
-                    <div class="mb-3">
-                        {{ form.name.label(class="form-label fw-bold") }}
-                        {{ form.name(class="form-control", placeholder="הקלד שם חברה...") }}
-                        {% for error in form.name.errors %}
-                            <div class="text-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-
-                    <div class="d-grid">
-                        {{ form.submit(class="btn btn-primary") }}
-                    </div>
-                </form>
+            <div class="form-group">
+                {{ form.name.label(class="form-label") }}
+                {{ form.name(class="form-control", placeholder="הקלד שם חברה...") }}
+                {% for error in form.name.errors %}
+                    <div class="error-message">{{ error }}</div>
+                {% endfor %}
             </div>
 
-            <hr>
-
-            <!-- טבלה המציגה את כל החברות הקיימות -->
-            <h2 class="text-center mt-5 mb-3">רשימת חברות קיימות</h2>
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered shadow">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>מזהה</th>
-                            <th>שם חברה</th>
-                            <th>פעולות</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for company in companies %}
-                        <tr>
-                            <td>{{ company.id }}</td>
-                            <td>{{ company.name }}</td>
-                            <td>
-                                <form method="POST" action="{{ url_for('admin_companies_bp.delete_company', company_id=company.id) }}" onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את החברה הזו?');">
-                                    {{ delete_form.hidden_tag() }}
-                                    <input type="hidden" name="company_id" value="{{ company.id }}">
-                                    {{ delete_form.submit(class="btn btn-danger btn-sm") }}
-                                </form>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+            <div class="text-center">
+                {{ form.submit(class="action-button") }}
             </div>
+        </form>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'companies-list')">רשימת חברות</button>
+        <button class="tab-button" onclick="openTab(event, 'add-company')">הוספת חברה</button>
+    </div>
+
+    <div id="companies-list" class="tab-content active">
+        <h3 class="table-title">רשימת חברות קיימות</h3>
+        <div class="table-responsive">
+            <table class="table company-table">
+                <thead>
+                    <tr>
+                        <th>מזהה</th>
+                        <th>שם חברה</th>
+                        <th>פעולות</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for company in companies %}
+                    <tr>
+                        <td>{{ company.id }}</td>
+                        <td>{{ company.name }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin_companies_bp.delete_company', company_id=company.id) }}" onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את החברה הזו?');">
+                                {{ delete_form.hidden_tag() }}
+                                <input type="hidden" name="company_id" value="{{ company.id }}">
+                                <button type="submit" class="action-button danger">
+                                    <i class="fa fa-trash"></i> מחיקה
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-</div>
+
+    <div id="add-company" class="tab-content">
+        <div class="company-form">
+            <h3 class="form-title">הוספת חברה חדשה</h3>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control", placeholder="הקלד שם חברה...") }}
+                    {% for error in form.name.errors %}
+                        <div class="error-message">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="text-center">
+                    {{ form.submit(class="action-button") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openTab(evt, tabName) {
+        var tabContents = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+        }
+        var tabButtons = document.getElementsByClassName("tab-button");
+        for (var i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove("active");
+        }
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        var defaultTab = document.querySelector(".tab-button.active");
+        if (defaultTab) {
+            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
+            document.getElementById(tabName).classList.add("active");
+        }
+    });
+</script>
 {% endblock %}

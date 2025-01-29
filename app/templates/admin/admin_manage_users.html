@@ -1,44 +1,72 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block content %}
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <h1 class="text-center mb-4">ניהול משתמשים (Admin)</h1>
+<section class="admin-users">
+    <h2 class="page-title">ניהול משתמשים (Admin)</h2>
 
-            <!-- טבלת משתמשים -->
-            <div class="table-responsive">
-                <table class="table table-bordered shadow">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>ID</th>
-                            <th>אימייל</th>
-                            <th>שם פרטי</th>
-                            <th>פעולות</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for user in users %}
-                        <tr>
-                            <td>{{ user.id }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.first_name }}</td>
-                            <td>
-                                <!-- כפתור שחזור סיסמה -->
-                                <form method="POST" action="{{ url_for('admin.reset_user_password') }}" style="display:inline;">
-                                    {{ csrf_token() }}
-                                    <input type="hidden" name="user_id" value="{{ user.id }}">
-                                    <button type="submit" class="btn btn-warning btn-sm">
-                                        שחזור סיסמה
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'users-list')">רשימת משתמשים</button>
+    </div>
+
+    <div id="users-list" class="tab-content active">
+        <h3 class="section-title">רשימת משתמשים קיימים</h3>
+        <div class="table-responsive">
+            <table class="table user-management-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>אימייל</th>
+                        <th>שם פרטי</th>
+                        <th>פעולות</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.first_name }}</td>
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('admin_bp.admin_users_bp.reset_user_password') }}"
+                                  onsubmit="return confirm('האם אתה בטוח שברצונך לשחזר את הסיסמה למשתמש זה?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                <button type="submit" class="action-button warning small-button">
+                                    שחזור סיסמה
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-</div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openTab(evt, tabName) {
+        var tabContents = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+        }
+        var tabButtons = document.getElementsByClassName("tab-button");
+        for (var i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove("active");
+        }
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        var defaultTab = document.querySelector(".tab-button.active");
+        if (defaultTab) {
+            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
+            document.getElementById(tabName).classList.add("active");
+        }
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <h1 class="text-center mb-4">ניהול חברות (Admin)</h1>
+
+            <!-- טופס להוספת חברה חדשה -->
+            <div class="card p-4 mb-4 shadow">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label fw-bold") }}
+                        {{ form.name(class="form-control", placeholder="הקלד שם חברה...") }}
+                        {% for error in form.name.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+
+            <hr>
+
+            <!-- טבלה המציגה את כל החברות הקיימות -->
+            <h2 class="text-center mt-5 mb-3">רשימת חברות קיימות</h2>
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered shadow">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>מזהה</th>
+                            <th>שם חברה</th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for company in companies %}
+                        <tr>
+                            <td>{{ company.id }}</td>
+                            <td>{{ company.name }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin_companies_bp.delete_company', company_id=company.id) }}" onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את החברה הזו?');">
+                                    {{ delete_form.hidden_tag() }}
+                                    <input type="hidden" name="company_id" value="{{ company.id }}">
+                                    {{ delete_form.submit(class="btn btn-danger btn-sm") }}
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

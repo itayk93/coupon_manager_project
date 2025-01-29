@@ -1,65 +1,88 @@
-<!-- app/templates/admin_manage_tags.html -->
-
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <h1 class="text-center mb-4">ניהול תגיות (Admin)</h1>
+<section class="admin-tags">
+    <h2 class="page-title">ניהול תגיות (Admin)</h2>
 
-            <!-- טופס להוספת תגית חדשה -->
-            <div class="card p-4 mb-4 shadow">
-                <form method="POST">
-                    {{ form.hidden_tag() }}
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'manage-tags')">הוספת תגית</button>
+        <button class="tab-button" onclick="openTab(event, 'tags-list')">רשימת תגיות</button>
+    </div>
 
-                    <div class="mb-3">
-                        {{ form.name.label(class="form-label fw-bold") }}
-                        {{ form.name(class="form-control", placeholder="הקלד שם תגית...") }}
-                        {% for error in form.name.errors %}
-                            <div class="text-danger mt-1">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-
-                    <div class="d-grid">
-                        {{ form.submit(class="btn btn-primary") }}
-                    </div>
-                </form>
-            </div>
-
-            <hr>
-
-            <!-- טבלה המציגה את כל התגיות הקיימות -->
-            <h2 class="text-center mt-5 mb-3">רשימת תגיות קיימות</h2>
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered shadow">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>מזהה</th>
-                            <th>שם תגית</th>
-                            <th>ספירת שימוש (count)</th>
-                            <th>פעולות</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for tag in tags %}
-                        <tr>
-                            <td>{{ tag.id }}</td>
-                            <td>{{ tag.name }}</td>
-                            <td>{{ tag.count }}</td>
-                            <td>
-                                <form method="POST" action="{{ url_for('admin_tags_bp.delete_tag', tag_id=tag.id) }}" onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את התגית הזו?');">
-                                    {{ delete_form.hidden_tag() }}
-                                    <input type="hidden" name="tag_id" value="{{ tag.id }}">
-                                    {{ delete_form.submit(class="btn btn-danger btn-sm") }}
-                                </form>
-                            </td>
-                        </tr>
+    <div id="manage-tags" class="tab-content active">
+        <h3 class="section-title">הוספת תגית חדשה</h3>
+        <div class="form-container">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="input-field", placeholder="הקלד שם תגית...") }}
+                    {% for error in form.name.errors %}
+                        <div class="error-message">{{ error }}</div>
                     {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                </div>
+                <div class="form-actions">
+                    {{ form.submit(class="action-button") }}
+                </div>
+            </form>
         </div>
     </div>
-</div>
+
+    <div id="tags-list" class="tab-content">
+        <h3 class="section-title">רשימת תגיות קיימות</h3>
+        <div class="table-responsive">
+            <table class="table tag-management-table">
+                <thead>
+                    <tr>
+                        <th>מזהה</th>
+                        <th>שם תגית</th>
+                        <th>ספירת שימוש</th>
+                        <th>פעולות</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for tag in tags %}
+                    <tr>
+                        <td>{{ tag.id }}</td>
+                        <td>{{ tag.name }}</td>
+                        <td>{{ tag.count }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin_tags_bp.delete_tag', tag_id=tag.id) }}" onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את התגית הזו?');">
+                                {{ delete_form.hidden_tag() }}
+                                <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                                {{ delete_form.submit(class="action-button danger small-button") }}
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openTab(evt, tabName) {
+        var tabContents = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+        }
+        var tabButtons = document.getElementsByClassName("tab-button");
+        for (var i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove("active");
+        }
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        var defaultTab = document.querySelector(".tab-button.active");
+        if (defaultTab) {
+            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
+            document.getElementById(tabName).classList.add("active");
+        }
+    });
+</script>
 {% endblock %}

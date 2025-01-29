@@ -118,37 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
         this.querySelector('.dropdown-content').classList.remove('show');
     }
 
-    // פונקציה להגדרת dropdowns בהתאם לגודל המסך
-    function setupDropdowns() {
-        const isMobile = window.innerWidth < mobileBreakpoint;
-
-        dropdowns.forEach(dropdown => {
-            const dropbtn = dropdown.querySelector('.dropbtn');
-            const dropdownContent = dropdown.querySelector('.dropdown-content');
-
-            // הסרת כל האירועים הקודמים כדי למנוע כפילויות
-            dropdown.removeEventListener('click', toggleDropdownClick);
-            dropdown.removeEventListener('mouseenter', openDropdownHover);
-            dropdown.removeEventListener('mouseleave', closeDropdownHover);
-
-            if (isMobile) {
-                // במכשירים ניידים: השתמש באירועי click על האלמנט dropdown
-                dropdown.addEventListener('click', toggleDropdownClick);
-            } else {
-                // במחשבים שולחניים: השתמש באירועי hover
-                dropdown.addEventListener('mouseenter', openDropdownHover);
-                dropdown.addEventListener('mouseleave', closeDropdownHover);
-            }
-        });
-    }
-
-    // קריאה ראשונית להגדרת התפריטים
-    setupDropdowns();
-
-    // טיפול באירוע שינוי גודל המסך
-    window.addEventListener('resize', () => {
-        setupDropdowns();
-    });
 
     // Hamburger Menu Functionality
     const hamburger = document.querySelector('.hamburger');

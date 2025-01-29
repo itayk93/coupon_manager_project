@@ -74,3 +74,16 @@ def update_company_counts_and_send_email(app):
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error in update_company_counts_and_send_email: {e}")
+
+from sqlalchemy import text
+from app.extensions import db
+
+
+def get_coupons_expiring_in_30_days():
+    query = text("""
+        SELECT * FROM coupon 
+        WHERE expiration::DATE = CURRENT_DATE + INTERVAL '30 days'
+        AND reminder_sent_30_days = false
+    """)
+    result = db.session.execute(query)
+    return result.fetchall()  # או עיבוד אחר

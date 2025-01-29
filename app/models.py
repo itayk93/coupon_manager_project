@@ -11,6 +11,7 @@ from sqlalchemy.sql import func
 from cryptography.fernet import Fernet
 
 from app.extensions import db  # נניח שיש לך את האובייקט db כאן
+from sqlalchemy import Column, Integer, String  # הוסף את הייבוא החסר
 
 # טוען את קובץ ה-.env
 load_dotenv()
@@ -368,6 +369,7 @@ class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     image_path = db.Column(db.String(200), nullable=False)
+    company_count = db.Column(db.Integer, default=0)  # וודא שזה קיים!
 
     def __repr__(self):
         return f"<Company {self.name}>"

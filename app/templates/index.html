@@ -168,8 +168,16 @@
     justify-content: center;
     gap: 15px;
     margin: 20px 0;
+    flex-direction: row; /* ברירת מחדל - כפתורים אחד ליד השני */
 }
 
+/* כאשר המסך קטן מ-600px, הכפתורים יהיו אחד מעל השני */
+@media (max-width: 600px) {
+    .export-buttons {
+        flex-direction: row;
+        gap: 10px; /* רווח בין הכפתורים */
+    }
+}
 
 .button-with-explanation {
     position: relative;
