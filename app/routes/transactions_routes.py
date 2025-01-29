@@ -26,7 +26,7 @@ def log_user_activity(action, coupon_id=None):
     רישום פעולות משתמש.
     """
     try:
-        ip_address = get_public_ip() or '0.0.0.0'
+        ip_address = None or '0.0.0.0'
         geo_data = get_geo_location(ip_address)
         user_agent = request.headers.get('User-Agent', '')
 

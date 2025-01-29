@@ -37,7 +37,7 @@ from sqlalchemy.sql import text
 from flask import request, current_app
 from flask_login import current_user
 from app.helpers import get_geo_location, get_public_ip
-ip_address = get_public_ip()
+ip_address = None
 
 def log_user_activity(ip_address,action, coupon_id=None):
     """

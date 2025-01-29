@@ -66,7 +66,7 @@ def add_coupon_transaction(coupon):
 
 def log_user_activity(action, coupon_id=None):
     try:
-        ip_address = get_public_ip() or '0.0.0.0'
+        ip_address = None or '0.0.0.0'
         geo_data = get_geo_location(ip_address)
 
         activity = {
@@ -387,7 +387,7 @@ def add_coupons_bulk():
     and then create a temporary Excel file – which is then passed to process_coupons_excel for processing.
     """
     # הגדרת הכתובת IP והפעילות
-    ip_address = get_public_ip() or '127.0.0.1'
+    ip_address = None or '127.0.0.1'
     log_user_activity("add_coupons_bulk_view", None)
 
     form = AddCouponsBulkForm()
