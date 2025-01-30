@@ -1609,7 +1609,6 @@ def parse_user_usage_text(usage_text, user):
     # יצירת DataFrame
     usage_df = pd.DataFrame(usage_list)
 
-    usage_df.to_excel("usage_df.xlsx", index=False)
     # עיבוד מידע נוסף עבור חישוב עלויות
     usage_record = {
         "id": response["id"],
