@@ -111,28 +111,44 @@ def confirm_email(token):
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    log_user_activity(ip_address,"login_view")
+    ip_address = request.remote_addr  # קבלת כתובת ה-IP של המשתמש
+    log_user_activity(ip_address, "login_view")
 
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and check_password_hash(user.password, form.password.data):
-            if not user.is_confirmed:
-                flash('עליך לאשר את חשבונך לפני התחברות.', 'error')
-                log_user_activity(ip_address,"login_unconfirmed_user")
-                return redirect(url_for('auth.login'))
+
+        if not user:
+            flash("משתמש לא קיים.", "danger")
+            log_user_activity(ip_address, "login_nonexistent_user")
+            return redirect(url_for('auth.login'))
+
+        # בדיקה אם המשתמש נמחק לוגית
+        if user.is_deleted:
+            flash("משתמש זה כבר לא קיים במערכת.", "warning")
+            log_user_activity(ip_address, "login_deleted_user_attempt")
+            return redirect(url_for('auth.login'))
+
+        # בדיקה האם המשתמש אישר את חשבונו
+        if not user.is_confirmed:
+            flash('עליך לאשר את חשבונך לפני התחברות.', 'error')
+            log_user_activity(ip_address, "login_unconfirmed_user")
+            return redirect(url_for('auth.login'))
+
+        # בדיקה אם הסיסמה תואמת
+        if check_password_hash(user.password, form.password.data):
             login_user(user, remember=form.remember.data)
-            log_user_activity(ip_address,"login_success")
+            log_user_activity(ip_address, "login_success")
             return redirect(url_for('profile.index'))
         else:
             flash('אימייל או סיסמה שגויים.', 'error')
-            log_user_activity(ip_address,"login_failed_credentials")
+            log_user_activity(ip_address, "login_failed_credentials")
+
     else:
         if request.method == 'POST':
-            log_user_activity(ip_address,"login_form_validation_failed")
+            log_user_activity(ip_address, "login_form_validation_failed")
 
     return render_template('login.html', form=form)
-
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():

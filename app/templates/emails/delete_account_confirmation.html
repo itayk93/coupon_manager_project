@@ -2,16 +2,19 @@
 <html lang="he" dir="rtl" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="UTF-8">
-    <title>שחזור סיסמה ב-Coupon Master</title>
+    <title>אישור מחיקת חשבון Coupon Master</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style>
+        /* ===================================================
+           עיצוב כללי בהתבסס על ה-CSS שלך
+        =================================================== */
         body {
             margin: 0;
             padding: 0;
             background-color: #f9f9f9;
             font-family: Arial, sans-serif;
             direction: rtl;
-            text-align: right;
+            text-align: right; /* יישור טקסט לימין */
         }
         .email-container {
             width: 100%;
@@ -27,7 +30,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .header {
-            background-color: #2E86C1;
+            background-color: #c0392b; /* אדום - לצורך דגש על מחיקה */
             color: #ffffff;
             padding: 20px;
             text-align: center;
@@ -40,14 +43,14 @@
         .body {
             padding: 20px;
             color: #2C3E50;
-            text-align: right;
+            text-align: right; /* יישור טקסט לימין */
         }
         .body p {
             margin-bottom: 15px;
             line-height: 1.5;
         }
         .highlight {
-            color: #2E86C1;
+            color: #c0392b; /* אדום */
             font-weight: bold;
         }
         .button-container {
@@ -55,18 +58,18 @@
             margin: 30px 0;
         }
         .button {
-            background-color: #2E86C1;
-            color: #ffffff;
+            background-color: #c0392b; /* אדום */
+            color: #ffffff; /* צבע טקסט לבן */
             padding: 15px 25px;
             text-decoration: none;
             border-radius: 5px;
             font-size: 16px;
-            font-weight: bold;
+            font-weight: bold; /* טקסט ב-bold */
             display: inline-block;
             transition: background-color 0.3s;
         }
         .button:hover {
-            background-color: #A9CCE3;
+            background-color: #e74c3c;
         }
         .footer {
             background-color: #f0f0f0;
@@ -78,6 +81,7 @@
         .footer p {
             margin: 0;
         }
+        /* רספונסיביות למכשירים ניידים */
         @media only screen and (max-width: 600px) {
             .email-content {
                 width: 100% !important;
@@ -97,16 +101,20 @@
                     <div class="email-content">
                         <!-- Header -->
                         <div class="header">
-                            <h1>שחזור סיסמה ב-Coupon Master</h1>
+                            <h1>אישור מחיקת חשבון Coupon Master</h1>
                         </div>
                         <!-- Body -->
                         <div class="body">
                             <p>שלום {{ user.first_name }},</p>
-                            <p>קיבלנו בקשה לשחזור סיסמה עבור החשבון שלך ב-Coupon Master.</p>
-                            <p>אם לא ביקשת לשחזר סיסמה, אנא התעלם מהודעה זו. אחרת, לחץ על הכפתור למטה כדי לאפס את הסיסמה שלך:</p>
+                            <p>אנו מבינים שברצונך למחוק את חשבונך ב-<span class="highlight">Coupon Master</span>.
+                            כדי להשלים את המחיקה, אנא לחץ על הכפתור למטה:</p>
                             <div class="button-container">
-                                <a href="{{ reset_link }}" class="button" style="color: #ffffff; font-weight: bold;">אפס סיסמה</a>
+                                <a href="{{ deletion_link }}" class="button" style="color: #ffffff; font-weight: bold;">
+                                    אשר מחיקה לצמיתות
+                                </a>
                             </div>
+                            <p>שים לב כי לאחר המחיקה לא תוכל לשחזר את חשבונך או את הקופונים המשויכים אליו.</p>
+                            <p>אם לא ביקשת למחוק את חשבונך, אנא התעלם מהודעה זו או פנה אלינו לתמיכה.</p>
                             <p>בברכה,<br>צוות Coupon Master</p>
                         </div>
                         <!-- Footer -->

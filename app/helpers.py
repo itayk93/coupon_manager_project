@@ -1452,36 +1452,34 @@ def get_geo_location(ip_address):
 # app/helpers.py
 
 def send_password_reset_email(user):
-    """
-    שולח מייל שחזור סיסמה למשתמש.
-    """
-    from flask import url_for, render_template
-    from app.helpers import send_email
+    try:
+        token = generate_confirmation_token(user.email)
+        reset_url = url_for('auth.reset_password', token=token, _external=True)
+        html = render_template('emails/password_reset_email.html', user=user, reset_link=reset_url)
 
-    # כאן נשתמש בפונקציה החדשה
-    token = generate_password_reset_token(user.email)
-    reset_url = url_for('auth.reset_password', token=token, _external=True)
+        sender_email = 'CouponMasterIL2@gmail.com'
+        sender_name = 'Coupon Master'
+        recipient_email = user.email
+        recipient_name = user.first_name
+        subject = "בקשת שחזור סיסמה - Coupon Master"
 
-    html = render_template(
-        'emails/password_reset_email.html',
-        user=user,
-        reset_url=reset_url
-    )
+        #print(f"שליחת מייל שחזור לכתובת: {recipient_email}")
+        #print(f"קישור שחזור: {reset_url}")
 
-    subject = "בקשת שחזור סיסמה - Coupon Master"
-    sender_email = 'CouponMasterIL2@gmail.com'
-    sender_name = 'Coupon Master'
-    recipient_email = user.email
-    recipient_name = user.first_name or 'משתמש יקר'
+        response = send_email(
+            sender_email=sender_email,
+            sender_name=sender_name,
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_content=html
+        )
 
-    send_email(
-        sender_email=sender_email,
-        sender_name=sender_name,
-        recipient_email=recipient_email,
-        recipient_name=recipient_name,
-        subject=subject,
-        html_content=html
-    )
+        #print(f"תשובת השרת לשליחת המייל: {response}")
+
+    except Exception as e:
+        print(f"שגיאה בשליחת מייל שחזור סיסמה: {e}")
+
 
 # app/helpers.py
 

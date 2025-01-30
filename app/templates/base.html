@@ -32,8 +32,9 @@
             <!-- אייקון הבית -->
             <a href="{{ url_for('profile.index') }}" class="home-icon"><i class="fa fa-home"></i></a>
             <span>
-                {{ greeting }}, {{ current_user.first_name }}
-            </span>            
+                {% if current_user.gender == "male" %}ברוך הבא{% elif current_user.gender == "female" %}ברוכה הבאה{% else %}ברוך הבא
+                {% endif %}, {{ current_user.first_name }}
+            </span>
         </div>
         {% endif %}
         <div class="header-center">

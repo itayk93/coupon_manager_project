@@ -328,6 +328,7 @@ def update_profile_field():
         logger.info(f"Received update for field: {field} with value: {value}")
 
         csrf_token = request.headers.get('X-CSRFToken')
+        #print(f"Received CSRF Token: {csrf_token}")
         if not csrf_token:
             logger.warning("Missing CSRF token in request.")
             return jsonify({'status': 'error', 'message': 'Missing CSRF token.'}), 400

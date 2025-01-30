@@ -83,6 +83,7 @@ class User(UserMixin, db.Model):
 
     is_confirmed = db.Column(db.Boolean, default=False, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    is_deleted = db.Column(db.Boolean, default=False)
     slots = db.Column(db.Integer, default=0, nullable=False)
     slots_automatic_coupons = db.Column(db.Integer, default=50, nullable=False)
 

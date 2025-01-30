@@ -1,0 +1,119 @@
+<!-- templates/emails/account_delete_confirmation.html -->
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>אישור מחיקת חשבון - Coupon Master</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            direction: rtl;
+        }
+        .email-container {
+            width: 100%;
+            padding: 20px 0;
+        }
+        .email-content {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .email-header {
+            background-color: #2E86C1;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .email-body {
+            padding: 20px;
+            color: #2C3E50;
+            text-align: right;
+        }
+        .email-body h2 {
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+        .email-body p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        .email-footer {
+            background-color: #f0f0f0;
+            color: #7f8c8d;
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+        }
+        .action-button {
+            display: block;
+            width: fit-content;
+            margin: 20px auto;
+            padding: 15px 25px;
+            background-color: #e74c3c;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            transition: background-color 0.3s;
+        }
+        .action-button:hover {
+            background-color: #c0392b;
+        }
+        .warning-text {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+                <td align="center">
+                    <div class="email-content">
+                        <!-- Header -->
+                        <div class="email-header">
+                            <h1>Coupon Master</h1>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="email-body">
+                            <h2>אישור מחיקת חשבון</h2>
+                            <p>שלום {{ user.first_name }},</p>
+                            <p>קיבלת הודעה זו כי ביקשת למחוק את חשבונך ב-Coupon Master.</p>
+                            <p class="warning-text">לתשומת לבך: מחיקת החשבון היא פעולה בלתי הפיכה!</p>
+                            <p>אם אתה בטוח שברצונך למחוק את חשבונך לצמיתות, לחץ על הכפתור הבא:</p>
+
+                            <a href="{{ deletion_link }}" class="action-button">
+                                אשר מחיקה לצמיתות
+                            </a>
+
+                            <p>אם לא ביקשת למחוק את חשבונך, אנא התעלם מהודעה זו והחשבון שלך יישאר פעיל.</p>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="email-footer">
+                            <p>© 2025 Coupon Master. כל הזכויות שמורות.</p>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

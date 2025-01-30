@@ -30,3 +30,4 @@ sib-api-v3-sdk
 itsdangerous
 xlsxwriter
 thefuzz
+itsdangerous

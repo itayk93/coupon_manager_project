@@ -4,12 +4,18 @@
 <section class="admin-users">
     <h2 class="page-title">ניהול משתמשים (Admin)</h2>
 
+    <!-- לשונית אחת: "רשימת משתמשים" -->
     <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'users-list')">רשימת משתמשים</button>
+        <button class="tab-button active"
+                onclick="openTab(event, 'users-list')">
+            רשימת משתמשים
+        </button>
     </div>
 
+    <!-- תוכן הלשונית -->
     <div id="users-list" class="tab-content active">
         <h3 class="section-title">רשימת משתמשים קיימים</h3>
+
         <div class="table-responsive">
             <table class="table user-management-table">
                 <thead>
@@ -17,6 +23,7 @@
                         <th>ID</th>
                         <th>אימייל</th>
                         <th>שם פרטי</th>
+                        <th>סלוטים לאוטומציה</th>
                         <th>פעולות</th>
                     </tr>
                 </thead>
@@ -26,14 +33,50 @@
                         <td>{{ user.id }}</td>
                         <td>{{ user.email }}</td>
                         <td>{{ user.first_name }}</td>
+
+                        <!-- טופס לעדכון כמות הסלוטים -->
                         <td>
                             <form method="POST"
+                                  action="{{ url_for('admin_bp.admin_users_bp.update_slots_automatic_coupons') }}"
+                                  class="update-slots-form">
+                                <!-- הגנת CSRF (Flask-WTF) -->
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+
+                                <!-- כפתור שמור משמאל (עבור RTL) + אינפוט עריכת הסלוטים -->
+                                <button type="submit" class="action-button save-button small-button">שמור</button>
+                                <input type="number"
+                                       name="slots_automatic_coupons"
+                                       value="{{ user.slots_automatic_coupons }}"
+                                       min="0"
+                                       class="slots-input"
+                                       required>
+                            </form>
+                        </td>
+
+                        <!-- פעולות נוספות (שחזור סיסמה + מחיקת משתמש) -->
+                        <td>
+                            <!-- טופס שחזור סיסמה -->
+                            <form method="POST"
                                   action="{{ url_for('admin_bp.admin_users_bp.reset_user_password') }}"
-                                  onsubmit="return confirm('האם אתה בטוח שברצונך לשחזר את הסיסמה למשתמש זה?');">
+                                  onsubmit="return confirm('לשחזר סיסמה למשתמש זה?');"
+                                  style="display: inline-block;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="user_id" value="{{ user.id }}">
                                 <button type="submit" class="action-button warning small-button">
                                     שחזור סיסמה
+                                </button>
+                            </form>
+
+                            <!-- טופס מחיקת משתמש -->
+                            <form method="POST"
+                                  action="{{ url_for('admin_bp.admin_users_bp.initiate_delete_user') }}"
+                                  onsubmit="return confirm('האם אתה בטוח שברצונך למחוק משתמש זה?');"
+                                  style="display: inline-block; margin-right: 5px;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                <button type="submit" class="action-button danger small-button">
+                                    מחיקת משתמש
                                 </button>
                             </form>
                         </td>
@@ -48,6 +91,10 @@
 
 {% block scripts %}
 <script>
+    /*
+        פונקציה לפתיחת טאב (אם תרצה להרחיב ללשוניות נוספות).
+        כאן טאב יחיד: רשימת משתמשים, כך שמראש מסומן 'active'.
+    */
     function openTab(evt, tabName) {
         var tabContents = document.getElementsByClassName("tab-content");
         for (var i = 0; i < tabContents.length; i++) {
@@ -61,6 +108,7 @@
         evt.currentTarget.classList.add("active");
     }
 
+    // במצב טאב יחיד, ההגדרה הזו פחות קריטית, אבל זה רק לצורך דוגמה.
     document.addEventListener("DOMContentLoaded", function() {
         var defaultTab = document.querySelector(".tab-button.active");
         if (defaultTab) {

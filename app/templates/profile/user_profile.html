@@ -11,12 +11,12 @@
     <div class="company-info">
         {% if user.profile_image %}
             <img src="{{ url_for('static', filename=user.profile_image.replace('static/', '')) }}"
-                 alt="תמונת פרופיל"
-                 class="company-logo">
+                alt="תמונת פרופיל"
+                class="company-logo">
         {% else %}
             <img src="{{ url_for('static', filename='images/default_profile.png') }}"
-                 alt="תמונת פרופיל"
-                 class="company-logo">
+                alt="תמונת פרופיל"
+                class="company-logo">
         {% endif %}
         <h3>{{ user.first_name }} {{ user.last_name }}</h3>
     </div>
@@ -51,7 +51,7 @@
         </div>
     </div>
 
-    {% if is_owner %}
+    {% if is_owner and not user.is_admin %}
     <div class="tabs">
         <button class="tab-button active" onclick="openTab(event, 'personal')">מידע אישי</button>
         <button class="tab-button" onclick="openTab(event, 'demographics')">פרטים דמוגרפיים</button>
@@ -154,9 +154,24 @@
     {% else %}
         <p class="no-data-message">אין ביקורות על משתמש זה.</p>
     {% endif %}
-</section>
-{% endblock %}
 
+    <!-- מציג כפתור מחיקה רק אם בעל הפרופיל, ואינו אדמין -->
+    {% if is_owner and not user.is_admin %}
+    <div class="action-buttons" style="margin-top: 40px;">
+        <form method="POST"
+              action="{{ url_for('admin_bp.admin_users_bp.initiate_delete_user') }}"
+              onsubmit="return confirm('האם אתה בטוח שתרצה למחוק את חשבונך לצמיתות? כל תוכן יישאר במערכת תחת משתמש "Deleted"?');"
+              style="display: inline-block;">
+            {{ form.csrf_token }}
+            <input type="hidden" name="user_id" value="{{ user.id }}">
+            <button type="submit" class="action-button danger">
+                מחיקת משתמש
+            </button>
+        </form>
+    </div>
+    {% endif %}
+    </section>
+{% endblock %}
 
 {% block scripts %}
 <script>
@@ -183,7 +198,7 @@
     }
 
     function saveProfileField(fieldId, value) {
-        const csrfToken = getCookie('csrf_token');
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
         fetch('/update_profile_field', {
             method: 'POST',
@@ -255,21 +270,6 @@
                     debouncedSave(fieldId, value);
                 });
             });
-        }
-
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
         }
     });
 </script>
