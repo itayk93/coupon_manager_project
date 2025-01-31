@@ -20,21 +20,26 @@
             {% for c in expiring_coupons %}
             <li>
                 <strong>{{ c.company }}</strong> -
-                {% set expiration_date = c.expiration.strftime('%Y-%m-%d') %}
-                {% set today_date = current_date.strftime('%Y-%m-%d') %}
-                {% set tomorrow_date = (current_date + timedelta(days=1)).strftime('%Y-%m-%d') %}
-                
+                {% set expiration_date = c.expiration.strftime('%d/%m/%Y') %}
+                {% set today_date = current_date.strftime('%d/%m/%Y') %}
+                {% set tomorrow_date = (current_date + timedelta(days=1)).strftime('%d/%m/%Y') %}
+                                
                 {% if expiration_date == today_date %}
-                    פג תוקף היום
+                    התוקף יפוג היום בלילה
                 {% elif expiration_date == tomorrow_date %}
-                    פג תוקף מחר
+                    התוקף יפוג מחר
                 {% else %}
-                    פג תוקף עד: <strong>{{ expiration_date }}</strong>
-                {% endif %}                
-                <a class="view-coupon-button" href="{{ url_for('coupons.coupon_detail', id=c.id) }}">
-                    צפה בקופון
-                </a>
+                    התוקף יפוג ב-<strong>{{ expiration_date }}</strong>
+                {% endif %}   
+
+                <!-- הוספת span עם קלאס כדי לשלוט רק עליו -->
+                <span class="coupon-button-wrapper">
+                    <a class="view-coupon-button" href="{{ url_for('coupons.coupon_detail', id=c.id) }}">
+                        צפה בקופון
+                    </a>
+                </span>
             </li>
+            
             {% endfor %}
         </ul>
         
@@ -316,6 +321,20 @@
     margin-top: 5px;
     padding-top: 0;
 }
+
+/* ברירת מחדל: הכפתור מופיע באותה שורה */
+.coupon-button-wrapper {
+    display: inline; 
+}
+
+/* במובייל (מסכים קטנים) הכפתור ירד לשורה הבאה */
+@media (max-width: 600px) {
+    .coupon-button-wrapper {
+        display: block;
+        margin-top: 5px; /* הוספת רווח קטן */
+    }
+}
+
 </style>
 
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
