@@ -33,6 +33,7 @@ load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 IMGUR_CLIENT_ID = os.getenv("IMGUR_CLIENT_ID")
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
 SENDER_NAME = "Coupon Master"
 API_KEY = os.getenv("IPINFO_API_KEY")
 
@@ -1627,3 +1628,20 @@ def parse_user_usage_text(usage_text, user):
     pricing_df = pd.DataFrame([usage_record])
 
     return usage_df, pricing_df
+
+
+import logging
+
+def decrypt_coupon_code(encrypted_code):
+    try:
+        encryption_key = os.getenv("ENCRYPTION_KEY")
+        if not encryption_key:
+            logging.error("ENCRYPTION_KEY not found in environment variables.")
+            return None  # מחזיר None אם המפתח חסר
+
+        # הפעלת אלגוריתם הפענוח שלך
+        decrypted_code = some_decryption_function(encrypted_code, encryption_key)
+        return decrypted_code
+    except Exception as e:
+        logging.error(f"Error decrypting coupon code: {e}")
+        return None  # מחזיר None במקום להפעיל flash()

@@ -21,53 +21,230 @@ def reset_was_sent_today():
     WAS_SENT_TODAY = False
     logging.info("reset_was_sent_today - Resetting WAS_SENT_TODAY to False")
 
+from datetime import datetime, date, timedelta
 
-def send_expiration_warnings():
-    from app import create_app  # ✅ מייבא רק בתוך הפונקציה
+def categorize_coupons(coupons):
     """
-    פונקציה ששולחת התראות על קופונים שעתידים לפוג.
+    מחלק את הקופונים לשלוש קטגוריות: היום, מחר, והמשך החודש.
     """
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+
+    categorized = {
+        "today_coupons": [],
+        "tomorrow_coupons": [],
+        "future_coupons": []
+    }
+
+    for coupon in coupons:
+        expiration_date = datetime.strptime(coupon['expiration'], "%Y-%m-%d").date()
+        if expiration_date == today:
+            categorized["today_coupons"].append(coupon)
+        elif expiration_date == tomorrow:
+            categorized["tomorrow_coupons"].append(coupon)
+        else:
+            categorized["future_coupons"].append(coupon)
+
+    return categorized
+
+from flask import render_template
+from sqlalchemy.sql import text
+from datetime import date, timedelta, datetime
+
+def send_expiration_warnings_work():
+    from app import create_app
     app = create_app()
     with app.app_context():
-        try:
-            today = db.func.current_date()
-            one_month_ahead = today + db.text("INTERVAL '30 days'")
+        # שאילתה שמביאה את הנתונים, כולל חישוב יתרה (remaining_value)
+        query = text("""
+            SELECT 
+                c.id AS coupon_id,
+                c.code, 
+                c.value,
+                c.expiration, 
+                c.company, 
+                c.user_id, 
+                u.email, 
+                u.first_name,
+                -- מחושב דינמית אם יש טבלאות usage ו-transaction:
+                COALESCE(
+                    (SELECT SUM(transaction_amount) FROM (
+                        SELECT -used_amount AS transaction_amount
+                        FROM coupon_usage WHERE coupon_id = c.id
+                        UNION ALL
+                        SELECT -usage_amount + recharge_amount
+                        FROM coupon_transaction WHERE coupon_id = c.id
+                    ) AS subquery),
+                    c.value
+                ) AS remaining_value
+            FROM coupon c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.expiration IS NOT NULL
+              AND TO_DATE(c.expiration, 'YYYY-MM-DD') 
+                  BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '30 days')
+              AND c.reminder_sent_30_days = FALSE
+              AND c.status = 'פעיל'
+              AND c.is_for_sale = FALSE;
+        """)
 
-            coupons_to_warn = Coupon.query.filter(
-                Coupon.expiration == one_month_ahead,
-                Coupon.reminder_sent_30_days == False
-            ).all()
+        coupons = db.session.execute(query).fetchall()
+        users = {}
 
-            for coupon in coupons_to_warn:
-                user = coupon.user
-                if user:
-                    try:
-                        html_content = f"""
-                        <html>
-                        <body>
-                            <p>שלום {user.first_name},</p>
-                            <p>תוקף הקופון שלך <strong>{coupon.code}</strong> עומד לפוג בעוד 30 יום.</p>
-                        </body>
-                        </html>
-                        """
-                        send_email(
-                            sender_email="CouponMasterIL2@gmail.com",
-                            sender_name="Coupon Master",
-                            recipient_email=user.email,
-                            recipient_name=f"{user.first_name} {user.last_name}",
-                            subject="התראה על תפוגת קופון - 30 יום נותרו",
-                            html_content=html_content
-                        )
-                        coupon.reminder_sent_30_days = True
-                        db.session.commit()
-                        logging.info(f"Sent expiration warning to {user.email} for coupon {coupon.code}")
-                    except Exception as e:
-                        logging.error(f"Failed to send expiration warning for coupon {coupon.code}: {e}")
-                        db.session.rollback()
+        for coupon in coupons:
+            user_id = coupon.user_id
 
-        except Exception as e:
-            logging.error(f"Error in send_expiration_warnings: {e}")
+            # חישוב "תוקף עד"
+            expiration_date = datetime.strptime(coupon.expiration, "%Y-%m-%d").date()
+            days_left = (expiration_date - date.today()).days
+            expiration_formatted = expiration_date.strftime('%d/%m/%Y')
 
+            # מכניסים את הקופון לרשימת הקופונים של המשתמש
+            # בלי שום פענוח על code
+            users.setdefault(user_id, {
+                'email': coupon.email,
+                'first_name': coupon.first_name,
+                'coupons': []
+            })
+            users[user_id]['coupons'].append({
+                'coupon_id': coupon.coupon_id,
+                'company': coupon.company,
+                'code': coupon.code,  # פה זה הקוד "כמו שהוא" מה-DB
+                'remaining_value': coupon.remaining_value,
+                'expiration': coupon.expiration,
+                'expiration_formatted': expiration_formatted,
+                'days_left': days_left,
+                'coupon_detail_link': f"https://yourwebsite.com/coupon_detail/{coupon.coupon_id}"
+            })
+
+        # שליחת מייל אחד לכל משתמש
+        for user in users.values():
+            email_content = render_template(
+                "emails/coupon_expiration_warning.html",  # התבנית שלך
+                user=user,
+                coupons=user['coupons'],
+                current_year=date.today().year
+            )
+
+            send_email(
+                sender_email="CouponMasterIL2@gmail.com",
+                sender_name="Coupon Master",
+                recipient_email=user['email'],
+                recipient_name=user['first_name'],
+                subject="התראה על תפוגת קופונים",
+                html_content=email_content
+            )
+
+            # עדכון DB כדי שלא נשלח שוב למחרת
+            update_query = text("""
+                UPDATE coupon
+                SET reminder_sent_30_days = TRUE
+                WHERE id = ANY(:coupon_ids)
+            """)
+            db.session.execute(update_query, {
+                "coupon_ids": [c['coupon_id'] for c in user['coupons']]
+            })
+            db.session.commit()
+
+from flask import render_template
+from sqlalchemy.sql import text
+from datetime import date, timedelta, datetime
+from app.helpers import decrypt_coupon_code  # ייבוא הפונקציה לפענוח
+
+def send_expiration_warnings():
+    from app import create_app
+    app = create_app()
+    with app.app_context():
+        # שאילתה שמביאה את הנתונים, כולל חישוב יתרה (remaining_value)
+        query = text("""
+            SELECT 
+                c.id AS coupon_id,
+                c.code, 
+                c.value,
+                c.expiration, 
+                c.company, 
+                c.user_id, 
+                u.email, 
+                u.first_name,
+                -- מחושב דינמית אם יש טבלאות usage ו-transaction:
+                COALESCE(
+                    (SELECT SUM(transaction_amount) FROM (
+                        SELECT -used_amount AS transaction_amount
+                        FROM coupon_usage WHERE coupon_id = c.id
+                        UNION ALL
+                        SELECT -usage_amount + recharge_amount
+                        FROM coupon_transaction WHERE coupon_id = c.id
+                    ) AS subquery),
+                    c.value
+                ) AS remaining_value
+            FROM coupon c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.expiration IS NOT NULL
+              AND TO_DATE(c.expiration, 'YYYY-MM-DD') 
+                  BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '30 days')
+              AND c.reminder_sent_30_days = FALSE
+              AND c.status = 'פעיל'
+              AND c.is_for_sale = FALSE;
+        """)
+
+        coupons = db.session.execute(query).fetchall()
+        users = {}
+
+        for coupon in coupons:
+            user_id = coupon.user_id
+
+            # פענוח קוד הקופון
+            decrypted_code = decrypt_coupon_code(coupon.code)
+
+            # חישוב "תוקף עד"
+            expiration_date = datetime.strptime(coupon.expiration, "%Y-%m-%d").date()
+            days_left = (expiration_date - date.today()).days
+            expiration_formatted = expiration_date.strftime('%d/%m/%Y')
+
+            # מכניסים את הקופון לרשימת הקופונים של המשתמש עם הקוד המפוענח
+            users.setdefault(user_id, {
+                'email': coupon.email,
+                'first_name': coupon.first_name,
+                'coupons': []
+            })
+            users[user_id]['coupons'].append({
+                'coupon_id': coupon.coupon_id,
+                'company': coupon.company,
+                'code': decrypted_code if decrypted_code else "שגיאה בפענוח",  # אם יש שגיאה, לא שולחים את הקוד המצונזר
+                'remaining_value': coupon.remaining_value,
+                'expiration': coupon.expiration,
+                'expiration_formatted': expiration_formatted,
+                'days_left': days_left,
+                'coupon_detail_link': f"https://yourwebsite.com/coupon_detail/{coupon.coupon_id}"
+            })
+
+        # שליחת מייל אחד לכל משתמש
+        for user in users.values():
+            email_content = render_template(
+                "emails/coupon_expiration_warning.html",  # התבנית שלך
+                user=user,
+                coupons=user['coupons'],
+                current_year=date.today().year
+            )
+
+            send_email(
+                sender_email="CouponMasterIL2@gmail.com",
+                sender_name="Coupon Master",
+                recipient_email=user['email'],
+                recipient_name=user['first_name'],
+                subject="התראה על תפוגת קופונים",
+                html_content=email_content
+            )
+
+            # עדכון DB כדי שלא נשלח שוב למחרת
+            update_query = text("""
+                UPDATE coupon
+                SET reminder_sent_30_days = TRUE
+                WHERE id = ANY(:coupon_ids)
+            """)
+            db.session.execute(update_query, {
+                "coupon_ids": [c['coupon_id'] for c in user['coupons']]
+            })
+            db.session.commit()
 
 def daily_email_flow():
     """

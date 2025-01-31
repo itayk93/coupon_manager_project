@@ -49,7 +49,7 @@ def log_user_activity(ip_address,action, coupon_id=None):
         geo_data = get_geo_location(ip_address)
 
         # ודא ש-geo_data מחזירה ערכים נכונים
-        print(f"Geo Data: {geo_data}")
+        #print(f"Geo Data: {geo_data}")
 
         activity = {
             "user_id": current_user.id if current_user and current_user.is_authenticated else None,

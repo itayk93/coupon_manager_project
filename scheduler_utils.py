@@ -80,10 +80,14 @@ from app.extensions import db
 
 
 def get_coupons_expiring_in_30_days():
-    query = text("""
-        SELECT * FROM coupon 
-        WHERE expiration::DATE = CURRENT_DATE + INTERVAL '30 days'
-        AND reminder_sent_30_days = false
-    """)
+    query = text("""SELECT * 
+FROM coupon 
+WHERE expiration IS NOT NULL
+AND TO_DATE(expiration, 'YYYY-MM-DD') 
+    BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '30 days')
+AND reminder_sent_30_days = FALSE
+AND status = 'פעיל'   -- רק קופונים פעילים
+AND is_for_sale = FALSE;  -- לא למכירה
+""")
     result = db.session.execute(query)
     return result.fetchall()  # או עיבוד אחר
