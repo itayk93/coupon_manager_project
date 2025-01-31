@@ -3,58 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <title>התראה על תפוגת תוקף קופונים</title>
+    <!-- מומלץ להוסיף פונטים בעברית (למשל 'Alef'), אך שים לב שלא כל לקוחות הדוא"ל תומכים היטב ב-Fonts חיצוניים -->
+    <link href="https://fonts.googleapis.com/css2?family=Alef&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style>
-        body { margin: 0; padding: 0; background-color: #f9f9f9; font-family: Arial, sans-serif; direction: rtl; text-align: right; }
-        .email-container { width: 100%; padding: 20px 0; background-color: #f9f9f9; }
-        .email-content { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .header { background-color: #2E86C1; color: #ffffff; padding: 20px; text-align: center; }
-        .header h1 { margin: 0; font-size: 24px; }
-        .body { padding: 20px; color: #2C3E50; }
-        .highlight { color: #2E86C1; font-weight: bold; }
-        .coupon-block { border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin-bottom: 20px; background-color: #FAFAFA; }
-        .button-container { text-align: center; margin: 30px 0; }
-        .button { background-color: #2E86C1; color: #ffffff; padding: 15px 25px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block; }
-        .button:hover { background-color: #A9CCE3; }
-        .footer { background-color: #f0f0f0; color: #7f8c8d; text-align: center; padding: 15px; font-size: 12px; }
+        /* התאמת ברירת מחדל לגוף המייל */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            font-family: 'Alef', Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+        }
+        /* עוטף כללי לכל התוכן */
+        .email-container {
+            width: 100%;
+            background-color: #f4f4f4;
+            padding: 20px 0;
+        }
+        /* תוכן האימייל המרכזי */
+        .email-content {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        /* כותרת עליונה */
+        .header {
+            background-color: #2E86C1;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        /* גוף ההודעה */
+        .body {
+            padding: 20px;
+            color: #2C3E50;
+        }
+        /* בלוק בודד של קופון */
+        .coupon-item {
+            border-bottom: 1px solid #eaeaea;
+            padding: 20px 0;
+            text-align: center; /* יישור למרכז */
+        }
+        .coupon-item:last-child {
+            border-bottom: none; /* ללא קו תחתון אחרון */
+        }
+        /* תמונת חברה */
+        .company-logo {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            display: block;
+            margin: 0 auto 15px; /* מרכז תמונה ומרווח תחתון */
+        }
+        /* טקסט של הודעת הקופון */
+        .coupon-message {
+            font-size: 16px;
+            margin: 0 0 10px;
+            line-height: 1.5;
+        }
+        /* קוד הקופון */
+        .coupon-code-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+            margin: 0 0 10px;
+        }
+        .coupon-code {
+            color: #2E86C1;
+            font-weight: normal;
+            direction: ltr; /* לעתים נוח להציג את הקוד משמאל לימין */
+            display: inline-block;
+            margin-right: 5px;
+        }
+        /* כפתור למעבר לאתר */
+        .button-container {
+            text-align: center;
+            margin: 20px 0 0;
+        }
+        .button {
+            background-color: #2E86C1;
+            color: #ffffff;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .button:hover {
+            background-color: #1b5e85;
+        }
+        /* כותרת תחתונה */
+        .footer {
+            background-color: #f0f0f0;
+            color: #7f8c8d;
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+        }
+        .footer p {
+            margin: 0;
+        }
+        /* מדיה-קוויריז לטלפונים */
+        @media only screen and (max-width: 600px) {
+            .email-content {
+                margin: 0 10px;
+                border-radius: 5px;
+            }
+        }
     </style>
 </head>
 <body dir="rtl">
     <div class="email-container">
         <div class="email-content">
-            <div class="header"><h1>התראה על תפוגת תוקף קופונים</h1></div>
-            <div class="body">
-                <p>שלום {{ user.first_name }},</p>
-
-                {% if coupons|length > 1 %}
-                    <p>יש לך מספר קופונים שפג תוקפם ב-30 הימים הקרובים:</p>
-                {% else %}
-                    <p>יש לך קופון אחד שפג תוקפו בקרוב:</p>
-                {% endif %}
-
-                {% for coupon in coupons %}
-                    <div class="coupon-block">
-                        <p><strong>קוד הקופון:</strong> <span class="highlight">{{ coupon.code }}</span></p>
-                        <p><strong>חברה:</strong> <span class="highlight">{{ coupon.company }}</span></p>
-                        <p><strong>יתרה לניצול:</strong> <span class="highlight">{{ coupon.remaining_value }} ₪</span></p>
-                        <p><strong>תאריך תפוגה:</strong>
-                            {% if coupon.days_left == 0 %}
-                                <span class="highlight">היום הקופון יפוג תוקף</span>
-                            {% elif coupon.days_left == 1 %}
-                                <span class="highlight">מחר הקופון יפוג תוקף</span>
-                            {% else %}
-                                <span class="highlight">{{ coupon.expiration_formatted }}</span>
-                            {% endif %}
-                        </p>
-                        <div class="button-container">
-                            <a href="{{ coupon.coupon_detail_link }}" class="button">ניהול הקופון</a>
-                        </div>
-                    </div>
-                {% endfor %}
-
-                <p>כדי למנוע אובדן, נצל את הקופונים לפני תום התוקף.</p>
+            <!-- כותרת כללית (ניתן לערוך או להסיר) -->
+            <div class="header">
+                <h1>התראה על תפוגת תוקף קופונים</h1>
             </div>
-            <div class="footer"><p>© {{ current_year }} Coupon Master. כל הזכויות שמורות.</p></div>
+
+            <div class="body">
+                <!-- אפשר להוסיף פה ברכת שלום: "שלום {{ user.first_name }}" אם תרצה -->
+
+                <!-- לולאה על הקופונים (דוגמה מסינטקס Django Template) -->
+                {% for coupon in coupons %}
+                <div class="coupon-item">
+                    <!-- תמונת חברה (כאן ניתן להוסיף src מלא מאוחר יותר) -->
+                    <img src="" alt="{{ coupon.company }} Logo" class="company-logo" />
+
+                    <!-- הטקסט הראשי: "היי! התוקף של הקופון שלך..." -->
+                    <p class="coupon-message">
+                        היי! התוקף של הקופון שלך ל{{ coupon.company }} עומד לפוג
+                        {% if coupon.days_left == 30 %}
+                            בעוד 30 ימים
+                        {% elif coupon.days_left == 7 %}
+                            בעוד שבוע
+                        {% elif coupon.days_left == 1 %}
+                            מחר
+                        {% elif coupon.days_left == 0 %}
+                            היום!
+                        {% else %}
+                            {{ coupon.expiration_formatted }}
+                        {% endif %}
+                        . נשאר בו {{ coupon.remaining_value }} ₪
+                    </p>
+
+                    <!-- הצגת קוד הקופון -->
+                    <p class="coupon-code-label">
+                        קוד קופון:
+                        <span class="coupon-code">{{ coupon.code }}</span>
+                    </p>
+
+                    <!-- כפתור למעבר לאתר / ניהול הקופון -->
+                    <div class="button-container">
+                        <a href="{{ coupon.coupon_detail_link }}" class="button">מעבר לאתר</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- כותרת תחתונה -->
+            <div class="footer">
+                <p>© {{ current_year }} Coupon Master. כל הזכויות שמורות.</p>
+            </div>
         </div>
     </div>
 </body>

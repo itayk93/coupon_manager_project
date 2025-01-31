@@ -283,7 +283,6 @@ def index():
     # --------------------------------------------------------------------------------
     # 6. החזרת ה-Template 'index.html'
     # --------------------------------------------------------------------------------
-    
     # המרה של expiration מ-String ל-Date (אם הוא לא None)
     for coupon in expiring_coupons:
         if isinstance(coupon.expiration, str):  # אם expiration הוא מחרוזת
