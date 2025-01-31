@@ -5,11 +5,47 @@
 {% block content %}
 <section class="hero">
     <h2>{{ greeting }}, {{ current_user.first_name }}!</h2>
-    <!-- <p>איזה כיף לראות אותך כאן!<br>בוא נבדוק כמה נשאר לך בארנק וכמה חסכת.</p> -->
+
+    {% if show_expiring_alert %}
+    <!-- התראה לקופונים שעומדים לפוג -->
+    <div class="expiring-coupons-alert">
+
+        <!-- כפתור ה-X למעלה-משמאל -->
+        <a class="close-expiring-alert" href="{{ url_for('profile.dismiss_expiring_alert') }}">×</a>
+
+        <p><strong>שים לב!</strong> יש לך {{ expiring_coupons|length }} קופונים שעומדים לפוג תוקפם בשבוע הקרוב:</p>
+
+        <!-- רשימת הקופונים -->
+        <ul class="expiring-coupons-list">
+            {% for c in expiring_coupons %}
+            <li>
+                <strong>{{ c.company }}</strong> -
+                {% set expiration_date = c.expiration.strftime('%Y-%m-%d') %}
+                {% set today_date = current_date.strftime('%Y-%m-%d') %}
+                {% set tomorrow_date = (current_date + timedelta(days=1)).strftime('%Y-%m-%d') %}
+                
+                {% if expiration_date == today_date %}
+                    פג תוקף היום
+                {% elif expiration_date == tomorrow_date %}
+                    פג תוקף מחר
+                {% else %}
+                    פג תוקף עד: <strong>{{ expiration_date }}</strong>
+                {% endif %}                
+                <a class="view-coupon-button" href="{{ url_for('coupons.coupon_detail', id=c.id) }}">
+                    צפה בקופון
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        
+    </div>
+    {% endif %}
+
     <div class="total-value">
         <p>נשאר לך בארנק:</p>
         <h1>{{ '%.2f'|format(total_value) }} ₪</h1>
     </div>
+
     <p class="total-savings-line tooltip-trigger" style="position: relative; display: inline-block;">
         עד כה חסכת: {{ '%.0f'|format(total_savings) }} ₪ מתוך {{ '%.0f'|format(total_coupons_value) }} ₪
         (חיסכון של {{ '%.0f'|format(percentage_savings) }}%)
@@ -25,7 +61,10 @@
         {{ form.hidden_tag() }}
         <div class="input-wrapper">
             <label for="usage_explanation">השלמה אוטומטית של השימוש בקופונים</label>
-            <textarea id="usage_explanation" name="usage_explanation" rows="2" class="input-field_centered"
+            <textarea id="usage_explanation"
+                      name="usage_explanation"
+                      rows="2"
+                      class="input-field_centered"
                       placeholder="כאן ניתן להקליד באופן חופשי במה השתמשת וכמה"></textarea>
         </div>
         <div class="button-with-explanation">
@@ -34,7 +73,7 @@
                 יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
                 <span class="close-tooltip">×</span>
             </div>
-        </div>        
+        </div>
     </form>
 </section>
 
@@ -45,9 +84,11 @@
              alt="{{ coupon.company }} Logo" class="company-logo">
     {% endmacro %}
 
+    {# חלוקה לקטגוריות: פעילים, חד פעמיים, בשימוש, למכירה וכו' #}
     {% set coupon_categories = [
         (active_coupons, "קופונים פעילים"),
         (active_one_time_coupons, "קופונים חד פעמיים"),
+        (used_coupons, "קופונים מנוצלים/לא פעילים"),
         (coupons_for_sale, "קופונים למכירה")
     ] %}
 
@@ -56,20 +97,33 @@
             <h3 class="coupon-section-title">{{ title }}</h3>
             <div class="coupon-container">
                 {% for coupon in coupons %}
-                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
-                        {{ get_company_logo(coupon) }}
-                        <p class="company-name">{{ coupon.company }}</p>
-                        <p>קוד קופון: {{ coupon.code }}</p>
-                        {% if coupon.is_one_time %}
-                            <p>מטרה: {{ coupon.purpose }}</p>
-                        {% else %}
-                            <p class="remaining-value">נשאר לך: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח</p>
-                            <p class="discount-percentage">כבר השתמשת ב: {{ (coupon.used_value / coupon.value * 100)|round(2) if coupon.value > 0 else 0 }}%</p>
-                        {% endif %}
-                        {% if title == "קופונים למכירה" %}
-                            <p style="color: var(--accent-color); font-weight: bold;">למכירה במחיר {{ '%.2f'|format(coupon.cost) }} ש"ח</p>
-                        {% endif %}
-                    </a>
+                <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
+                    {{ get_company_logo(coupon) }}
+                    <p class="company-name">{{ coupon.company }}</p>
+                    <p>קוד קופון: {{ coupon.code }}</p>
+
+                    {% if coupon.is_one_time %}
+                        <p>מטרה: {{ coupon.purpose }}</p>
+                    {% else %}
+                        <p class="remaining-value">
+                            נשאר לך: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח
+                        </p>
+                        <p class="discount-percentage">
+                            כבר השתמשת ב:
+                            {% if coupon.value > 0 %}
+                                {{ (coupon.used_value / coupon.value * 100)|round(2) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </p>
+                    {% endif %}
+
+                    {% if title == "קופונים למכירה" %}
+                    <p style="color: var(--accent-color); font-weight: bold;">
+                        למכירה במחיר {{ '%.2f'|format(coupon.cost) }} ש"ח
+                    </p>
+                    {% endif %}
+                </a>
                 {% endfor %}
             </div>
         {% else %}
@@ -87,15 +141,16 @@
     </a>
 </div>
 
+{# אם המשתמש אדמין, מציג כפתור עדכון קופונים מרוכז #}
 {% if current_user.is_admin %}
-    <form action="{{ url_for('coupons.update_all_active_coupons') }}" method="post" style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
-        {{ form.hidden_tag() }}
-        <button type="submit" class="action-button small-button">
-            <i class="fa fa-refresh"></i> עדכן את כל הקופונים הפעילים מ-Multipass
-        </button>
-    </form>
+<form action="{{ url_for('coupons.update_all_active_coupons') }}" method="post"
+      style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+    {{ form.hidden_tag() }}
+    <button type="submit" class="action-button small-button">
+        <i class="fa fa-refresh"></i> עדכן את כל הקופונים הפעילים מ-Multipass
+    </button>
+</form>
 {% endif %}
-
 {% endblock %}
 
 {% block scripts %}
@@ -103,9 +158,64 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
 
 <style>
-    .total-value p {
-    font-size: 1.25em; /* מגדיל את הכתב */
-    font-weight: bold; /* הופך ל-bold */
+/* === התראה מינימליסטית בפינה עם כפתור X למעלה-משמאל === */
+.expiring-coupons-alert {
+    background-color: #fff8e1; /* רקע בהיר ועדין */
+    color: #000;               /* טקסט כהה */
+    padding: 15px 20px;
+    border-radius: 8px;
+    font-size: 1.1em;
+    position: relative; /* מאפשר מיקום מוחלט של כפתור ה-X */
+    margin-top: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    text-align: center; /* ממורכז */
+}
+
+.close-expiring-alert {
+    position: absolute;
+    top: 5px; 
+    right: 10px; 
+    font-size: 1.2em;
+    text-decoration: none;
+    color: #ff9800; 
+    font-weight: bold;
+}
+
+.expiring-coupons-alert p {
+    margin: 0;
+    margin-top: 10px;
+}
+
+.expiring-coupons-list {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+}
+
+.expiring-coupons-list li {
+    margin-bottom: 5px;
+}
+
+/* כפתור "צפה בקופון" מעוצב */
+.view-coupon-button {
+    display: inline-block;
+    margin-right: 5px; /* מרווח קטן בין הטקסט לפני הכפתור */
+    background-color: #3498db;
+    color: #fff;
+    text-decoration: none;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-weight: normal;
+}
+.view-coupon-button:hover {
+    background-color: #2980b9;
+}
+
+/* שאר העיצוב של העמוד */
+.total-value p {
+    font-size: 1.25em;
+    font-weight: bold;
 }
 
 .coupon-container {
@@ -116,7 +226,7 @@
 }
 
 .coupon-card {
-    flex: 1 1 calc(25% - 20px); /* ברירת מחדל - 4 קופונים בשורה */
+    flex: 1 1 calc(25% - 20px);
     max-width: calc(25% - 20px);
     box-sizing: border-box;
     padding: 15px 20px;
@@ -131,23 +241,18 @@
     align-items: center;
 }
 
-/* כאשר המסך קטן מ-1200px -> 3 קופונים בשורה */
 @media (max-width: 1200px) {
     .coupon-card {
         flex: 1 1 calc(33.333% - 20px);
         max-width: calc(33.333% - 20px);
     }
 }
-
-/* כאשר המסך קטן מ-992px -> 2 קופונים בשורה */
 @media (max-width: 992px) {
     .coupon-card {
         flex: 1 1 calc(50% - 20px);
         max-width: calc(50% - 20px);
     }
 }
-
-/* כאשר המסך קטן מ-600px -> קופון אחד בשורה */
 @media (max-width: 600px) {
     .coupon-card {
         flex: 1 1 calc(50% - 20px);
@@ -173,14 +278,13 @@
     justify-content: center;
     gap: 15px;
     margin: 20px 0;
-    flex-direction: row; /* ברירת מחדל - כפתורים אחד ליד השני */
+    flex-direction: row;
 }
 
-/* כאשר המסך קטן מ-600px, הכפתורים יהיו אחד מעל השני */
 @media (max-width: 600px) {
     .export-buttons {
         flex-direction: row;
-        gap: 10px; /* רווח בין הכפתורים */
+        gap: 10px;
     }
 }
 
@@ -189,40 +293,30 @@
     display: inline-block;
 }
 
-/* זה חשוב להכניס כדי שהtooltip גם יעבוד */
 .button-with-explanation:hover .tooltip {
     display: block;
 }
-/* זה חשוב להכניס כדי שהtooltip גם יעבוד */
 .tooltip-trigger:hover .tooltip {
     display: block;
 }
 
-
-/* ניגשים ספציפית ל־tooltip שנמצא בתוך האלמנט עם המחלקה total-savings-line */
 .total-savings-line .tooltip {
-    top: -20px !important; /* הזזת ה-tooltip מעט למעלה */
-    left: 110% !important; /* שומר אותו מימין לטקסט */
+    top: -20px !important;
+    left: 110% !important;
 }
-
 .total-savings-line .tooltip:after {
     top: 50%;
     right: 100%;
     margin-top: -5px;
     border-color: transparent #333 transparent transparent !important;
 }
-
-/* אני מקטין עם זה את הרווח מתחת ״עד כה חסכת:״ */
 .total-savings-line {
     position: relative;
     display: inline-block;
-    margin-top: 5px; /* הקטן את הרווח מעל השורה */
+    margin-top: 5px;
     padding-top: 0;
 }
-
 </style>
 
-{{ super() }}
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
-    
 {% endblock %}

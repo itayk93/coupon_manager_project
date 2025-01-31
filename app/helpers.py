@@ -28,7 +28,7 @@ from itsdangerous import URLSafeTimedSerializer
 from app.models import Company
 import numpy as np
 from sqlalchemy.sql import text
-
+import pytz
 load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 IMGUR_CLIENT_ID = os.getenv("IMGUR_CLIENT_ID")
@@ -1645,3 +1645,15 @@ def decrypt_coupon_code(encrypted_code):
     except Exception as e:
         logging.error(f"Error decrypting coupon code: {e}")
         return None  # מחזיר None במקום להפעיל flash()
+
+def get_greeting():
+    israel_tz = pytz.timezone('Asia/Jerusalem')
+    current_hour = datetime.now(israel_tz).hour
+
+    if current_hour < 12:
+        return "בוקר טוב"
+    elif current_hour < 18:
+        return "צהריים טובים"
+    else:
+        return "ערב טוב"
+

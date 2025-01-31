@@ -110,11 +110,40 @@ def get_greeting():
     else:
         return "ערב טוב"
 
+# app/routes/profile_routes.py
+
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
+from flask_login import login_required, current_user
+from datetime import date, timedelta, datetime
+import pytz
+import logging
+
+from app.extensions import db
+from app.models import Coupon, Company
+from app.forms import ProfileForm
+from app.helpers import update_coupon_status, get_greeting
+
+
+# ייתכן שיש לך פונקציה לקבל IP, אשתמש כאן ב-REMOTE_ADDR
+def get_ip_address():
+    return request.remote_addr or '0.0.0.0'
+
 
 @profile_bp.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
+    from sqlalchemy import cast, Date
+    """
+    עמוד הפרופיל / הבית שמציג:
+    - ברכה (greeting)
+    - אפשרות עריכת פרופיל (ProfileForm)
+    - חישוב סכומי קופונים (remaining, savings...)
+    - הצגת קופונים בקטגוריות שונות
+    - הצגת באנר "קופונים שעומדים לפוג תוך 7 ימים" – רק פעם ביום, אם יש כאלה.
+    """
+    ip_address = get_ip_address()
     log_user_activity(ip_address, "index")
+
     form = ProfileForm()
     if form.validate_on_submit():
         # עדכון פרטי המשתמש
@@ -131,149 +160,171 @@ def index():
         form.age.data = current_user.age
         form.gender.data = current_user.gender
 
-    greeting = get_greeting()  # קביעת הברכה לפי השעה בישראל
+    greeting = get_greeting()  # לדוגמה: בהתאם לשעה, מחזיר "בוקר טוב" / "ערב טוב" וכד'.
 
-    # חישוב סך הקופונים והחיסכון לאחר עדכון הסטטוס
-    all_non_one_time_coupons = Coupon.query.filter(
-        Coupon.user_id == current_user.id,
-        Coupon.status == 'פעיל',  # רק קופונים פעילים
-        Coupon.is_for_sale == False,
-        ~Coupon.is_one_time,  # לא חד פעמיים
-        Coupon.exclude_saving != True  # סינון קופונים מסומנים כ-excluded
-    ).all()
+    # --------------------------------------------------------------------------------
+    # 1. חישוב סך הקופונים והחיסכון (החלק המקורי שלך)
+    # --------------------------------------------------------------------------------
 
-    #print("קופונים פעילים שנכנסו לחישוב:")
-    #for coupon in all_non_one_time_coupons:
-    #    print(f"קוד: {coupon.code}, ערך: {coupon.value}, שימוש עד כה: {coupon.used_value}, נשאר להוציא: {coupon.remaining_value}")
-
-    # חישוב סך הקופונים
-    total_remaining = sum(coupon.value - coupon.used_value for coupon in all_non_one_time_coupons)
-    #print(f"סה\"כ נשאר: {total_remaining:.2f} ש\"ח")
-
-    # חישוב סך החיסכון
-    total_savings = sum(
-        coupon.used_value * (coupon.value - coupon.cost) / coupon.value
-        for coupon in all_non_one_time_coupons if coupon.cost > 0
-    )
-    #print(f"סה\"כ חיסכון: {total_savings:.2f} ש\"ח")
-
-    # חישוב סך ערך הקופונים
-    total_coupons_value = sum(coupon.value for coupon in all_non_one_time_coupons)
-    #print(f"סך ערך הקופונים: {total_coupons_value:.2f} ש\"ח")
-
-    # חישוב אחוז החיסכון
-    if total_coupons_value > 0:
-        percentage_savings = (total_savings / total_coupons_value) * 100
-    else:
-        percentage_savings = 0
-    #print(f"אחוז החיסכון: {percentage_savings:.2f}%")
-
-    # סינון קופונים חד פעמיים פעילים
-    active_one_time_coupons = Coupon.query.filter(
-        Coupon.status == 'פעיל',
-        Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == False,
-        Coupon.is_one_time  # קופונים חד פעמיים
-    ).all()
-
-    # סינון קופונים משומשים (שאינם פעילים)
-    used_coupons = Coupon.query.filter(
-        Coupon.status != 'פעיל',
-        Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == False,
-        ~Coupon.is_one_time  # קופונים שאינם חד פעמיים
-    ).all()
-
-    # סינון קופונים למכירה
-    coupons_for_sale = Coupon.query.filter(
-        Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == True,
-        ~Coupon.is_one_time  # קופונים שאינם חד פעמיים
-    ).all()
-
-    # עדכון סטטוס הקופונים
-    for coupon in all_non_one_time_coupons + active_one_time_coupons + used_coupons + coupons_for_sale:
-        update_coupon_status(coupon)
-    db.session.commit()
-
-    # חישוב סך הקופונים והחיסכון לאחר עדכון הסטטוס
+    # שליפת קופונים לא-חד-פעמיים פעילים, לא למכירה, לא excluded
     all_non_one_time_coupons = Coupon.query.filter(
         Coupon.user_id == current_user.id,
         Coupon.status == 'פעיל',
         Coupon.is_for_sale == False,
         ~Coupon.is_one_time,
-        Coupon.value > Coupon.used_value,  # להחריג קופונים שנוצלו במלואם
-        Coupon.exclude_saving != True  # סינון קופונים מסומנים כ-excluded
+        Coupon.exclude_saving != True
     ).all()
 
-    # חישוב סך הקופונים
-    total_remaining = sum(coupon.value - coupon.used_value for coupon in all_non_one_time_coupons)
+    # חישוב סך הקופונים (remaining)
+    total_remaining = sum(c.value - c.used_value for c in all_non_one_time_coupons)
 
-    # חישוב סך החיסכון באופן יחסי לשימוש בפועל
+    # חישוב סך החיסכון (יחסי לשימוש בפועל)
     total_savings = sum(
-        coupon.used_value * (coupon.value - coupon.cost) / coupon.value
-        for coupon in all_non_one_time_coupons if coupon.cost > 0
+        c.used_value * (c.value - c.cost) / c.value
+        for c in all_non_one_time_coupons if c.cost > 0 and c.value > 0
     )
 
     # חישוב סך ערך הקופונים
-    total_coupons_value = sum(coupon.value for coupon in all_non_one_time_coupons)
+    total_coupons_value = sum(c.value for c in all_non_one_time_coupons)
 
     # חישוב אחוז החיסכון
-    if total_coupons_value > 0:
-        percentage_savings = (total_savings / total_coupons_value) * 100
-    else:
-        percentage_savings = 0
+    percentage_savings = (total_savings / total_coupons_value) * 100 if total_coupons_value > 0 else 0
 
-    #print(f"סה\"כ חיסכון: {total_savings:.2f} ש\"ח")
-    #print(f"סך ערך הקופונים: {total_coupons_value:.2f} ש\"ח")
-    #print(f"אחוז החיסכון: {percentage_savings:.2f}%")
+    # --------------------------------------------------------------------------------
+    # 2. שליפה וחלוקה לקטגוריות (active, active_one_time, used, for_sale)
+    # --------------------------------------------------------------------------------
 
-    # שליפת הקופונים לפי קטגוריות
-    active_coupons = Coupon.query.filter(
+    # קופונים חד-פעמיים פעילים
+    active_one_time_coupons = Coupon.query.filter(
         Coupon.status == 'פעיל',
         Coupon.user_id == current_user.id,
         Coupon.is_for_sale == False,
-        ~Coupon.is_one_time  # קופונים שאינם חד פעמיים
+        Coupon.is_one_time == True
+    ).all()
+
+    # קופונים מנוצלים (שאינם פעילים)
+    used_coupons = Coupon.query.filter(
+        Coupon.status != 'פעיל',
+        Coupon.user_id == current_user.id,
+        Coupon.is_for_sale == False,
+        ~Coupon.is_one_time
+    ).all()
+
+    # קופונים למכירה
+    coupons_for_sale = Coupon.query.filter(
+        Coupon.user_id == current_user.id,
+        Coupon.is_for_sale == True,
+        ~Coupon.is_one_time
+    ).all()
+
+    # קופונים פעילים (לא-חד-פעמיים)
+    active_coupons = Coupon.query.filter(
+        Coupon.user_id == current_user.id,
+        Coupon.status == 'פעיל',
+        Coupon.is_for_sale == False,
+        ~Coupon.is_one_time
     ).order_by(Coupon.date_added.desc()).all()
 
-    # שליפת כל החברות ויצירת מילון מיפוי
+    # --------------------------------------------------------------------------------
+    # 3. עדכון סטטוס (לכל הקטגוריות) ואז commit
+    # --------------------------------------------------------------------------------
+    all_to_update = all_non_one_time_coupons + active_one_time_coupons + used_coupons + coupons_for_sale
+    for coupon in all_to_update:
+        update_coupon_status(coupon)
+    db.session.commit()
+
+    # --------------------------------------------------------------------------------
+    # 4. בדיקת "האם יש קופונים שפג תוקפם ב-7 הימים הקרובים" + הצגת באנר פעם ביום
+    # --------------------------------------------------------------------------------
+
+    # בדיקה אם המשתמש דחה (dismiss) את ההתרעה היום
+    dismissed_today = (session.get('dismissed_expiring_alert_date') == str(date.today()))
+
+    # מציאת קופונים שפג תוקפם בשבוע הקרוב
+    one_week_from_now = date.today() + timedelta(days=7)
+    expiring_coupons = Coupon.query.filter(
+        Coupon.user_id == current_user.id,
+        Coupon.status == 'פעיל',
+        Coupon.is_for_sale == False,
+        Coupon.expiration.isnot(None)  # לוודא שהשדה אינו NULL
+    ).filter(
+        cast(Coupon.expiration, Date) >= date.today(),
+        cast(Coupon.expiration, Date) <= date.today() + timedelta(days=7)
+    ).all()
+
+    # בדיקה האם המשתמש דחה (dismiss) את ההתרעה היום
+    dismissed_today = (
+        current_user.dismissed_expiring_alert_at is not None
+        and current_user.dismissed_expiring_alert_at == date.today()
+    )
+
+    # מציאת קופונים שפג תוקפם בשבוע הקרוב
+    one_week_from_now = date.today() + timedelta(days=7)
+    expiring_coupons = Coupon.query.filter(
+        Coupon.user_id == current_user.id,
+        Coupon.status == 'פעיל',
+        Coupon.is_for_sale == False,
+        Coupon.expiration.isnot(None)
+    ).filter(
+        cast(Coupon.expiration, Date) >= date.today(),
+        cast(Coupon.expiration, Date) <= one_week_from_now
+    ).all()
+
+    # מציגים התראה רק אם יש קופונים רלוונטיים והמשתמש לא דחה את ההתראה היום
+    show_expiring_alert = len(expiring_coupons) > 0 and not dismissed_today
+
+
+    # --------------------------------------------------------------------------------
+    # 5. שליפת כל החברות (למפת לוגו, אם רלוונטי)
+    # --------------------------------------------------------------------------------
     companies = Company.query.all()
     company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
 
-    # שליפת כל הקופונים שאינם חד-פעמיים (כל הסטטוסים)
-    all_non_one_time_coupons_all_status = Coupon.query.filter(
-        Coupon.user_id == current_user.id,
-        Coupon.exclude_saving != True  # סינון קופונים מסומנים כ-excluded
-    ).all()
-
-    # חישוב סך ההפרשים בין value ל-cost רק אם value גדול מ-cost (חיסכון חיובי)
-    total_savings_all = sum(
-        (coupon.value - coupon.cost) for coupon in all_non_one_time_coupons_all_status if coupon.value > coupon.cost
-    )
-
-    # סך כל הערך של הקופונים הלא חד-פעמיים
-    total_coupons_value_all = sum(coupon.value for coupon in all_non_one_time_coupons_all_status)
-
-    # חישוב אחוז החיסכון
-    if total_coupons_value_all > 0:
-        percentage_savings_all = (total_savings_all / total_coupons_value_all) * 100
-    else:
-        percentage_savings_all = 0
+    # --------------------------------------------------------------------------------
+    # 6. החזרת ה-Template 'index.html'
+    # --------------------------------------------------------------------------------
+    
+    # המרה של expiration מ-String ל-Date (אם הוא לא None)
+    for coupon in expiring_coupons:
+        if isinstance(coupon.expiration, str):  # אם expiration הוא מחרוזת
+            coupon.expiration = datetime.strptime(coupon.expiration, "%Y-%m-%d").date()
 
     return render_template(
         'index.html',
-        greeting=greeting, 
+        form=form,
+        greeting=greeting,
         total_value=total_remaining,
-        total_savings=total_savings_all,
-        total_coupons_value=total_coupons_value_all,
-        percentage_savings=percentage_savings_all,
+        total_savings=total_savings,
+        total_coupons_value=total_coupons_value,
+        percentage_savings=percentage_savings,
+
         active_coupons=active_coupons,
         active_one_time_coupons=active_one_time_coupons,
         used_coupons=used_coupons,
         coupons_for_sale=coupons_for_sale,
-        form=form,
-        company_logo_mapping=company_logo_mapping
+
+        company_logo_mapping=company_logo_mapping,
+
+        # משתנים רלוונטיים להתראות
+        show_expiring_alert=show_expiring_alert,
+        expiring_coupons=expiring_coupons,
+
+        # ✅ הוספת current_date ו-timedelta לתבנית
+        current_date=date.today(),
+        timedelta=timedelta
     )
+
+
+@profile_bp.route('/dismiss_expiring_alert', methods=['GET'])
+@login_required
+def dismiss_expiring_alert():
+    """
+    המשתמש לחץ על X בסרגל ההתראות => עדכון התאריך האחרון שבו דחה את ההתראה בדאטהבייס.
+    """
+    current_user.dismissed_expiring_alert_at = date.today()
+    db.session.commit()
+    
+    return redirect(url_for('profile.index'))
 
 @profile_bp.route('/notifications')
 @login_required

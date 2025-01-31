@@ -304,8 +304,36 @@ def configure_scheduler():
             replace_existing=True
         )
 
+        # איפוס ההתראות הדחויות בחצות
+        scheduler.add_job(
+            func=reset_dismissed_alerts,
+            trigger=CronTrigger(hour=0, minute=0),
+            id='reset_dismissed_alerts',
+            name='Reset dismissed expiring alerts daily at midnight',
+            replace_existing=True
+        )
+
         scheduler.start()
         logging.info(f"Scheduler started successfully with jobs: {scheduler.get_jobs()}")
 
     else:
         logging.info("Scheduler is already running, skipping re-initialization.")
+
+from app.extensions import db
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import logging
+
+def reset_dismissed_alerts():
+    """
+    איפוס העמודה dismissed_expiring_alert_at לכל המשתמשים פעם ביום.
+    כך שההתראה תופיע שוב למחרת אם יש קופונים שפג תוקפם.
+    """
+    try:
+        db.session.execute("UPDATE users SET dismissed_expiring_alert_at = NULL")
+        db.session.commit()
+        logging.info("reset_dismissed_alerts - All dismissed_expiring_alert_at fields reset to NULL.")
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"reset_dismissed_alerts - Error resetting dismissed alerts: {e}")
+
