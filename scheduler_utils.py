@@ -129,3 +129,37 @@ def save_status(was_sent):
     except Exception as e:
         db.session.rollback()
         logging.error(f"Error updating email status: {e}")
+
+import datetime
+from sqlalchemy.sql import text
+from app.extensions import db
+import logging
+
+def load_process_status(process):
+    """
+    טוען מהטבלה את הסטטוס של תהליך מסוים עבור התאריך הנוכחי.
+    מחזיר True אם תהליך זה כבר בוצע היום, אחרת False.
+    """
+    today = datetime.date.today()
+    query = text("SELECT was_sent FROM daily_email_status WHERE date = :today AND process = :process")
+    result = db.session.execute(query, {"today": today, "process": process}).fetchone()
+    return result[0] if result else False
+
+def save_process_status(process, was_sent):
+    """
+    שומר בטבלה את סטטוס ביצוע התהליך (process) עבור התאריך הנוכחי.
+    משתמש ב-UPsert (INSERT ... ON CONFLICT) כדי לעדכן או להוסיף את הרשומה.
+    """
+    today = datetime.date.today()
+    query = text("""
+        INSERT INTO daily_email_status (date, process, was_sent)
+        VALUES (:today, :process, :was_sent)
+        ON CONFLICT (date, process) DO UPDATE SET was_sent = EXCLUDED.was_sent;
+    """)
+    try:
+        db.session.execute(query, {"today": today, "process": process, "was_sent": was_sent})
+        db.session.commit()
+        logging.info("Updated status for process '%s' for date %s: %s", process, today, was_sent)
+    except Exception as e:
+        db.session.rollback()
+        logging.error("Error updating status for process '%s': %s", process, e)
