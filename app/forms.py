@@ -718,6 +718,7 @@ class ManageCouponTagForm(FlaskForm):
     coupon_id = HiddenField('Coupon ID', validators=[DataRequired()])
     tag_id = SelectField('תגית', coerce=int, validators=[DataRequired()])
     submit = SubmitField('עדכן תגית')
+    auto_download_details = SelectField("הורדה אוטומטית", choices=[], coerce=str)  # שדה חדש
 
 # app/forms.py
 

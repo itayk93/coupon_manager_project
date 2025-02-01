@@ -166,29 +166,54 @@ def index():
     # 1. חישוב סך הקופונים והחיסכון (החלק המקורי שלך)
     # --------------------------------------------------------------------------------
 
-    # שליפת קופונים לא-חד-פעמיים פעילים, לא למכירה, לא excluded
+    # 1. חישוב סך הקופונים והחיסכון (ללא מסנן סטטוס)
     all_non_one_time_coupons = Coupon.query.filter(
         Coupon.user_id == current_user.id,
-        Coupon.status == 'פעיל',
         Coupon.is_for_sale == False,
         ~Coupon.is_one_time,
         Coupon.exclude_saving != True
     ).all()
 
-    # חישוב סך הקופונים (remaining)
-    total_remaining = sum(c.value - c.used_value for c in all_non_one_time_coupons)
-
-    # חישוב סך החיסכון (יחסי לשימוש בפועל)
+    total_remaining = sum(coupon.value - coupon.used_value for coupon in all_non_one_time_coupons)
     total_savings = sum(
-        c.used_value * (c.value - c.cost) / c.value
-        for c in all_non_one_time_coupons if c.cost > 0 and c.value > 0
+        (coupon.value - coupon.cost) for coupon in all_non_one_time_coupons if coupon.value > coupon.cost
     )
-
-    # חישוב סך ערך הקופונים
-    total_coupons_value = sum(c.value for c in all_non_one_time_coupons)
-
-    # חישוב אחוז החיסכון
+    total_coupons_value = sum(coupon.value for coupon in all_non_one_time_coupons)
     percentage_savings = (total_savings / total_coupons_value) * 100 if total_coupons_value > 0 else 0
+
+    # 2. חלוקת קופונים לקטגוריות (הקטגוריות נשארות כפי שהן)
+    active_one_time_coupons = Coupon.query.filter(
+        Coupon.status == 'פעיל',
+        Coupon.user_id == current_user.id,
+        Coupon.is_for_sale == False,
+        Coupon.is_one_time == True
+    ).all()
+
+    used_coupons = Coupon.query.filter(
+        Coupon.status != 'פעיל',
+        Coupon.user_id == current_user.id,
+        Coupon.is_for_sale == False,
+        ~Coupon.is_one_time
+    ).all()
+
+    coupons_for_sale = Coupon.query.filter(
+        Coupon.user_id == current_user.id,
+        Coupon.is_for_sale == True,
+        ~Coupon.is_one_time
+    ).all()
+
+    active_coupons = Coupon.query.filter(
+        Coupon.user_id == current_user.id,
+        Coupon.status == 'פעיל',
+        Coupon.is_for_sale == False,
+        ~Coupon.is_one_time
+    ).order_by(Coupon.date_added.desc()).all()
+
+    # 3. עדכון סטטוס – שימוש במשתנה שהגדרנו למעלה
+    all_to_update = all_non_one_time_coupons + active_one_time_coupons + used_coupons + coupons_for_sale
+    for coupon in all_to_update:
+        update_coupon_status(coupon)
+    db.session.commit()
 
     # --------------------------------------------------------------------------------
     # 2. שליפה וחלוקה לקטגוריות (active, active_one_time, used, for_sale)

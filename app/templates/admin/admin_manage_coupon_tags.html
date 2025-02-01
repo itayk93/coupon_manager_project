@@ -1,73 +1,75 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="admin-tags">
-    <h2 class="page-title">ניהול תגיות לקופונים (Admin)</h2>
-
-    <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'tags-list')">רשימת תגיות</button>
+<div class="container my-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0">ניהול קופונים - עדכון תגיות והורדה אוטומטית</h4>
     </div>
+    <div class="card-body">
+      <!-- הודעות מערכת -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
 
-    <div id="tags-list" class="tab-content active">
-        <h3 class="table-title">רשימת קופונים עם תגיות</h3>
-        <div class="table-responsive">
-            <table class="table coupon-tags-table">
-                <thead>
-                    <tr>
-                        <th>ID קופון</th>
-                        <th>חברה</th>
-                        <th>תגית נוכחית</th>
-                        <th>פעולות</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for coupon in coupons %}
-                    <tr class="{% if not coupon.tag_id %}no-tag{% endif %}">
-                        <td>{{ coupon.id }}</td>
-                        <td>{{ coupon.company }}</td>
-                        <td class="tag-value">{{ coupon.tag_name if coupon.tag_name else 'ללא תגית' }}</td>
-                        <td>
-                            <form method="POST" class="update-tag-form">
-                                {{ forms[coupon.id].hidden_tag() }}
-                                {{ forms[coupon.id].coupon_id }}
-                                <div class="form-group">
-                                    {{ forms[coupon.id].tag_id(class="form-select") }}
-                                </div>
-                                <div class="form-actions">
-                                    {{ forms[coupon.id].submit(class="action-button small-button") }}
-                                </div>
-                            </form>
-                        </td>
-                    </tr>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>מספר קופון</th>
+              <th>חברה</th>
+              <th>תגית נוכחית</th>
+              <th>הורדה אוטומטית</th>
+              <th>עדכון תגית</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for coupon in coupons %}
+            <tr>
+              <td>{{ coupon.id }}</td>
+              <td>{{ coupon.company }}</td>
+              <td>{{ coupon.tag_name if coupon.tag_name else "לא הוגדרה" }}</td>
+              <td>
+                <!-- טופס לעדכון הורדה אוטומטית -->
+                <form method="POST" class="d-flex align-items-center">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
+                  <select class="form-select form-select-sm me-2" name="auto_download_details">
+                    <option value="">בחר ערך</option>
+                    <option value="Max" {% if coupon.auto_download_details == "Max" %}selected{% endif %}>Max</option>
+                    <option value="Multipass" {% if coupon.auto_download_details == "Multipass" %}selected{% endif %}>Multipass</option>
+                  </select>
+                  <button type="submit" name="update_auto" class="btn btn-sm btn-secondary">עדכן הורדה</button>
+                </form>
+              </td>
+              <td>
+                <!-- טופס לעדכון תגית -->
+                <form method="POST" class="d-flex align-items-center">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
+                  <select class="form-select form-select-sm me-2" name="tag_id" required>
+                    {% for tag in tags %}
+                      <option value="{{ tag.id }}" {% if coupon.tag_id == tag.id %}selected{% endif %}>
+                        {{ tag.name }}
+                      </option>
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</section>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    function openTab(evt, tabName) {
-        var tabContents = document.getElementsByClassName("tab-content");
-        for (var i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-        var tabButtons = document.getElementsByClassName("tab-button");
-        for (var i = 0; i < tabButtons.length; i++) {
-            tabButtons[i].classList.remove("active");
-        }
-        document.getElementById(tabName).classList.add("active");
-        evt.currentTarget.classList.add("active");
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        var defaultTab = document.querySelector(".tab-button.active");
-        if (defaultTab) {
-            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
-            document.getElementById(tabName).classList.add("active");
-        }
-    });
-</script>
+                  </select>
+                  <button type="submit" name="update_tag" class="btn btn-sm btn-primary">עדכן תגית</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div><!-- /.table-responsive -->
+    </div><!-- /.card-body -->
+  </div><!-- /.card -->
+</div><!-- /.container -->
 {% endblock %}

@@ -1705,8 +1705,8 @@ def coupon_detail(id):
 
     log_user_activity("view_coupon", coupon.id)
 
-
-    sql = text("""
+    # שומר את זה לגיבוי - ב01/02/2025 הוספתי תיקון שמטרתו למנוע מצב שיש עדכון ידני ועדכון אוטומטי שחופפים אחד את השני
+    sql_old = text("""
 WITH CouponFilter AS (
     SELECT DISTINCT coupon_id
     FROM coupon_transaction
@@ -1795,6 +1795,98 @@ ORDER BY
     CASE WHEN timestamp IS NULL THEN 1 ELSE 0 END,
     timestamp ASC;
 """)
+
+    sql = text("""
+    WITH CouponFilter AS (
+        SELECT DISTINCT coupon_id
+        FROM coupon_transaction
+        WHERE source = 'Multipass'
+    ),
+    CombinedData AS (
+        SELECT
+            'coupon_usage' AS source_table,
+            id,
+            coupon_id,
+            -used_amount AS transaction_amount,
+            timestamp,
+            action,
+            details,
+            NULL AS location,
+            0 AS recharge_amount,
+            NULL AS reference_number,
+            NULL AS source
+        FROM
+            coupon_usage
+        WHERE
+            details NOT LIKE '%Multipass%'
+
+        UNION ALL
+
+        SELECT
+            'coupon_transaction' AS source_table,
+            id,
+            coupon_id,
+            -usage_amount + recharge_amount AS transaction_amount,
+            transaction_date AS timestamp,
+            source AS action,
+            CASE
+                WHEN location IS NOT NULL AND location != '' THEN location
+                ELSE NULL
+            END AS details,
+            location,
+            recharge_amount,
+            reference_number,
+            source
+        FROM
+            coupon_transaction
+    ),
+    SummedData AS (
+        SELECT
+            source_table,
+            id,
+            coupon_id,
+            timestamp,
+            transaction_amount,
+            details,
+            action
+        FROM CombinedData
+        WHERE coupon_id = :coupon_id
+        AND (
+            coupon_id NOT IN (SELECT coupon_id FROM CouponFilter)
+            OR (source_table = 'coupon_transaction' AND action = 'Multipass')
+        )
+
+        UNION ALL
+
+        SELECT
+            'sum_row' AS source_table,
+            NULL AS id,
+            coupon_id,
+            NULL AS timestamp,
+            SUM(transaction_amount) AS transaction_amount,
+            'יתרה בקופון' AS details,
+            NULL AS action
+        FROM CombinedData
+        WHERE coupon_id = :coupon_id
+        AND (
+            coupon_id NOT IN (SELECT coupon_id FROM CouponFilter)
+            OR (source_table = 'coupon_transaction' AND action = 'Multipass')
+        )
+        GROUP BY coupon_id
+    )
+    SELECT
+        source_table,
+        id,
+        coupon_id,
+        timestamp,
+        transaction_amount,
+        details,
+        action
+    FROM SummedData
+    ORDER BY
+        CASE WHEN timestamp IS NULL THEN 1 ELSE 0 END,
+        timestamp ASC;
+    """)
 
     result = db.session.execute(sql, {'coupon_id': coupon.id})
     consolidated_rows = result.fetchall()
