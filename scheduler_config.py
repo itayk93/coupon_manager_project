@@ -370,13 +370,14 @@ WHERE c.expiration IS NOT NULL
             db.session.execute(update_query, {"coupon_ids": coupon_ids})
             db.session.commit()
 
+import logging
+from app.scheduler_utils import load_status, save_status
 
 def daily_email_flow():
     """
     פונקציה שתשלח את המייל היומי רק אם עוד לא נשלח היום.
     """
-    global WAS_SENT_TODAY
-    if WAS_SENT_TODAY:
+    if load_status():  # ✅ במקום WAS_SENT_TODAY
         logging.info("daily_email_flow - Email already sent today. Skipping.")
         return
 
@@ -386,10 +387,10 @@ def daily_email_flow():
         try:
             from app.scheduler_utils import update_company_counts_and_send_email
             update_company_counts_and_send_email(app)
-            WAS_SENT_TODAY = True
-            logging.info("daily_email_flow - Email sent successfully, marked WAS_SENT_TODAY = True")
+            save_status(True)  # ✅ מעדכן את מסד הנתונים שהמייל נשלח
+            logging.info("daily_email_flow - Email sent successfully, status saved in DB.")
         except Exception as e:
-            logging.error(f"Error in daily_email_flow: {e}")
+            logging.error(f"❌ Error in daily_email_flow: {e}")
 
 import logging
 import datetime
@@ -445,14 +446,17 @@ def configure_scheduler():
 
         # בדיקה: אם השעה היא אחרי 8 והמייל היומי עדיין לא נשלח, להפעיל את daily_email_flow מיד.
         now = datetime.datetime.now()
-        if now.hour >= 8 and not load_status():
-            logging.info("השעה היא אחרי 8 והמייל היומי עדיין לא נשלח - מפעיל את daily_email_flow מיד.")
+        status = load_status()  # קבלת הסטטוס ממסד הנתונים
+
+        logging.info(f"🛠️  [DEBUG] Time now: {now.hour}:{now.minute} - Email sent status: {status}")
+
+        # בדיקה אם השעה היא בדיוק 8:00 והמייל עדיין לא נשלח
+        if now.hour == 8 and now.minute == 0 and not status:
+            logging.info("🚀 השעה בדיוק 8:00 והמייל לא נשלח עדיין - מפעיל עכשיו את daily_email_flow!")
             daily_email_flow()
-            save_status(True)  # ✅ מעדכן שהמייל נשלח
+            save_status(True)  # מעדכן שהמייל נשלח
         else:
-            logging.info("המייל היומי כבר נשלח היום או שהשעה מוקדמת מדי.")
-    else:
-        logging.info("Scheduler is already running, skipping re-initialization.")
+            logging.info("✅ המייל כבר נשלח היום או שהשעה לא בדיוק 8:00.")
 
 from app.extensions import db
 from apscheduler.schedulers.background import BackgroundScheduler
