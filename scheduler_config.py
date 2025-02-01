@@ -371,7 +371,7 @@ WHERE c.expiration IS NOT NULL
             db.session.commit()
 
 import logging
-from app.scheduler_utils import load_status, save_status
+from scheduler_utils import load_status, save_status
 
 def daily_email_flow():
     """
@@ -385,7 +385,7 @@ def daily_email_flow():
     app = create_app()
     with app.app_context():
         try:
-            from app.scheduler_utils import update_company_counts_and_send_email
+            from scheduler_utils import update_company_counts_and_send_email
             update_company_counts_and_send_email(app)
             save_status(True)  # ✅ מעדכן את מסד הנתונים שהמייל נשלח
             logging.info("daily_email_flow - Email sent successfully, status saved in DB.")
