@@ -180,6 +180,7 @@ def reset_dismissed_alerts():
 
 from sqlalchemy.sql import text
 
+print("Sdfsd")
 def load_process_status(process):
     """
     טוען את הסטטוס של תהליך מסוים (למשל, 'reset', 'expiration', 'daily_email', 'dismissed_reset')
