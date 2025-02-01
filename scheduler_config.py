@@ -391,37 +391,35 @@ def daily_email_flow():
         except Exception as e:
             logging.error(f"Error in daily_email_flow: {e}")
 
+import logging
+import datetime
+from apscheduler.triggers.cron import CronTrigger
+from scheduler_utils import load_status, save_status  # ✅ מייבאים את הפונקציות מה- utils
 
 def configure_scheduler():
     """
-    מגדיר את עבודות ה-scheduler כך שיוכלו לפעול באפליקציה.
-    מונע כפילויות על ידי בדיקה אם ה-scheduler כבר פועל.
+    מגדיר את עבודות ה-scheduler כך שיוכלו לפעול באפליקציה,
+    תוך בדיקה האם יש להריץ את daily_email_flow מיד אם השעה כבר אחרי 8
+    והמייל היומי עדיין לא נשלח.
     """
     global scheduler
 
     if not scheduler.running:  # מונע הפעלה כפולה
         logging.info("Starting scheduler and adding jobs...")
 
-        # איפוס הדגל כל חצות
+        # איפוס הדגל כל חצות (עדכון במסד הנתונים)
         scheduler.add_job(
-            func=reset_was_sent_today,
+            func=lambda: save_status(False),
             trigger=CronTrigger(hour=0, minute=0),
             id='reset_was_sent_today',
             name='Reset the daily email flag at midnight',
             replace_existing=True
         )
 
-        # שליחת התראות על קופונים שפג תוקפם
-        # 30 יום לפני תפוגה
+        # שליחת התראות על קופונים שפג תוקפם (30, 7, 1 ימים לפני וביום התפוגה)
         scheduler.add_job(send_expiration_warnings, trigger=CronTrigger(hour=8, minute=0), id='exp_30_days')
-
-        # 7 ימים לפני תפוגה
         scheduler.add_job(send_expiration_warnings, trigger=CronTrigger(hour=8, minute=0), id='exp_7_days')
-
-        # יום לפני תפוגה
         scheduler.add_job(send_expiration_warnings, trigger=CronTrigger(hour=8, minute=0), id='exp_1_day')
-
-        # ביום התפוגה עצמו
         scheduler.add_job(send_expiration_warnings, trigger=CronTrigger(hour=8, minute=0), id='exp_today')
 
         # בדיקת ושליחת המייל היומי כל שעתיים מ-10:00 עד 22:00
@@ -445,6 +443,14 @@ def configure_scheduler():
         scheduler.start()
         logging.info(f"Scheduler started successfully with jobs: {scheduler.get_jobs()}")
 
+        # בדיקה: אם השעה היא אחרי 8 והמייל היומי עדיין לא נשלח, להפעיל את daily_email_flow מיד.
+        now = datetime.datetime.now()
+        if now.hour >= 8 and not load_status():
+            logging.info("השעה היא אחרי 8 והמייל היומי עדיין לא נשלח - מפעיל את daily_email_flow מיד.")
+            daily_email_flow()
+            save_status(True)  # ✅ מעדכן שהמייל נשלח
+        else:
+            logging.info("המייל היומי כבר נשלח היום או שהשעה מוקדמת מדי.")
     else:
         logging.info("Scheduler is already running, skipping re-initialization.")
 

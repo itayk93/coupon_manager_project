@@ -91,3 +91,41 @@ AND is_for_sale = FALSE;  -- לא למכירה
 """)
     result = db.session.execute(query)
     return result.fetchall()  # או עיבוד אחר
+
+
+import datetime
+import logging
+from sqlalchemy.sql import text
+from app.extensions import db
+
+
+def load_status():
+    """
+    טוען מהטבלה אם המייל נשלח עבור התאריך הנוכחי.
+    מחזיר True אם נשלח, אחרת False.
+    """
+    today = datetime.date.today()
+    query = text("SELECT was_sent FROM daily_email_status WHERE date = :today")
+    result = db.session.execute(query, {"today": today}).fetchone()
+
+    return result[0] if result else False  # אם אין רשומה להיום, נחזיר False
+
+
+def save_status(was_sent):
+    """
+    שומר בטבלה את מצב השליחה עבור התאריך הנוכחי.
+    משתמש ב-UPSERT (INSERT ... ON CONFLICT) כך שהרשומה תתעדכן אם היא קיימת.
+    """
+    today = datetime.date.today()
+    query = text("""
+        INSERT INTO daily_email_status (date, was_sent)
+        VALUES (:today, :was_sent)
+        ON CONFLICT (date) DO UPDATE SET was_sent = EXCLUDED.was_sent;
+    """)
+    try:
+        db.session.execute(query, {"today": today, "was_sent": was_sent})
+        db.session.commit()
+        logging.info(f"Updated email status for {today}: {was_sent}")
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error updating email status: {e}")
