@@ -292,6 +292,7 @@ def configure_scheduler():
             else:
                 logging.info("Process 'daily_email' already executed today or time is before 8:00.")
 
+            print("Sdfsdf")
             # תהליך D: איפוס התראות דחויות (dismissed alerts reset)
             if not load_process_status('dismissed_reset'):
                 logging.info("Process 'dismissed_reset' not executed today. Executing dismissed alerts reset now...")
