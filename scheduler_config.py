@@ -227,7 +227,7 @@ def configure_scheduler():
         # --- תהליך A: איפוס סטטוס (reset) ---
         scheduler.add_job(
             func=lambda: save_process_status('reset', False),
-            trigger=CronTrigger(hour=0, minute=0),
+            trigger=CronTrigger(hour=22, minute=0),
             id='reset_status',
             name='Reset daily status at midnight',
             replace_existing=True
@@ -236,7 +236,7 @@ def configure_scheduler():
         # --- תהליך B: שליחת התראות על קופונים שפג תוקפם (expiration warnings) ---
         scheduler.add_job(
             func=send_expiration_warnings,
-            trigger=CronTrigger(hour=8, minute=0),
+            trigger=CronTrigger(hour=6, minute=0),
             id='expiration_warnings',
             name='Send expiration warnings at 8:00',
             replace_existing=True
@@ -245,7 +245,7 @@ def configure_scheduler():
         # --- תהליך C: שליחת המייל היומי (daily email) ---
         scheduler.add_job(
             func=daily_email_flow,
-            trigger=CronTrigger(hour=8, minute=0),
+            trigger=CronTrigger(hour=6, minute=0),
             id='daily_email',
             name='Send daily email at 8:00',
             replace_existing=True
@@ -254,7 +254,7 @@ def configure_scheduler():
         # --- תהליך D: איפוס התראות דחויות (dismissed alerts reset) ---
         scheduler.add_job(
             func=reset_dismissed_alerts,
-            trigger=CronTrigger(hour=0, minute=0),
+            trigger=CronTrigger(hour=22, minute=0),
             id='dismissed_reset',
             name='Reset dismissed alerts at midnight',
             replace_existing=True
@@ -277,7 +277,7 @@ def configure_scheduler():
                 logging.info("Process 'reset' already executed today.")
 
             # תהליך B: שליחת התראות (expiration warnings)
-            if now.hour >= 8 and not load_process_status('expiration'):
+            if now.hour >= 6 and not load_process_status('expiration'):
                 logging.info("Process 'expiration' not executed today and time is after 8:00. Executing expiration warnings now...")
                 send_expiration_warnings()
                 save_process_status('expiration', True)
@@ -285,7 +285,7 @@ def configure_scheduler():
                 logging.info("Process 'expiration' already executed today or time is before 8:00.")
 
             # תהליך C: שליחת המייל היומי (daily email)
-            if now.hour >= 8 and not load_process_status('daily_email'):
+            if now.hour >= 6 and not load_process_status('daily_email'):
                 logging.info("Process 'daily_email' not executed today and time is after 8:00. Executing daily email now...")
                 daily_email_flow()
                 save_process_status('daily_email', True)
