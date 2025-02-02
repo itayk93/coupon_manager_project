@@ -272,17 +272,17 @@ def save_status(was_sent):
     """
     today = datetime.date.today()
     query = text("""
-        INSERT INTO daily_email_status (date, was_sent)
-        VALUES (:today, :was_sent)
-        ON CONFLICT (date) DO UPDATE SET was_sent = EXCLUDED.was_sent;
+        INSERT INTO daily_email_status (date, process, was_sent)
+        VALUES (:today, 'default', :was_sent)
+        ON CONFLICT (date, process) DO UPDATE SET was_sent = EXCLUDED.was_sent;
     """)
     try:
         db.session.execute(query, {"today": today, "was_sent": was_sent})
         db.session.commit()
-        logging.info(f"Updated email status for {today}: {was_sent}")
+        logging.info("Updated email status for %s: %s", today, was_sent)
     except Exception as e:
         db.session.rollback()
-        logging.error(f"Error updating email status: {e}")
+        logging.error("Error updating email status: %s", e)
 
 import datetime
 from sqlalchemy.sql import text

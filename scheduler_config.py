@@ -3,8 +3,9 @@ import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from app.extensions import db
-from app.models import Coupon
+from app.models import Coupon, Company   # <-- הוספנו את Company
 from app.helpers import send_email
+from flask import current_app
 
 # משתנה גלובלי לסימון אם כבר שלחנו את המייל היומי (לצורך פונקציות ישנות – לא בשימוש כשמשתמשים בטבלת הסטטוס)
 WAS_SENT_TODAY = False
@@ -103,16 +104,37 @@ def send_expiration_warnings():
                 'first_name': coupon.first_name,
                 'coupons': []
             })
+            import os
+            import base64
+
+            # נניח שיש לנו את המודל Company עם image_path
+            company_obj = Company.query.filter_by(name=coupon.company).first()
+            logo_filename = company_obj.image_path if company_obj and company_obj.image_path else "default_logo.png"
+            # נניח שהתמונות נמצאות בתיקייה static/logos
+            logo_filepath = os.path.join(current_app.root_path, "static", "logos", "images", logo_filename)
+
+            # נסה לקרוא את הקובץ ולהמיר ל-Base64
+            try:
+                with open(logo_filepath, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+            except Exception as e:
+                # במקרה של שגיאה, נשתמש במחרוזת ריקה או בלוגו ברירת מחדל כלשהו
+                logging.error(f"Error reading logo file {logo_filepath}: {e}")
+                encoded_string = ""
+
             users[user_id]['coupons'].append({
                 'coupon_id': coupon.coupon_id,
                 'company': coupon.company,
+                # נעביר את מחרוזת ה-Base64
+                'company_logo_base64': encoded_string,
                 'code': coupon.code,
                 'remaining_value': coupon.remaining_value,
                 'expiration': coupon.expiration,
                 'expiration_formatted': expiration_formatted,
                 'days_left': days_left,
-                'coupon_detail_link': f"https://yourwebsite.com/coupon_detail/{coupon.coupon_id}"
+                'coupon_detail_link': f"https://coupon-manager-project.onrender.com/coupon_detail/{coupon.coupon_id}"
             })
+
         for user in users.values():
             email_content = render_template(
                 "emails/coupon_expiration_warning.html",
@@ -292,7 +314,6 @@ def configure_scheduler():
             else:
                 logging.info("Process 'daily_email' already executed today or time is before 8:00.")
 
-            print("Sdfsdf")
             # תהליך D: איפוס התראות דחויות (dismissed alerts reset)
             if not load_process_status('dismissed_reset'):
                 logging.info("Process 'dismissed_reset' not executed today. Executing dismissed alerts reset now...")

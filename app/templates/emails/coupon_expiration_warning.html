@@ -137,7 +137,13 @@
                 {% for coupon in coupons %}
                 <div class="coupon-item">
                     <!-- תמונת חברה (כאן ניתן להוסיף src מלא מאוחר יותר) -->
-                    <img src="" alt="{{ coupon.company }} Logo" class="company-logo" />
+                    <!-- תמונת חברה מוטמעת - נשתמש בנתונים Base64 -->
+                    {% if coupon.company_logo_base64 %}
+                      <img src="data:image/png;base64,{{ coupon.company_logo_base64 }}" alt="{{ coupon.company }} Logo" class="company-logo" />
+                    {% else %}
+                      <!-- אפשר להציג תמונת ברירת מחדל או טקסט במקרה שאין תמונה -->
+                      <p>לוגו לא זמין</p>
+                    {% endif %}
 
                     <!-- הטקסט הראשי: "היי! התוקף של הקופון שלך..." -->
                     <p class="coupon-message">
