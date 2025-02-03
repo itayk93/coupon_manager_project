@@ -300,8 +300,7 @@ def plot_usage_vs_discount(df: pd.DataFrame):
         print("⚠️ העמודה 'value' לא נמצאה בנתונים. דילוג על גרף זה.")
         return None
     df = df.copy()
-    df["usage_percentage"] = df.apply(lambda row: (row["used_value"] / row["value"] * 100)
-    if row["value"] != 0 else 0, axis=1)
+    df["usage_percentage"] = df.apply(lambda row: (row["used_value"] / row["value"] * 100) if row["value"] != 0 else 0, axis=1)
     fig = px.scatter(
         df,
         x="discount_percentage",

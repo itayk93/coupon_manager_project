@@ -231,3 +231,57 @@ def redirect_after_deletion():
     else:
         # עמוד הבית / פרופיל / כל דבר אחר
         return redirect(url_for('profile.index'))
+
+@admin_users_bp.route('/resend_confirmation_email', methods=['POST'])
+@login_required
+def resend_confirmation_email():
+    """
+    שולח מייל אישור מחדש למשתמש שאינו מאושר (אדמין בלבד).
+    """
+    if not current_user.is_admin:
+        flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
+        return redirect(url_for('profile.index'))
+
+    user_id = request.form.get('user_id', type=int)
+    user = User.query.get(user_id)
+    if not user:
+        flash("משתמש לא נמצא.", "error")
+        return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
+
+    if user.is_confirmed:
+        flash("המשתמש כבר אישר את חשבונו.", "info")
+        return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
+
+    # ייבוא הפונקציה ליצירת הטוקן (ודא שהפונקציה קיימת ב-app/helpers.py)
+    from app.helpers import generate_confirmation_token
+
+    # יצירת טוקן אישור
+    token = generate_confirmation_token(user.email)
+    confirm_url = url_for('auth.confirm_email', token=token, _external=True)
+    
+    # רינדור התבנית של מייל אישור (בדומה לשליחת המייל בהרשמה)
+    html = render_template('emails/account_confirmation.html',
+                           user=user, confirmation_link=confirm_url)
+
+    # פרטי השולח והנמען (עדכן במידת הצורך)
+    sender_email = 'CouponMasterIL2@gmail.com'
+    sender_name = 'Coupon Master'
+    recipient_email = user.email
+    recipient_name = user.first_name or 'משתמש יקר'
+    subject = 'אישור חשבון ב-Coupon Master'
+
+    try:
+        send_email(
+            sender_email=sender_email,
+            sender_name=sender_name,
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_content=html
+        )
+        flash(f'נשלח מייל אישור מחדש לכתובת {user.email}.', 'success')
+    except Exception as e:
+        current_app.logger.error(f"שגיאה בשליחת מייל אישור מחדש ל-{user.email}: {e}")
+        flash('אירעה שגיאה בשליחת המייל. אנא נסה שוב מאוחר יותר.', 'error')
+
+    return redirect(url_for('admin_bp.admin_users_bp.manage_users'))

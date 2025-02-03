@@ -825,7 +825,7 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
 
     # המרת הפלט ל-DataFrame
     coupon_df = pd.DataFrame([coupon_data])
-    coupon_df.to_excel("sdfsd.xlsx", index=False)
+
     # יצירת DataFrame נוסף עם פרטי העלות
     pricing_data = {
         "prompt_tokens": response['usage']['prompt_tokens'],

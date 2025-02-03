@@ -1999,7 +1999,7 @@ def confirm_delete_coupon(id):
     if form.validate_on_submit():
         if form.submit.data:
             try:
-                transactions = Transaction.query.filter_by(coupon_id=coupon.id).all()
+                transactions = Transaction.query.filter_by().all()
                 for transaction in transactions:
                     db.session.delete(transaction)
 

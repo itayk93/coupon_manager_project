@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
-{% block title %}Coupon Master{% endblock %}
+{% block title %}
+Coupon Master
+{% endblock %}
 
 {% block content %}
 <section class="hero">
@@ -9,13 +11,8 @@
     {% if show_expiring_alert %}
     <!-- התראה לקופונים שעומדים לפוג -->
     <div class="expiring-coupons-alert">
-
-        <!-- כפתור ה-X למעלה-משמאל -->
         <a class="close-expiring-alert" href="{{ url_for('profile.dismiss_expiring_alert') }}">×</a>
-
         <p><strong>שים לב!</strong> יש לך {{ expiring_coupons|length }} קופונים שעומדים לפוג תוקפם בשבוע הקרוב:</p>
-
-        <!-- רשימת הקופונים -->
         <ul class="expiring-coupons-list">
             {% for c in expiring_coupons %}
             <li>
@@ -23,26 +20,22 @@
                 {% set expiration_date = c.expiration.strftime('%d/%m/%Y') %}
                 {% set today_date = current_date.strftime('%d/%m/%Y') %}
                 {% set tomorrow_date = (current_date + timedelta(days=1)).strftime('%d/%m/%Y') %}
-                                
+                
                 {% if expiration_date == today_date %}
                     התוקף יפוג היום בלילה
                 {% elif expiration_date == tomorrow_date %}
                     התוקף יפוג מחר
                 {% else %}
                     התוקף יפוג ב-<strong>{{ expiration_date }}</strong>
-                {% endif %}   
-
-                <!-- הוספת span עם קלאס כדי לשלוט רק עליו -->
+                {% endif %}
                 <span class="coupon-button-wrapper">
                     <a class="view-coupon-button" href="{{ url_for('coupons.coupon_detail', id=c.id) }}">
                         צפה בקופון
                     </a>
                 </span>
             </li>
-            
             {% endfor %}
         </ul>
-        
     </div>
     {% endif %}
 
@@ -61,63 +54,67 @@
     </p>
 </section>
 
-<!-- עטיפת שתי הטפסים בקונטיינר אחד -->
-<div class="usage-forms-container">
-
-    <section class="usage-form-wrapper">
-        <form method="POST" action="{{ url_for('coupons.parse_usage_text') }}">
-            {{ usage_form.hidden_tag() }}
-            <div class="input-wrapper">
-                <label for="usage_explanation">השלמה אוטומטית של השימוש בקופונים</label>
-                <textarea id="usage_explanation"
-                          name="usage_explanation"
-                          rows="2"
-                          class="input-field_centered"
-                          placeholder="כאן ניתן לפרט באילו קופונים השתמשת כדי לעדכן באופן אוטומטי."></textarea>
+<!-- טופס "השלמה אוטומטית של השימוש בקופונים" (Usage) -->
+<section class="usage-form-wrapper">
+    <form method="POST" action="{{ url_for('coupons.parse_usage_text') }}">
+        {{ usage_form.hidden_tag() }}
+        <div class="input-wrapper">
+            <label for="usage_explanation">השלמה אוטומטית של השימוש בקופונים</label>
+            <textarea
+                class="input-field_centered"
+                id="usage_explanation"
+                name="usage_explanation"
+                rows="2"
+                placeholder="כאן ניתן להקליד במה השתמשת ובכמה..."
+            ></textarea>
+        </div>
+        <div class="button-with-explanation">
+            <input
+                class="submit-button"
+                id="submit_usage_explanation"
+                name="submit_usage_explanation"
+                type="submit"
+                value="שלח"
+            >
+            <div class="tooltip">
+                יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
+                <span class="close-tooltip">×</span>
             </div>
-            <div class="button-with-explanation">
-                <button type="submit" class="submit-button">שלח</button>
-                <div class="tooltip">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
-                    <span class="close-tooltip">×</span>
-                </div>
+        </div>
+    </form>
+</section>
+
+<!-- טופס "SMS לקופון חדש" -->
+<section class="sms-form-wrapper">
+    <form method="POST" action="{{ url_for('coupons.add_coupon') }}">
+        {{ sms_form.hidden_tag() }}
+        <div class="input-wrapper">
+            <label for="sms_text">הכנס כאן את תוכן ה-SMS שקיבלת עבור קופון חדש:</label>
+            <textarea
+                class="input-field_centered"
+                id="sms_text"
+                name="sms_text"
+                rows="2"
+                placeholder="כאן מכניסים את תוכן ה-SMS"
+            ></textarea>
+        </div>
+        <div class="button-with-explanation">
+            <input
+                class="submit-button"
+                id="submit_sms"
+                name="submit_sms"
+                type="submit"
+                value="הבא"
+            >
+            <div class="tooltip">
+                יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
+                <span class="close-tooltip">×</span>
             </div>
-        </form>
-    </section>
+        </div>
+    </form>
+</section>
 
-    <!-- טופס "SMS לקופון חדש" -->
-    <section class="usage-form-wrapper">
-        <form method="POST" action="{{ url_for('coupons.add_coupon') }}">
-            {{ sms_form.hidden_tag() }}
-            <div class="input-wrapper">
-                <label for="sms_text">הוספה אוטומטית של קופון חדש</label>
-                <textarea
-                    class="input-field_centered"
-                    id="sms_text"
-                    name="sms_text"
-                    rows="2"
-                    placeholder="כאן ניתן לפרט על הקופון החדש שקנית כדי להוסיף אותו באופן אוטומטי"
-                ></textarea>
-            </div>
-            <div class="button-with-explanation">
-                <input
-                    class="submit-button"
-                    id="submit_sms"
-                    name="submit_sms"
-                    type="submit"
-                    value="הבא"
-                >
-                <div class="tooltip">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
-                    <span class="close-tooltip">×</span>
-                </div>
-            </div>
-        </form>
-    </section>
-
-</div>
-
-
+<!-- רשימת הקופונים (פעילים, חד פעמיים, למכירה) -->
 <section class="coupon-list">
     {% macro get_company_logo(coupon) %}
         {% set company_lower = coupon.company.lower() %}
@@ -125,7 +122,6 @@
              alt="{{ coupon.company }} Logo" class="company-logo">
     {% endmacro %}
 
-    {# חלוקה לקטגוריות: פעילים, חד פעמיים, בשימוש, למכירה וכו' #}
     {% set coupon_categories = [
         (active_coupons, "קופונים פעילים"),
         (active_one_time_coupons, "קופונים חד פעמיים"),
@@ -172,6 +168,7 @@
     {% endfor %}
 </section>
 
+<!-- כפתורי ייצוא (Excel + PDF) -->
 <div class="export-buttons">
     <a href="{{ url_for('export.export_excel') }}" class="export-button">
         <i class="fa fa-file-excel-o" aria-hidden="true"></i> ייצא ל-Excel
@@ -181,11 +178,11 @@
     </a>
 </div>
 
-{# אם המשתמש אדמין, מציג כפתור עדכון קופונים מרוכז #}
+<!-- כפתור עדכון קופונים מרוכז (לאדמין) -->
 {% if current_user.is_admin %}
 <form action="{{ url_for('coupons.update_all_active_coupons') }}" method="post"
       style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
-    {{ usage_form.hidden_tag() }}
+    {{ profile_form.hidden_tag() }}
     <button type="submit" class="action-button small-button">
         <i class="fa fa-refresh"></i> עדכן את כל הקופונים הפעילים מ-Multipass
     </button>
@@ -198,19 +195,30 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
 
 <style>
-/* === התראה מינימליסטית בפינה עם כפתור X למעלה-משמאל === */
+/* מעטפת סקשן של הטפסים (לא חובה, רק דוגמה) */
+.usage-form-wrapper,
+.sms-form-wrapper {
+    margin: 30px auto;
+    max-width: 600px; /* אפשר לשנות לרוחב הרצוי */
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+/* עיצוב עבור כותרת ההתראה */
 .expiring-coupons-alert {
-    background-color: #fff8e1; /* רקע בהיר ועדין */
-    color: #000;               /* טקסט כהה */
+    background-color: #fff8e1;
+    color: #000;
     padding: 15px 20px;
     border-radius: 8px;
     font-size: 1.1em;
-    position: relative; /* מאפשר מיקום מוחלט של כפתור ה-X */
+    position: relative;
     margin-top: 15px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    text-align: center; /* ממורכז */
+    text-align: center;
 }
-
 .close-expiring-alert {
     position: absolute;
     top: 5px; 
@@ -220,26 +228,17 @@
     color: #ff9800; 
     font-weight: bold;
 }
-
-.expiring-coupons-alert p {
-    margin: 0;
-    margin-top: 10px;
-}
-
 .expiring-coupons-list {
     list-style: none;
     margin: 10px 0 0;
     padding: 0;
 }
-
 .expiring-coupons-list li {
     margin-bottom: 5px;
 }
-
-/* כפתור "צפה בקופון" מעוצב */
 .view-coupon-button {
     display: inline-block;
-    margin-right: 5px; /* מרווח קטן בין הטקסט לפני הכפתור */
+    margin-right: 5px;
     background-color: #3498db;
     color: #fff;
     text-decoration: none;
@@ -252,35 +251,99 @@
     background-color: #2980b9;
 }
 
-/* שאר העיצוב של העמוד */
-.total-value p {
-    font-size: 1.25em;
+/* עיצוב input-wrapper ו textarea */
+.input-wrapper {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+.input-field_centered {
+    width: 100%;
+    min-height: 80px;
+    font-size: 1em;
+    padding: 8px 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    resize: vertical; /* מאפשר למשתמש להגדיל את התיבה */
+    outline: none;
+}
+
+/* כפתור ו-tooltip */
+.button-with-explanation {
+    position: relative;
+    display: inline-block;
+}
+.submit-button {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+}
+.submit-button:hover {
+    background-color: #2980b9;
+}
+.tooltip {
+    display: none;
+    position: absolute;
+    top: -45px;
+    right: 0;
+    background-color: #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    white-space: nowrap;
+    z-index: 9999;
+}
+.button-with-explanation:hover .tooltip {
+    display: block;
+}
+.tooltip .close-tooltip {
+    margin-left: 10px;
+    cursor: pointer;
     font-weight: bold;
 }
 
+/* עיצוב כרטיסי הקופון */
+.coupon-list {
+    margin-top: 40px;
+}
 .coupon-container {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 20px;
 }
-
 .coupon-card {
     flex: 1 1 calc(25% - 20px);
     max-width: calc(25% - 20px);
     box-sizing: border-box;
     padding: 15px 20px;
-    border: 1px solid var(--light-gray);
+    border: 1px solid #ddd;
     border-radius: 8px;
-    background-color: var(--white);
-    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+    background-color: #fff;
+    transition: transform 0.2s, box-shadow 0.2s;
     color: inherit;
     text-decoration: none;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
-
+.coupon-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.company-logo {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
 @media (max-width: 1200px) {
     .coupon-card {
         flex: 1 1 calc(33.333% - 20px);
@@ -300,19 +363,7 @@
     }
 }
 
-.coupon-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.company-logo {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-
+/* כפתורי ייצוא (Excel + PDF) */
 .export-buttons {
     display: flex;
     justify-content: center;
@@ -320,26 +371,41 @@
     margin: 20px 0;
     flex-direction: row;
 }
+.export-button {
+    background-color: #ddd;
+    color: #333;
+    padding: 8px 16px;
+    border-radius: 5px;
+    text-decoration: none;
+}
+.export-button:hover {
+    background-color: #ccc;
+}
 
+.action-button.small-button {
+    padding: 6px 15px;
+    font-size: 0.9em;
+    margin-top: 10px;
+}
+
+/* coupon-button-wrapper בשורת ההתראה */
+.coupon-button-wrapper {
+    display: inline;
+}
 @media (max-width: 600px) {
-    .export-buttons {
-        flex-direction: row;
-        gap: 10px;
+    .coupon-button-wrapper {
+        display: block;
+        margin-top: 5px;
     }
 }
 
-.button-with-explanation {
+/* החיסכון (tooltip-trigger) */
+.total-savings-line {
     position: relative;
     display: inline-block;
+    margin-top: 5px;
+    padding-top: 0;
 }
-
-.button-with-explanation:hover .tooltip {
-    display: block;
-}
-.tooltip-trigger:hover .tooltip {
-    display: block;
-}
-
 .total-savings-line .tooltip {
     top: -20px !important;
     left: 110% !important;
@@ -350,85 +416,6 @@
     margin-top: -5px;
     border-color: transparent #333 transparent transparent !important;
 }
-.total-savings-line {
-    position: relative;
-    display: inline-block;
-    margin-top: 5px;
-    padding-top: 0;
-}
-
-/* ברירת מחדל: הכפתור מופיע באותה שורה */
-.coupon-button-wrapper {
-    display: inline; 
-}
-
-/* במובייל (מסכים קטנים) הכפתור ירד לשורה הבאה */
-@media (max-width: 600px) {
-    .coupon-button-wrapper {
-        display: block;
-        margin-top: 5px; /* הוספת רווח קטן */
-    }
-}
-/* קונטיינר עוטף לשני הטפסים זה לצד זה */
-.usage-forms-container {
-    display: flex;
-    gap: 5px;  /* רווח קטן מאוד ביניהן */
-    justify-content: center;
-    align-items: stretch; /* מוודא שכל התיבות יהיו באותו גובה */
-    margin: 20px auto;
-    max-width: 800px; /* שומר על גבול רוחב סביר */
-    border-radius: 10px; /* מעגל לי את התיבה */
-    /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);*/
-}
-
-/* הופך כל usage-form-wrapper לטופס צר יותר ובאותו גובה */
-.usage-form-wrapper {
-    flex: 1;  /* נותן לכל תיבה לקחת את אותו הגובה */
-    max-width: 360px; /* ניתן לשנות ל-370px אם רוצים */
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    margin-top: 0; /* ביטול מרווחים בין התיבות */
-    margin-bottom: 0; /* ביטול מרווחים בין התיבות */
-}
-
-/* מוודא שהתוכן בתוך כל תיבה יתפרס באופן אחיד כך שהכפתור לא יזוז */
-.usage-form-wrapper form {
-    display: flex;
-    flex-direction: column;
-    height: 100%; /* גורם לכל תיבה להתפרס לגובה מלא */
-}
-
-/* מבטיח שהכפתור תמיד יישב בתחתית */
-.button-with-explanation {
-    margin-top: auto; /* דוחף את הכפתור לתחתית */
-}
-
-@media (max-width: 600px) {
-    .usage-forms-container {
-        flex-direction: column;
-        gap: 10px; /* ביטול הרווח ביניהן */
-        margin-top: 5px; /* אפשר לשנות ל-0px אם עדיין יש רווח גדול מדי */
-        margin-bottom: 5px;
-        margin: 5px auto;
-        padding: 0 15px; /* מוסיף רווח מהקצוות כך שהתיבות לא ייגעו בקצה */
-        max-width: 95%; /* מוודא שהתיבות לא יתפרסו על כל הרוחב */
-    }
-
-    .usage-form-wrapper {
-        max-width: 100%;
-        /*padding-bottom: 0px;  /*זה חותך את סוף של התיבה. ביטלתי את זה כי זה מכוער */
-        margin-bottom: 0px; /* שחק עם זה - אם עדיין רחוק מדי, נסה 0px */
-    }
-
-    .usage-form-wrapper form {
-        padding: 0px; /* מבטיח שאין padding נוסף בטפסים עצמם */
-        margin: 0px;
-    }
-}
-
 
 </style>
-
-<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
 {% endblock %}

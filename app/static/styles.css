@@ -664,7 +664,7 @@ h3 {
     background-color: var(--white);
     margin: 15px auto; /* היה 20px, עכשיו מצמצם רווחים */
     margin-top: 10px;
-    border-radius: 10px;
+    border-radius: 10px; /* מעגל לי את התיבה */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     width: 55%;
     max-width: 750px;
@@ -1197,7 +1197,7 @@ h3 {
 .coupon-section-title {
     text-align: center;
     color: var(--primary-color);
-    margin: 40px 0 20px 0;
+    margin: 10px 0 10px 0;
 }
 
 .coupon-grid {
@@ -2593,11 +2593,6 @@ h3 {
     margin-top: 40px;
 }
 
-.coupon-section-title {
-    text-align: center;
-    margin-bottom: 20px;
-    color: var(--primary-color);
-}
 
 /* Responsive Styles */
 @media (max-width: 600px) {

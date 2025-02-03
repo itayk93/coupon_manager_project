@@ -1,107 +1,127 @@
-{% extends "base.html" %}
-
-{% block content %}
-<section class="admin-users">
-    <h2 class="page-title">ניהול משתמשים (Admin)</h2>
-
-    <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'users-list')">רשימת משתמשים</button>
+<!DOCTYPE html>
+<html lang="he" dir="rtl" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>אישור חשבון Coupon Master</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        /* ===================================================
+           עיצוב כללי בהתבסס על ה-CSS שלך
+        =================================================== */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: right; /* יישור טקסט לימין */
+        }
+        .email-container {
+            width: 100%;
+            background-color: #f9f9f9;
+            padding: 20px 0;
+        }
+        .email-content {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            background-color: #2E86C1;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .body {
+            padding: 20px;
+            color: #2C3E50;
+            text-align: right; /* יישור טקסט לימין */
+        }
+        .body p {
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        .highlight {
+            color: #2E86C1; /* כחול */
+            font-weight: bold;
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .button {
+            background-color: #2E86C1;
+            color: #ffffff; /* צבע טקסט לבן */
+            padding: 15px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold; /* טקסט ב-bold */
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #A9CCE3;
+        }
+        .footer {
+            background-color: #f0f0f0;
+            color: #7f8c8d;
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+        }
+        .footer p {
+            margin: 0;
+        }
+        /* רספונסיביות למכשירים ניידים */
+        @media only screen and (max-width: 600px) {
+            .email-content {
+                width: 100% !important;
+            }
+            .button {
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body dir="rtl">
+    <div class="email-container">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+                <td align="center">
+                    <div class="email-content">
+                        <!-- Header -->
+                        <div class="header">
+                            <h1>אישור חשבון Coupon Master</h1>
+                        </div>
+                        <!-- Body -->
+                        <div class="body">
+                            <p>שלום {{ user.first_name }},</p>
+                            <p>תודה שהצטרפת ל-Coupon Master! כדי לאשר את חשבונך ולהתחיל להשתמש בשירותינו, אנא לחץ על הכפתור למטה:</p>
+                            <!-- Button -->
+                            <div class="button-container">
+                                <a href="{{ confirmation_link }}" class="button" style="color: #ffffff; font-weight: bold;">אשר חשבון</a>
+                            </div>
+                            <p>אם אינך מבקש להירשם ל-Coupon Master, אנא התעלם ממייל זה.</p>
+                            <p>בברכה,<br>Coupon Master</p>
+                        </div>
+                        <!-- Footer -->
+                        <div class="footer">
+                            <p>© 2024 Coupon Master. כל הזכויות שמורות.</p>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
     </div>
-
-    <div id="users-list" class="tab-content active">
-        <h3 class="section-title">רשימת משתמשים קיימים</h3>
-        <div class="table-responsive">
-            <table class="table user-management-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>אימייל</th>
-                        <th>שם פרטי</th>
-                        <th>סלוטים לאוטומציה</th>
-                        <th>פעולות</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for user in users %}
-                    <tr>
-                        <td>{{ user.id }}</td>
-                        <td>{{ user.email }}</td>
-                        <td>{{ user.first_name }}</td>
-
-                        <!-- טופס עדכון סלוטים (דוגמה) -->
-                        <td>
-                            <form method="POST"
-                                  action="{{ url_for('admin_bp.admin_users_bp.update_slots_automatic_coupons') }}"
-                                  class="update-slots-form">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="user_id" value="{{ user.id }}">
-                                <button type="submit" class="action-button save-button small-button">
-                                    שמור
-                                </button>
-                                <input type="number"
-                                       name="slots_automatic_coupons"
-                                       value="{{ user.slots_automatic_coupons }}"
-                                       min="0"
-                                       class="slots-input"
-                                       required>
-                            </form>
-                        </td>
-
-                        <td>
-                            <!-- כפתור שחזור סיסמה -->
-                            <form method="POST"
-                                  action="{{ url_for('admin_bp.admin_users_bp.reset_user_password') }}"
-                                  onsubmit="return confirm('לשחזר סיסמה למשתמש זה?');"
-                                  style="display: inline-block;">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="user_id" value="{{ user.id }}">
-                                <button type="submit" class="action-button warning small-button">
-                                    שחזור סיסמה
-                                </button>
-                            </form>
-
-                            <!-- כפתור מחיקת משתמש -->
-                            <form method="POST"
-                                  action="{{ url_for('admin_bp.admin_users_bp.initiate_delete_user') }}"
-                                  onsubmit="return confirm('האם אתה בטוח שברצונך לשלוח בקשת מחיקה למשתמש זה?');"
-                                  style="display: inline-block; margin-right: 5px;">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="user_id" value="{{ user.id }}">
-                                <button type="submit" class="action-button danger small-button">
-                                    מחיקת משתמש
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</section>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    function openTab(evt, tabName) {
-        var tabContents = document.getElementsByClassName("tab-content");
-        for (var i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-        var tabButtons = document.getElementsByClassName("tab-button");
-        for (var i = 0; i < tabButtons.length; i++) {
-            tabButtons[i].classList.remove("active");
-        }
-        document.getElementById(tabName).classList.add("active");
-        evt.currentTarget.classList.add("active");
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        var defaultTab = document.querySelector(".tab-button.active");
-        if (defaultTab) {
-            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
-            document.getElementById(tabName).classList.add("active");
-        }
-    });
-</script>
-{% endblock %}
+</body>
+</html>

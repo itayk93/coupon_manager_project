@@ -13,7 +13,7 @@ import pytz  # ספרייה לניהול אזורי זמן
 
 from app.extensions import db
 from app.models import Coupon, Company, Tag, CouponUsage, Transaction, Notification, CouponRequest, GptUsage, CouponTransaction
-from app.forms import ProfileForm, SellCouponForm, UploadCouponsForm, AddCouponsBulkForm, CouponForm, DeleteCouponsForm, ConfirmDeleteForm, MarkCouponAsUsedForm, EditCouponForm, ApproveTransactionForm
+from app.forms import ProfileForm, SellCouponForm, UploadCouponsForm, AddCouponsBulkForm, CouponForm, DeleteCouponsForm, ConfirmDeleteForm, MarkCouponAsUsedForm, EditCouponForm, ApproveTransactionForm,SMSInputForm
 from app.helpers import update_coupon_status, get_coupon_data, process_coupons_excel
 from app.helpers import send_coupon_purchase_request_email
 from sqlalchemy.exc import IntegrityError
@@ -122,6 +122,7 @@ from app.extensions import db
 from app.models import Coupon, Company
 from app.forms import ProfileForm
 from app.helpers import update_coupon_status, get_greeting
+from app.forms import ProfileForm, UsageExplanationForm
 
 
 # ייתכן שיש לך פונקציה לקבל IP, אשתמש כאן ב-REMOTE_ADDR
@@ -144,21 +145,29 @@ def index():
     ip_address = get_ip_address()
     log_user_activity(ip_address, "index")
 
-    form = ProfileForm()
-    if form.validate_on_submit():
-        # עדכון פרטי המשתמש
-        current_user.age = form.age.data
-        current_user.gender = form.gender.data
+    # טופס עריכת פרופיל
+    profile_form = ProfileForm()
+
+    # טופס ראשון: usage
+    usage_form = UsageExplanationForm()
+
+    # טופס שני: sms => ליצירת קופון חדש דרך parse SMS
+    sms_form = SMSInputForm()
+
+    # בדיקת טופס עריכת פרופיל
+    if profile_form.validate_on_submit() and 'age' in request.form:
+        current_user.age = profile_form.age.data
+        current_user.gender = profile_form.gender.data
         db.session.commit()
         flash('פרטי הפרופיל עודכנו בהצלחה.', 'success')
         return redirect(url_for('profile.index'))
 
     if request.method == 'GET':
-        # מילוי הטופס עם נתוני המשתמש הקיימים
-        form.first_name.data = current_user.first_name
-        form.last_name.data = current_user.last_name
-        form.age.data = current_user.age
-        form.gender.data = current_user.gender
+        # מילוי טופס הפרופיל
+        profile_form.first_name.data = current_user.first_name
+        profile_form.last_name.data = current_user.last_name
+        profile_form.age.data = current_user.age
+        profile_form.gender.data = current_user.gender
 
     greeting = get_greeting()  # לדוגמה: בהתאם לשעה, מחזיר "בוקר טוב" / "ערב טוב" וכד'.
 
@@ -315,7 +324,9 @@ def index():
 
     return render_template(
         'index.html',
-        form=form,
+        profile_form=profile_form,
+        usage_form=usage_form,
+        sms_form=sms_form,
         greeting=greeting,
         total_value=total_remaining,
         total_savings=total_savings,
