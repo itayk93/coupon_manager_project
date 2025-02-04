@@ -31,3 +31,4 @@ itsdangerous
 xlsxwriter
 thefuzz
 itsdangerous
+plotly
