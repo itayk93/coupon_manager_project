@@ -49,6 +49,13 @@
             <span class="info-title">תיאור פרופיל:</span>
             <span class="info-value">{{ user.profile_description or '...' }}</span>
         </div>
+        {% if is_owner or is_admin %}
+        <div class="info-box">
+            <span class="info-title">מספר משתמש:</span>
+            <span class="info-value">{{ user.id }}</span>
+        </div>
+        {% endif %}
+      
     </div>
 
     {% if is_owner and not user.is_admin %}

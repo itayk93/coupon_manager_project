@@ -53,7 +53,7 @@ def reset_user_password():
         return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
 
     # -- כאן אתה יכול לקרוא לפונקציה הקיימת לשליחת מייל שחזור --
-    # send_password_reset_email(user)
+    send_password_reset_email(user)
     flash(f'נשלח מייל שחזור סיסמה לכתובת {user.email}.', 'success')
     return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
 

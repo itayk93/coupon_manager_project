@@ -1,129 +1,205 @@
 {% extends "base.html" %}
 
+{% block styles %}
+<style>
+  /* עיצוב לטאב והכפתורים */
+  .tabs {
+    margin-bottom: 20px;
+  }
+
+  /* עיצוב לטבלה במידה ורוצים */
+  .user-management-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .user-management-table th,
+  .user-management-table td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #ddd;
+  }
+
+  /* עיצוב לקונטיינר של הכפתורים */
+  .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* מרווח של 10px בין הכפתורים */
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* עיצוב לכפתורים עצמם */
+  .action-button {
+    padding: 5px 10px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .save-button {
+    background-color: #4CAF50;
+    color: #fff;
+  }
+
+  .warning {
+    background-color: #ff9800;
+    color: #fff;
+  }
+
+  .danger {
+    background-color: #f44336;
+    color: #fff;
+  }
+
+  .info {
+    background-color: #2196F3;
+    color: #fff;
+  }
+
+  .small-button {
+    font-size: 0.9em;
+  }
+
+  /* קונטיינר עבור תיבת הקלט והכפתור - שימוש ב-CSS Grid */
+  .slots-container {
+    display: grid;
+    grid-template-columns: auto auto; /* שתי עמודות */
+    gap: 10px; /* מרווח אחיד בין העמודות */
+    align-items: center; /* מיקום אנכי במרכז */
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="admin-users">
-    <h2 class="page-title">ניהול משתמשים (Admin)</h2>
+  <h2 class="page-title">ניהול משתמשים (Admin)</h2>
 
-    <!-- לשונית אחת: "רשימת משתמשים" -->
-    <div class="tabs">
-        <button class="tab-button active"
-                onclick="openTab(event, 'users-list')">
-            רשימת משתמשים
-        </button>
+  <!-- לשונית אחת: "רשימת משתמשים" -->
+  <div class="tabs">
+    <button class="tab-button active" onclick="openTab(event, 'users-list')">
+      רשימת משתמשים
+    </button>
+  </div>
+
+  <!-- תוכן הלשונית -->
+  <div id="users-list" class="tab-content active">
+    <h3 class="section-title">רשימת משתמשים קיימים</h3>
+
+    <div class="table-responsive">
+      <table class="table user-management-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>אימייל</th>
+            <th>שם פרטי</th>
+            <th>סלוטים לאוטומציה</th>
+            <th>פעולות</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+            <tr>
+              <td>{{ user.id }}</td>
+              <td>{{ user.email }}</td>
+              <td>{{ user.first_name }}</td>
+              <!-- טופס לעדכון כמות הסלוטים -->
+              <td>
+                <form method="POST"
+                      action="{{ url_for('admin_bp.admin_users_bp.update_slots_automatic_coupons') }}"
+                      class="update-slots-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="user_id" value="{{ user.id }}">
+
+                  <!-- עטיפת השדה והכפתור בקונטיינר Grid -->
+                  <div class="slots-container">
+                    <input type="number"
+                           name="slots_automatic_coupons"
+                           value="{{ user.slots_automatic_coupons }}"
+                           min="0"
+                           class="slots-input"
+                           required>
+                    <button type="submit" class="action-button save-button small-button">
+                      שמור
+                    </button>
+                  </div>
+                </form>
+              </td>
+              <!-- טור פעולות -->
+              <td>
+                <div class="action-buttons">
+                  <!-- טופס לשחזור סיסמה -->
+                  <form method="POST"
+                        action="{{ url_for('admin_bp.admin_users_bp.reset_user_password') }}"
+                        onsubmit="return confirm('לשחזר סיסמה למשתמש זה?');"
+                        class="action-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <button type="submit" class="action-button warning small-button">
+                      שחזור סיסמה
+                    </button>
+                  </form>
+
+                  <!-- טופס למחיקת משתמש -->
+                  <form method="POST"
+                        action="{{ url_for('admin_bp.admin_users_bp.initiate_delete_user') }}"
+                        onsubmit="return confirm('האם אתה בטוח שברצונך למחוק משתמש זה?');"
+                        class="action-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <button type="submit" class="action-button danger small-button">
+                      מחיקת משתמש
+                    </button>
+                  </form>
+
+                  <!-- טופס לשליחת מייל אישור מחדש (אם המשתמש לא מאושר) -->
+                  {% if not user.is_confirmed %}
+                    <form method="POST"
+                          action="{{ url_for('admin_bp.admin_users_bp.resend_confirmation_email') }}"
+                          class="action-form">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="user_id" value="{{ user.id }}">
+                      <button type="submit" class="action-button info small-button">
+                        שלח מייל אישור
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-
-    <!-- תוכן הלשונית -->
-    <div id="users-list" class="tab-content active">
-        <h3 class="section-title">רשימת משתמשים קיימים</h3>
-
-        <div class="table-responsive">
-            <table class="table user-management-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>אימייל</th>
-                        <th>שם פרטי</th>
-                        <th>סלוטים לאוטומציה</th>
-                        <th>פעולות</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- בתוך <tbody> של הטבלה, בתוך הלולאה for user in users -->
-                    {% for user in users %}
-                        <tr>
-                            <td>{{ user.id }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.first_name }}</td>
-                            <!-- עדכון כמות הסלוטים -->
-                            <td>
-                                <form method="POST"
-                                      action="{{ url_for('admin_bp.admin_users_bp.update_slots_automatic_coupons') }}"
-                                      class="update-slots-form">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="user_id" value="{{ user.id }}">
-                                    <button type="submit" class="action-button save-button small-button">שמור</button>
-                                    <input type="number"
-                                           name="slots_automatic_coupons"
-                                           value="{{ user.slots_automatic_coupons }}"
-                                           min="0"
-                                           class="slots-input"
-                                           required>
-                                </form>
-                            </td>
-                            <!-- פעולות נוספות -->
-                            <td>
-                                <!-- טופס לשחזור סיסמה -->
-                                <form method="POST"
-                                      action="{{ url_for('admin_bp.admin_users_bp.reset_user_password') }}"
-                                      onsubmit="return confirm('לשחזר סיסמה למשתמש זה?');"
-                                      style="display: inline-block;">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="user_id" value="{{ user.id }}">
-                                    <button type="submit" class="action-button warning small-button">
-                                        שחזור סיסמה
-                                    </button>
-                                </form>
-
-                                <!-- טופס מחיקת משתמש -->
-                                <form method="POST"
-                                      action="{{ url_for('admin_bp.admin_users_bp.initiate_delete_user') }}"
-                                      onsubmit="return confirm('האם אתה בטוח שברצונך למחוק משתמש זה?');"
-                                      style="display: inline-block; margin-right: 5px;">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="user_id" value="{{ user.id }}">
-                                    <button type="submit" class="action-button danger small-button">
-                                        מחיקת משתמש
-                                    </button>
-                                </form>
-
-                                <!-- טופס שליחת מייל אישור מחדש (נראה רק אם המשתמש לא מאושר) -->
-                                {% if not user.is_confirmed %}
-                                <form method="POST"
-                                      action="{{ url_for('admin_bp.admin_users_bp.resend_confirmation_email') }}"
-                                      style="display: inline-block;">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="user_id" value="{{ user.id }}">
-                                    <button type="submit" class="action-button info small-button">
-                                        שלח מייל אישור
-                                    </button>
-                                </form>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+  </div>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    /*
-        פונקציה לפתיחת טאב (אם תרצה להרחיב ללשוניות נוספות).
-        כאן טאב יחיד: רשימת משתמשים, כך שמראש מסומן 'active'.
-    */
-    function openTab(evt, tabName) {
-        var tabContents = document.getElementsByClassName("tab-content");
-        for (var i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-        var tabButtons = document.getElementsByClassName("tab-button");
-        for (var i = 0; i < tabButtons.length; i++) {
-            tabButtons[i].classList.remove("active");
-        }
-        document.getElementById(tabName).classList.add("active");
-        evt.currentTarget.classList.add("active");
+  /*
+    פונקציה לפתיחת טאב (אם תרצה להרחיב ללשוניות נוספות).
+    כאן טאב יחיד: רשימת משתמשים, כך שמראש מסומן 'active'.
+  */
+  function openTab(evt, tabName) {
+    var tabContents = document.getElementsByClassName("tab-content");
+    for (var i = 0; i < tabContents.length; i++) {
+      tabContents[i].classList.remove("active");
     }
+    var tabButtons = document.getElementsByClassName("tab-button");
+    for (var i = 0; i < tabButtons.length; i++) {
+      tabButtons[i].classList.remove("active");
+    }
+    document.getElementById(tabName).classList.add("active");
+    evt.currentTarget.classList.add("active");
+  }
 
-    // במצב טאב יחיד, ההגדרה הזו פחות קריטית, אבל זה רק לצורך דוגמה.
-    document.addEventListener("DOMContentLoaded", function() {
-        var defaultTab = document.querySelector(".tab-button.active");
-        if (defaultTab) {
-            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
-            document.getElementById(tabName).classList.add("active");
-        }
-    });
+  // בעת טעינת הדף, וודא שהטאב הנכון מסומן כ-active
+  document.addEventListener("DOMContentLoaded", function() {
+    var defaultTab = document.querySelector(".tab-button.active");
+    if (defaultTab) {
+      var tabName = defaultTab.getAttribute("onclick").split("'")[1];
+      document.getElementById(tabName).classList.add("active");
+    }
+  });
 </script>
 {% endblock %}

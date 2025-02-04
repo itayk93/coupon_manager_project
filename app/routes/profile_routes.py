@@ -553,7 +553,7 @@ def rate_user(user_id, transaction_id):
         db.session.add(new_review)
         db.session.commit()
         flash('Your review has been saved successfully!', 'success')
-        return redirect(url_for('profile.user_profile', user_id=user_to_rate.id))
+        return redirect(url_for('profile.user_profile', user_id=current_user.id))
 
     return render_template('profile/rate_user.html', form=form, user_to_rate=user_to_rate, transaction=transaction)
 

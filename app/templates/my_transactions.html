@@ -67,7 +67,8 @@
                             <!-- טקסט בעברית מוצג ב-td למעלה, כאן רק הפעולה -->
                             <form method="post" action="{{ url_for('transactions.seller_confirm_transfer', transaction_id=transaction.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="action-button">אשר שהכסף התקבל</button>
+                                <!-- הכפתור עם המחלקה narrow-button -->
+                                <button type="submit" class="action-button narrow-button">אשר שההעברה הכספית בוצעה</button>
                             </form>
 
                         {% else %}
@@ -128,7 +129,7 @@
                             {% if not transaction.buyer_confirmed %}
                                 <form method="post" action="{{ url_for('transactions.buyer_confirm_transfer', transaction_id=transaction.id) }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="action-button">אשר שההעברה הכספית בוצעה</button>
+                                    <button type="submit" class="action-button narrow-button">אשר שההעברה הכספית בוצעה</button>
                                 </form>
                             {% else %}
                                 <span class="text-muted">ממתין לאישור המוכר.</span>
