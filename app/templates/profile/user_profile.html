@@ -37,7 +37,6 @@
                             {% endif %}
                         {% endfor %}
                     {% else %}
-                        <!-- במקרה שאין דירוג -->
                         {% for i in range(1, 6) %}
                             <i class="fa fa-star-o" style="color:#ccc"></i>
                         {% endfor %}
@@ -55,75 +54,85 @@
             <span class="info-value">{{ user.id }}</span>
         </div>
         {% endif %}
-      
     </div>
 
-    {% if is_owner and not user.is_admin %}
-    <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'personal')">מידע אישי</button>
-        <button class="tab-button" onclick="openTab(event, 'demographics')">פרטים דמוגרפיים</button>
-    </div>
-
-    <form id="profile-form" method="POST" action="">
-        {{ form.hidden_tag() }}
-
-        <div id="personal" class="tab-content active">
-            <div class="info-box">
-                <span class="info-title">{{ form.first_name.label }}</span>
-                <span class="info-value">
-                    {{ form.first_name(class="input-field", id="first_name") }}
-                    <span class="save-indicator" id="first_name-save-indicator"></span>
-                </span>
-                {% for error in form.first_name.errors %}
-                    <span class="error-message">{{ error }}</span>
-                {% endfor %}
-            </div>
-
-            <div class="info-box">
-                <span class="info-title">{{ form.last_name.label }}</span>
-                <span class="info-value">
-                    {{ form.last_name(class="input-field", id="last_name") }}
-                    <span class="save-indicator" id="last_name-save-indicator"></span>
-                </span>
-                {% for error in form.last_name.errors %}
-                    <span class="error-message">{{ error }}</span>
-                {% endfor %}
-            </div>
-
-            <div class="info-box">
-                <span class="info-title">Email:</span>
-                <span class="info-value">
-                    <input type="email" id="email" name="email" class="input-field" value="{{ current_user.email }}" disabled>
-                </span>
-            </div>
+    {# 2. הצגת טופס העריכה רק לבעל הפרופיל, ובמקרה שאינו הבעלים – הצגת נתונים בלבד #}
+    {% if is_owner %}
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab(event, 'personal')">מידע אישי</button>
+            <button class="tab-button" onclick="openTab(event, 'demographics')">פרטים דמוגרפיים</button>
         </div>
 
-        <div id="demographics" class="tab-content">
-            <h3 style="margin-bottom: 20px;">פרטים דמוגרפיים (אופציונלי)</h3>
+        <form id="profile-form" method="POST" action="">
+            {{ form.hidden_tag() }}
 
-            <div class="info-box">
-                <span class="info-title">{{ form.age.label }}</span>
-                <span class="info-value">
-                    {{ form.age(class="input-field", id="age") }}
-                    <span class="save-indicator" id="age-save-indicator"></span>
-                </span>
-                {% for error in form.age.errors %}
-                    <span class="error-message">{{ error }}</span>
-                {% endfor %}
+            <div id="personal" class="tab-content active">
+                <div class="info-box">
+                    <span class="info-title">{{ form.first_name.label }}</span>
+                    <span class="info-value">
+                        {{ form.first_name(class="input-field", id="first_name") }}
+                        <span class="save-indicator" id="first_name-save-indicator"></span>
+                    </span>
+                    {% for error in form.first_name.errors %}
+                        <span class="error-message">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="info-box">
+                    <span class="info-title">{{ form.last_name.label }}</span>
+                    <span class="info-value">
+                        {{ form.last_name(class="input-field", id="last_name") }}
+                        <span class="save-indicator" id="last_name-save-indicator"></span>
+                    </span>
+                    {% for error in form.last_name.errors %}
+                        <span class="error-message">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="info-box">
+                    <span class="info-title">Email:</span>
+                    <span class="info-value">
+                        <input type="email" id="email" name="email" class="input-field" value="{{ current_user.email }}" disabled>
+                    </span>
+                </div>
             </div>
 
-            <div class="info-box">
-                <span class="info-title">{{ form.gender.label }}</span>
-                <span class="info-value">
-                    {{ form.gender(class="input-field", id="gender") }}
-                    <span class="save-indicator" id="gender-save-indicator"></span>
-                </span>
-                {% for error in form.gender.errors %}
-                    <span class="error-message">{{ error }}</span>
-                {% endfor %}
+            <div id="demographics" class="tab-content">
+                <h3 style="margin-bottom: 20px;">פרטים דמוגרפיים (אופציונלי)</h3>
+
+                <div class="info-box">
+                    <span class="info-title">{{ form.age.label }}</span>
+                    <span class="info-value">
+                        {{ form.age(class="input-field", id="age") }}
+                        <span class="save-indicator" id="age-save-indicator"></span>
+                    </span>
+                    {% for error in form.age.errors %}
+                        <span class="error-message">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="info-box">
+                    <span class="info-title">{{ form.gender.label }}</span>
+                    <span class="info-value">
+                        {{ form.gender(class="input-field", id="gender") }}
+                        <span class="save-indicator" id="gender-save-indicator"></span>
+                    </span>
+                    {% for error in form.gender.errors %}
+                        <span class="error-message">{{ error }}</span>
+                    {% endfor %}
+                </div>
             </div>
+        </form>
+    {% else %}
+        <div class="info-box">
+            <span class="info-title">שם מלא:</span>
+            <span class="info-value">{{ user.first_name }} {{ user.last_name }}</span>
         </div>
-    </form>
+
+        <div class="info-box">
+            <span class="info-title">תיאור פרופיל:</span>
+            <span class="info-value">{{ user.profile_description or '...' }}</span>
+        </div>
     {% endif %}
 
     <h3 class="usage-history-title">ביקורות שקיבל</h3>
@@ -162,8 +171,8 @@
         <p class="no-data-message">אין ביקורות על משתמש זה.</p>
     {% endif %}
 
-    <!-- מציג כפתור מחיקה רק אם בעל הפרופיל, ואינו אדמין -->
-    {% if is_owner and not user.is_admin %}
+    {# כפתור מחיקה יופיע רק לבעל הפרופיל שאינו מנהל #}
+    {% if is_owner and not is_admin %}
     <div class="action-buttons" style="margin-top: 40px;">
         <form method="POST"
               action="{{ url_for('admin_bp.admin_users_bp.initiate_delete_user') }}"
@@ -177,7 +186,7 @@
         </form>
     </div>
     {% endif %}
-    </section>
+</section>
 {% endblock %}
 
 {% block scripts %}

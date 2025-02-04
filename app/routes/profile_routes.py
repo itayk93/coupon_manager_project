@@ -563,10 +563,9 @@ def user_profile(user_id):
     user = User.query.get_or_404(user_id)
     form = ProfileForm()
 
-    # בדיקה האם המשתמש הנוכחי הוא בעל הפרופיל
-    if current_user.id != user.id:
-        flash('אין לך הרשאה לערוך פרופיל זה.', 'danger')
-        return redirect(url_for('profile.index'))
+    # הגדרת האם המשתמש הנוכחי הוא הבעלים של הפרופיל
+    is_owner = (current_user.id == user.id)
+    is_admin = current_user.is_admin if hasattr(current_user, 'is_admin') else False
 
     # 1) מחשבים דירוג ממוצע של המשתמש (אם יש ביקורות)
     avg_rating = db.session.query(func.avg(UserReview.rating)).filter(
@@ -576,9 +575,6 @@ def user_profile(user_id):
         avg_rating = round(avg_rating, 1)  # עיגול לעשרון אחד
     else:
         avg_rating = None  # אם אין ביקורות בכלל
-
-    # 2) קובעים האם המשתמש הנוכחי הוא בעל הפרופיל
-    is_owner = (current_user.id == user.id)
 
     # 3) שליפת כל הביקורות שהמשתמש (user) קיבל, כדי להציגן בתבנית
     ratings = UserReview.query.filter_by(reviewed_user_id=user.id)\
@@ -611,6 +607,13 @@ def user_profile(user_id):
         db.session.commit()
         flash('פרופיל עודכן בהצלחה!', 'success')
         return redirect(url_for('profile.user_profile', user_id=user.id))
+
+    # מילוי טופס הפרופיל רק לבעל הפרופיל
+    if is_owner:
+        form.first_name.data = user.first_name
+        form.last_name.data = user.last_name
+        form.age.data = user.age
+        form.gender.data = user.gender
 
     # 6) העברת כל הנתונים לתבנית
     return render_template(
