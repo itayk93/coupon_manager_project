@@ -25,24 +25,13 @@
         {% endif %}
 
         <!-- שדה החברה -->
-        <!-- שדה החברה (סלקט) -->
         <div class="form-group">
-            {{ form.company_id.label }}
-            {{ form.company_id(class="input-field", id="company_select") }}
-            {% for error in form.company_id.errors %}
+            {{ form.company.label }}
+            {{ form.company(class="input-field") }}
+            {% for error in form.company.errors %}
                 <span class="error">{{ error }}</span>
             {% endfor %}
         </div>
-
-        <!-- שדה חברה אחרת (מוסתר כברירת מחדל) -->
-        <div class="form-group" id="other_company_group" style="display: none;">
-            {{ form.other_company.label }}
-            {{ form.other_company(class="input-field", id="other_company") }}
-            {% for error in form.other_company.errors %}
-                <span class="error">{{ error }}</span>
-            {% endfor %}
-        </div>
-
 
         <!-- שדה הקוד -->
         <div class="form-group">

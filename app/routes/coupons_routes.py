@@ -1374,137 +1374,6 @@ def convert_date_format(date_input):
     else:
         return None
 
-'''''''''''
-@coupons_bp.route('/edit_coupon/<int:id>', methods=['GET', 'POST'])
-@login_required
-def edit_coupon_old(id):
-    coupon = Coupon.query.get_or_404(id)
-
-    # -- activity log snippet --
-    log_user_activity("edit_coupon_view", coupon.id)
-
-    if coupon.user_id != current_user.id:
-        flash('אינך מורשה לערוך קופון זה.', 'danger')
-        return redirect(url_for('coupons.show_coupons'))
-
-    form = EditCouponForm(obj=coupon)
-
-    if form.validate_on_submit():
-        try:
-            old_value = coupon.value
-            coupon.company = form.company.data.strip()
-            coupon.code = form.code.data.strip()
-            coupon.value = float(form.value.data)
-            coupon.cost = float(form.cost.data)
-            coupon.cvv = form.cvv.data            # שורה חדשה
-            coupon.card_exp = form.card_exp.data  # שורה חדשה
-            coupon.description = form.description.data or ''
-            coupon.is_one_time = form.is_one_time.data
-            coupon.purpose = form.purpose.data.strip() if form.is_one_time.data else None
-            coupon.expiration = form.expiration.data if form.expiration.data else None
-            coupon.cvv = form.cvv.data.strip() if form.cvv.data else None
-            coupon.card_exp = form.card_exp.data.strip() if form.card_exp.data else None
-
-            if form.tags.data:
-                if isinstance(form.tags.data, str) and form.tags.data:
-                    tag_names = [tag.strip() for tag in form.tags.data.split(',') if tag.strip()]
-                elif isinstance(form.tags.data, list):
-                    tag_names = [tag.strip() for tag in form.tags.data if isinstance(tag, str) and tag.strip()]
-                else:
-                    tag_names = []
-                coupon.tags.clear()
-                for name in tag_names:
-                    tag = Tag.query.filter_by(name=name).first()
-                    if not tag:
-                        tag = Tag(name=name, count=1)
-                        db.session.add(tag)
-                    else:
-                        tag.count += 1
-                    coupon.tags.append(tag)
-            else:
-                coupon.tags.clear()
-
-            db.session.commit()
-
-            if coupon.value != old_value:
-                initial_transaction = CouponTransaction.query.filter_by(
-                    coupon_id=coupon.id,
-                    source='User',
-                    reference_number='Initial'
-                ).first()
-                if initial_transaction:
-                    initial_transaction.recharge_amount = coupon.value
-                else:
-                    initial_transaction = CouponTransaction(
-                        coupon_id=coupon.id,
-                        transaction_date=datetime.utcnow(),
-                        location='הטענה ראשונית',
-                        recharge_amount=coupon.value,
-                        usage_amount=0.0,
-                        reference_number='Initial',
-                        source='User'
-                    )
-                    db.session.add(initial_transaction)
-                db.session.commit()
-
-            # -- activity log snippet --
-            try:
-                new_activity = {
-                    "user_id": current_user.id,
-                    "coupon_id": coupon.id,
-                    "timestamp": datetime.utcnow(),
-                    "action": "edit_coupon_submit",
-                    "device": request.headers.get('User-Agent', '')[:50],
-                    "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-                    "ip_address": ip_address[:45] if ip_address else None,
-                    "geo_location": get_geo_location(ip_address)[:100]
-                }
-                db.session.execute(
-                    text("""
-                        INSERT INTO user_activities
-                            (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
-                        VALUES
-                            (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
-                    """),
-                    new_activity
-                )
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                current_app.logger.error(f"Error logging activity [edit_coupon_submit]: {e}")
-            # -- end snippet --
-
-            flash('הקופון עודכן בהצלחה.', 'success')
-            return redirect(url_for('coupons.coupon_detail', id=coupon.id))
-
-        except IntegrityError:
-            db.session.rollback()
-            flash('קוד קופון זה כבר קיים. אנא בחר קוד אחר.', 'danger')
-        except Exception as e:
-            db.session.rollback()
-            flash('אירעה שגיאה בעת עדכון הקופון. נסה שוב.', 'danger')
-            current_app.logger.error(f"Error updating coupon: {e}")
-
-    elif request.method == 'GET':
-        if coupon.expiration:
-            if isinstance(coupon.expiration, str):
-                try:
-                    coupon.expiration = datetime.strptime(coupon.expiration, '%Y-%m-%d').date()
-                except ValueError:
-                    try:
-                        coupon.expiration = datetime.strptime(coupon.expiration, '%d/%m/%Y').date()
-                    except ValueError:
-                        coupon.expiration = None
-        form.expiration.data = coupon.expiration
-        form.tags.data = ', '.join([tag.name for tag in coupon.tags])
-
-    existing_tags = ', '.join([tag.name for tag in coupon.tags])
-    top_tags = Tag.query.order_by(Tag.count.desc()).limit(3).all()
-    top_tags = [tag.name for tag in top_tags]
-
-    return render_template('edit_coupon.html', form=form, coupon=coupon, existing_tags=existing_tags, top_tags=top_tags)
-'''''''''''
-
 @coupons_bp.route('/edit_coupon/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_coupon(id):
@@ -1519,10 +1388,41 @@ def edit_coupon(id):
 
     form = EditCouponForm(obj=coupon)
 
+    companies = Company.query.all()
+    company_choices = [('', 'בחר חברה')]
+    company_choices += [(str(c.id), c.name) for c in companies]
+    company_choices.append(('other', 'אחר'))
+    form.company_id.choices = company_choices
+
     if form.validate_on_submit():
         try:
             old_value = coupon.value
-            coupon.company = form.company.data.strip()
+            if form.company_id.data == 'other':
+                # אם המשתמש בחר "אחר"
+                new_company_name = form.other_company.data.strip()
+                if not new_company_name:
+                    flash('יש להזין שם חברה חדשה.', 'danger')
+                    return redirect(url_for('coupons.edit_coupon', id=coupon.id))
+                # בדיקה אם כבר קיימת החברה הזאת
+                existing_company = Company.query.filter_by(name=new_company_name).first()
+                if existing_company:
+                    coupon.company = existing_company.name
+                else:
+                    # אם לא קיימת, יוצרים רשומה חדשה:
+                    new_company = Company(name=new_company_name, image_path='default_logo.png')
+                    db.session.add(new_company)
+                    db.session.commit()
+                    coupon.company = new_company.name
+            else:
+                # אם המשתמש בחר חברה קיימת
+                selected_company_id = int(form.company_id.data)
+                chosen_company = Company.query.get(selected_company_id)
+                if chosen_company:
+                    coupon.company = chosen_company.name
+                else:
+                    flash('החברה שנבחרה אינה תקפה.', 'danger')
+                    return redirect(url_for('coupons.edit_coupon', id=coupon.id))
+
             coupon.code = form.code.data.strip()
             coupon.value = float(form.value.data)
             coupon.cost = float(form.cost.data)
@@ -1614,6 +1514,17 @@ def edit_coupon(id):
             current_app.logger.error(f"Error updating coupon: {e}")
 
     elif request.method == 'GET':
+            # מוצא את החברה לפי השם
+        existing_company = Company.query.filter_by(name=coupon.company).first()
+        if existing_company:
+            # אם החברה נמצאה – מציב את ה־ID שלה
+            form.company_id.data = str(existing_company.id)
+            form.other_company.data = ''
+        else:
+            # אם לא, סביר שזו "חברה אחרת" שלא קיימת ב־DB
+            form.company_id.data = 'other'
+            form.other_company.data = coupon.company
+            
         if coupon.expiration:
             if isinstance(coupon.expiration, str):
                 try:

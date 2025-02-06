@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}
+ניהול קופונים אוטומטיים
+{% endblock %}
+
+{% block content %}
+<section class="admin-dashboard">
+    <h2>ניהול קופונים אוטומטיים</h2>
+
+    <!-- חלק עליון: טפסים וכפתורי עדכון -->
+    <div class="forms-section">
+
+        <!-- טופס לעדכון auto_download_details בקופון בודד -->
+        <form method="POST" action="{{ url_for('admin_bp.admin_coupons_bp.update_auto_download_details') }}">
+            <!-- ה-CSRF כ-hidden input כדי שלא יוצג כטקסט ארוך על המסך -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-group">
+                <label for="coupon_id">בחר קופון</label>
+                <select name="coupon_id" id="coupon_id" required>
+                    <option value="">-- בחר קופון --</option>
+                    {% for coupon in coupons %}
+                    <option value="{{ coupon.id }}">
+                        {{ coupon.id }} - {{ coupon.company }}
+                        {% if coupon.auto_download_details %}
+                            ({{ coupon.auto_download_details }})
+                        {% else %}
+                            (אין ערך)
+                        {% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="auto_value">בחר ערך auto_download_details</label>
+                <select name="auto_value" id="auto_value">
+                    <option value="">-- בחר ערך --</option>
+                    {% for ad in auto_download_values %}
+                    <option value="{{ ad }}">
+                        {{ ad }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary">עדכן לקופון הנבחר</button>
+        </form>
+
+        <hr>
+
+        <!-- כפתור לעדכון מרוכז: רק פעילים -->
+        <form method="POST" action="{{ url_for('admin_bp.admin_coupons_bp.update_all_active_coupons') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-warning">
+                עדכן קופונים אוטומטיים פעילים בלבד
+            </button>
+        </form>
+
+        <!-- כפתור לעדכון מרוכז: כולם -->
+        <form method="POST" action="{{ url_for('admin_bp.admin_coupons_bp.update_all_any_coupons') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger">
+                עדכן את כל הקופונים האוטומטיים (כולם)
+            </button>
+        </form>
+
+    </div> <!-- /forms-section -->
+
+    <hr>
+
+    <!-- חלק תחתון: טבלה של כל הקופונים שיש להם auto_download_details (בלי קשר לסטטוס) -->
+    <div class="coupons-list">
+        <h3>קופונים (עם auto_download_details)</h3>
+        <div class="table-scroll">
+            <table class="active-coupons-table">
+                <thead>
+                    <tr>
+                        <th>Coupon ID</th>
+                        <th>User ID</th>
+                        <th>Company</th>
+                        <th>Auto Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in table_coupons %}
+                    <tr>
+                        <td>{{ c.id }}</td>
+                        <td>{{ c.user_id }}</td>
+                        <td>{{ c.company }}</td>
+                        <td>{{ c.auto_download_details }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* מראה כללי */
+.admin-dashboard {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.admin-dashboard h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #343a40;
+}
+
+/* החלק של הטפסים */
+.forms-section {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+/* עיצוב טופס ואלמנטים */
+.form-group {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-group select {
+    padding: 8px;
+    font-size: 1rem;
+}
+
+/* כפתורים */
+.btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    display: inline-block;
+    cursor: pointer;
+    color: #fff;
+    border: none;
+    margin-right: 10px;
+    margin-top: 10px;
+}
+
+.btn-primary {
+    background-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    transform: scale(1.03);
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+    transform: scale(1.03);
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #bd2130;
+    transform: scale(1.03);
+}
+
+/* החלק התחתון - טבלה */
+.coupons-list {
+    margin-top: 20px;
+}
+
+.table-scroll {
+    overflow-x: auto;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+.active-coupons-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.active-coupons-table thead {
+    background-color: #f0f0f0;
+}
+
+.active-coupons-table th,
+.active-coupons-table td {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    text-align: center;
+}
+
+.active-coupons-table th {
+    font-weight: bold;
+}
+</style>
+{% endblock %}

@@ -414,7 +414,8 @@ class SellCouponForm(FlaskForm):
         return True
     
 class EditCouponForm(FlaskForm):
-    company = StringField('שם החברה:', validators=[InputRequired(message="חובה למלא את שם החברה.")])
+    company_id = SelectField("חברה", choices=[], validators=[DataRequired()])
+    other_company = StringField("חברה אחרת")
     code = StringField('קוד קופון:', validators=[InputRequired(message="חובה למלא את קוד הקופון.")])
     value = FloatField('ערך הקופון (בש"ח):', validators=[InputRequired(message="חובה למלא את ערך הקופון."),
                                                          NumberRange(min=0, message="הערך חייב להיות 0 או גדול ממנו.")])

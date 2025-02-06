@@ -80,7 +80,7 @@ def create_app():
     app.register_blueprint(admin_coupon_tags_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
     # app.register_blueprint(profile_bp, url_prefix='/')
-    app.register_blueprint(admin_dashboard_bp, url_prefix='/admin')
+    app.register_blueprint(admin_dashboard_bp, url_prefix="/admin")
 
     # אם צריך - יצירת תיקיית instance
     if not os.path.exists('instance'):

@@ -282,7 +282,7 @@ def build_new_dashboard() -> str:
                         // שמירת ה-CSRF Token מתוך ה-meta
                         var csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
                         var csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : null;
-
+                        
                         // בדיקה אם ה-CSRF Token קיים
                         if (!csrfToken) {{
                             console.error("🚨 CSRF Token is missing from the page!");
@@ -829,7 +829,6 @@ def update_company_chart():
     updated_chart_div = plotly_plot(fig, include_plotlyjs=False, output_type='div', config={'responsive': True})
 
     return jsonify({"chart_div": updated_chart_div})
-
 
 def build_dashboard() -> str:
     df_all = fetch_data()
