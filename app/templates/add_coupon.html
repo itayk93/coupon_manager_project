@@ -256,70 +256,99 @@
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
 
 <style>
-.center-text {
-    text-align: center;
-}
-
-.slots-info-mobile {
-    display: none;
-    font-size: 12px;
-    color: #333;
-    margin-bottom: 5px;
-}
-
-
-/* במכשיר נייד: במקום tooltip, נציג טקסט קבוע מעל הכפתור */
-@media (max-width: 768px) {
-    .slots-info-mobile {
-        display: block; /* מציגים טקסט קטן מעל הכפתור */
-    }
-    .no-slots-message {
-        text-align: center; /* מרכז את הטקסט במסרים שאין מספיק סלוטים */
-    }
-    .manual-entry p {
-        text-align: center; /* מרכז את הטקסט במסמך הכניסה הידנית */
-    }
-
-    /* כאן מתקנים את סידור הצ'קבוקס והטקסט בשורה במסכים קטנים */
-    .form-group.center-text .form-label {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
+    .center-text {
         text-align: center;
     }
-}
-
-
-/* עיצוב עבור הכפתור בעת מעבר עכבר - בדסקטופ */
-@media (min-width: 769px) {
-    .add-coupons-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: center;
-}
-
-.button-row {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
-.button-row.full-width {
-    width: 100%;
-}
-
-.wide-button {
-    flex-grow: 1;
-    text-align: center;
-    display: block;
-    width: 100%;
-    max-width: 320px; /* להתאים לרוחב הרצוי */
-}
-
+    
+    .slots-info-mobile {
+        display: none;
+        font-size: 12px;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    /* עיצוב ייחודי למסכים קטנים */
+    @media (max-width: 768px) {
+        .slots-info-mobile {
+            display: block;
+        }
+        .no-slots-message {
+            text-align: center;
+        }
+        .manual-entry p {
+            text-align: center;
+        }
+    
+        /* יצירת רשת עם 2 עמודות לכפתורים העליונים */
+        .add-coupons-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* שתי עמודות שוות בגודל */
+            gap: 10px; /* רווח בין הכפתורים */
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+    
+        /* התאמת עיצוב הכפתורים */
+        .button-row {
+            display: contents; /* שומר על רשת הגריד */
+        }
+    
+        .button-row a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            font-size: 16px;
+            text-align: center;
+            min-height: 50px; /* גובה אחיד */
+            width: 100%;
+        }
+    
+        /* הכפתור הרחב לא יתפרס על כל הרוחב */
+        .button-row.full-width {
+            grid-column: span 2; /* תופס את כל הרוחב של הרשת */
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+    
+        .wide-button {
+            width: 100%; /* עכשיו הרוחב שלו כמו הכפתורים למעלה */
+            max-width: 100%;
+        }
+    }
+    
+    /* עיצוב בדסקטופ (ללא שינוי) */
+    @media (min-width: 769px) {
+        .add-coupons-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: center;
+        }
+    
+        .button-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+    
+        .button-row.full-width {
+            width: 100%;
+        }
+    
+        .wide-button {
+            flex-grow: 1;
+            text-align: center;
+            display: block;
+            width: 100%;
+            max-width: 320px;
+        }
+    }
 </style>
-
+    
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
