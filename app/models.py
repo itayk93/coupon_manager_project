@@ -554,6 +554,10 @@ class UserReview(db.Model):
     comment = db.Column(db.Text, nullable=True)    # הערה טקסטואלית
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    __table_args__ = (
+        db.UniqueConstraint('reviewer_id', 'reviewed_user_id', 'transaction_id', name='user_reviews_unique_review'),
+    )
+
     # קשרים אופציונליים
     reviewer = db.relationship("User", foreign_keys=[reviewer_id], backref="reviews_given")
     reviewed_user = db.relationship("User", foreign_keys=[reviewed_user_id], backref="reviews_received")

@@ -194,13 +194,14 @@
 
                     {# -- הוספת עמודה "פעולות" - מאפשרת להוסיף ביקורת על המוכר -- #}
                     <td>
-                        {% if transaction.status == 'הושלם' and current_user.id == transaction.buyer_id %}
+                        {% if transaction.status == 'הושלם' and current_user.id == transaction.buyer_id and transaction.id not in reviewed_transactions %}
                             <a href="{{ url_for('profile.rate_user', user_id=transaction.seller_id, transaction_id=transaction.id) }}"
                                class="action-button"
                                title="הוספת ביקורת על המוכר">
                                 הוספת ביקורת
                             </a>
                         {% else %}
+
                             -
                         {% endif %}
                     </td>

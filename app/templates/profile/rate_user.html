@@ -1,131 +1,167 @@
-<!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>הוסף ביקורת</title>
-    <style>
-        /* עיצוב כללי לעמוד */
-        body {
-            direction: rtl;
-            text-align: right;
-            font-family: Arial, sans-serif;
-            background-color: #f2f2f2;
-            margin: 0;
-            padding: 0;
-        }
-        /* מכולת התוכן */
-        .container {
-            max-width: 500px;
-            margin: 30px auto;
-            background-color: #fff;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        /* כותרת ראשית */
-        h1 {
-            text-align: center;
-            color: #2E86C1;
-        }
-        /* עיצוב קבוצת שדות בטופס */
-        .form-group {
-            margin-top: 15px;
-        }
-        .form-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        /* עיצוב שדות קלט */
-        .input-field {
-            width: 100%;
-            padding: 8px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        /* כפתור שליחה */
-        .submit-button {
-            background-color: #2E86C1;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            margin-top: 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-        }
-        .submit-button:hover {
-            background-color: #2874A6;
-        }
-        /* הודעות פלאש */
-        .flash-messages {
-            margin-bottom: 15px;
-        }
-        .flash-messages .flash {
-            color: red;
-            margin-bottom: 5px;
-        }
-        /* שם המשתמש */
-        .user-name {
-            font-weight: bold;
-            color: #34495E;
-        }
-        /* הודעות שגיאה בשדות */
-        .error {
-            color: red;
-            font-size: 13px;
-            margin-top: 5px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>הוסף ביקורת</h1>
+{% extends 'base.html' %}
 
-        <p>אתה עומד לכתוב ביקורת על <span class="user-name">{{ user_to_rate.first_name }} {{ user_to_rate.last_name }}</span>.</p>
+{% block title %}
+הוספת ביקורת
+{% endblock %}
 
-        {# הצגת הודעות פלאש, במידה ויש #}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                        <div class="flash {{ category }}">{{ message }}</div>
+{% block content %}
+<section class="add-review">
+    <h2>הוספת ביקורת</h2>
+
+    <!-- הצגת הודעות flash (בדומה לקוד הוספת קופון) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- תוכן דף הביקורות -->
+    <p class="center-text">מה דעתך על <span class="user-name">{{ user_to_rate.first_name }}</span>? נשמח לשמוע את הביקורת שלך.</p>
+
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            <label for="rating" class="form-label">דירוג (1 עד 5):</label>
+            {{ form.rating(class="input-field", id="rating", type="number", min="1", max="5") }}
+            {% if form.rating.errors %}
+                <div class="error">
+                    {% for error in form.rating.errors %}
+                        {{ error }}<br>
                     {% endfor %}
                 </div>
             {% endif %}
-        {% endwith %}
+        </div>
 
-        <form method="POST" action="">
-            {{ form.hidden_tag() }}
+        <div class="form-group">
+            <label for="comment" class="form-label">הערה:</label>
+            {{ form.comment(class="input-field", id="comment") }}
+            {% if form.comment.errors %}
+                <div class="error">
+                    {% for error in form.comment.errors %}
+                        {{ error }}<br>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
 
-            <div class="form-group">
-                <label for="rating" class="form-label">דירוג (1 עד 5):</label>
-                {{ form.rating(class="input-field", id="rating") }}
-                {% if form.rating.errors %}
-                    <div class="error">
-                        {% for error in form.rating.errors %}
-                            {{ error }}<br>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
+        {{ form.submit(class="submit-button") }}
+    </form>
+</section>
+{% endblock %}
 
-            <div class="form-group">
-                <label for="comment" class="form-label">הערה:</label>
-                {{ form.comment(class="input-field", id="comment") }}
-                {% if form.comment.errors %}
-                    <div class="error">
-                        {% for error in form.comment.errors %}
-                            {{ error }}<br>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
+{% block scripts %}
+{{ super() }}
+<!-- במידה ויש קובץ CSS חיצוני ל-Tooltip או ספריות אחרות, אפשר לטעון כאן.
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
+<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+-->
 
-            {{ form.submit(class="submit-button") }}
-        </form>
-    </div>
-</body>
-</html>
+<style>
+    /* כאן אפשר לשלב את הסגנונות שהופיעו בקוד של "הוספת קופון",
+       ולהתאים אותם לשימוש בעמוד הביקורות (class="add-review"). */
+
+    .add-review {
+        max-width: 600px;
+        margin: 30px auto;
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .add-review h2 {
+        text-align: center;
+        color: #2E86C1;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    /* הודעות פלאש */
+    .flash-messages {
+        margin-bottom: 15px;
+    }
+    .flash {
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 5px;
+    }
+    .flash.success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .flash.error, .flash.danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .flash.warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    /* עיצוב כללי לשדות/טופס */
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    .input-field {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    .submit-button {
+        background-color: #2E86C1;
+        color: #fff;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        font-size: 16px;
+    }
+    .submit-button:hover {
+        background-color: #2874A6;
+    }
+    .error {
+        color: red;
+        font-size: 13px;
+        margin-top: 5px;
+    }
+    .user-name {
+        font-weight: bold;
+        color: #34495E;
+    }
+
+    /* רספונסיבי למסכים קטנים */
+    @media (max-width: 768px) {
+        .add-review {
+            margin: 15px;
+            padding: 15px;
+        }
+        .submit-button {
+            font-size: 14px;
+        }
+    }
+    
+    .center-text {
+    text-align: center;
+    }
+
+</style>
+
+<script>
+    // אם תרצה/י להוסיף קוד JS ספציפי לעמוד הביקורות, אפשר כאן
+    console.log('Add Review page loaded.');
+</script>
+{% endblock %}

@@ -16,6 +16,7 @@ from app.models import Transaction, db
 from app.forms import ApproveTransactionForm
 from app.helpers import send_email
 import traceback
+from app.models import Coupon, User, Transaction, Notification, CouponRequest, CouponUsage, Tag, Company, UserReview, db
 
 transactions_bp = Blueprint('transactions', __name__)
 logger = logging.getLogger(__name__)
@@ -88,6 +89,11 @@ def my_transactions():
         Transaction.status.in_(["הושלם", "מבוטל"])
     ).all()
 
+    # מיפוי transaction_id -> האם קיימת ביקורת (True/False)
+    reviewed_transactions = {
+        review.transaction_id for review in UserReview.query.filter_by(reviewer_id=current_user.id).all()
+    }
+
     # שליפת כל החברות לצורך לוגו
     companies = Company.query.all()
     company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
@@ -106,6 +112,7 @@ def my_transactions():
         transactions_as_seller=active_seller_transactions,
         transactions_as_buyer=active_buyer_transactions,
         completed_transactions=completed_transactions,
+        reviewed_transactions=reviewed_transactions,  # מעבירים את המידע לשבלונה
         coupon_requests=coupon_requests,
         user_coupons=user_coupons,
         company_logo_mapping=company_logo_mapping
