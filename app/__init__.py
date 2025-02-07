@@ -65,6 +65,7 @@ def create_app():
     from app.routes.admin_routes.admin_companies_routes import admin_companies_bp
     from app.routes.admin_routes.admin_coupon_tags_routes import admin_coupon_tags_bp
     from app.routes.admin_routes.admin_dashboard_routes import admin_dashboard_bp
+    from app.routes.admin_routes.admin_messages_routes import admin_messages_bp
     # from app.routes.profile_routes import profile_bp
 
     app.register_blueprint(auth_bp)
@@ -81,6 +82,7 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix='/admin')
     # app.register_blueprint(profile_bp, url_prefix='/')
     app.register_blueprint(admin_dashboard_bp, url_prefix="/admin")
+    app.register_blueprint(admin_messages_bp)
 
     # אם צריך - יצירת תיקיית instance
     if not os.path.exists('instance'):

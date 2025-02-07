@@ -7,6 +7,7 @@ from .admin_companies_routes import admin_companies_bp
 from .admin_coupon_tags_routes import admin_coupon_tags_bp
 from .admin_users_routes import admin_users_bp
 from .admin_coupons import admin_coupons_bp
+from .admin_messages_routes import admin_messages_bp
 
 # יצירת ה-Blueprint הראשי עבור /admin
 admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin')
@@ -17,6 +18,7 @@ admin_bp.register_blueprint(admin_companies_bp,   url_prefix='/companies')
 admin_bp.register_blueprint(admin_coupon_tags_bp, url_prefix='/coupon-tags')
 admin_bp.register_blueprint(admin_users_bp,       url_prefix='/users')
 admin_bp.register_blueprint(admin_coupons_bp,     url_prefix='/coupons')  # ← רישום ניהול קופונים אוטומטיים
+admin_bp.register_blueprint(admin_messages_bp)
 
 @admin_bp.route('/dashboard', methods=['GET'])
 @login_required

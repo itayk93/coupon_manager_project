@@ -841,3 +841,16 @@ class ResetPasswordForm(FlaskForm):
 class UsageExplanationForm(FlaskForm):
     usage_explanation = TextAreaField('פירוט שימוש', validators=[DataRequired()])
     submit_usage_explanation = SubmitField('שלח')
+
+from flask_wtf import FlaskForm
+from wtforms import TextAreaField, SubmitField
+from wtforms.validators import DataRequired
+from flask_wtf import FlaskForm
+from wtforms import TextAreaField, StringField, SubmitField
+from wtforms.validators import DataRequired, Optional, URL
+
+class AdminMessageForm(FlaskForm):
+    message_text = TextAreaField("תוכן ההודעה", validators=[DataRequired()])
+    link_url = StringField("קישור (אופציונלי)", validators=[Optional(), URL(message="כתובת לא תקינה")])
+    link_text = StringField("טקסט לכפתור (אופציונלי)", validators=[Optional()])
+    submit = SubmitField("שמור הודעה")

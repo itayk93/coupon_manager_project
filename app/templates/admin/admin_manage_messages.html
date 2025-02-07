@@ -1,0 +1,253 @@
+{# app/templates/admin/admin_manage_messages.html #}
+{% extends 'base.html' %}
+
+{% block title %}
+ניהול הודעות מנהל
+{% endblock %}
+
+{% block styles %}
+<style>
+/* -- מיקום מרכזי ועטיפה כללית -- */
+.admin-messages-container {
+    max-width: 800px;
+    margin: 20px auto;
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    text-align: center; /* מרכז את התוכן */
+}
+
+.admin-messages-container h2 {
+    margin-bottom: 20px;
+}
+
+/* -- עיצוב טופס ההוספה -- */
+.admin-form {
+    margin-bottom: 20px;
+}
+.admin-form .form-group {
+    margin-bottom: 15px;
+    text-align: left; /* כדי שהלייבלים יהיו מיושרים לשמאל */
+    margin: 0 auto;
+    max-width: 400px;
+}
+.admin-form .form-group label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+.admin-form .form-group .input-field {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.submit-button {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+.submit-button:hover {
+    background-color: #2980b9;
+}
+
+/* -- כפתורי מחיקה וסימון הכל -- */
+.delete-button {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    margin-left: 10px;
+}
+.delete-button:hover {
+    background-color: #c0392b;
+}
+.toggle-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+    margin-top: 10px;
+}
+.toggle-button:hover {
+    background-color: #2980b9;
+}
+
+/* -- עיצוב רשימת ההודעות -- */
+.messages-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+    text-align: left; /* שורות ההודעות לימין/שמאל */
+    display: inline-block; /* כדי להישאר במרכז */
+    width: 100%;
+    max-width: 700px;
+}
+.messages-list li {
+    margin-bottom: 15px;
+    border: 1px solid #eee;
+    padding: 10px;
+    border-radius: 4px;
+    background: #fafafa;
+    position: relative;
+}
+
+/* -- תוכן ההודעה -- */
+.message-header {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.message-text {
+    white-space: pre-wrap; /* מאפשר ירידת שורה */
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+/* -- כפתור קישור ירוק -- */
+.link-button {
+    background-color: #2ecc71;
+    color: #fff;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    margin-left: 10px;
+    font-size: 0.9em;
+}
+.link-button:hover {
+    background-color: #27ae60;
+}
+
+/* -- תיבת סימון להודעות -- */
+.message-checkbox {
+    margin-right: 10px;
+    transform: scale(1.2);
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="add-coupon admin-messages-container">
+    <h2>ניהול הודעות מנהל</h2>
+
+    <!-- טופס הוספת הודעה חדשה -->
+    <form method="POST" class="admin-form">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            <label for="message_text">{{ form.message_text.label }}</label>
+            {{ form.message_text(rows=4, placeholder="הכנס את תוכן ההודעה כאן...", class="input-field") }}
+            {% for error in form.message_text.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="link_url">{{ form.link_url.label }}</label>
+            {{ form.link_url(placeholder="https://www.example.com", class="input-field") }}
+            {% for error in form.link_url.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="link_text">{{ form.link_text.label }}</label>
+            {{ form.link_text(placeholder="טקסט לכפתור (אופציונלי)", class="input-field") }}
+            {% for error in form.link_text.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="submit-button">
+            {{ form.submit.label }}
+        </button>
+    </form>
+
+    <!-- כפתור סימון הכל -->
+    <button id="toggle-selection" class="toggle-button">סמן הכל</button>
+
+    <!-- טופס מחיקה מרוכזת -->
+    <form method="POST" action="{{ url_for('admin_messages_bp.delete_multiple_admin_messages') }}"
+          id="bulk-delete-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <ul class="messages-list">
+            {% for message in messages %}
+            <li class="message-item">
+                <!-- צד שמאל: תיבת סימון והודעה -->
+                <div class="message-left">
+                    <input type="checkbox" name="message_ids" value="{{ message.id }}" class="message-checkbox">
+                    <div class="message-info">
+                        <div class="message-header">
+                            {{ message.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                        </div>
+                        <div class="message-text">{{ message.message_text }}</div>
+                    </div>
+                </div>
+                <!-- צד ימין: כפתור מחיקה פרטני + כפתור קישור (אם קיים) -->
+                <div class="message-actions">
+                    {% if message.link_url %}
+                    <a href="{{ message.link_url }}" target="_blank" class="link-button">
+                        {{ message.link_text if message.link_text else "פתח קישור" }}
+                    </a>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('admin_messages_bp.delete_admin_message', message_id=message.id) }}" class="inline-delete-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="delete-button">🗑</button>
+                    </form>
+                </div>
+            </li>
+            {% else %}
+            <li>אין הודעות מנהל.</li>
+            {% endfor %}
+        </ul>
+
+
+
+        <!-- כפתור למחיקת הודעות מסומנות -->
+        <button type="submit" id="bulk-delete-button" class="delete-button" disabled>
+            מחק הודעות נבחרות
+        </button>
+    </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const checkboxes = document.querySelectorAll(".message-checkbox");
+    const bulkDeleteButton = document.getElementById("bulk-delete-button");
+    const toggleSelectionButton = document.getElementById("toggle-selection");
+
+    // כפתור "סמן הכל / בטל סימון"
+    toggleSelectionButton.addEventListener("click", function () {
+        const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
+        checkboxes.forEach(checkbox => checkbox.checked = !allChecked);
+        updateDeleteButton();
+    });
+
+    // מעדכן מצב כפתור מחיקה מרוכזת (Enable/Disable)
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener("change", updateDeleteButton);
+    });
+
+    function updateDeleteButton() {
+        const anyChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+        bulkDeleteButton.disabled = !anyChecked;
+    }
+});
+</script>
+{% endblock %}

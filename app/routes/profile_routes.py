@@ -38,6 +38,7 @@ from flask import request, current_app
 from flask_login import current_user
 from app.helpers import get_geo_location, get_public_ip
 ip_address = None
+from app.models import AdminMessage
 
 def log_user_activity(ip_address,action, coupon_id=None):
     """
@@ -322,6 +323,16 @@ def index():
         if isinstance(coupon.expiration, str):  # אם expiration הוא מחרוזת
             coupon.expiration = datetime.strptime(coupon.expiration, "%Y-%m-%d").date()
 
+    # --------------------------------------------------------------------------------
+    # הודעת אדמין
+    # --------------------------------------------------------------------------------
+    # קבלת ההודעה האחרונה
+    latest_message = AdminMessage.query.order_by(AdminMessage.id.desc()).first()
+    show_admin_message = False
+
+    if latest_message:
+        if (current_user.dismissed_message_id is None) or (current_user.dismissed_message_id < latest_message.id):
+            show_admin_message = True
     return render_template(
         'index.html',
         profile_form=profile_form,
@@ -346,8 +357,11 @@ def index():
 
         # ✅ הוספת current_date ו-timedelta לתבנית
         current_date=date.today(),
-        timedelta=timedelta
-    )
+        timedelta=timedelta,
+
+        show_admin_message=show_admin_message,
+        admin_message=latest_message if show_admin_message else None)
+
 
 
 @profile_bp.route('/dismiss_expiring_alert', methods=['GET'])

@@ -3,6 +3,21 @@
 {% block title %}Coupon Master{% endblock %}
 
 {% block content %}
+{% if show_admin_message and admin_message %}
+<div class="admin-flash-message">
+    <p>{{ admin_message.message_text | replace("\n", "<br>") | safe }}</p>
+    {% if admin_message.link_url %}
+        <a href="{{ admin_message.link_url }}" target="_blank" class="admin-message-button">
+            {{ admin_message.link_text if admin_message.link_text else "למידע נוסף" }}
+        </a>
+    {% endif %}
+        <form method="post" action="{{ url_for('admin_messages_bp.dismiss_admin_message') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="close-button">×</button>
+    </form>
+</div>
+{% endif %}
+
 <section class="hero">
     <h2>{{ greeting }}, {{ current_user.first_name }}!</h2>
 
@@ -198,6 +213,53 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
 
 <style>
+/* עיצוב ההודעה המנהלית */
+.admin-flash-message {
+    background-color: #fff8e1; /* צבע צהוב עדין */
+    color: #856404;
+    border: 1px solid #ffeeba;
+    padding: 10px 15px; /* הקטנת הרווחים בפנים */
+    border-radius: 6px;
+    font-size: 1em; /* הקטנת גודל הפונט */
+    font-weight: normal; /* הקטנת הדגשה */
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin: 15px auto; /* הקטנת המרווח העליון והתחתון */
+    max-width: 800px; /* הגדלת הרוחב למראה טוב יותר */
+    width: 90%; /* רוחב דינמי להתאמה למסכים קטנים */
+    position: relative;
+}
+
+/* כפתור X לסגירת ההודעה */
+.admin-flash-message .close-button {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.1em;
+    cursor: pointer;
+    color: inherit;
+}
+
+/* כפתור X לסגירת ההודעה */
+.close-button {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    color: inherit;
+}
+
+/* הנפשה לסגירה */
+.admin-flash-message.fade-out {
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}
+
 /* === התראה מינימליסטית בפינה עם כפתור X למעלה-משמאל === */
 .expiring-coupons-alert {
     background-color: #fff8e1; /* רקע בהיר ועדין */
@@ -404,6 +466,29 @@
     margin-top: auto; /* דוחף את הכפתור לתחתית */
 }
 
+.admin-flash-message p {
+    margin-top: 4px; /* צמצום הרווח מעל הטקסט */
+    margin-bottom: 4px; /* שומר על רווח מינימלי מעל הכפתור */
+}
+
+.admin-message-button {
+    display: inline-block;
+    background-color: #3498db;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 0.85em;
+    font-weight: bold;
+    transition: background 0.3s ease-in-out;
+    margin-top: 2px; /* הקטנת הרווח בין הטקסט לכפתור */
+}
+
+.admin-message-button:hover {
+    background-color: #2980b9;
+}
+
+
 @media (max-width: 600px) {
     .usage-forms-container {
         flex-direction: column;
@@ -429,6 +514,33 @@
 
 
 </style>
-
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".close-button").forEach(button => {
+            button.addEventListener("click", function (event) {
+                event.preventDefault();  // מניעת השליחה הרגילה של הטופס
+                
+                let form = this.closest("form");
+                let url = form.action;
+                let csrfToken = form.querySelector("input[name='csrf_token']").value;
+    
+                fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: `csrf_token=${csrfToken}`
+                }).then(response => {
+                    if (response.ok) {
+                        form.closest(".admin-flash-message").remove(); // הסרת ההודעה מהעמוד
+                    } else {
+                        alert("שגיאה בעת סגירת ההודעה");
+                    }
+                });
+            });
+        });
+    });
+</script>
+    
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
 {% endblock %}

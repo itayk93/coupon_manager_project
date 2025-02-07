@@ -72,6 +72,7 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(150), nullable=False)
     age = db.Column(db.Integer, nullable=True)
     gender = db.Column(db.String(20), nullable=True)
+    dismissed_message_id = db.Column(db.Integer, nullable=True)
     # עמודה תאריך יצירת המשתמש
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
@@ -556,3 +557,12 @@ class UserReview(db.Model):
     # קשרים אופציונליים
     reviewer = db.relationship("User", foreign_keys=[reviewer_id], backref="reviews_given")
     reviewed_user = db.relationship("User", foreign_keys=[reviewed_user_id], backref="reviews_received")
+
+class AdminMessage(db.Model):
+    __tablename__ = 'admin_messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    message_text = db.Column(db.Text, nullable=False)
+    link_url = db.Column(db.String(255), nullable=True)   # קישור אופציונלי
+    link_text = db.Column(db.String(255), nullable=True)  # טקסט הכפתור
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
