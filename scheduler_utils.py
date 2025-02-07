@@ -252,18 +252,19 @@ import logging
 from sqlalchemy.sql import text
 from app.extensions import db
 
+from app import create_app
 
 def load_status():
     """
     טוען מהטבלה אם המייל נשלח עבור התאריך הנוכחי.
     מחזיר True אם נשלח, אחרת False.
     """
-    today = datetime.date.today()
-    query = text("SELECT was_sent FROM daily_email_status WHERE date = :today")
-    result = db.session.execute(query, {"today": today}).fetchone()
-
-    return result[0] if result else False  # אם אין רשומה להיום, נחזיר False
-
+    app = create_app()  # יצירת מופע של האפליקציה
+    with app.app_context():  # שימוש ב-context כדי למנוע שגיאות
+        today = datetime.date.today()
+        query = text("SELECT was_sent FROM daily_email_status WHERE date = :today")
+        result = db.session.execute(query, {"today": today}).fetchone()
+        return result[0] if result else False  # אם אין רשומה להיום, נחזיר False
 
 def save_status(was_sent):
     """

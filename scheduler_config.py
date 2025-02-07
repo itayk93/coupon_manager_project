@@ -160,21 +160,22 @@ def send_expiration_warnings():
             })
             db.session.commit()
 
+
 def daily_email_flow():
     """
     פונקציה ששולחת את המייל היומי רק אם הוא עדיין לא נשלח היום.
     """
-    # יבוא מקומי של create_app כדי למנוע מעגל תלות
     from app import create_app
     from scheduler_utils import update_company_counts_and_send_email
     from app.extensions import db
-    # כאן אנו בודקים את הסטטוס דרך הטבלה (ללא המשתנה הגלובלי WAS_SENT_TODAY)
-    from scheduler_utils import load_status, save_status
-    if load_status():
-        logging.info("daily_email_flow - Email already sent today. Skipping.")
-        return
+    from scheduler_utils import load_status, save_status  # לוודא שהייבוא תקין
+
     app = create_app()
-    with app.app_context():
+    with app.app_context():  # נעטוף את כל הקריאות ב-context של Flask
+        if load_status():
+            logging.info("daily_email_flow - Email already sent today. Skipping.")
+            return
+
         try:
             update_company_counts_and_send_email(app)
             save_status(True)
