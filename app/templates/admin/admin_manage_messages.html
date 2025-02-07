@@ -15,7 +15,7 @@
     padding: 20px;
     border-radius: 6px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    text-align: center; /* מרכז את התוכן */
+    text-align: center;
 }
 
 .admin-messages-container h2 {
@@ -28,7 +28,7 @@
 }
 .admin-form .form-group {
     margin-bottom: 15px;
-    text-align: left; /* כדי שהלייבלים יהיו מיושרים לשמאל */
+    text-align: left;
     margin: 0 auto;
     max-width: 400px;
 }
@@ -62,11 +62,12 @@
     background-color: #e74c3c;
     color: white;
     border: none;
-    padding: 5px 10px;
-    border-radius: 5px;
+    padding: 4px 8px; /* הקטנה לעומת הקודם */
+    border-radius: 4px;
     cursor: pointer;
-    font-size: 0.9em;
+    font-size: 0.8em; /* גודל קטן יותר */
     margin-left: 10px;
+    transition: background-color 0.3s ease;
 }
 .delete-button:hover {
     background-color: #c0392b;
@@ -75,12 +76,13 @@
     background-color: #3498db;
     color: white;
     border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
+    padding: 6px 10px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 0.9em;
-    margin-bottom: 10px;
-    margin-top: 10px;
+    margin: 10px auto;
+    display: block;
+    transition: background-color 0.3s ease;
 }
 .toggle-button:hover {
     background-color: #2980b9;
@@ -91,29 +93,53 @@
     list-style: none;
     padding: 0;
     margin-top: 20px;
-    text-align: left; /* שורות ההודעות לימין/שמאל */
-    display: inline-block; /* כדי להישאר במרכז */
+    text-align: left;
     width: 100%;
     max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
 }
-.messages-list li {
+/* כל הודעה מוצגת כקונטיינר Flex לשני צדדים */
+.messages-list li.message-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 15px;
     border: 1px solid #eee;
     padding: 10px;
     border-radius: 4px;
     background: #fafafa;
-    position: relative;
 }
 
-/* -- תוכן ההודעה -- */
+/* צד שמאל: סימון והודעה */
+.message-left {
+    display: flex;
+    align-items: center;
+}
+.message-checkbox {
+    margin-right: 10px;
+    transform: scale(1.2);
+    cursor: pointer;
+}
+.message-info {
+    font-size: 0.85em; /* הודעה קטנה יותר */
+}
 .message-header {
     font-weight: bold;
     margin-bottom: 5px;
 }
 .message-text {
-    white-space: pre-wrap; /* מאפשר ירידת שורה */
+    white-space: pre-wrap;
     margin-top: 5px;
     margin-bottom: 5px;
+    font-size: 0.85em;
+}
+
+/* צד ימין: כפתורי פעולה */
+.message-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 /* -- כפתור קישור ירוק -- */
@@ -121,20 +147,32 @@
     background-color: #2ecc71;
     color: #fff;
     text-decoration: none;
-    padding: 5px 10px;
-    border-radius: 5px;
-    margin-left: 10px;
-    font-size: 0.9em;
+    padding: 4px 8px; /* הקטנה לעומת המקורי */
+    border-radius: 4px;
+    font-size: 0.8em;
+    transition: background-color 0.3s ease;
 }
 .link-button:hover {
     background-color: #27ae60;
 }
 
-/* -- תיבת סימון להודעות -- */
-.message-checkbox {
-    margin-right: 10px;
-    transform: scale(1.2);
+/* -- כפתור למחיקת הודעות מסומנות -- */
+.bulk-delete-button {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 6px 0;
+    border-radius: 5px;
     cursor: pointer;
+    font-size: 0.9em;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 700px;
+    display: block;
+}
+.bulk-delete-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
 }
 </style>
 {% endblock %}
@@ -180,8 +218,7 @@
     <button id="toggle-selection" class="toggle-button">סמן הכל</button>
 
     <!-- טופס מחיקה מרוכזת -->
-    <form method="POST" action="{{ url_for('admin_messages_bp.delete_multiple_admin_messages') }}"
-          id="bulk-delete-form">
+    <form method="POST" action="{{ url_for('admin_messages_bp.delete_multiple_admin_messages') }}" id="bulk-delete-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <ul class="messages-list">
@@ -197,7 +234,7 @@
                         <div class="message-text">{{ message.message_text }}</div>
                     </div>
                 </div>
-                <!-- צד ימין: כפתור מחיקה פרטני + כפתור קישור (אם קיים) -->
+                <!-- צד ימין: כפתור קישור (אם קיים) ומחיקה פרטנית -->
                 <div class="message-actions">
                     {% if message.link_url %}
                     <a href="{{ message.link_url }}" target="_blank" class="link-button">
@@ -215,10 +252,8 @@
             {% endfor %}
         </ul>
 
-
-
         <!-- כפתור למחיקת הודעות מסומנות -->
-        <button type="submit" id="bulk-delete-button" class="delete-button" disabled>
+        <button type="submit" id="bulk-delete-button" class="delete-button bulk-delete-button" disabled>
             מחק הודעות נבחרות
         </button>
     </form>
@@ -239,7 +274,7 @@ document.addEventListener("DOMContentLoaded", function () {
         updateDeleteButton();
     });
 
-    // מעדכן מצב כפתור מחיקה מרוכזת (Enable/Disable)
+    // עדכון מצב כפתור מחיקה מרוכזת (הפעל/השבת)
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener("change", updateDeleteButton);
     });
