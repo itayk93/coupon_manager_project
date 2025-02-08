@@ -111,11 +111,17 @@ header {
     color: var(--secondary-color);
 }
 
-/* מרווח לאייקון הבית */
-.header-left a.home-icon i.fa-home {
-    font-size: 1.8em; /* Adjusted to fit the narrower header */
+/* החוקים הרגילים לכל אייקון בתוך header-left חוץ מהבית */
+.header-left a:not(.home-icon) i {
+    font-size: 1.8em; /* נשאר אותו דבר */
     color: var(--white);
-    margin-left: 8px; /* מרווח בין הסמל לטקסט */
+    margin-left: 8px; /* שמירה על רווח עבור אייקונים אחרים */
+}
+
+/* חוקים נפרדים רק לאייקון של הבית */
+.header-left a.home-icon i.fa-home {
+    font-size: 1.5em; /* מקטין טיפה את האייקון */
+    margin-left: 3px; /* מרווח מינימלי */
 }
 
 /* Optional: style for the home icon text */
@@ -2191,6 +2197,68 @@ h3 {
     .coupon-card {
         width: 100% !important;
     }
+}
+/* ודא שכל האלמנטים מתיישרים למרכז */
+.about-section, .about-section h2, .about-section h3, .about-section p,
+.about-section ul, .about-section li, .qa-section, .qa-section .question,
+.qa-section .question h4, .qa-section .question p {
+    text-align: center !important;
+}
+
+/* מרכוז הרשימה */
+.about-section ul {
+    list-style-type: none; /* מסיר בולטים */
+    padding: 0;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* מוודא שכל פריט ברשימה ממורכז */
+.about-section li {
+    text-align: center;
+    width: 100%;
+    display: block;
+}
+
+/* הסרת נקודות מהרשימה */
+.about-section li::before {
+    content: none !important;
+}
+
+/* שאלות ותשובות - שתי עמודות בשורה במסכים גדולים */
+.qa-section {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 עמודות */
+    gap: 20px; /* מרווחים בין הבלוקים */
+    align-items: stretch; /* מוודא שכל האלמנטים יתארכו לאותו הגובה */
+}
+
+/* שאלות ותשובות - בלוק אחד בשורה במסכים קטנים */
+@media (max-width: 768px) {
+    .qa-section {
+        grid-template-columns: 1fr; /* עמודה אחת בלבד */
+    }
+}
+
+/* עיצוב אחיד לבלוקים */
+.qa-section .question {
+    background-color: var(--light-gray);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* מוודא שהתוכן בפנים מיושר למרכז */
+}
+
+/* אפקט ריחוף */
+.qa-section .question:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* ===================================================

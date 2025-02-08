@@ -85,11 +85,11 @@
 
         {% if coupon.is_for_sale %}
             <div class="info-box">
-                <span class="info-title">ערך מקורי:</span>
+                <span class="info-title">כמה הקופון שווה בפועל:</span>
                 <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
             </div>
             <div class="info-box">
-                <span class="info-title">עלות:</span>
+                <span class="info-title">כמה שילמת על הקופון:</span>
                 <span class="info-value">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
             </div>
         {% endif %}

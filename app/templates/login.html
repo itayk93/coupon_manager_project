@@ -3,6 +3,8 @@
 {% block title %}התחברות{% endblock %}
 
 {% block content %}
+<h2 class="page-title">ברוכים הבאים ל - CouponMaster!</h2>
+
 <section class="auth-form">
     <h2>התחברות</h2>
     <form method="POST" action="">
@@ -53,6 +55,34 @@
         </a>
     </div>
 </section>
+
+<!-- כותרת התכונות -->
+<h2 class="features-title">מה אפשר לעשות באתר שלנו?</h2>
+
+<!-- בלוקים עם תכונות עיקריות של האתר -->
+<section class="features">
+    <div class="feature-box_login">
+        <i class="fa fa-wallet feature-icon"></i>
+        <h3>נהלו את כל הקופונים שלכם במקום אחד</h3>
+        <p>צרו ארנק דיגיטלי חכם וגלו כמה קל לנהל את כל ההטבות שלכם. התחילו לחסוך עכשיו!</p>
+    </div>
+    <div class="feature-box_login">
+        <i class="fa fa-handshake feature-icon"></i>
+        <h3>הרוויחו מקופונים שאינכם צריכים</h3>
+        <p>מכרו או העבירו קופונים שלא תנצלו ותנו לאחרים ליהנות מההטבות. הצטרפו לקהילת החיסכון שלנו!</p>
+    </div>
+    <div class="feature-box_login">
+        <i class="fa fa-clock feature-icon"></i>
+        <h3>לעולם לא תפספסו עוד הטבה</h3>
+        <p>קבלו התראות חכמות לפני פקיעת הקופונים ונצלו כל הטבה בזמן. הירשמו עכשיו והתחילו לחסוך!</p>
+    </div>
+    <div class="feature-box_login">
+        <i class="fa fa-lock feature-icon"></i>
+        <h3>הנתונים שלכם שמורים</h3>
+        <p>כל הפרטים נשמרים בצורה מוצפנת ומאובטחת, כך שרק אתם שולטים בקופונים שלכם!</p>
+    </div>
+</section>
+
 {% endblock %}
 
 {% block scripts %}
@@ -105,5 +135,87 @@
 .secondary-button:hover {
     background-color: #e0e0e0;
 }
+
+/* כותרת התכונות */
+.features-title {
+    text-align: center;
+    font-size: 1.8em;
+    margin-top: 40px;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+}
+
+/* סגנון לבלוקים של התכונות */
+.features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    max-width: 800px;
+    margin: 20px auto;
+    text-align: center;
+}
+
+.feature-box_login {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-box_login:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.feature-icon {
+    font-size: 1.5em;
+    color: #2473CC;
+    margin-bottom: 8px;
+}
+
+/* 2 עמודות גם במסכים קטנים כמו טלפונים */
+@media (max-width: 768px) {
+    .features {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* למסכים צרים במיוחד (מתחת ל-400px) - עמודה אחת */
+@media (max-width: 400px) {
+    .features {
+        grid-template-columns: 1fr;
+    }
+}
+.feature-box_login h3 {
+    margin-top: 0px; /* מקטין את הרווח העליון של ה-<h3> */
+}
+
+/* למסכים גדולים */
+@media (min-width: 1024px) {
+    .features {
+        max-width: 600px;
+    }
+
+    .feature-box_login {
+        padding: 10px;
+    }
+
+    .feature-box_login h3 {
+        font-size: 1.2em;
+    }
+
+    .feature-box_login p {
+        font-size: 0.9em;
+    }
+
+    .feature-icon {
+        font-size: 1.2em;
+    }
+    .auth-form {
+        margin-top: 0px; /* הקטן את הרווח בהתאם */
+    }
+}
+
 </style>
 {% endblock %}
