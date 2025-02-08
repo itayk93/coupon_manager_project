@@ -260,6 +260,18 @@
         .header-right {
             justify-self: end;
         }
+        /* ברירת מחדל לכל המסכים - אין מרווח */
+        .home-icon {
+            margin: 0 !important;
+        }
+
+        /* התאמה למסכים קטנים (טלפונים ניידים) */
+        @media (max-width: 768px) { /* מתאים למכשירים ניידים */
+            .home-icon {
+                margin: 0 -10px 0 0 !important; /* מזיז את האייקון יותר ימינה */
+            }
+        }
+
     </style>
 
     {% block scripts %}{% endblock %}
