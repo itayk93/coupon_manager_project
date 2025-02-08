@@ -33,7 +33,22 @@ def log_user_activity(ip_address,action, coupon_id=None):
     פונקציה מרכזית לרישום activity log.
     """
     try:
+        user_id = current_user.id if current_user.is_authenticated else None
         user_agent = request.headers.get('User-Agent', '')
+
+        # 🔹 בדיקת ההסכמה האחרונה של המשתמש (רק לפי user_id) 🔹
+        consent_check_query = """
+            SELECT consent_status FROM user_consents 
+            WHERE user_id = :user_id 
+            ORDER BY timestamp DESC LIMIT 1
+        """
+        result = db.session.execute(
+            text(consent_check_query),
+            {"user_id": user_id}
+        ).fetchone()
+        
+        if not result or not result[0]:  # אם אין הסכמה או שהיא false, לא נמשיך לרשום את הפעולה
+            return
 
         geo_data = get_geo_location(ip_address)
 
@@ -139,6 +154,10 @@ def login():
         if check_password_hash(user.password, form.password.data):
             login_user(user, remember=form.remember.data)
             log_user_activity(ip_address, "login_success")
+
+            # 🔹 שדרוג חשוב: קישור ההסכמה למשתמש לאחר התחברות 🔹
+            update_consent_after_login(user.id)
+
             return redirect(url_for('profile.index'))
         else:
             flash('אימייל או סיסמה שגויים.', 'error')
@@ -230,45 +249,92 @@ def logout():
     return redirect(url_for('auth.login'))
 
 
+from flask import request, jsonify, make_response
+from datetime import datetime
+from sqlalchemy import text
+
 @auth_bp.route('/save_consent', methods=['POST'])
 def save_consent():
-    # Retrieve the IP address at the beginning of the function
-    ip_address = None
-    log_user_activity(ip_address, "save_consent_attempt")
+    try:
+        # שליפת כתובת IP
+        ip_address = request.remote_addr
+        log_user_activity(ip_address, "save_consent_attempt")
 
-    # Get data from the request
-    data = request.json
-    consent = data.get('consent')
+        # קבלת הנתונים מהבקשה
+        data = request.json
+        consent = data.get('consent')
 
-    if consent is None:
-        return jsonify({"error": "Invalid data"}), 400
+        if consent is None:
+            return jsonify({"error": "Invalid data"}), 400
 
-    # Identify user by user_id (if logged in) or IP address (if not logged in)
-    user_id = current_user.id if current_user.is_authenticated else None
+        # בדיקת משתמש מחובר
+        user_id = current_user.id if current_user.is_authenticated else None
 
-    # Check if there is already an existing consent record
-    if user_id:
-        existing_consent = UserConsent.query.filter_by(user_id=user_id).first()
-    else:
-        existing_consent = UserConsent.query.filter_by(ip_address=ip_address).first()
+        # בדיקה אם יש הסכמה קיימת לפי user_id או כתובת IP
+        if user_id:
+            existing_consent = UserConsent.query.filter_by(user_id=user_id).first()
+        else:
+            existing_consent = UserConsent.query.filter_by(ip_address=ip_address).first()
 
-    if existing_consent:
-        # Update consent status
-        existing_consent.consent_status = consent
-        existing_consent.timestamp = datetime.utcnow()
-    else:
-        # Create a new consent record
-        new_consent = UserConsent(
-            user_id=user_id,
-            ip_address=ip_address,
-            consent_status=consent,
-            timestamp=datetime.utcnow()
-        )
-        db.session.add(new_consent)
+        if existing_consent:
+            # עדכון סטטוס ההסכמה והזמן
+            existing_consent.consent_status = consent
+            existing_consent.timestamp = datetime.utcnow()
+            consent_id = existing_consent.consent_id  # שמירה של ה-ID
+        else:
+            # יצירת רשומת הסכמה חדשה
+            new_consent = UserConsent(
+                user_id=user_id,
+                ip_address=ip_address,
+                consent_status=consent,
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(new_consent)
+            db.session.commit()  # שמירה לפני שליפה
+            consent_id = new_consent.consent_id  # קבלת ה-ID שנשמר
 
-    db.session.commit()
-    log_user_activity(ip_address, "save_consent_success")
-    return jsonify({"message": "Consent saved successfully"}), 200
+        db.session.commit()
+        log_user_activity(ip_address, "save_consent_success")
+
+        # יצירת תגובה עם עוגיה המכילה את consent_id
+        response = make_response(jsonify({"message": "Consent saved successfully", "consent_id": consent_id}))
+        response.set_cookie("consent_id", str(consent_id), max_age=365 * 24 * 60 * 60, path="/")
+
+        return response
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+def update_consent_after_login(user_id):
+    try:
+        consent_id = request.cookies.get("consent_id")
+        ip_address = request.remote_addr
+
+        if consent_id:
+            # עדכון ה-user_id בטבלת ההסכמות לפי העוגיה
+            db.session.execute(
+                text("""
+                    UPDATE user_consents
+                    SET user_id = :user_id
+                    WHERE consent_id = :consent_id AND user_id IS NULL
+                """),
+                {"user_id": user_id, "consent_id": consent_id}
+            )
+        else:
+            # אם אין עוגיה, ננסה לאתר לפי ה-IP האחרון
+            db.session.execute(
+                text("""
+                    UPDATE user_consents
+                    SET user_id = :user_id
+                    WHERE ip_address = :ip_address AND user_id IS NULL
+                """),
+                {"user_id": user_id, "ip_address": ip_address}
+            )
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating consent after login: {e}")
 
 @auth_bp.route('/privacy-policy')
 def privacy_policy():
@@ -336,7 +402,7 @@ def check_location():
     ip_address = None
 
     # רישום הפעולה
-    log_user_activity(ip_address, "page_access")
+    #log_user_activity(ip_address, "page_access")
 
     # קבלת נתוני המיקום
     geo_data = get_geo_location(ip_address)

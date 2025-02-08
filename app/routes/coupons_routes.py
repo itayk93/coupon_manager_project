@@ -64,19 +64,40 @@ def add_coupon_transaction(coupon):
     db.session.add(new_transaction)
     db.session.commit()
 
+from sqlalchemy import text
+
 def log_user_activity(action, coupon_id=None):
     try:
-        ip_address = None or '0.0.0.0'
+        #ip_address = request.remote_addr  # קבלת כתובת ה-IP האמיתית
+        ip_address = None
+        
+        user_id = current_user.id if current_user.is_authenticated else None
+
+        # 🔹 בדיקת ההסכמה האחרונה של המשתמש (רק לפי user_id) 🔹
+        consent_check_query = """
+            SELECT consent_status FROM user_consents 
+            WHERE user_id = :user_id 
+            ORDER BY timestamp DESC LIMIT 1
+        """
+        result = db.session.execute(
+            text(consent_check_query),
+            {"user_id": user_id}
+        ).fetchone()
+        
+        if not result or not result[0]:  # אם אין הסכמה או שהיא false, לא נמשיך לרשום את הפעולה
+            return
+
+        # שליפת נתוני מיקום (אם רלוונטי)
         geo_data = get_geo_location(ip_address)
 
         activity = {
-            "user_id": current_user.id if current_user and current_user.is_authenticated else None,
+            "user_id": user_id,
             "coupon_id": coupon_id,
             "timestamp": datetime.utcnow(),
             "action": action,
             "device": request.headers.get('User-Agent', '')[:50],
             "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
-            "ip_address": ip_address[:45] if ip_address else None if ip_address else None,
+            "ip_address": ip_address[:45] if ip_address else None,
             "city": geo_data.get("city"),
             "region": geo_data.get("region"),
             "country": geo_data.get("country"),
@@ -92,6 +113,7 @@ def log_user_activity(action, coupon_id=None):
             activity
         )
         db.session.commit()
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error logging activity [{action}]: {e}")
