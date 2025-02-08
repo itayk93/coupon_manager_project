@@ -89,11 +89,11 @@
                     {% endfor %}
                 </div>
 
-                <div class="info-box">
+                <div class="info-box email-box">
                     <span class="info-title">Email:</span>
-                    <span class="info-value">
-                        <input type="email" id="email" name="email" class="input-field" value="{{ current_user.email }}" disabled>
-                    </span>
+                    <div class="info-value email-input-container">
+                        <input type="email" id="email" name="email" class="input-field email-field" value="{{ current_user.email }}" disabled>
+                    </div>
                 </div>
             </div>
 
@@ -452,5 +452,6 @@
         margin: 0 2px;
         color: #ccc;
     }
+
 </style>
 {% endblock %}

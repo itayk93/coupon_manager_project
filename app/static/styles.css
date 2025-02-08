@@ -3430,6 +3430,39 @@ h2 {
     text-align: center;
     margin: 0 auto;
 }
+@media (max-width: 768px) {
+    .email-box {
+        display: flex;
+        flex-direction: column; /* מסדר את הפריטים אחד מתחת לשני */
+        align-items: center; /* ממרכז את התוכן */
+        text-align: center; /* מוודא שהתיבה ממורכזת */
+        width: 80%;
+        max-width: 350px;
+        margin: 0 auto;
+    }
+
+    .email-box .info-title {
+        width: 100%;
+        text-align: center; /* הכותרת נשארת ממורכזת */
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .email-box .info-value.email-input-container {
+        width: 100%;
+        display: flex;
+        justify-content: center; /* ממורכז אופקית */
+    }
+
+    .email-box .email-field {
+        text-align: center; /* ממרכז את הטקסט בתוך שדה האימייל */
+        width: 100%;
+        max-width: 250px; /* מקטין קצת את השדה */
+        box-sizing: border-box;
+        padding: 10px;
+        font-size: 1em;
+    }
+}
 
 /* ===================================================
    38. Centered Profile Section + Animations
