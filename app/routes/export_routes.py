@@ -50,7 +50,7 @@ def log_user_activity(action):
 @export_bp.route('/export_excel')
 @login_required
 def export_excel():
-    log_user_activity("export_excel_view")
+    #log_user_activity("export_excel_view")
 
     coupons = Coupon.query.filter_by(user_id=current_user.id).all()
     data = []
@@ -77,7 +77,7 @@ def export_excel():
     output.seek(0)
 
     flash('קובץ אקסל נוצר בהצלחה.', 'success')
-    log_user_activity("export_excel_downloaded")
+    #log_user_activity("export_excel_downloaded")
 
     return send_file(
         output,
@@ -89,7 +89,7 @@ def export_excel():
 @export_bp.route('/export_pdf')
 @login_required
 def export_pdf():
-    log_user_activity("export_pdf_view")
+    #log_user_activity("export_pdf_view")
 
     pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
 
@@ -112,7 +112,7 @@ def export_pdf():
     output.seek(0)
 
     flash('קובץ PDF נוצר בהצלחה.', 'success')
-    log_user_activity("export_pdf_downloaded")
+    #log_user_activity("export_pdf_downloaded")
 
     return send_file(
         output,

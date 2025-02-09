@@ -60,7 +60,7 @@ def log_user_activity(action, coupon_id=None):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"[ERROR] log_user_activity failed: {e}")
+        current_app.logger.error(f"[ERROR] #log_user_activity failed: {e}")
 
 
 @marketplace_bp.route('/marketplace')
@@ -70,7 +70,7 @@ def marketplace():
     מציג את שוק הקופונים עם הקופונים הזמינים והבקשות לקנייה.
     בקשות שכבר סופקו/fulfilled לא יופיעו.
     """
-    log_user_activity("marketplace_view")
+    #log_user_activity("marketplace_view")
 
     try:
         # ספירת עסקאות ממתינות כמוכר
@@ -124,7 +124,7 @@ def marketplace():
 @marketplace_bp.route('/marketplace/coupon/<int:id>')
 @login_required
 def marketplace_coupon_detail(id):
-    log_user_activity("marketplace_coupon_detail_view", coupon_id=id)
+    #log_user_activity("marketplace_coupon_detail_view", coupon_id=id)
 
     coupon = Coupon.query.get_or_404(id)
     if not coupon.is_available or not coupon.is_for_sale:
@@ -138,7 +138,7 @@ def marketplace_coupon_detail(id):
 @marketplace_bp.route('/request_coupon/<int:id>', methods=['GET', 'POST'])
 @login_required
 def request_coupon_detail(id):
-    log_user_activity("request_coupon_detail_view", None)
+    #log_user_activity("request_coupon_detail_view", None)
 
     coupon_request = CouponRequest.query.get_or_404(id)
     if coupon_request.fulfilled:
@@ -176,7 +176,7 @@ def coupon_request_detail_view(id):
     מסך פירוט בקשת קופון, מאפשר מחיקה.
     אם הבקשה סופקה - לא נציג פה.
     """
-    log_user_activity("coupon_request_detail_view")
+    #log_user_activity("coupon_request_detail_view")
     coupon_request = CouponRequest.query.get_or_404(id)
     if coupon_request.fulfilled:
         flash('בקשת הקופון כבר טופלה.', 'danger')
@@ -210,7 +210,7 @@ def coupon_request_detail_view(id):
 @marketplace_bp.route('/delete_coupon_request/<int:id>', methods=['POST'])
 @login_required
 def delete_coupon_request(id):
-    log_user_activity("delete_coupon_request_attempt", None)
+    #log_user_activity("delete_coupon_request_attempt", None)
 
     coupon_request = CouponRequest.query.get_or_404(id)
     if coupon_request.user_id != current_user.id:
@@ -222,7 +222,8 @@ def delete_coupon_request(id):
         db.session.commit()
 
         try:
-            log_user_activity("delete_coupon_request_success", None)
+            pass
+            #log_user_activity("delete_coupon_request_success", None)
         except Exception as e:
             current_app.logger.error(f"Error logging success activity [delete_coupon_request_success]: {e}")
 
@@ -246,7 +247,7 @@ def seller_cancel_transaction(transaction_id):
     """
     המוכר מבטל עסקה - הקופון חוזר להיות זמין.
     """
-    log_user_activity("seller_cancel_transaction_attempt", transaction_id)
+    #log_user_activity("seller_cancel_transaction_attempt", transaction_id)
 
     transaction = Transaction.query.get_or_404(transaction_id)
     if transaction.seller_id != current_user.id:
@@ -284,7 +285,8 @@ def seller_cancel_transaction(transaction_id):
     db.session.commit()
 
     try:
-        log_user_activity("seller_cancel_transaction_success", transaction_id)
+        pass
+        #log_user_activity("seller_cancel_transaction_success", transaction_id)
     except Exception as e:
         current_app.logger.error(f"Error logging activity [seller_cancel_transaction_success]: {e}")
 
@@ -361,7 +363,7 @@ def offer_coupon_selection(request_id):
     """
     מסך ראשון לבחירת איך להציע קופון (קיים/חדש) + הודעה (אופציונלית) למבקש.
     """
-    log_user_activity("offer_coupon_selection_view")
+    #log_user_activity("offer_coupon_selection_view")
 
     coupon_request = CouponRequest.query.get_or_404(request_id)
     if coupon_request.user_id == current_user.id:
@@ -424,7 +426,7 @@ def offer_coupon_process(request_id):
     """
     אחרי שבחרו קופון (קיים/חדש), נוצר/נבחר ה-coupon, ונשלח מייל למבקש עם לינק לרכישה.
     """
-    log_user_activity("offer_coupon_process")
+    #log_user_activity("offer_coupon_process")
 
     coupon_request = CouponRequest.query.get_or_404(request_id)
     if coupon_request.user_id == current_user.id:

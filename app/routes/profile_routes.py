@@ -94,10 +94,10 @@ def log_user_activity(ip_address,action, coupon_id=None):
 def home():
     if current_user.is_authenticated:
         # רישום הפעולה
-        log_user_activity(ip_address, "authorized_index_access")
+        #log_user_activity(ip_address, "authorized_index_access")
         return redirect(url_for('profile.index'))
     else:
-        log_user_activity(ip_address, "unauthorized_redirect_to_login")
+        #log_user_activity(ip_address, "unauthorized_redirect_to_login")
         return redirect(url_for('auth.login'))
 
 def get_greeting():
@@ -144,7 +144,7 @@ def index():
     - הצגת באנר "קופונים שעומדים לפוג תוך 7 ימים" – רק פעם ביום, אם יש כאלה.
     """
     ip_address = get_ip_address()
-    log_user_activity(ip_address, "index")
+    #log_user_activity(ip_address, "index")
 
     # טופס עריכת פרופיל
     profile_form = ProfileForm()
@@ -644,3 +644,13 @@ def user_profile(user_id):
 @login_required
 def user_profile_default():
     return redirect(url_for('profile.user_profile', user_id=current_user.id))
+
+@profile_bp.route('/landing_page')
+def landing_page():
+    # שליפת סכום (value - cost) מכל הקופונים
+    total_savings = db.session.query(db.func.sum(Coupon.value - Coupon.cost)).scalar()
+    if not total_savings:
+        total_savings = 0  # אם לא הוחזר ערך (None), נאפס ל-0
+    
+    # העברת המשתנה total_savings לטמפלט
+    return render_template('landing_page.html', total_savings=total_savings)

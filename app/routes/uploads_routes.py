@@ -51,7 +51,7 @@ def log_user_activity(action):
 @uploads_bp.route('/upload_coupons', methods=['GET', 'POST'])
 @login_required
 def upload_coupons():
-    log_user_activity("upload_coupons_view")
+    #log_user_activity("upload_coupons_view")
 
     form = UploadCouponsForm()
     if form.validate_on_submit():
@@ -71,7 +71,7 @@ def upload_coupons():
             else:
                 flash('כל הקופונים נוספו בהצלחה!', 'success')
 
-            log_user_activity("upload_coupons_submit")
+            #log_user_activity("upload_coupons_submit")
         except Exception as e:
             flash('אירעה שגיאה בעת עיבוד הקובץ.', 'danger')
             traceback.print_exc()
@@ -84,7 +84,7 @@ def upload_coupons():
 @uploads_bp.route('/add_coupons_bulk', methods=['GET', 'POST'])
 @login_required
 def add_coupons_bulk():
-    log_user_activity("add_coupons_bulk_view")
+    #log_user_activity("add_coupons_bulk_view")
 
     form = AddCouponsBulkForm()
     companies = Company.query.all()
@@ -188,7 +188,7 @@ def add_coupons_bulk():
                     flash('כל הקופונים נוספו בהצלחה!', 'success')
 
                 current_app.logger.info("All coupons successfully processed and imported.")
-                log_user_activity("add_coupons_bulk_submit")
+                #log_user_activity("add_coupons_bulk_submit")
                 return redirect(url_for('transactions.show_coupons'))
             else:
                 current_app.logger.info("No new coupons were added, so no export or import was made.")
@@ -209,7 +209,7 @@ def add_coupons_bulk():
 @uploads_bp.route('/download_template')
 @login_required
 def download_template():
-    log_user_activity("download_template_view")
+    #log_user_activity("download_template_view")
 
     data = {
         'קוד קופון': ['ABC123', 'DEF456', 'GHI789'],
@@ -232,7 +232,7 @@ def download_template():
     output.seek(0)
 
     flash('תבנית להוספת קופונים הורדה בהצלחה.', 'success')
-    log_user_activity("download_template_success")
+    #log_user_activity("download_template_success")
 
     return send_file(
         output,

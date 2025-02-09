@@ -46,7 +46,7 @@ def log_user_activity(action, coupon_id=None):
 @requests_bp.route('/coupon_request/<int:id>', methods=['GET', 'POST'])
 @login_required
 def coupon_request_detail(id):
-    log_user_activity("coupon_request_detail_view")
+    #log_user_activity("coupon_request_detail_view")
 
     coupon_request = CouponRequest.query.get_or_404(id)
 
@@ -60,7 +60,7 @@ def coupon_request_detail(id):
         db.session.delete(coupon_request)
         db.session.commit()
         flash('הבקשה נמחקה בהצלחה.', 'success')
-        log_user_activity("coupon_request_deleted")
+        #log_user_activity("coupon_request_deleted")
         return redirect(url_for('marketplace.marketplace'))
 
     requester = User.query.get(coupon_request.user_id)
@@ -84,7 +84,7 @@ def coupon_request_detail(id):
 @requests_bp.route('/delete_coupon_request/<int:id>', methods=['POST'])
 @login_required
 def delete_coupon_request(id):
-    log_user_activity("delete_coupon_request_attempt")
+    #log_user_activity("delete_coupon_request_attempt")
 
     coupon_request = CouponRequest.query.get_or_404(id)
     if coupon_request.user_id != current_user.id:
@@ -95,7 +95,7 @@ def delete_coupon_request(id):
         db.session.delete(coupon_request)
         db.session.commit()
         flash('בקשת הקופון נמחקה בהצלחה.', 'success')
-        log_user_activity("delete_coupon_request_success")
+        #log_user_activity("delete_coupon_request_success")
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error deleting coupon request {id}: {e}")
@@ -113,7 +113,7 @@ def request_coupon():
     - Fills in the requested cost, requested value, discount percentage, coupon code (optional), and additional description.
     - Saved to the coupon_requests table.
     """
-    log_user_activity("request_coupon_view")
+    #log_user_activity("request_coupon_view")
 
     form = RequestCouponForm()
 
@@ -158,7 +158,7 @@ def request_coupon():
             db.session.add(coupon_req)
             db.session.commit()
             flash('בקשת הקופון נרשמה בהצלחה!', 'success')
-            log_user_activity("request_coupon_submitted")
+            #log_user_activity("request_coupon_submitted")
             return redirect(url_for('marketplace.marketplace'))
 
         except Exception as e:
@@ -174,7 +174,7 @@ def request_coupon():
 def buy_slots():
     from app.forms import BuySlotsForm
 
-    log_user_activity("buy_slots_view")
+    #log_user_activity("buy_slots_view")
 
     form = BuySlotsForm()
     if form.validate_on_submit():
@@ -187,7 +187,7 @@ def buy_slots():
             current_user.slots += slot_amount
             db.session.commit()
             flash(f'רכשת {slot_amount} סלוטים בהצלחה!', 'success')
-            log_user_activity("buy_slots_success")
+            #log_user_activity("buy_slots_success")
             return redirect(url_for('requests.buy_slots'))
         except ValueError:
             flash('כמות סלוטים לא תקפה.', 'danger')

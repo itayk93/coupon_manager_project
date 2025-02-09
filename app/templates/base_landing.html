@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Coupon Master{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {% if ga_tracking_id %}
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_tracking_id }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ ga_tracking_id }}');
+    </script>
+    {% endif %}
+
+    <!-- Apple Touch Icon (for Home Screen) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='icons/site.webmanifest') }}">
+    <link rel="mask-icon" href="{{ url_for('static', filename='icons/safari-pinned-tab.svg') }}" color="#5bbad5">
+    <meta name="apple-mobile-web-app-title" content="CouponMasterIL">
+    <meta name="application-name" content="CouponMasterIL">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- הוספת Font Awesome לסמלים (אם תרצה להשתמש באייקונים כלשהם) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- מטא טאג ל-CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <!-- העברת הגדרות בסיסיות (CSS Variables וכו') ישירות לתוך בלוק Style -->
+    <style>
+        /* ייבוא פונט Rubik במקום Heebo */
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap');
+
+        /* =====================
+           1. CSS Variables
+           ===================== */
+        :root {
+            --primary-color: #2E86C1; /* Calm Blue */
+            --secondary-color: #A9CCE3; /* Light Blue */
+            --accent-color: #F5B041; /* Light Orange for emphasis */
+            --background-color: #f9f9f9;
+            --text-color: #2C3E50;
+            --white: #ffffff;
+            --light-gray: #e0e0e0;
+            --gray: #bdc3c7;
+            --success-color: #27AE60;
+            --success-text: #ffffff;
+            --danger-color: #C0392B;
+            --danger-text: #ffffff;
+            --warning-color: #F39C12;
+            --warning-text: #ffffff;
+            --font-family: 'Rubik', Arial, sans-serif;
+            --transition-speed: 0.3s;
+            --max-width: 1200px;
+        }
+
+        /* הגדרות בסיסיות נוספות (אם תרצה) */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+    <!-- כפתור סגירת כל ההתראות (אם תרצה) -->
+    <button id="close-all-notifications" style="display: none;">סגור את כל ההתראות</button>
+
+    <!-- אזור ההתראות (אם תרצה להשתמש בו) -->
+    <div id="notification-area"></div>
+
+    <!-- HEADER מינימלי עם רקע כחול (או גרדיאנט כחול) ולוגו בלבד -->
+    <header 
+        style="
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 16px; 
+            background: linear-gradient(135deg, #2473CC 0%, #1a5aa3 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        ">
+        <!-- כאן ניתן להחליף נתיב לתמונה של הלוגו -->
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Coupon Master Logo" style="max-height: 50px;">
+    </header>
+
+    <main>
+        <!-- הצגת הודעות פלאש (אם יש) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- הודעת עוגיות (אם רלוונטי) -->
+    <div id="cookie-consent" style="display: none; position: fixed; bottom: 0; width: 100%; background-color: #f8f9fa; padding: 15px; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); text-align: center; z-index: 1000;">
+        <p style="margin: 0; font-size: 14px; color: #333;">
+            אנו משתמשים בעוגיות כדי לשפר את חוויית הגלישה שלך. על ידי המשך השימוש באתר, אתה מסכים לשימוש בעוגיות.
+            <a href="/privacy-policy" style="color: #007bff; text-decoration: none;">למידע נוסף</a>.
+        </p>
+        <button id="accept-cookies" style="margin-top: 10px; padding: 10px 20px; background-color: #27AE60; color: #fff; border: none; border-radius: 5px; cursor: pointer;">
+            אני מסכים
+        </button>
+        <button id="reject-cookies" style="margin-top: 10px; padding: 10px 20px; background-color: #C0392B; color: #fff; border: none; border-radius: 5px; cursor: pointer;">
+            אני דוחה
+        </button>
+    </div>
+
+    <!-- סקריפט לטיפול בהעדפת Cookies -->
+    <script>
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function sendConsentToServer(status) {
+            fetch("{{ url_for('auth.save_consent') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ consent: status })
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('cookie-consent').style.display = 'none';
+                } else {
+                    response.json().then(data => {
+                        alert(data.error || "שגיאה בשליחת ההעדפה לשרת");
+                    });
+                }
+            })
+            .catch(error => {
+                console.error("Fetch error:", error);
+                alert("שגיאה בלתי צפויה בעת שליחת ההעדפה לשרת");
+            });
+        }
+
+        window.onload = function () {
+            if (!getCookie('cookies_accepted')) {
+                const consentBox = document.getElementById('cookie-consent');
+                consentBox.style.display = 'block';
+                setTimeout(() => {
+                    consentBox.classList.add('visible');
+                }, 100);
+            }
+        };
+
+        document.getElementById('accept-cookies').onclick = function () {
+            const d = new Date();
+            d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000));
+            document.cookie = `cookies_accepted=true; expires=${d.toUTCString()}; path=/`;
+            sendConsentToServer(true);
+        };
+
+        document.getElementById('reject-cookies').onclick = function () {
+            const d = new Date();
+            d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000));
+            document.cookie = `cookies_accepted=false; expires=${d.toUTCString()}; path=/`;
+            sendConsentToServer(false);
+        };
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

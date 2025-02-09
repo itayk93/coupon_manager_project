@@ -129,7 +129,7 @@ def sell_coupon():
     There is no manual option for selecting a tag.
     """
     # -- activity log snippet --
-    log_user_activity("sell_coupon_view", None)
+    #log_user_activity("sell_coupon_view", None)
 
     form = SellCouponForm()
 
@@ -287,7 +287,7 @@ def sell_coupon():
 @coupons_bp.route('/coupons')
 @login_required
 def show_coupons():
-    log_user_activity("show_coupons", None)
+    #log_user_activity("show_coupons", None)
 
     coupons = Coupon.query.options(joinedload(Coupon.tags)).filter_by(user_id=current_user.id, is_for_sale=False).all()
     for coupon in coupons:
@@ -340,7 +340,7 @@ def upload_coupons():
     Excel file upload screen and bulk addition of coupons for the current user.
     """
     # -- activity log snippet --
-    log_user_activity("upload_coupons_view", None)
+    #log_user_activity("upload_coupons_view", None)
 
     form = UploadCouponsForm()
     if form.validate_on_submit():
@@ -410,7 +410,7 @@ def add_coupons_bulk():
     """
     # הגדרת הכתובת IP והפעילות
     ip_address = None or '127.0.0.1'
-    log_user_activity("add_coupons_bulk_view", None)
+    #log_user_activity("add_coupons_bulk_view", None)
 
     form = AddCouponsBulkForm()
     companies = Company.query.all()
@@ -590,7 +590,7 @@ def get_most_common_tag_for_company(company_name):
 @login_required
 def add_coupon():
     # -- activity log snippet --
-    log_user_activity("add_coupon_view", None)
+    #log_user_activity("add_coupon_view", None)
 
     try:
         manual = request.args.get('manual', 'false').lower() == 'true'
@@ -696,7 +696,7 @@ def add_coupon():
                     coupon_form.other_tag.data = ''
 
                 # -- activity log add_coupon_via_sms --
-                log_user_activity("add_coupon_via_sms", None)
+                #log_user_activity("add_coupon_via_sms", None)
 
                 show_coupon_form = True
             else:
@@ -980,7 +980,7 @@ def add_coupon():
 @coupons_bp.route('/add_coupon_with_image.html', methods=['GET', 'POST'])
 @login_required
 def add_coupon_with_image_html():
-    log_user_activity("add_coupon_with_image_html_view", None)
+    #log_user_activity("add_coupon_with_image_html_view", None)
 
     form = CouponForm()
     if request.method == 'POST':
@@ -1129,7 +1129,7 @@ def add_coupon_with_image_html():
 @coupons_bp.route('/add_coupon_with_image', methods=['GET', 'POST'])
 @login_required
 def add_coupon_with_image():
-    log_user_activity("add_coupon_with_image_view", None)
+    #log_user_activity("add_coupon_with_image_view", None)
 
     upload_image_form = UploadImageForm()
     coupon_form = CouponForm()
@@ -1375,7 +1375,7 @@ def add_coupon_with_image():
 @login_required
 def add_coupon_manual():
     # -- activity log snippet --
-    log_user_activity("add_coupon_manual_view", None)
+    #log_user_activity("add_coupon_manual_view", None)
 
     coupon_form = CouponForm()
     if coupon_form.validate_on_submit():
@@ -1402,7 +1402,7 @@ def edit_coupon(id):
     coupon = Coupon.query.get_or_404(id)
 
     # -- activity log snippet --
-    log_user_activity("edit_coupon_view", coupon.id)
+    #log_user_activity("edit_coupon_view", coupon.id)
 
     if coupon.user_id != current_user.id:
         flash('אינך מורשה לערוך קופון זה.', 'danger')
@@ -1569,7 +1569,7 @@ def edit_coupon(id):
 @login_required
 def select_coupons_to_delete():
     # -- activity log snippet --
-    log_user_activity("select_coupons_to_delete_view", None)
+    #log_user_activity("select_coupons_to_delete_view", None)
 
     form = DeleteCouponsForm()
     coupons = Coupon.query.filter_by(user_id=current_user.id).order_by(Coupon.date_added.desc()).all()
@@ -1636,7 +1636,7 @@ def coupon_detail(id):
     # בדיקה האם auto_download_details אינו NULL
     show_multipass_button = coupon.auto_download_details is not None
 
-    log_user_activity("view_coupon", coupon.id)
+    #log_user_activity("view_coupon", coupon.id)
 
     # שומר את זה לגיבוי - ב01/02/2025 הוספתי תיקון שמטרתו למנוע מצב שיש עדכון ידני ועדכון אוטומטי שחופפים אחד את השני
     sql_old = text("""
@@ -1853,7 +1853,7 @@ ORDER BY
 @login_required
 def delete_coupon(id):
     # -- activity log snippet --
-    log_user_activity("delete_coupon_attempt", id)
+    #log_user_activity("delete_coupon_attempt", id)
 
     form = DeleteCouponForm()
     if form.validate_on_submit():
@@ -1922,7 +1922,7 @@ def confirm_delete_coupon(id):
     coupon = Coupon.query.get_or_404(id)
 
     # -- activity log snippet --
-    log_user_activity("confirm_delete_coupon_view", coupon.id)
+    #log_user_activity("confirm_delete_coupon_view", coupon.id)
 
     if coupon.user_id != current_user.id:
         flash('אינך מורשה למחוק קופון זה.', 'danger')
@@ -1969,7 +1969,7 @@ def edit_usage(usage_id):
     coupon = Coupon.query.get_or_404(usage.coupon_id)
 
     # -- activity log snippet --
-    log_user_activity("edit_usage_view", coupon_id)
+    #log_user_activity("edit_usage_view", coupon_id)
 
     if coupon.user_id != current_user.id:
         flash('אינך מורשה לערוך שימוש זה.', 'danger')
@@ -2031,7 +2031,7 @@ def edit_usage(usage_id):
 @login_required
 def update_all_coupons_route():
     # -- activity log snippet --
-    log_user_activity("update_all_coupons_process", None)
+    #log_user_activity("update_all_coupons_process", None)
 
     updated, failed = update_all_active_coupons(current_user.id)
     if updated:
@@ -2045,7 +2045,7 @@ def update_all_coupons_route():
 @login_required
 def get_tags():
     # -- activity log snippet --
-    log_user_activity("get_tags", None)
+    #log_user_activity("get_tags", None)
 
     tags = [tag.name for tag in Tag.query.all()]
     return jsonify(tags)
@@ -2055,7 +2055,7 @@ def get_tags():
 @login_required
 def usage_order():
     # -- activity log snippet --
-    log_user_activity("usage_order_view", None)
+    #log_user_activity("usage_order_view", None)
 
     valid_coupons = Coupon.query.filter(Coupon.status == 'פעיל', Coupon.user_id == current_user.id).order_by(
         (Coupon.used_value / Coupon.value).desc()
@@ -2072,7 +2072,7 @@ def usage_order():
 @login_required
 def export_excel():
     # -- activity log snippet --
-    log_user_activity("export_excel", None)
+    #log_user_activity("export_excel", None)
 
     coupons = Coupon.query.filter_by(user_id=current_user.id).all()
     data = []
@@ -2111,7 +2111,7 @@ def export_excel():
 @login_required
 def export_pdf():
     # -- activity log snippet --
-    log_user_activity("export_pdf", None)
+    #log_user_activity("export_pdf", None)
 
 
     from reportlab.pdfgen import canvas
@@ -2148,7 +2148,7 @@ def delete_coupon_request(id):
     coupon_request = CouponRequest.query.get_or_404(id)
 
     # -- activity log snippet --
-    log_user_activity("delete_coupon_request_attempt", None)
+    #log_user_activity("delete_coupon_request_attempt", None)
 
     if coupon_request.user_id != current_user.id:
         flash('אין לך הרשאה למחוק בקשה זו.', 'danger')
@@ -2256,7 +2256,7 @@ def send_coupon_expiration_warning(coupon_id):
     coupon = Coupon.query.get_or_404(coupon_id)
 
     # -- activity log snippet --
-    log_user_activity("send_coupon_expiration_warning", coupon.id)
+    #log_user_activity("send_coupon_expiration_warning", coupon.id)
 
     user = coupon.user
     expiration_date = coupon.expiration
@@ -2287,7 +2287,7 @@ def mark_coupon_as_used(id):
     coupon = Coupon.query.get_or_404(id)
 
     # -- activity log snippet --
-    log_user_activity("mark_coupon_as_used", coupon.id)
+    #log_user_activity("mark_coupon_as_used", coupon.id)
 
     if coupon.user_id != current_user.id:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
@@ -2337,7 +2337,7 @@ def update_coupon_usage_from_multipass(id):
     # קודם נשלוף את הקופון:
     coupon = Coupon.query.get_or_404(id)
     # כעת יש לנו coupon.id, אפשר ללוגג
-    log_user_activity("update_coupon_usage_from_multipass", coupon.id)
+    #log_user_activity("update_coupon_usage_from_multipass", coupon.id)
 
     if coupon.is_one_time:
         flash('קופון חד-פעמי – אין צורך בעדכון שימוש מ-Multipass.', 'warning')
@@ -2384,7 +2384,7 @@ def update_coupon_usage_from_multipass(id):
 @coupons_bp.route('/update_coupon_usage/<int:id>', methods=['GET', 'POST'])
 @login_required
 def update_coupon_usage_route(id):
-    log_user_activity("complete_transaction")
+    #log_user_activity("complete_transaction")
 
     coupon = Coupon.query.get_or_404(id)
     companies = Company.query.all()
@@ -2505,7 +2505,7 @@ def update_coupon_transactions():
     פעולה ידנית לאדמין: עדכון נתוני שימוש/הטענות של קופון מסויים
     לפי מזהה קופון או code שמגיע ב-POST.
     """
-    log_user_activity("update_coupon_transactions_attempt")
+    #log_user_activity("update_coupon_transactions_attempt")
 
     if not current_user.is_admin:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')

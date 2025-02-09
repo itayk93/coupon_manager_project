@@ -310,7 +310,7 @@ def cancel_transaction(transaction_id):
 @login_required
 def mark_coupon_as_fully_used(id):
     coupon = Coupon.query.get_or_404(id)
-    log_user_activity("mark_coupon_as_fully_used_attempt", coupon.id)
+    #log_user_activity("mark_coupon_as_fully_used_attempt", coupon.id)
 
     if coupon.user_id != current_user.id:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
@@ -351,7 +351,7 @@ def mark_coupon_as_fully_used(id):
         db.session.commit()
 
         flash('הקופון סומן כנוצל לגמרי בהצלחה.', 'success')
-        log_user_activity("mark_coupon_as_fully_used_success", coupon.id)
+        #log_user_activity("mark_coupon_as_fully_used_success", coupon.id)
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error marking coupon as fully used: {e}")
@@ -363,7 +363,7 @@ def mark_coupon_as_fully_used(id):
 @login_required
 def update_coupon(id):
     coupon = Coupon.query.get_or_404(id)
-    log_user_activity("update_coupon_view", coupon.id)
+    #log_user_activity("update_coupon_view", coupon.id)
 
     if coupon.user_id != current_user.id:
         flash('אין לך הרשאה לעדכן קופון זה.', 'danger')
@@ -374,7 +374,7 @@ def update_coupon(id):
         try:
             db.session.commit()
             flash('סטטוס הקופון עודכן בהצלחה ל"נוצל".', 'success')
-            log_user_activity("update_coupon_one_time_marked_used", coupon.id)
+            #log_user_activity("update_coupon_one_time_marked_used", coupon.id)
         except Exception as e:
             db.session.rollback()
             flash('אירעה שגיאה בעת עדכון סטטוס הקופון.', 'danger')
@@ -415,7 +415,7 @@ def update_coupon(id):
             db.session.commit()
 
             flash('כמות השימוש עודכנה בהצלחה.', 'success')
-            log_user_activity("update_coupon_usage_success", coupon.id)
+            #log_user_activity("update_coupon_usage_success", coupon.id)
             return redirect(url_for('transactions.coupon_detail', id=id))
         except Exception as e:
             db.session.rollback()
@@ -427,7 +427,7 @@ def update_coupon(id):
 @transactions_bp.route('/update_all_coupons')
 @login_required
 def update_all_coupons():
-    log_user_activity("update_all_coupons_view")
+    #log_user_activity("update_all_coupons_view")
 
     active_coupons = Coupon.query.filter(
         Coupon.user_id == current_user.id,
@@ -472,7 +472,7 @@ def update_all_coupons():
 
     if updated_coupons:
         flash('הקופונים הבאים עודכנו בהצלחה: ' + ', '.join(updated_coupons), 'success')
-        log_user_activity("update_all_coupons_success")
+        #log_user_activity("update_all_coupons_success")
     if failed_coupons:
         flash('הקופונים הבאים לא עודכנו: ' + ', '.join(failed_coupons), 'danger')
 
@@ -482,7 +482,7 @@ def update_all_coupons():
 @login_required
 def complete_transaction_route(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
-    log_user_activity("complete_transaction_route_attempt", transaction.coupon_id)
+    #log_user_activity("complete_transaction_route_attempt", transaction.coupon_id)
 
     if not current_user.is_admin:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
@@ -502,7 +502,7 @@ def seller_confirm_transfer(transaction_id):
     כמו כן, נשלח מייל למוכר עצמו כדי להודיע שהעסקה הסתיימה.
     """
     transaction = Transaction.query.get_or_404(transaction_id)
-    log_user_activity("seller_confirm_transfer_view", transaction.coupon_id)
+    #log_user_activity("seller_confirm_transfer_view", transaction.coupon_id)
 
     # וידוא שהמשתמש הנוכחי הוא אכן המוכר
     if transaction.seller_id != current_user.id:
@@ -594,7 +594,7 @@ def buyer_confirm_transfer(transaction_id):
     - נשלח מייל למוכר.
     - חוזרים ל-my_transactions בסיום.
     """
-    log_user_activity("buyer_confirm_transfer_view", transaction_id)
+    #log_user_activity("buyer_confirm_transfer_view", transaction_id)
     current_app.logger.debug(f"Starting buyer_confirm_transfer with transaction_id: {transaction_id}")
 
     try:
@@ -675,7 +675,7 @@ def buy_coupon_direct():
     נוצרת Transaction, נשלחת למוכר התראה ומייל.
     כמו כן, אם יש בקשת קופון שהביאה להצעה הזאת - נסמן אותה כ-fulfilled.
     """
-    log_user_activity("buy_coupon_direct_attempt")
+    #log_user_activity("buy_coupon_direct_attempt")
 
     coupon_id = request.args.get('coupon_id', type=int)
     if not coupon_id:
