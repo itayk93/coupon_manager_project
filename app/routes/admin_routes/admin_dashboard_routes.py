@@ -229,19 +229,6 @@ def build_new_dashboard() -> str:
 
       <!-- אזור לגרף והסינון – מוצגים בשורה אחת -->
       <div class="chart-filter-container" style="display: flex; justify-content: center; align-items: flex-start; gap: 20px; margin-bottom: 20px;">
-         <div id="companyFilter" style="text-align:center;">
-            <label for="companySelect">בחר חברות:</label><br>
-            <select id="companySelect" multiple size="15" style="width:300px; padding:5px; font-size:1em;">
-    """
-    for comp in companies:
-        new_dashboard_section += f'              <option value="{comp}" selected>{comp}</option>\n'
-    new_dashboard_section += f"""            </select>
-                        <br><br>
-                        <button id="selectAllBtn" style="padding:5px; font-size:0.9em; margin-right:5px;">סימון הכל</button>
-                        <button id="deselectAllBtn" style="padding:5px; font-size:0.9em; margin-right:5px;">ביטול סימון הכל</button>
-                        <button id="updateChartBtn" style="padding:5px; font-size:0.9em;">עדכן גרף</button>
-                    </div>
-
                     <div id="companyChartContainer" style="width:100%; max-width:600px; height:350px; background:#fff; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1); position:relative;">
                         {div_company_chart}
                     </div>
@@ -255,22 +242,6 @@ def build_new_dashboard() -> str:
 
                     // שומר את ה־csrfToken מתוך ה־meta 
                     var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-                    // פונקציה: סימון הכל
-                    document.getElementById('selectAllBtn').addEventListener('click', function() {{
-                        var selectElement = document.getElementById('companySelect');
-                        for (var i = 0; i < selectElement.options.length; i++) {{
-                            selectElement.options[i].selected = true;
-                        }}
-                    }});
-
-                    // פונקציה: ביטול סימון הכל
-                    document.getElementById('deselectAllBtn').addEventListener('click', function() {{
-                        var selectElement = document.getElementById('companySelect');
-                        for (var i = 0; i < selectElement.options.length; i++) {{
-                            selectElement.options[i].selected = false;
-                        }}
-                    }});
 
                     // הפונקציה המרכזית: שולחת POST לשרת עם רשימת החברות הנבחרות
                     function updateGraph() {{
@@ -313,8 +284,6 @@ def build_new_dashboard() -> str:
                         .catch(error => console.error('Error:', error));
                     }}
 
-                    // מאזינים לאירוע "קליק" בכפתור 'עדכן גרף'
-                    document.getElementById('updateChartBtn').addEventListener('click', updateGraph);
                 </script>
                 </div>
                 """
@@ -756,79 +725,6 @@ def generate_full_dashboard_html(dashboards: dict, unique_users: list) -> str:
     """
     return plotly_js + full_content
 
-
-@admin_dashboard_bp.route('/update_company_chart', methods=['POST'])
-@login_required
-def update_company_chart():
-    print("Received request at /update_company_chart")  # בדיקה אם זה נקרא
-    # ודא שהמשתמש הוא מנהל
-    if not is_admin(current_user):
-        abort(403)
-
-    # קבלת רשימת החברות שנבחרו מהבקשה (מצופה לקבל JSON עם מפתח "companies")
-    try:
-        req_data = request.get_json()
-        selected_companies = req_data.get("companies", [])
-        csrf_token = request.headers.get("X-CSRF-Token")  # בדיקה אם נשלח מהלקוח
-        print(f"🔹 CSRF Token שהתקבל: {csrf_token}")  # הדפסה ל-Log
-
-        if not csrf_token:
-            return jsonify({"error": "CSRF Token is missing"}), 400
-
-    except Exception as e:
-        return jsonify({"error": "נתוני בקשה לא תקינים"}), 400
-
-    # שליפת הנתונים ועיבודם
-    df_all = fetch_data()
-    if df_all.empty:
-        return jsonify({"error": "אין נתונים זמינים"}), 404
-
-    df_all = calculate_discount(df_all)
-
-    # סינון הנתונים לפי החברות שנבחרו (אם נבחרו)
-    if selected_companies:
-        df_all = df_all[df_all["company"].isin(selected_companies)]
-
-    # הכנת הנתונים לגרף
-    if "company" in df_all.columns:
-        agg = df_all.groupby("company").agg({'value': 'mean', 'cost': 'mean'}).reset_index()
-        agg = agg.sort_values("value", ascending=False)
-        companies = agg["company"].tolist()
-        avgValue = agg["value"].tolist()
-        avgCost = agg["cost"].tolist()
-    else:
-        companies = []
-        avgValue = []
-        avgCost = []
-
-    # בניית התרשים בעזרת Plotly
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=avgValue,
-        y=companies,
-        mode='markers',
-        marker=dict(color='rgb(55,83,109)', size=12),
-        name='ערך ממוצע'
-    ))
-    fig.add_trace(go.Scatter(
-        x=avgCost,
-        y=companies,
-        mode='markers',
-        marker=dict(color='rgb(26,118,255)', size=12),
-        name='עלות ממוצע'
-    ))
-    fig.update_layout(
-        title="ערך וקופון ממוצע לכל החברות",
-        xaxis_title="ערך (בש\"ח)",
-        yaxis=dict(autorange="reversed"),
-        margin=dict(l=100, r=50, t=50, b=50),
-        height=350
-    )
-
-    # יצירת HTML לתרשים
-    updated_chart_div = plotly_plot(fig, include_plotlyjs=False, output_type='div', config={'responsive': True})
-
-    return jsonify({"chart_div": updated_chart_div})
 
 
 def build_dashboard() -> str:

@@ -29,6 +29,14 @@ def create_app():
 
     app = Flask(__name__, static_folder='static', template_folder='templates')
 
+    # טעינת ה-GA_TRACKING_ID מהסביבה
+    app.config['GA_TRACKING_ID'] = os.getenv("GA_TRACKING_ID", "")
+
+    # הגדרת משתנה לכל התבניות
+    @app.context_processor
+    def inject_ga_tracking_id():
+        return dict(ga_tracking_id=app.config['GA_TRACKING_ID'])
+
     # טוען קונפיגורציה (Config) מהקובץ config.py
     app.config.from_object(Config)
 

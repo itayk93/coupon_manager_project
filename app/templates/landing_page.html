@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coupon Master - הדרך החכמה לחסוך</title>
+    <style>
+        :root {
+            --primary-color: #2473CC;
+            --secondary-color: #1a5aa3;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #2473CC 0%, #1a5aa3 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+
+        .hero p {
+            font-size: 1.5em;
+            margin-bottom: 40px;
+        }
+
+        .features {
+            padding: 60px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-box {
+            background: #f8f9fb;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: #FF6B6B;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.2em;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            background: #ff5252;
+        }
+
+        .savings-counter {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .final-cta {
+            background: #f8f9fb;
+            text-align: center;
+            padding: 60px 20px;
+            margin-top: 40px;
+        }
+
+        .final-cta h2 {
+            color: var(--primary-color);
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .final-cta p {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .final-cta .cta-button {
+            font-size: 1.4em;
+            padding: 20px 50px;
+        }
+    </style>
+</head>
+<body>
+    <section class="hero">
+        <h1>הפסיקו לפספס קופונים. התחילו לחסוך אלפי שקלים!</h1>
+        <p>הארנק הדיגיטלי החכם שמרכז את כל הקופונים שלכם במקום אחד - בדיוק כשאתם צריכים אותם</p>
+        <a href="#download" class="cta-button">התחילו לחסוך עכשיו!</a>
+    </section>
+
+    <div class="savings-counter">
+        משתמשים שלנו כבר חסכו: ₪1,458,932
+    </div>
+
+    <section class="features">
+        <div class="feature-box">
+            <h3>סוף לקופונים שפג תוקפם! 🎯</h3>
+            <p>קבלו התראות חכמות לפני שהקופונים נגמרים ונצלו כל שקל אפשרי. המערכת שלנו תזכיר לכם בדיוק מתי להשתמש בכל קופון!</p>
+        </div>
+
+        <div class="feature-box">
+            <h3>הוספת קופונים בשנייה אחת ⚡</h3>
+            <p>פשוט צלמו את הקופון או העתיקו אותו - והמערכת החכמה שלנו תזהה הכל אוטומטית. שכחו מהקלדות מייגעות!</p>
+        </div>
+
+        <div class="feature-box">
+            <h3>הרוויחו מקופונים שאתם לא צריכים 💰</h3>
+            <p>יש לכם קופון שלא תשתמשו בו? מכרו אותו למי שכן צריך! פלטפורמת המסחר שלנו מחברת בין קונים למוכרים בקלות ובמהירות.</p>
+        </div>
+    </section>
+
+    <section class="final-cta">
+        <h2>מוכנים להפסיק לזרוק כסף לפח?</h2>
+        <p>הצטרפו למהפכת החיסכון החכם - יותר משתמשים חוסכים יותר כסף!</p>
+        <a href="/signup" class="cta-button">להורדת האפליקציה בחינם</a>
+    </section>
+</body>
+</html>
