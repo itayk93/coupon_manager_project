@@ -250,7 +250,7 @@ def configure_scheduler():
         # --- תהליך A: איפוס סטטוס (reset) ---
         scheduler.add_job(
             func=lambda: save_process_status('reset', False),
-            trigger=CronTrigger(hour=9, minute=15),
+            trigger=CronTrigger(hour=8, minute=0),
             id='reset_status',
             name='Reset daily status at midnight',
             replace_existing=True
@@ -259,7 +259,7 @@ def configure_scheduler():
         # --- תהליך B: שליחת התראות על קופונים שפג תוקפם (expiration warnings) ---
         scheduler.add_job(
             func=send_expiration_warnings,
-            trigger=CronTrigger(hour=10, minute=0),
+            trigger=CronTrigger(hour=7, minute=17),
             id='expiration_warnings',
             name='Send expiration warnings at 8:00',
             replace_existing=True
@@ -268,7 +268,7 @@ def configure_scheduler():
         # --- תהליך C: שליחת המייל היומי (daily email) ---
         scheduler.add_job(
             func=daily_email_flow,
-            trigger=CronTrigger(hour=10, minute=0),
+            trigger=CronTrigger(hour=7, minute=17),
             id='daily_email',
             name='Send daily email at 8:00',
             replace_existing=True
@@ -277,7 +277,7 @@ def configure_scheduler():
         # --- תהליך D: איפוס התראות דחויות (dismissed alerts reset) ---
         scheduler.add_job(
             func=reset_dismissed_alerts,
-            trigger=CronTrigger(hour=9, minute=15),
+            trigger=CronTrigger(hour=8, minute=0),
             id='dismissed_reset',
             name='Reset dismissed alerts at midnight',
             replace_existing=True
