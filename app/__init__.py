@@ -29,13 +29,16 @@ def create_app():
 
     app = Flask(__name__, static_folder='static', template_folder='templates')
 
-    # טעינת ה-GA_TRACKING_ID מהסביבה
     app.config['GA_TRACKING_ID'] = os.getenv("GA_TRACKING_ID", "")
+    app.config['CLARITY_PROJECT_ID'] = os.getenv("CLARITY_PROJECT_ID", "")  # ✅ תיקון כאן!
 
-    # הגדרת משתנה לכל התבניות
     @app.context_processor
-    def inject_ga_tracking_id():
-        return dict(ga_tracking_id=app.config['GA_TRACKING_ID'])
+    def inject_tracking_ids():
+        return dict(
+            ga_tracking_id=app.config['GA_TRACKING_ID'],
+            clarity_project_id=app.config['CLARITY_PROJECT_ID']  # ✅ עכשיו זה נטען נכון
+        )
+
 
     # טוען קונפיגורציה (Config) מהקובץ config.py
     app.config.from_object(Config)
@@ -48,6 +51,8 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    login_manager.login_message = "עליך להתחבר כדי לגשת לעמוד זה"
+    login_manager.login_message_category = "warning"  # אפשר לשנות ל-'info', 'danger', 'success'
     login_manager.login_view = 'auth.login'
     csrf.init_app(app)
 

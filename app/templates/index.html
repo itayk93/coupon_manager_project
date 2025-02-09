@@ -83,13 +83,13 @@
         <form method="POST" action="{{ url_for('coupons.parse_usage_text') }}">
             {{ usage_form.hidden_tag() }}
             <div class="input-wrapper">
-                <label for="usage_explanation">השלמה אוטומטית של השימוש בקופונים</label>
+                <label for="usage_explanation">דיווח אוטומטי על שימוש בקופונים</label>
                 <textarea id="usage_explanation"
-                          name="usage_explanation"
-                          rows="2"
-                          class="input-field_centered"
-                          placeholder="כאן ניתן לפרט באילו קופונים השתמשת כדי לעדכן באופן אוטומטי."></textarea>
-            </div>
+                        name="usage_explanation"
+                        rows="2"
+                        class="input-field_centered"
+                        placeholder="{% if current_user.gender == 'male' %}תפרט כאן באלו קופונים השתמשת ובכמה{% else %}תפרטי כאן באלו קופונים השתמשת ובכמה{% endif %}"></textarea>
+                  </div>
             <div class="button-with-explanation">
                 <button type="submit" class="submit-button">שלח</button>
                 <div class="tooltip">
@@ -105,13 +105,13 @@
         <form method="POST" action="{{ url_for('coupons.add_coupon') }}">
             {{ sms_form.hidden_tag() }}
             <div class="input-wrapper">
-                <label for="sms_text">הוספה אוטומטית של קופון חדש</label>
+                <label for="sms_text">זיהוי והוספה אוטומטית של קופון</label>
                 <textarea
                     class="input-field_centered"
                     id="sms_text"
                     name="sms_text"
                     rows="2"
-                    placeholder="כאן ניתן לפרט על הקופון החדש שקנית כדי להוסיף אותו באופן אוטומטי"
+                    placeholder="{% if current_user.gender == 'male' %}תפרט כאן את הפרטים של הקופון שקנית להוספה אוטומטית שלו{% else %}תפרטי כאן את הפרטים של הקופון שקנית להוספה אוטומטית שלו{% endif %}"
                 ></textarea>
             </div>
             <div class="button-with-explanation">

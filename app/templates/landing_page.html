@@ -17,31 +17,34 @@
         --highlight-color: #ffdd57;
     }
     
-    /* Global RTL Settings */
+    /* Global RTL Settings + reset margins */
     body {
         direction: rtl;
         text-align: right;
+        margin: 0; /* מסיר מרווח דפדפן דיפולטי */
+        font-family: Arial, sans-serif;
     }
     
     /* Hero Section */
     .hero {
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
         color: white;
-        padding: 40px 20px;
+        padding: 20px 20px;
         text-align: center;
         border-radius: 0 0 15px 15px;
+        margin: 0; /* מסיר margin עליון */
     }
 
     .hero h1 {
         font-size: 2.6em;
-        margin-bottom: 10px;
+        margin: 0 0 10px; /* אין margin-top */
         line-height: 1.2;
         font-weight: 700;
     }
 
     .hero p {
         font-size: 1.3em;
-        margin-bottom: 20px;
+        margin: 0 0 20px; /* אין margin-top */
         max-width: 800px;
         margin-left: auto;
         margin-right: auto;
@@ -72,7 +75,7 @@
         font-size: 2.2em;
         font-weight: bold;
         color: var(--primary-color);
-        margin: 10px 0;
+        margin: 0px 0 10px; /* מגדיל את ה-margin העליון ל-40px */
         text-align: center;
         padding: 10px;
         background: var(--bg-light);
@@ -80,12 +83,14 @@
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
 
+
     /* Features Section */
     .features {
         padding: 30px 20px;
         max-width: 1200px;
         margin: 0 auto;
         display: grid;
+        /* שני בולטים באותה שורה גם בנייד */
         grid-template-columns: repeat(2, 1fr);
         gap: 20px;
     }
@@ -119,6 +124,7 @@
         font-size: 1.1em;
         color: var(--text-dark);
         line-height: 1.4;
+        margin: 0;
     }
 
     /* Final CTA Section */
@@ -127,7 +133,7 @@
         color: white;
         text-align: center;
         padding: 50px 20px;
-        margin-top: 30px;
+        margin-top: 30px; /* אפשר להסיר אם תרצו צמצום מרווח */
         box-shadow: 0px -4px 10px rgba(0, 0, 0, 0.15);
     }
 
@@ -167,28 +173,21 @@
         text-decoration: underline;
     }
 
-    /* Responsive Design */
+    /* Responsive Design:
+       נמחקה ההגדרה שהופכת את .features לטור 1 בנייד, כדי לשמור על 2 בולטים בכל מצב */
     @media (max-width: 768px) {
-        .features {
-            grid-template-columns: 1fr;
-        }
-
         .hero h1 {
             font-size: 2.2em;
         }
-
         .hero p {
             font-size: 1.2em;
         }
-
         .savings-counter {
             font-size: 2em;
         }
-
         .feature-box {
             padding: 15px;
         }
-
         .final-cta h2 {
             font-size: 2em;
         }
@@ -241,5 +240,4 @@
         <a href="mailto:couponmasteril2@gmail.com">צור קשר</a>
     </p>
 </footer>
-
 {% endblock %}

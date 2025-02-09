@@ -38,13 +38,15 @@
     </form>
 
     <!-- הצגת הודעות פלאש -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+    {% if request.endpoint != 'auth.login' %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    {% endif %}
 
     <div class="auth-buttons">
         <a href="{{ url_for('auth.register') }}" class="secondary-button">
