@@ -145,11 +145,13 @@ def update_coupon_usage(coupon, usage_amount, details='עדכון שימוש'):
         db.session.add(usage)
 
         # שליחת התראה למשתמש על העדכון
+        """""""""
         create_notification(
             user_id=coupon.user_id,
             message=f"השימוש בקופון {coupon.code} עודכן (+{usage_amount} ש\"ח).",
             link=url_for('coupons.coupon_detail', id=coupon.id)
         )
+        """""""""
 
         db.session.commit()
 
@@ -1460,7 +1462,7 @@ def get_most_common_tag_for_company(company_name):
 
     if results:
         # התגית הראשונה ברשימה היא הנפוצה ביותר
-        print("[DEBUG] get_most_common_tag_for_company results =>", results)  # הדפסה לקונסול
+        #print("[DEBUG] get_most_common_tag_for_company results =>", results)  # הדפסה לקונסול
         return results[0][0]
     else:
         # אין תגיות משויכות לחברה זו

@@ -117,12 +117,14 @@ def update_all_active_coupons():
                 )
                 db.session.add(usage)
 
+                """""""""
                 notification = Notification(
                     user_id=cpn.user_id,
                     message=f"השימוש בקופון {cpn.code} עודכן אוטומטית ({cpn.auto_download_details}).",
                     link=url_for('coupons.coupon_detail', id=cpn.id)
                 )
                 db.session.add(notification)
+                """""""""
 
                 updated_coupons.append(str(cpn.id))
             else:
@@ -171,12 +173,14 @@ def update_all_any_coupons():
                 )
                 db.session.add(usage)
 
+                """""""""
                 notification = Notification(
                     user_id=cpn.user_id,
                     message=f"השימוש בקופון {cpn.code} עודכן אוטומטית ({cpn.auto_download_details}).",
                     link=url_for('coupons.coupon_detail', id=cpn.id)
                 )
                 db.session.add(notification)
+                """""""""
 
                 updated_coupons.append(str(cpn.id))
             else:

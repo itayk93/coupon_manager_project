@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 import pytz
 import logging
 from fuzzywuzzy import fuzz
-
+import numpy as np
 from app.extensions import db
 from app.models import (
     Coupon, Company, Tag, CouponUsage, Transaction, Notification, CouponRequest, GptUsage, CouponTransaction, coupon_tags
@@ -219,9 +219,11 @@ def sell_coupon():
         # Retrieve the most common tag for the chosen company
         found_tag = get_most_common_tag_for_company(chosen_company_name)  # וודא שהפונקציה מחזירה ערך
         if found_tag:
-            current_app.logger.info(f"[DEBUG] sell_coupon => auto found_tag = '{found_tag.name}'")
+            #current_app.logger.info(f"[DEBUG] sell_coupon => auto found_tag = '{found_tag.name}'")
+            pass
         else:
-            current_app.logger.info("[DEBUG] sell_coupon => auto found_tag = 'None'")
+            #current_app.logger.info("[DEBUG] sell_coupon => auto found_tag = 'None'")
+            pass
 
         # If a matching tag is found, add it to the coupon
         if found_tag:
@@ -580,7 +582,7 @@ def get_most_common_tag_for_company(company_name):
         .order_by(func.count(Tag.id).desc(), Tag.id.asc()) \
         .all()
     if results:
-        current_app.logger.info(f"[DEBUG] get_most_common_tag_for_company({company_name}) => {results}")
+        #current_app.logger.info(f"[DEBUG] get_most_common_tag_for_company({company_name}) => {results}")
         return results[0][0]
     else:
         return None
@@ -631,8 +633,11 @@ def add_coupon():
                     cost_usd=float(pricing_row['cost_usd']),
                     cost_ils=float(pricing_row['cost_ils']),
                     exchange_rate=float(pricing_row['exchange_rate']),
-                    prompt_text=str(pricing_row['prompt_text']),
-                    response_text=str(pricing_row['response_text'])
+                    #prompt_text=str(pricing_row['prompt_text']),
+                    #response_text=str(pricing_row['response_text']),
+                    prompt_text=np.nan,
+                    response_text=np.nan
+
                 )
                 db.session.add(new_usage)
                 db.session.commit()
@@ -680,14 +685,14 @@ def add_coupon():
                     flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
                     return redirect(url_for('coupons.add_coupon'))
 
-                current_app.logger.info(f"[DEBUG] Sending to get_most_common_tag_for_company => '{chosen_company_name}'")
+                #current_app.logger.info(f"[DEBUG] Sending to get_most_common_tag_for_company => '{chosen_company_name}'")
                 found_tag = get_most_common_tag_for_company(chosen_company_name)
                 current_app.logger.info(f"[DEBUG] Received tag => '{found_tag}' for company '{chosen_company_name}'")
                 if found_tag:
                     tag_id = found_tag.id
                     tag_name = found_tag.name
-                    current_app.logger.info(
-                        f"[DEBUG] Received tag => '{tag_name}' (ID: {tag_id}) for company '{chosen_company_name}'")
+                    #current_app.logger.info(
+                        #f"[DEBUG] Received tag => '{tag_name}' (ID: {tag_id}) for company '{chosen_company_name}'")
                 else:
                     current_app.logger.info(f"[DEBUG] No tag found for company '{chosen_company_name}'")
 
@@ -785,14 +790,14 @@ def add_coupon():
                                 flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
                                 return redirect(url_for('coupons.add_coupon'))
 
-                            current_app.logger.info(f"[DEBUG] Sending to get_most_common_tag_for_company => '{chosen_company_name}'")
+                            #current_app.logger.info(f"[DEBUG] Sending to get_most_common_tag_for_company => '{chosen_company_name}'")
                             found_tag = get_most_common_tag_for_company(chosen_company_name)
                             current_app.logger.info(f"[DEBUG] Received tag => '{found_tag}' for company '{chosen_company_name}'")
                             if found_tag:
                                 tag_id = found_tag.id
                                 tag_name = found_tag.name
-                                current_app.logger.info(
-                                    f"[DEBUG] Received tag => '{tag_name}' (ID: {tag_id}) for company '{chosen_company_name}'")
+                                #current_app.logger.info(
+                                    #f"[DEBUG] Received tag => '{tag_name}' (ID: {tag_id}) for company '{chosen_company_name}'")
                             else:
                                 current_app.logger.info(f"[DEBUG] No tag found for company '{chosen_company_name}'")
 
@@ -846,7 +851,7 @@ def add_coupon():
                                        tags=tags)
 
             elif 'submit_coupon' in request.form and coupon_form.submit_coupon.data:
-                current_app.logger.info("[DEBUG] Manual flow - user pressed submit_coupon")
+                #current_app.logger.info("[DEBUG] Manual flow - user pressed submit_coupon")
                 if coupon_form.validate_on_submit():
                     code = coupon_form.code.data.strip()
                     try:
@@ -910,9 +915,9 @@ def add_coupon():
                     )
 
                     chosen_company_name = company.name
-                    current_app.logger.info(f"[DEBUG] Manual flow => chosen_company_name = '{chosen_company_name}'")
+                    #current_app.logger.info(f"[DEBUG] Manual flow => chosen_company_name = '{chosen_company_name}'")
                     found_tag = get_most_common_tag_for_company(chosen_company_name)
-                    current_app.logger.info(f"[DEBUG] Manual flow => auto found_tag = '{found_tag}'")
+                    #current_app.logger.info(f"[DEBUG] Manual flow => auto found_tag = '{found_tag}'")
 
                     if found_tag:
                         new_coupon.tags.append(found_tag)
@@ -2363,13 +2368,14 @@ def update_coupon_usage_from_multipass(id):
             details='שימוש מעודכן מ-Multipass.'
         )
         db.session.add(usage)
-
+        """""""""
         notification = Notification(
             user_id=coupon.user_id,
             message=f"השימוש בקופון {coupon.code} עודכן מ-Multipass.",
             link=url_for('coupons.coupon_detail', id=coupon.id)
         )
         db.session.add(notification)
+        """""""""
         db.session.commit()
 
         flash('השימוש עודכן בהצלחה מ-Multipass.', 'success')
@@ -2474,12 +2480,14 @@ def update_all_active_coupons():
                 )
                 db.session.add(usage)
 
+                """""""""
                 notification = Notification(
                     user_id=cpn.user_id,
                     message=f"השימוש בקופון {cpn.code} עודכן מ-Multipass.",
                     link=url_for('coupons.coupon_detail', id=cpn.id)
                 )
                 db.session.add(notification)
+                """""""""
 
                 updated_coupons.append(cpn.code)
             else:
@@ -2555,12 +2563,14 @@ def update_coupon_transactions():
             )
             db.session.add(usage)
 
+            """""""""
             notification = Notification(
                 user_id=coupon.user_id,
                 message=f"השימוש בקופון {coupon.code} עודכן מ-Multipass.",
                 link=url_for('coupons.coupon_detail', id=coupon.id)
             )
             db.session.add(notification)
+            """""""""
             flash(f'הקופון עודכן בהצלחה: {coupon.code}', 'success')
         else:
             current_app.logger.error(f"Error updating coupon {coupon.code} (no DataFrame returned).")
@@ -2613,8 +2623,10 @@ def parse_usage_text():
                     cost_usd=float(row['cost_usd']),
                     cost_ils=float(row['cost_ils']),
                     exchange_rate=float(row['exchange_rate']),
-                    prompt_text=str(row['prompt_text']),
-                    response_text=str(row['response_text'])
+                    #prompt_text=str(row['prompt_text']),
+                    #response_text=str(row['response_text']),
+                    prompt_text=np.nan,
+                    response_text=np.nan
                 )
                 db.session.add(new_gpt)
                 db.session.commit()
@@ -2662,7 +2674,7 @@ def review_usage_findings():
     form = UsageExplanationForm()  # או שם הטופס המתאים
     usage_list = session.get('parsed_usages', [])
 
-    current_app.logger.info(f"[DEBUG] Entered review_usage_findings. usage_list={usage_list}")
+    #current_app.logger.info(f"[DEBUG] Entered review_usage_findings. usage_list={usage_list}")
 
     if not usage_list:
         flash("לא נמצאו נתוני שימוש. הזן טקסט תחילה.", "danger")
@@ -2721,7 +2733,7 @@ def review_usage_findings():
             # הסכום שהוזן
             amount_str = request.form.get(f"row-{i}-amount", "0")
 
-            current_app.logger.info(f"[DEBUG] row-{i} => coupon_id_str={coupon_id_str}, amount_str={amount_str}")
+            #current_app.logger.info(f"[DEBUG] row-{i} => coupon_id_str={coupon_id_str}, amount_str={amount_str}")
 
             try:
                 used_amount = float(amount_str)
@@ -2734,7 +2746,7 @@ def review_usage_findings():
             updated_rows.append(row)
 
         session['confirmed_usages'] = updated_rows
-        current_app.logger.info(f"[DEBUG] confirm_usage_update => {updated_rows}")
+        #current_app.logger.info(f"[DEBUG] confirm_usage_update => {updated_rows}")
         return redirect(url_for('coupons.confirm_usage_update'))
 
 
@@ -2742,7 +2754,7 @@ def review_usage_findings():
 @login_required
 def confirm_usage_update():
     confirmed_usages = session.get('confirmed_usages', [])
-    current_app.logger.info(f"[DEBUG] Entered confirm_usage_update. confirmed_usages={confirmed_usages}")
+    #current_app.logger.info(f"[DEBUG] Entered confirm_usage_update. confirmed_usages={confirmed_usages}")
 
     if not confirmed_usages:
         flash("אין שימושים לאישור.", "danger")
@@ -2759,7 +2771,7 @@ def confirm_usage_update():
         coupon_id_str = row.get('company_final', '')
         used_amount = row.get('used_amount', 0.0)
 
-        current_app.logger.info(f"[DEBUG] Processing usage => coupon_id_str={coupon_id_str}, used_amount={used_amount}")
+        #current_app.logger.info(f"[DEBUG] Processing usage => coupon_id_str={coupon_id_str}, used_amount={used_amount}")
 
         # אם המשתמש בחר "other" ולא בחר בפועל חדש => אין עדכון
         if coupon_id_str in ("", "other"):
@@ -2808,7 +2820,7 @@ def confirm_usage_update():
         update_coupon_status(coupon)
 
         successes.append(f"עודכן שימוש של {used_amount} ₪ בקופון {coupon.code}.")
-        current_app.logger.info(f"[DEBUG] Successfully updated usage in coupon={coupon.code} (+{used_amount}).")
+        #current_app.logger.info(f"[DEBUG] Successfully updated usage in coupon={coupon.code} (+{used_amount}).")
 
     # ניסיון לשמור ב־DB
     try:
@@ -2825,7 +2837,7 @@ def confirm_usage_update():
         current_app.logger.info(f"[DEBUG] Errors occurred: {errors}")
     if successes:
         flash("הקופונים הבאים עודכנו:\n" + "\n".join(successes), "success")
-        current_app.logger.info(f"[DEBUG] Successes: {successes}")
+        #current_app.logger.info(f"[DEBUG] Successes: {successes}")
 
     # ניקוי הנתונים מה־Session
     session.pop('parsed_usages', None)
