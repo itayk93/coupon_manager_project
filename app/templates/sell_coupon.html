@@ -145,9 +145,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const discountPercentage = parseFloat(discountPercentageInput.value);
 
         if (
-            !isNaN(couponCost) && 
-            !isNaN(discountPercentage) && 
-            discountPercentage >= 0 && 
+            !isNaN(couponCost) &&
+            !isNaN(discountPercentage) &&
+            discountPercentage >= 0 &&
             discountPercentage <= 100
         ) {
             // נוסחה: מחיר לאחר הנחה = מחיר מקורי * (1 - אחוז הנחה)

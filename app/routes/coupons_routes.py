@@ -134,7 +134,7 @@ def sell_coupon():
     form = SellCouponForm()
 
     # Fetch only companies (no need to fetch tags for manual selection)
-    companies = Company.query.all()
+    companies = Company.query.order_by(Company.name).all()
 
     # Prepare a list of options for company selection
     company_choices = [('', 'בחר חברה')]
@@ -294,7 +294,7 @@ def show_coupons():
         update_coupon_status(coupon)
     db.session.commit()
 
-    companies = Company.query.all()
+    companies = Company.query.order_by(Company.name).all()
     company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
 
     active_coupons = [coupon for coupon in coupons if coupon.status == 'פעיל' and not coupon.is_one_time]
@@ -413,7 +413,7 @@ def add_coupons_bulk():
     #log_user_activity("add_coupons_bulk_view", None)
 
     form = AddCouponsBulkForm()
-    companies = Company.query.all()
+    companies = Company.query.order_by(Company.name).all()
     tags = Tag.query.all()
 
     # הגדרת choices לחברות (ולא לתגיות, כי בחרנו להתעלם משדות ה-Tag)
@@ -598,7 +598,7 @@ def add_coupon():
         coupon_form = CouponForm()
         show_coupon_form = manual
 
-        companies = Company.query.all()
+        companies = Company.query.order_by(Company.name).all()
         tags = Tag.query.all()
 
         companies_list = [c.name for c in companies]
@@ -1136,7 +1136,7 @@ def add_coupon_with_image():
     show_coupon_form = False
 
     # Fetch the list of companies from the database
-    companies = Company.query.all()
+    companies = Company.query.order_by(Company.name).all()
 
     # Set the choices for the company_id field only (without tags)
     coupon_form.company_id.choices = [('', 'בחר')] + [(str(company.id), company.name) for company in companies] + [('other', 'אחר')]
@@ -1410,7 +1410,7 @@ def edit_coupon(id):
 
     form = EditCouponForm(obj=coupon)
 
-    companies = Company.query.all()
+    companies = Company.query.order_by(Company.name).all()
     company_choices = [('', 'בחר חברה')]
     company_choices += [(str(c.id), c.name) for c in companies]
     company_choices.append(('other', 'אחר'))
@@ -1829,7 +1829,7 @@ ORDER BY
         discount_percentage = ((coupon.value - coupon.cost) / coupon.value) * 100
         discount_percentage = round(discount_percentage, 2)
 
-    companies = Company.query.all()
+    companies = Company.query.order_by(Company.name).all()
     company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
     company_logo = company_logo_mapping.get(coupon.company.lower(), 'default_logo.png')
 
@@ -2387,7 +2387,7 @@ def update_coupon_usage_route(id):
     #log_user_activity("complete_transaction")
 
     coupon = Coupon.query.get_or_404(id)
-    companies = Company.query.all()
+    companies = Company.query.order_by(Company.name).all()
     company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
     is_owner = (current_user.id == coupon.user_id)
 

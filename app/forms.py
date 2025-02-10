@@ -340,7 +340,7 @@ class SellCouponForm(FlaskForm):
         validators=[Optional()]
     )
     cost = DecimalField(
-        'כמה היית רוצה לקבל על הקופון?',
+        'כמה הקופון שווה בפועל?',
         validators=[
             DataRequired(message="חובה למלא את המחיר."),
             NumberRange(min=0, message="המחיר חייב להיות חיובי.")
@@ -348,7 +348,7 @@ class SellCouponForm(FlaskForm):
         places=2
     )
     value = DecimalField(
-        'כמה הקופון שווה בפועל?',
+        'כמה היית רוצה לקבל על הקופון?',
         validators=[
             DataRequired(message="חובה למלא את הערך."),
             NumberRange(min=0, message="הערך חייב להיות חיובי.")
