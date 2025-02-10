@@ -648,7 +648,8 @@ def user_profile_default():
 @profile_bp.route('/landing_page')
 def landing_page():
     # שליפת סכום (value - cost) מכל הקופונים
-    total_savings = db.session.query(db.func.sum(Coupon.value - Coupon.cost)).scalar()
+    total_savings = db.session.query(db.func.sum(Coupon.value - Coupon.cost))\
+        .filter(Coupon.is_for_sale == False).scalar()
     if not total_savings:
         total_savings = 0  # אם לא הוחזר ערך (None), נאפס ל-0
     
