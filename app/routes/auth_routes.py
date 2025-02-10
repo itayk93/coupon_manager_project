@@ -26,6 +26,65 @@ from datetime import datetime
 from flask import request, current_app
 from flask_login import current_user
 
+from flask_dance.contrib.google import google
+from flask import session
+from app.extensions import google_bp
+
+@auth_bp.route('/login/google')
+def login_google():
+    return redirect(url_for('google.login'))
+
+@auth_bp.route('/register/google')
+def register_google():
+    return redirect(url_for('google.login'))  # ניתן להוסיף לוגיקה לרישום נפרד אם צריך
+
+@auth_bp.route('/login/google/callback')
+def google_callback():
+    if not google.authorized:
+        flash("ההתחברות נכשלה!", "danger")
+        return redirect(url_for('auth.login'))
+
+    # קבלת נתוני המשתמש מגוגל
+    resp = google.get("/oauth2/v1/userinfo")
+    if resp.status_code != 200:
+        flash("נכשל בשליפת הנתונים מגוגל.", "danger")
+        return redirect(url_for('auth.login'))
+
+    user_info = resp.json()
+    google_id = user_info.get("id")  # ✅ שים לב לשינוי כאן!
+    email = user_info.get("email")
+    first_name = user_info.get("given_name", "")
+    last_name = user_info.get("family_name", "")
+
+    #current_app.logger.info(f"User info from Google: {user_info}")
+
+    # חיפוש המשתמש לפי אימייל
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        # יצירת משתמש חדש
+        user = User(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            google_id=google_id,  # ✅ עכשיו יישמר נכון
+            is_confirmed=True
+        )
+        db.session.add(user)
+        db.session.commit()
+        #current_app.logger.info(f"User {email} created with Google ID: {google_id}")
+    else:
+        # אם המשתמש קיים ואין לו Google ID, נוסיף אותו
+        if not user.google_id:
+            user.google_id = google_id
+            db.session.commit()
+            #current_app.logger.info(f"Updated Google ID for {email}: {google_id}")
+
+    # התחברות למערכת
+    login_user(user)
+    flash(f"ברוך הבא, {user.first_name}!", "success")
+    return redirect(url_for('profile.index'))
+
 ip_address = None
 
 def log_user_activity(ip_address,action, coupon_id=None):

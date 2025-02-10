@@ -27,6 +27,9 @@ def create_app():
     # טוען משתני סביבה (ליתר ביטחון, אפשר גם ב-wsgi.py)
     load_dotenv()
 
+    import os
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
     app = Flask(__name__, static_folder='static', template_folder='templates')
 
     app.config['GA_TRACKING_ID'] = os.getenv("GA_TRACKING_ID", "")
@@ -79,9 +82,10 @@ def create_app():
     from app.routes.admin_routes.admin_coupon_tags_routes import admin_coupon_tags_bp
     from app.routes.admin_routes.admin_dashboard_routes import admin_dashboard_bp
     from app.routes.admin_routes.admin_messages_routes import admin_messages_bp
+    from app.extensions import google_bp
     # from app.routes.profile_routes import profile_bp
 
-    app.register_blueprint(auth_bp)
+    app.register_blueprint(google_bp, url_prefix="/login")  # ✅ הוספנו את Google Login כאן!
     app.register_blueprint(profile_bp)
     app.register_blueprint(coupons_bp)
     app.register_blueprint(marketplace_bp)
@@ -96,6 +100,8 @@ def create_app():
     # app.register_blueprint(profile_bp, url_prefix='/')
     app.register_blueprint(admin_dashboard_bp, url_prefix="/admin")
     app.register_blueprint(admin_messages_bp)
+    app.register_blueprint(auth_bp, url_prefix="/auth")
+
 
     # אם צריך - יצירת תיקיית instance
     if not os.path.exists('instance'):

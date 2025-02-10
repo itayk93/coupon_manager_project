@@ -35,6 +35,7 @@
         <div class="form-group">
             {{ form.submit(class="submit-button") }}
         </div>
+
     </form>
 
     <!-- הצגת הודעות פלאש -->
@@ -56,6 +57,15 @@
             <i class="fa fa-key" aria-hidden="true"></i> שחזור סיסמה
         </a>
     </div>
+
+    <!-- 🔹 כפתורי התחברות עם Google -->
+    <div class="auth-buttons google-auth">
+        <a href="{{ url_for('auth.login_google') }}" class="google-button">
+            <img src="{{ url_for('static', filename='images/google-logo.png') }}" alt="Google Logo">
+            התחברות עם Google
+        </a>
+    </div>
+
 </section>
 
 <!-- כותרת התכונות -->
@@ -217,13 +227,70 @@
     .auth-form {
         margin-top: 0px; /* הקטן את הרווח בהתאם */
     }
-}
-.page-title {
-    margin: 1;
-}
-.auth-form {
-    margin-top: 0;
-}
+    }
+    .page-title {
+        margin: 1;
+    }
+    .auth-form {
+        margin-top: 0;
+    }
+    .google-auth {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .google-auth {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+        flex-wrap: nowrap; /* מונע שבירה לשורה חדשה */
+    }
+
+    .google-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px; /* רווח בין האייקון לטקסט */
+        padding: 12px 15px;
+        border: none;
+        border-radius: 5px;
+        background-color: #DB4437;
+        color: white;
+        font-size: 14px;
+        font-weight: bold;
+        text-decoration: none;
+        transition: background-color 0.3s;
+        width: 180px; /* מספיק רחב כדי להימנע משבירה */
+        text-align: center; /* ממורכז */
+        white-space: nowrap; /* מונע ירידת טקסט לשורה חדשה */
+    }
+
+    .google-button img {
+        width: 24px;
+        height: 24px;
+    }
+
+    .google-button:hover {
+        background-color: #C1351D;
+    }
+
+    /* לוודא שבמובייל גם אם אין הרבה מקום, הכפתורים נשארים אחד ליד השני */
+    @media (max-width: 400px) {
+        .google-auth {
+            flex-wrap: nowrap; /* חשוב! מונע שבירה לשורה שנייה */
+            justify-content: space-evenly; /* מבטיח מרווח טוב */
+        }
+
+        .google-button {
+            width: 48%; /* נותן לכל כפתור 48% מרוחב המסך כדי להישאר בשורה אחת */
+            font-size: 13px; /* מקטין טיפה את הגופן כדי למנוע שבירה */
+        }
+    }
 
 </style>
 {% endblock %}

@@ -67,6 +67,7 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
+    google_id = db.Column(db.String(50), unique=True, nullable=True)  # ✅ זה השדה החדש
     password = db.Column(db.String(256), nullable=False)
     first_name = db.Column(db.String(150), nullable=False)
     last_name = db.Column(db.String(150), nullable=False)
