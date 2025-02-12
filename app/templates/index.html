@@ -92,11 +92,13 @@
                   </div>
             <div class="button-with-explanation">
                 <button type="submit" class="submit-button">שלח</button>
+                <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
                 <div class="tooltip">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
+                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטית.
                     <span class="close-tooltip">×</span>
                 </div>
             </div>
+            
         </form>
     </section>
 
@@ -115,18 +117,13 @@
                 ></textarea>
             </div>
             <div class="button-with-explanation">
-                <input
-                    class="submit-button"
-                    id="submit_sms"
-                    name="submit_sms"
-                    type="submit"
-                    value="הבא"
-                >
+                <input class="submit-button" id="submit_sms" name="submit_sms" type="submit" value="הבא">
+                <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
                 <div class="tooltip">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
+                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטית.
                     <span class="close-tooltip">×</span>
                 </div>
-            </div>
+            </div>            
         </form>
     </section>
 
@@ -509,6 +506,30 @@
     .usage-form-wrapper form {
         padding: 0px; /* מבטיח שאין padding נוסף בטפסים עצמם */
         margin: 0px;
+    }
+    .button-with-explanation {
+    position: relative;
+    display: flex;
+    align-items: center;
+    }
+
+    @media (max-width: 768px) {
+    /* כפתור סימן השאלה */
+    .tooltip-button-mobile {
+        position: relative; /* כדי לאפשר מיקום מוחלט של ה-tooltip בתוכו */
+        margin-top: 10px;    /* מגדירים מרווח עליון קטן כדי להנמיך אותו */
+    }
+
+    /* ה-tooltip עצמו */
+    .mobile-tooltip,
+    .tooltip {
+        position: absolute;
+        top: calc(100% + 8px); /* מופיע 8px מתחת לכפתור */
+        left: 50%;             /* מניח אותו באמצע הכפתור לרוחב */
+        transform: translateX(-50%); 
+        max-width: 90vw;       /* מגביל את הרוחב ל־90% מרוחב המסך (כדי שלא ייחתך) */
+        white-space: normal;   /* מאפשר שבירת שורות במקום גלילת רוחב או חיתוך */
+        z-index: 9999;         /* מבטיח שהוא יהיה מקדימה לכל תוכן אחר */
     }
 }
 
