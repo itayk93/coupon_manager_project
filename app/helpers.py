@@ -96,6 +96,7 @@ def update_coupon_status(coupon):
             coupon.status = new_status
             logger.info(f"Coupon {coupon.id} status updated from '{old_status}' to '{new_status}'")
 
+            """""""""
             # שליחת התראה רק אם שונה ל'נוצל' או 'פג תוקף'
             if new_status == 'נוצל' and not coupon.notification_sent_nutzel:
                 create_notification(
@@ -112,6 +113,7 @@ def update_coupon_status(coupon):
                     link=url_for('coupons.coupon_detail', id=coupon.id)
                 )
                 coupon.notification_sent_pagh_tokev = True
+            """""""""
 
     except Exception as e:
         logger.error(f"Error in update_coupon_status for coupon {coupon.id}: {e}")
@@ -1175,18 +1177,22 @@ def update_coupon_status(coupon):
                 status = 'פג תוקף'
                 # Check if notification was already sent
                 if not coupon.notification_sent_pagh_tokev:
+                    coupon.notification_sent_pagh_tokev = True
+                    """""""""
                     notification = Notification(
                         user_id=coupon.user_id,
                         message=f"הקופון {coupon.code} פג תוקף.",
                         link=url_for('coupons.coupon_detail', id=coupon.id)
                     )
                     db.session.add(notification)
-                    coupon.notification_sent_pagh_tokev = True
+                    """""""""
 
         # Check if fully used
         if coupon.used_value >= coupon.value:
             status = 'נוצל'
+            coupon.notification_sent_nutzel = True
             # Check if notification was already sent
+            """""""""
             if not coupon.notification_sent_nutzel:
                 notification = Notification(
                     user_id=coupon.user_id,
@@ -1194,7 +1200,7 @@ def update_coupon_status(coupon):
                     link=url_for('coupons.coupon_detail', id=coupon.id)
                 )
                 db.session.add(notification)
-                coupon.notification_sent_nutzel = True
+                """""""""
 
         if coupon.status != status:
             coupon.status = status

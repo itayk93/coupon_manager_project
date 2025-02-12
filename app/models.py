@@ -394,15 +394,18 @@ def update_coupon_status(coupon):
             if current_date > expiration_date:
                 status = 'פג תוקף'
                 # Create notification for expired coupon
+                """""""""
                 notification = Notification(
                     user_id=coupon.user_id,
                     message=f"הקופון {coupon.code} פג תוקף.",
                     link=url_for('coupon_detail', id=coupon.id)
                 )
                 db.session.add(notification)
+                """""""""
 
         if coupon.used_value >= coupon.value:
             status = 'נוצל'
+            """""""""
             # Create notification for fully used coupon
             notification = Notification(
                 user_id=coupon.user_id,
@@ -410,6 +413,7 @@ def update_coupon_status(coupon):
                 link=url_for('coupon_detail', id=coupon.id)
             )
             db.session.add(notification)
+            """""""""
 
         if coupon.status != status:
             coupon.status = status

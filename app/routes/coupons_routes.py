@@ -1110,12 +1110,14 @@ def add_coupon_with_image_html():
             try:
                 db.session.commit()
                 add_coupon_transaction(new_coupon)  # ואז ליצור את רשומת ה-CouponTransaction
+                """""""""
                 notification = Notification(
                     user_id=current_user.id,
                     message=f"הקופון {new_coupon.code} נוסף בהצלחה.",
                     link=url_for('coupons.coupon_detail', id=new_coupon.id)
                 )
                 db.session.add(notification)
+                """""""""
                 db.session.commit()
 
                 flash('קופון נוסף בהצלחה!', 'success')
@@ -1349,12 +1351,14 @@ def add_coupon_with_image():
         db.session.add(new_coupon)
         try:
             db.session.commit()
+            """""""""
             notification = Notification(
                 user_id=current_user.id,
                 message=f"הקופון {new_coupon.code} נוסף בהצלחה.",
                 link=url_for('coupons.coupon_detail', id=new_coupon.id)
             )
             db.session.add(notification)
+            """""""""
             db.session.commit()
 
             flash('קופון נוסף בהצלחה!', 'success')
@@ -2314,12 +2318,14 @@ def mark_coupon_as_used(id):
         db.session.add(usage)
 
         # שולחים נוטיפיקציה
+        """""""""
         notification = Notification(
             user_id=coupon.user_id,
             message=f"הקופון {coupon.code} סומן כנוצל לגמרי.",
             link=url_for('coupons.coupon_detail', id=coupon.id)
         )
         db.session.add(notification)
+        """""""""
 
         db.session.commit()
 

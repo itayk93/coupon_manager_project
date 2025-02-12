@@ -48,18 +48,27 @@
                     <div class="error">{{ error }}</div>
                 {% endfor %}
             </div>
-            <!-- Submit Button -->
             <div class="form-group" style="position: relative;">
                 <!-- טקסט תומך במסכים קטנים -->
                 <div class="slots-info-mobile center-text">
                     יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
                 </div>
-                {{ sms_form.submit_sms(class="submit-button") }}
-
-                <!-- Tooltip לדסקטופ -->
-                <div class="tooltip" id="Tooltip">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים להשתמש בהם למילוי הטופס באופן אוטומטי.
-                    <span class="close-tooltip" id="closeTooltip">×</span>
+                
+                <!-- עטיפה משותפת ל" הבא " ול-❔ -->
+                <div class="mobile-buttons-container">
+                    {{ sms_form.submit_sms(class="submit-button") }}
+                    <div class="tooltip-container">
+                        <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
+                        <div class="mobile-tooltip">
+                            יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
+                            <span class="close-tooltip">×</span>
+                        </div>
+                    </div>
+                </div>                
+                            
+                <!-- Tooltip לדסקטופ (מופיע במעבר עכבר) -->
+                <div class="tooltip">
+                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
                 </div>
             </div>
         </form>
@@ -210,12 +219,23 @@
             </div>
         </div>
 
-        <!-- One-Time Use Checkbox -->
-        <div class="form-group">
-            <label for="is_one_time">
-                {{ coupon_form.is_one_time() }}
+        <!-- One-Time Use Checkbox (כולל tooltip) -->
+        <div class="form-group tooltip-checkbox-container" style="position: relative;">
+            <button type="button" class="tooltip-button-mobile" id="tooltipOneTimeButtonMobile" aria-label="מידע נוסף">❔</button>
+            {{ coupon_form.is_one_time() }}
+            <label for="is_one_time" class="form-label">
                 {{ coupon_form.is_one_time.label }}
             </label>
+            <div class="mobile-tooltip" id="TooltipOneTimeUse">
+                קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                <span class="close-tooltip" id="closeTooltipOneTime">×</span>
+            </div>
+            <div class="tooltip" id="TooltipOneTimeUse">
+                קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                <span class="close-tooltip" id="closeTooltipOneTime">×</span>
+            </div>
+        </div>
+
             {% for error in coupon_form.is_one_time.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
@@ -252,7 +272,6 @@
 {% block scripts %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
-{{ super() }}
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
 
 <style>

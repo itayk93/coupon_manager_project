@@ -188,9 +188,8 @@
             });
         }
 
-
         // הצגת הודעת עוגיות אם העוגיה לא קיימת
-        window.onload = function () {
+        document.addEventListener("DOMContentLoaded", function () {
             if (!getCookie('cookies_accepted')) {
                 const consentBox = document.getElementById('cookie-consent');
                 consentBox.style.display = 'block';
@@ -198,67 +197,58 @@
                     consentBox.classList.add('visible');
                 }, 100); // מוסיף את האנימציה לאחר 100ms
             }
-        };
 
-        // טיפול בלחיצה על כפתור "אני מסכים"
-        document.getElementById('accept-cookies').onclick = function () {
-            const d = new Date();
-            d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000)); // שנה קדימה
-            document.cookie = `cookies_accepted=true; expires=${d.toUTCString()}; path=/`;
-            sendConsentToServer(true);
-        };
+            // טיפול בלחיצה על כפתור "אני מסכים"
+            document.getElementById('accept-cookies').onclick = function () {
+                const d = new Date();
+                d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000)); // שנה קדימה
+                document.cookie = `cookies_accepted=true; expires=${d.toUTCString()}; path=/`;
+                sendConsentToServer(true);
+            };
 
-        // טיפול בלחיצה על כפתור "אני דוחה"
-        document.getElementById('reject-cookies').onclick = function () {
-            const d = new Date();
-            d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000)); // שנה קדימה
-            document.cookie = `cookies_accepted=false; expires=${d.toUTCString()}; path=/`;
+            // טיפול בלחיצה על כפתור "אני דוחה"
+            document.getElementById('reject-cookies').onclick = function () {
+                const d = new Date();
+                d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000)); // שנה קדימה
+                document.cookie = `cookies_accepted=false; expires=${d.toUTCString()}; path=/`;
 
-            // מחיקת כל העוגיות מהדומיין
-            document.cookie.split(";").forEach(function(c) {
-                document.cookie = c.trim().split("=")[0] + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            });
+                // מחיקת כל העוגיות מהדומיין
+                document.cookie.split(";").forEach(function(c) {
+                    document.cookie = c.trim().split("=")[0] + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                });
 
-            // ניקוי localStorage ו-sessionStorage
-            localStorage.clear();
-            sessionStorage.clear();
+                // ניקוי localStorage ו-sessionStorage
+                localStorage.clear();
+                sessionStorage.clear();
 
-            // רענון הדף כדי לוודא שהעוגיות לא נטענות מחדש
-            location.reload();
-        };
+                // רענון הדף כדי לוודא שהעוגיות לא נטענות מחדש
+                location.reload();
+            };
 
-        // קריאה ראשונית להגדרת התפריטים
-        setupDropdowns();
+            // קריאה ראשונית להגדרת התפריטים
+            const mobileBreakpoint = 768; // נקודת שבירה למובייל
+            const dropdowns = document.querySelectorAll('.dropdown'); // הגדרת משתנה dropdowns
 
-        // טיפול באירוע שינוי גודל המסך
-        window.addEventListener('resize', () => {
-            setupDropdowns();
-        });
+            function toggleDropdownClick(event) {
+                event.preventDefault(); // מונע פעולות ברירת מחדל
+                const dropdownContent = this.querySelector(".dropdown-content");
+                
+                if (!dropdownContent) return; // אם לא נמצא dropdown, לא לעשות כלום
 
-        // פונקציה להגדרת dropdowns בהתאם לגודל המסך
-        function setupDropdowns() {
-            const isMobile = window.innerWidth < mobileBreakpoint;
+                // סגירת dropdowns אחרים
+                document.querySelectorAll(".dropdown-content").forEach(content => {
+                    if (content !== dropdownContent) {
+                        content.classList.remove("show");
+                    }
+                });
 
-            dropdowns.forEach(dropdown => {
-                const dropbtn = dropdown.querySelector('.dropbtn');
-                const dropdownContent = dropdown.querySelector('.dropdown-content');
+                // הצגת התפריט שנלחץ
+                dropdownContent.classList.toggle("show");
+            }
 
-                // הסרת כל האירועים הקודמים כדי למנוע כפילויות
-                dropdown.removeEventListener('click', toggleDropdownClick);
-                dropdown.removeEventListener('mouseenter', openDropdownHover);
-                dropdown.removeEventListener('mouseleave', closeDropdownHover);
-
-                if (isMobile) {
-                    // במכשירים ניידים: השתמש באירועי click על האלמנט dropdown
-                    dropdown.addEventListener('click', toggleDropdownClick);
-                } else {
-                    // במחשבים שולחניים: השתמש באירועי hover
-                    dropdown.addEventListener('mouseenter', openDropdownHover);
-                    dropdown.addEventListener('mouseleave', closeDropdownHover);
-                }
-            });
             function openDropdownHover() {
                 const dropdownContent = this.querySelector('.dropdown-content');
+                if (!dropdownContent) return;
 
                 // ניקוי מחלקות קודמות
                 dropdownContent.classList.remove('adjust-left', 'adjust-right');
@@ -276,7 +266,43 @@
 
                 dropdownContent.classList.add('show');
             }
-        }
+
+            function closeDropdownHover() {
+                const dropdownContent = this.querySelector('.dropdown-content');
+                if (dropdownContent) {
+                    dropdownContent.classList.remove("show");
+                }
+            }
+
+            function setupDropdowns() {
+                const isMobile = window.innerWidth < mobileBreakpoint;
+
+                dropdowns.forEach(dropdown => {
+                    const dropbtn = dropdown.querySelector('.dropbtn');
+                    const dropdownContent = dropdown.querySelector('.dropdown-content');
+
+                    // הסרת כל האירועים הקודמים כדי למנוע כפילויות
+                    dropdown.removeEventListener('click', toggleDropdownClick);
+                    dropdown.removeEventListener('mouseenter', openDropdownHover);
+                    dropdown.removeEventListener('mouseleave', closeDropdownHover);
+
+                    if (isMobile) {
+                        // במכשירים ניידים: השתמש באירועי click על האלמנט dropdown
+                        dropdown.addEventListener('click', toggleDropdownClick);
+                    } else {
+                        // במחשבים שולחניים: השתמש באירועי hover
+                        dropdown.addEventListener('mouseenter', openDropdownHover);
+                        dropdown.addEventListener('mouseleave', closeDropdownHover);
+                    }
+                });
+            }
+
+            // קריאה ראשונית להגדרת dropdowns אחרי טעינת הדף
+            setupDropdowns();
+
+            // טיפול באירוע שינוי גודל המסך
+            window.addEventListener('resize', setupDropdowns);
+        });
     </script>
 
     <!-- הוספתי כאן למטה את סגנונות ה-Grid עבור ההדר -->

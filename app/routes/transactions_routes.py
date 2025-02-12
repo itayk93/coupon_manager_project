@@ -342,12 +342,14 @@ def mark_coupon_as_fully_used(id):
         )
         db.session.add(usage)
 
+        """""""""
         notification = Notification(
             user_id=coupon.user_id,
             message=f"הקופון {coupon.code} נוצל במלואו.",
             link=url_for('transactions.coupon_detail', id=coupon.id)
         )
         db.session.add(notification)
+        """""""""
         db.session.commit()
 
         flash('הקופון סומן כנוצל לגמרי בהצלחה.', 'success')
@@ -405,13 +407,14 @@ def update_coupon(id):
             )
             db.session.add(usage)
 
+            """""""""
             notification = Notification(
                 user_id=coupon.user_id,
                 message=f"השתמשת ב-{new_used_amount} ש״ח בקופון {coupon.code}.",
                 link=url_for('transactions.coupon_detail', id=coupon.id)
             )
             db.session.add(notification)
-
+            """""""""
             db.session.commit()
 
             flash('כמות השימוש עודכנה בהצלחה.', 'success')

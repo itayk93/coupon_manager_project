@@ -250,9 +250,9 @@ def configure_scheduler():
         # --- תהליך A: איפוס סטטוס (reset) ---
         scheduler.add_job(
             func=lambda: save_process_status('reset', False),
-            trigger=CronTrigger(hour=22, minute=0),
+            trigger=CronTrigger(hour=0, minute=0),
             id='reset_status',
-            name='Reset daily status at midnight',
+            name='Reset daily status at 2:00',
             replace_existing=True
         )
 
@@ -277,9 +277,9 @@ def configure_scheduler():
         # --- תהליך D: איפוס התראות דחויות (dismissed alerts reset) ---
         scheduler.add_job(
             func=reset_dismissed_alerts,
-            trigger=CronTrigger(hour=22, minute=0),
+            trigger=CronTrigger(hour=0, minute=0),
             id='dismissed_reset',
-            name='Reset dismissed alerts at midnight',
+            name='Reset dismissed alerts at 2:00',
             replace_existing=True
         )
 

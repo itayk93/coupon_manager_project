@@ -1,4 +1,4 @@
-/* סגנון ל-tooltip בדסקטופ */
+/* === Tooltip בדסקטופ === */
 .tooltip {
     display: none;
     position: absolute;
@@ -10,13 +10,12 @@
     border-radius: 5px;
     width: 250px;
     font-size: 14px;
-    text-align: center;
+    text-align: center; /* ממרכז את הטקסט */
     z-index: 1000;
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
-    padding-right: 20px;
 }
 
-/* החץ הקטן של tooltip בדסקטופ */
+/* חץ קטן של ה-tooltip בדסקטופ */
 .tooltip:after {
     content: "";
     position: absolute;
@@ -28,14 +27,7 @@
     border-color: transparent #333 transparent transparent;
 }
 
-/* במכשירים ניידים - אין tooltip אלא טקסט נפרד */
-@media (max-width: 768px) {
-    .tooltip {
-        display: none !important;
-    }
-}
-
-/* כפתור סגירה (X) ל-tooltip */
+/* === כפתור סגירה (X) ל-tooltip === */
 .close-tooltip {
     position: absolute;
     top: 5px;
@@ -52,9 +44,114 @@
     color: #ccc;
 }
 
-/* הצגת tooltip במעבר עכבר (בדסקטופ) */
+/* === בדסקטופ - tooltip מופיע במעבר עכבר === */
 @media (min-width: 769px) {
     .form-group:hover .tooltip {
         display: block;
     }
+    .slots-info-mobile {
+        display: none;
+    }
+}
+
+/* === התאמות למובייל (עד 768px) === */
+@media (max-width: 768px) {
+    /* הצגת "יש לך עוד X סלוטים זמינים למילוי אוטומטי." רק במסכים קטנים */
+    .slots-info-mobile {
+        display: block;
+    }
+
+    /* הסתרת tooltip רגיל במובייל */
+    .tooltip {
+        display: none;
+    }
+
+    /* עטיפה של הכפתור ❔ וכפתור "הבא" */
+    .mobile-buttons-container {
+        display: flex;
+        justify-content: center; /* ממורכז */
+        align-items: center;
+        gap: 5px; /* רווח בין הכפתור "הבא" לכפתור ❔ */
+        margin-bottom: 10px;
+        flex-direction: row-reverse; /* הפיכת הסדר כך שה❔ יהיה מימין */
+    }
+
+    /* כפתור קטן ❔ ליד השדות במובייל (משמש גם עבור ה-tooltip החדש) */
+    .tooltip-button-mobile {
+        position: relative;
+        background: none;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+        color: #007bff; /* צבע כחול */
+        padding: 5px;
+    }
+
+    /* ה-Tooltip במובייל */
+    .mobile-tooltip {
+        display: none;
+        position: absolute;
+        background: #333;
+        color: #fff;
+        padding: 10px;
+        font-size: 14px;
+        border-radius: 5px;
+        text-align: center; /* ממרכז את הטקסט */
+        width: 220px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        z-index: 9999;
+        top: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    /* חץ למעלה כדי להראות שה-tooltip שייך לכפתור */
+    .mobile-tooltip:after {
+        content: "";
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: transparent transparent #333 transparent; /* צבע שחור כמו בדסקטופ */
+    }
+}
+
+@media (min-width: 769px) {
+    .tooltip-button-mobile {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .close-tooltip {
+        position: absolute;
+        /* מבטלים את הערכים הקודמים */
+        top: auto;
+        right: auto;
+        /* מיקום חדש: 5px מהרצפה, 10px מהצד השמאלי */
+        bottom: 5px;
+        right: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 16px;
+        background-color: transparent;
+        border: none;
+        color: #fff;
+    }
+    
+    .close-tooltip:hover {
+        color: #ccc;
+    }
+}
+
+.tooltip-checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* רווח בין האלמנטים */
+}
+
+.tooltip-button-mobile {
+    order: -1; /* הכפתור יופיע ראשון (כלומר, מימין ב-RTL) */
 }
