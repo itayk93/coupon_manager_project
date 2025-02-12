@@ -1,4 +1,8 @@
+
 document.addEventListener('DOMContentLoaded', function() {
+    const isMobile = window.innerWidth < 768;
+    console.log("📱 isMobile detected as:", isMobile);
+    
     setTimeout(function() {
         const tooltip = document.querySelector('.mobile-tooltip');
         const tooltipButtonMobile = document.querySelector('.tooltip-button-mobile');
