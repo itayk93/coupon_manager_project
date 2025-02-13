@@ -108,13 +108,12 @@
                         <div class="body">
                             <p>שלום {{ seller.first_name }},</p>
                             <!-- שילוב המידע בשורה אחת עם הדגשה בצבע כחול -->
-                            <p>המשתמש <strong>{{ buyer.first_name }} {{ buyer.last_name }}</strong> הביע עניין בקופון שלך: <strong style="color: #2E86C1;">{{ coupon.code }}</strong>, של חברת <span class="highlight">{{ coupon.company }}</span> שעולה <span class="highlight">{{ coupon.cost }} ש״ח</span>.</p>
-                            <p>כדי לאשר או לדחות את הבקשה, אנא התחבר לחשבונך באמצעות הכפתור למטה.</p>
+                            <p>המשתמש <strong>{{ buyer.first_name }}</strong> הביע עניין בקופון שלך מחברת <span class="highlight">{{ coupon.company }}</span> שעולה <span class="highlight">{{ coupon.cost }} ₪</span>.</p>
+                            <p>כדי לאשר או לדחות את הבקשה, ניתן להתחבר לחשבונך באמצעות הכפתור למטה.</p>
                             <!-- Button -->
                             <div class="button-container">
-                                <a href="{{ url_for('transactions.my_transactions', _external=True) }}" class="button" style="color: #ffffff; font-weight: bold;">התחבר לאתר</a>
+                                <a href="{{ url_for('transactions.my_transactions', _external=True) }}" class="button" style="color: #ffffff; font-weight: bold;">התחברות לאתר</a>
                             </div>
-                            <p>אם יש לך שאלות או צורך בעזרה נוספת, אל תהסס ליצור איתנו קשר.</p>
                             <p>בברכה,<br>Coupon Master</p>
                         </div>
                         <!-- Footer -->

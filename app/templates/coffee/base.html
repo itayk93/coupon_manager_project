@@ -1,0 +1,36 @@
+<!-- app/templates/coffee/base.html -->
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}מערכת קפה{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>מערכת קפה – הנחות לקניית קפה</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('coffee.index') }}">בית</a></li>
+                <li><a href="{{ url_for('coffee.create_offer') }}">הצע הנחה</a></li>
+                <li><a href="{{ url_for('coffee.list_offers') }}">הצעות קיימות</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>התוכנה אינה אחראית לעסקאות שנעשות בין המשתמשים.</p>
+    </footer>
+</body>
+</html>

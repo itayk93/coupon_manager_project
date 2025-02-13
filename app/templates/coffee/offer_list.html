@@ -1,0 +1,16 @@
+<!-- app/templates/coffee/offer_list.html -->
+{% extends "base.html" %}
+{% block title %}הצעות קפה{% endblock %}
+{% block content %}
+    <h2>רשימת הצעות קפה</h2>
+    <ul>
+        {% for offer in offers %}
+            <li>
+                <a href="{{ url_for('coffee.offer_detail', offer_id=offer.id) }}">
+                    {{ offer.discount_percent }}% הנחה – קבוצה: {{ offer.customer_group }} – {{ 'בקנייה' if offer.is_buy_offer else 'במכירה' }}
+                </a>
+                <small>(נוצר ב-{{ offer.created_at.strftime('%Y-%m-%d') }})</small>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

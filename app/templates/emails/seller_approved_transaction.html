@@ -101,13 +101,12 @@
                         </div>
                         <div class="body">
                             <p>שלום {{ buyer.first_name }},</p>
-                            <p>המוכר <strong>{{ seller.first_name }} {{ seller.last_name }}</strong> אישר את העסקה עבור הקופון:
-                            <strong class="highlight">{{ coupon.code }}</strong> מחברת <span class="highlight">{{ coupon.company }}</span> בעלות <span class="highlight">{{ coupon.cost }} ש״ח</span>.</p>
-                            <p>כדי להמשיך בתהליך ולאשר את ההעברה הכספית, אנא התחבר לחשבונך באמצעות הכפתור למטה.</p>
+                            <p><strong class="highlight">{{ seller.first_name }}</strong> אישר את העסקה עבור הקופון מחברת <span class="highlight">{{ coupon.company }}</span> בעלות <span class="highlight">{{ coupon.cost }} ₪</span>.</p>
+                            <p>כעת עליך לאשר את ההעברה הכספית כדי להתקדם בתהליך, ניתן לעשות זאת בחשבון שלך.</p>
+
                             <div class="button-container">
                                 <a href="{{ url_for('transactions.my_transactions', _external=True) }}" class="button">לחשבון שלי</a>
                             </div>
-                            <p>אם יש לך שאלות או צורך בעזרה נוספת, אל תהסס ליצור איתנו קשר.</p>
                             <p>בברכה,<br>Coupon Master</p>
                         </div>
                         <div class="footer">

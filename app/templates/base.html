@@ -117,6 +117,12 @@
                 <a href="{{ url_for('profile.notifications') }}" class="nav-icon bell-icon">
                     <i class="fa fa-bell"></i>
                 </a>
+                <!-- כאן תוסיף את התנאי לאדמין + כפתור הקפה -->
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('coffee.index') }}" class="nav-icon coffee-icon" title="Coffee System">
+                    <i class="fa fa-coffee" style="font-size: 24px;"></i>
+                </a>
+                {% endif %}
             </nav>
 
             <!-- אייקון המבורגר למובייל -->

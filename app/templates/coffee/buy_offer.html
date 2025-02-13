@@ -1,0 +1,19 @@
+<!-- app/templates/coffee/buy_offer.html -->
+{% extends "base.html" %}
+{% block title %}רכישת הצעת קפה{% endblock %}
+{% block content %}
+    <h2>רכישת ההצעה</h2>
+    <p>הצעת ההנחה: {{ offer.discount_percent }}% הנחה – קבוצה: {{ offer.customer_group }}</p>
+    <form method="post">
+        <label for="negotiated_price_before">מחיר שסוכם לפני ההנחה:</label>
+        <input type="number" step="0.01" name="negotiated_price_before" required>
+        <br>
+        <label for="negotiated_price_after">מחיר שסוכם אחרי ההנחה:</label>
+        <input type="number" step="0.01" name="negotiated_price_after" required>
+        <br>
+        <label for="points_used">מספר נקודות לשימוש (אופציונלי):</label>
+        <input type="number" name="points_used">
+        <br>
+        <button type="submit">שלח בקשת רכישה</button>
+    </form>
+{% endblock %}

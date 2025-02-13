@@ -1,0 +1,32 @@
+<!-- app/templates/coffee/offer_form.html -->
+{% extends "base.html" %}
+{% block title %}הצע הנחה לקניית קפה{% endblock %}
+{% block content %}
+    <h2>הצע הנחה לקניית קפה</h2>
+    <p>עמוד זה מאפשר לאנשים עם הנחות לעזור למשתמשים ללא הנחות לקנות קפה בזול. שים לב: המחירים ייקבעו בין הצדדים, והתוכנה אינה אחראית לעסקאות.</p>
+    <form method="post">
+        {{ form.hidden_tag() }}  <!-- מוסיף CSRF Token לטופס -->
+        <label for="discount_percent">אחוז הנחה (לדוגמה: 20):</label>
+        <input type="number" step="0.01" name="discount_percent" required> %
+        <br>
+        <label for="customer_group">קבוצת לקוח:</label>
+        <select name="customer_group" required>
+            <option value="">בחר</option>
+            <option value="Connoisseur">Connoisseur – עד 5 שנים או עד 500 קפסולות</option>
+            <option value="Expert">Expert – מעל 5 ועד 10 שנים או בין 500 ל-900 קפסולות</option>
+            <option value="Ambassador">Ambassador – 10 שנים ומעלה או מעל 900 קפסולות</option>
+        </select>
+        <br>
+        <label for="points_offered">נקודות מועדון (אופציונלי):</label>
+        <input type="number" name="points_offered">
+        <br>
+        <label>סוג ההצעה:</label>
+        <input type="radio" name="offer_type" value="sell" checked> אני מציע הנחה (מוכר)
+        <input type="radio" name="offer_type" value="buy"> אני מחפש הנחה (קונה)
+        <br>
+        <label for="description">תיאור (אופציונלי):</label>
+        <textarea name="description"></textarea>
+        <br>
+        <button type="submit">צור הצעה</button>
+    </form>
+{% endblock %}

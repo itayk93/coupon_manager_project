@@ -1,0 +1,20 @@
+<!-- app/templates/coffee/offer_detail.html -->
+{% extends "base.html" %}
+{% block title %}פרטי הצעת קפה{% endblock %}
+{% block content %}
+    <h2>פרטי ההצעה</h2>
+    <p><strong>אחוז הנחה:</strong> {{ offer.discount_percent }}%</p>
+    <p><strong>קבוצת לקוח:</strong> {{ offer.customer_group }}</p>
+    {% if offer.points_offered %}
+        <p><strong>נקודות מועדון מוצעות:</strong> {{ offer.points_offered }}</p>
+    {% endif %}
+    <p><strong>סוג הצעה:</strong> {{ 'בקנייה' if offer.is_buy_offer else 'במכירה' }}</p>
+    {% if offer.description %}
+        <p><strong>תיאור:</strong> {{ offer.description }}</p>
+    {% endif %}
+    {% if current_user.id != offer.seller_id %}
+        <a href="{{ url_for('coffee.buy_offer', offer_id=offer.id) }}">רכוש/קנה בהצעה זו</a>
+    {% else %}
+        <p>זוהי ההצעה שלך.</p>
+    {% endif %}
+{% endblock %}

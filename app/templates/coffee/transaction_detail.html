@@ -1,0 +1,27 @@
+<!-- app/templates/coffee/transaction_detail.html -->
+{% extends "base.html" %}
+{% block title %}פרטי עסקת קפה{% endblock %}
+{% block content %}
+    <h2>פרטי עסקת הקפה</h2>
+    <p><strong>הצעת הנחה:</strong> {{ transaction.coffee_offer.discount_percent }}% – קבוצה: {{ transaction.coffee_offer.customer_group }}</p>
+    <p><strong>מחיר שסוכם לפני ההנחה:</strong> {{ transaction.negotiated_price_before or 'לא הוזן' }} ₪</p>
+    <p><strong>מחיר שסוכם אחרי ההנחה:</strong> {{ transaction.negotiated_price_after or 'לא הוזן' }} ₪</p>
+    {% if transaction.points_used %}
+        <p><strong>נקודות שהשתמשו:</strong> {{ transaction.points_used }}</p>
+    {% endif %}
+    {% if transaction.status != 'completed' %}
+        <h3>עדכן פרטי עסקה והשלם עסקה</h3>
+        <form method="post">
+            <label for="negotiated_price_before">מחיר לפני ההנחה:</label>
+            <input type="number" step="0.01" name="negotiated_price_before" required value="{{ transaction.negotiated_price_before or '' }}">
+            <br>
+            <label for="negotiated_price_after">מחיר אחרי ההנחה:</label>
+            <input type="number" step="0.01" name="negotiated_price_after" required value="{{ transaction.negotiated_price_after or '' }}">
+            <br>
+            <button type="submit">עדכן והשלם עסקה</button>
+        </form>
+    {% else %}
+        <p>העסקה הושלמה.</p>
+        <p><a href="{{ url_for('coffee.review_seller', transaction_id=transaction.id) }}">השאר ביקורת על המוכר</a></p>
+    {% endif %}
+{% endblock %}

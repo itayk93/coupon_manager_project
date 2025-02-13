@@ -1,0 +1,51 @@
+<!-- /Users/itaykarkason/Python Projects/coupon_manager_project/app/templates/coffee/index.html -->
+
+{% extends "base.html" %}
+{% block title %}בית – מערכת קפה{% endblock %}
+
+{% block content %}
+
+    <!-- כותרת מיוחדת ותפריט של מודול הקפה -->
+    <header class="coffee-header">
+        <h1>מערכת קפה – הנחות לקניית קפה</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('coffee.index') }}">בית</a></li>
+                <li><a href="{{ url_for('coffee.create_offer') }}">הצע הנחה</a></li>
+                <li><a href="{{ url_for('coffee.list_offers') }}">הצעות קיימות</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- תצוגת פלאש (אם אין לך כבר ב-base.html) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <!-- כאן החלק הספציפי לעמוד index של מודול הקפה -->
+    <h2>ברוכים הבאים למערכת קפה</h2>
+    <p>
+        מערכת זו מאפשרת למשתמשים עם הנחות (לדוגמה, Ambassador) לעזור לאנשים ללא הנחות
+        לקנות קפה בזול. המחירים סוכמים בין הצדדים – והתוכנה אינה אחראית לעסקאות.
+    </p>
+
+    <h3>הצעות אחרונות</h3>
+    <ul>
+        {% for offer in offers %}
+            <li>
+                <a href="{{ url_for('coffee.offer_detail', offer_id=offer.id) }}">
+                    {{ offer.discount_percent }}% הנחה – קבוצה: {{ offer.customer_group }} –
+                    {{ 'בקנייה' if offer.is_buy_offer else 'במכירה' }}
+                </a>
+                <small>(נוצר ב-{{ offer.created_at.strftime('%Y-%m-%d') }})</small>
+            </li>
+        {% endfor %}
+    </ul>
+
+{% endblock %}

@@ -1,0 +1,15 @@
+<!-- app/templates/coffee/review.html -->
+{% extends "base.html" %}
+{% block title %}השארת ביקורת על המוכר{% endblock %}
+{% block content %}
+    <h2>השאר ביקורת על המוכר</h2>
+    <form method="post">
+        <label for="rating">דירוג (1-5):</label>
+        <input type="number" name="rating" min="1" max="5" required>
+        <br>
+        <label for="comment">הערה (אופציונלי):</label>
+        <textarea name="comment"></textarea>
+        <br>
+        <button type="submit">שלח ביקורת</button>
+    </form>
+{% endblock %}
