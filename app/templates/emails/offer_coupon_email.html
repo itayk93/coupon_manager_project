@@ -101,8 +101,7 @@
                         </div>
                         <div class="body">
                             <p>שלום {{ buyer.first_name }},</p>
-                            <p>המוכר <strong>{{ seller.first_name }} {{ seller.last_name }}</strong> מציע לך קופון חדש:</p>
-
+                            <p><strong>{{ seller.first_name }}</strong> מציע לך קופון חדש:</p>
                             <p>
                                 <strong class="highlight">חברה:</strong> {{ coupon.company }}<br>
                                 <strong class="highlight">ערך הקופון:</strong> {{ coupon.value }} ש"ח<br>
@@ -120,7 +119,6 @@
                             <div class="button-container">
                                 <a href="{{ buy_link }}" class="button">לרכישה</a>
                             </div>
-                            <p>אם יש לך שאלות או צורך בעזרה נוספת, אל תהסס ליצור איתנו קשר.</p>
                             <p>בברכה,<br>צוות Coupon Master</p>
                         </div>
                         <div class="footer">

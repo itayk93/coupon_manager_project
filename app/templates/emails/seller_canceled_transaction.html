@@ -103,13 +103,12 @@
                         <!-- Body -->
                         <div class="body">
                             <p>שלום {{ buyer.first_name }},</p>
-                            <p>המוכר <strong class="highlight">{{ seller.first_name }} {{ seller.last_name }}</strong> החליט לבטל את העסקה עבור הקופון
-                            <strong style="color: #C0392B;">{{ coupon.code }}</strong> של
+                            <p><strong class="highlight">{{ seller.first_name }}</strong> החליט/ה לבטל את העסקה עבור הקופון של
                             <span class="highlight">{{ coupon.company }}</span>.</p>
                             <p>הקופון לא עבר אליך, והעסקה בוטלה במערכת.</p>
                             <div class="button-container">
                                 <a href="{{ url_for('transactions.my_transactions', _external=True) }}" class="button">
-                                    בדוק את העסקאות שלך
+                                    לבדיקת העסקאות שלך
                                 </a>
                             </div>
                             <p>נשמח לעזור במידה ויש לך שאלות נוספות.</p>

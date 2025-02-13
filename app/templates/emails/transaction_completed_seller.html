@@ -103,13 +103,13 @@
                     <!-- Body -->
                     <div class="body">
                         <p>שלום {{ seller.first_name }},</p>
-                        <p>שמחים לעדכן שהעסקה לקופון
-                            <span class="highlight">{{ coupon.code }}</span>
-                            של חברת <span class="highlight">{{ coupon.company }}</span>
+                        <p>שמחים לעדכן שהעסקה לקופון של
+                            <span class="highlight">{{ coupon.company }}</span>,
+                            שעולה <strong>{{ coupon.price }}</strong>,
                             הסתיימה בהצלחה והועברה לבעלות הקונה
-                            <strong class="highlight">{{ buyer.first_name }} {{ buyer.last_name }}</strong>.
+                            <strong class="highlight">{{ buyer.first_name }}</strong>.
                         </p>
-                        <p>הכסף התקבל בהצלחה, והקופון כבר אינו בבעלותך.
+                        <p>הקופון כבר אינו בבעלותך.
                             אם יש לך שאלות נוספות או נתקלת בבעיה, תוכל לפנות אלינו בכל עת.</p>
 
                         <div class="button-container">
