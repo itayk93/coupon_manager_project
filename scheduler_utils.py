@@ -64,7 +64,7 @@ def update_company_counts_and_send_email_old(app):
             recipient_email = "itayk93@gmail.com"
             subject = "עדכון יומי: company_count"
             send_email(
-                sender_email="noreply@couponmasteril.com‏",
+                sender_email="noreply@couponmasteril.com",
                 sender_name="Coupon Master",
                 recipient_email=recipient_email,
                 recipient_name="Itay",
@@ -219,7 +219,7 @@ def update_company_counts_and_send_email(app):
             recipient_email = "itayk93@gmail.com"
             subject = "דוח יומי: נתוני קופונים לחברות"
             send_email(
-                sender_email="noreply@couponmasteril.com‏",
+                sender_email="noreply@couponmasteril.com",
                 sender_name="Coupon Master",
                 recipient_email=recipient_email,
                 recipient_name="Itay",

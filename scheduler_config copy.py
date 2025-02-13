@@ -126,7 +126,7 @@ def send_expiration_warnings_old_old():
             )
 
             send_email(
-                sender_email="noreply@couponmasteril.com‏",
+                sender_email="noreply@couponmasteril.com",
                 sender_name="Coupon Master",
                 recipient_email=user['email'],
                 recipient_name=user['first_name'],
@@ -227,7 +227,7 @@ def send_expiration_warnings_old():
             )
 
             send_email(
-                sender_email="noreply@couponmasteril.com‏",
+                sender_email="noreply@couponmasteril.com",
                 sender_name="Coupon Master",
                 recipient_email=user['email'],
                 recipient_name=user['first_name'],
@@ -336,7 +336,7 @@ WHERE c.expiration IS NOT NULL
             )
 
             send_email(
-                sender_email="noreply@couponmasteril.com‏",
+                sender_email="noreply@couponmasteril.com",
                 sender_name="Coupon Master",
                 recipient_email=user['email'],
                 recipient_name=user['first_name'],

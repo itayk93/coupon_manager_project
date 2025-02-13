@@ -143,7 +143,7 @@ def send_expiration_warnings():
                 current_year=date.today().year
             )
             send_email(
-                sender_email="noreply@couponmasteril.com‏",
+                sender_email="noreply@couponmasteril.com",
                 sender_name="Coupon Master",
                 recipient_email=user['email'],
                 recipient_name=user['first_name'],
