@@ -1143,7 +1143,14 @@ def send_coupon_purchase_request_email(seller, buyer, coupon):
     subject = "בקשה חדשה לקופון שלך"
 
     # תבנית האימייל אמורה להיות ממוקמת ב-templates/emails/new_coupon_request.html
-    html_content = render_template('emails/new_coupon_request.html', seller=seller, buyer=buyer, coupon=coupon)
+    html_content = render_template(
+        'emails/new_coupon_request.html',
+        seller=seller,
+        buyer=buyer,
+        coupon=coupon,
+        buyer_gender=buyer.gender,
+        seller_gender=seller.gender
+    )
 
     send_email(
         sender_email=sender_email,

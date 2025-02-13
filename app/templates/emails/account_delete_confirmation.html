@@ -97,7 +97,7 @@
                             <p>שלום {{ user.first_name }},</p>
                             <p>קיבלת הודעה זו כי ביקשת למחוק את חשבונך ב-Coupon Master.</p>
                             <p class="warning-text">לתשומת לבך: מחיקת החשבון היא פעולה בלתי הפיכה!</p>
-                            <p>אם ברצונך למחוק את החשבון לצמיתות, יש ללחוץ על הכפתור הבא:</p>
+                            <p>אם {% if user.gender == 'female' %}ברצונך{% else %}ברצונך{% endif %} למחוק את החשבון לצמיתות, {% if user.gender == 'female' %}עלייך{% else %}עליך{% endif %} ללחוץ על הכפתור הבא:</p>
 
                             <a href="{{ deletion_link }}" class="action-button">
                                 אישור מחיקה לצמיתות

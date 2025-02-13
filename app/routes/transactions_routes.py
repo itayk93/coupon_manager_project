@@ -226,8 +226,14 @@ def approve_transaction(transaction_id):
         buyer = transaction.buyer
         coupon = transaction.coupon
 
-        html_content = render_template('emails/seller_approved_transaction.html',
-                                       seller=seller, buyer=buyer, coupon=coupon)
+        html_content = render_template(
+            'emails/seller_approved_transaction.html',
+            seller=seller,
+            buyer=buyer,
+            coupon=coupon,
+            buyer_gender=buyer.gender,
+            seller_gender=seller.gender
+        )
 
         try:
             send_email(
@@ -541,11 +547,14 @@ def seller_confirm_transfer(transaction_id):
         # 1. שליחת מייל לקונה (אופציונלי, אם קיים כבר)
         if buyer and buyer.email:
             html_content_buyer = render_template(
-                'emails/seller_confirmed_transfer.html',  # תבנית שכבר יש לך
+                'emails/seller_confirmed_transfer.html',
                 seller=seller,
                 buyer=buyer,
-                coupon=coupon
+                coupon=coupon,
+                buyer_gender=buyer.gender,
+                seller_gender=seller.gender
             )
+
             try:
                 send_email(
                     sender_email='CouponMasterIL2@gmail.com',
@@ -561,12 +570,16 @@ def seller_confirm_transfer(transaction_id):
 
         # 2. שליחת מייל למוכר עצמו – "העסקה הסתיימה"
         if seller and seller.email:
+
             html_content_seller = render_template(
-                'emails/transaction_completed_seller.html',  # תבנית חדשה (ראה למטה)
+                'emails/transaction_completed_seller.html',
                 seller=seller,
                 buyer=buyer,
-                coupon=coupon
+                coupon=coupon,
+                buyer_gender=buyer.gender,
+                seller_gender=seller.gender
             )
+
             try:
                 send_email(
                     sender_email='CouponMasterIL2@gmail.com',
@@ -637,8 +650,13 @@ def buyer_confirm_transfer(transaction_id):
                     try:
                         html_content = render_template(
                             'emails/buyer_confirmed_transfer.html',
-                            seller=seller, buyer=buyer, coupon=coupon
+                            seller=seller,
+                            buyer=buyer,
+                            coupon=coupon,
+                            buyer_gender=buyer.gender,
+                            seller_gender=seller.gender
                         )
+
                         send_email(
                             sender_email='CouponMasterIL2@gmail.com',
                             sender_name='Coupon Master',
@@ -732,12 +750,15 @@ def buy_coupon_direct():
         seller = User.query.get(coupon.user_id)
         buyer = current_user
         subject = "יש לך קונה חדש!"
+
         html_content = render_template(
             'emails/seller_new_buyer.html',
             seller=seller,
             buyer=buyer,
             coupon=coupon,
-            transaction=new_transaction
+            transaction=new_transaction,
+            buyer_gender=buyer.gender,
+            seller_gender=seller.gender
         )
 
         send_email(

@@ -103,7 +103,11 @@
                         <!-- Body -->
                         <div class="body">
                             <p>שלום {{ buyer.first_name }},</p>
-                            <p><strong class="highlight">{{ seller.first_name }}</strong> החליט/ה לבטל את העסקה עבור הקופון של
+                            <p><strong class="highlight">{{ seller.first_name }}</strong>
+                                {% if seller.gender == 'female' %}החליטה{% else %}החליט{% endif %}
+                                לבטל את העסקה עבור הקופון של
+                                <span class="highlight">{{ coupon.company }}</span>.
+                            </p>
                             <span class="highlight">{{ coupon.company }}</span>.</p>
                             <p>הקופון לא עבר אליך, והעסקה בוטלה במערכת.</p>
                             <div class="button-container">

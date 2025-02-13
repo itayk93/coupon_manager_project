@@ -100,20 +100,30 @@
                         </div>
                         <div class="body">
                             <p>שלום {{ seller.first_name }},</p>
-                            <p><strong>{{ buyer.first_name }} </strong> מעוניין לרכוש ממך את הקופון שעולה <span class="highlight">{{ coupon.cost }} ₪</span>.</p>
+                            <p>
+                                <strong>{{ buyer.first_name }}</strong>
+                                {% if buyer.gender == 'female' %}מעוניינת{% else %}מעוניין{% endif %}
+                                לרכוש ממך את הקופון שעולה
+                                <span class="highlight">{{ coupon.cost }} ₪</span>.
+                            </p>
                             <p>
                                 <strong class="highlight">חברה:</strong> {{ coupon.company }}
                             </p>
-                            <p>כדי לאשר או לדחות את העסקה, יש להתחבר למערכת דרך "העסקאות שלי":</p>
+                            <p>
+                                כדי לאשר או לדחות את העסקה
+                                {% if seller.gender == 'female' %}את יכולה{% else %}אתה יכול{% endif %}
+                                להתחבר למערכת דרך עמוד ה״העסקאות שלי״.
+                            </p>
                             <div class="button-container">
                                 <a href="{{ url_for('transactions.my_transactions', _external=True) }}" class="button">לצפייה בעסקאות</a>
                             </div>
                             <p>תודה,<br>צוות Coupon Master</p>
                         </div>
                         <div class="footer">
-                            <p>© 2025 Coupon Master. כל הזכויות שמורות.</p>
+                            <p>כל הזכויות שמורות. © 2025 Coupon Master</p>
                         </div>
                     </div>
+
                 </td>
             </tr>
         </table>

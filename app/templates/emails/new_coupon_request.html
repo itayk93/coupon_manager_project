@@ -105,17 +105,23 @@
                             <h1>בקשה חדשה לקופון שלך</h1>
                         </div>
                         <!-- Body -->
-                        <div class="body">
-                            <p>שלום {{ seller.first_name }},</p>
-                            <!-- שילוב המידע בשורה אחת עם הדגשה בצבע כחול -->
-                            <p>המשתמש <strong>{{ buyer.first_name }}</strong> הביע עניין בקופון שלך מחברת <span class="highlight">{{ coupon.company }}</span> שעולה <span class="highlight">{{ coupon.cost }} ₪</span>.</p>
-                            <p>כדי לאשר או לדחות את הבקשה, ניתן להתחבר לחשבונך באמצעות הכפתור למטה.</p>
-                            <!-- Button -->
-                            <div class="button-container">
-                                <a href="{{ url_for('transactions.my_transactions', _external=True) }}" class="button" style="color: #ffffff; font-weight: bold;">התחברות לאתר</a>
+                            <div class="body">
+                                <p>שלום {{ seller.first_name }},</p>
+                                <!-- שילוב המידע בשורה אחת עם הדגשה בצבע כחול -->
+                                <p>
+                                    <strong class="highlight">{{ buyer.first_name }}</strong>
+                                    {% if buyer.gender == 'female' %}הביעה{% else %}הביע{% endif %}
+                                    עניין בקופון שלך מחברת
+                                    <span class="highlight">{{ coupon.company }}</span>
+                                    שעולה <span class="highlight">{{ coupon.cost }} ₪</span>.
+                                </p>
+                                <p>כדי לאשר או לדחות את הבקשה, ניתן להתחבר לחשבון שלך באמצעות הכפתור למטה.</p>
+                                <!-- Button -->
+                                <div class="button-container">
+                                    <a href="{{ url_for('transactions.my_transactions', _external=True) }}" class="button" style="color: #ffffff; font-weight: bold;">התחברות לאתר</a>
+                                </div>
+                                <p>בברכה,<br>Coupon Master</p>
                             </div>
-                            <p>בברכה,<br>Coupon Master</p>
-                        </div>
                         <!-- Footer -->
                         <div class="footer">
                             <p>© 2024 Coupon Master. כל הזכויות שמורות.</p>

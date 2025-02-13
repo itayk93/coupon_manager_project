@@ -101,7 +101,14 @@
                         </div>
                         <div class="body">
                             <p>שלום {{ buyer.first_name }},</p>
-                            <p><strong>{{ seller.first_name }}</strong> מציע לך קופון חדש:</p>
+                            <p>
+                                <strong>
+                                    {% if seller.gender == 'female' %}המוכרת{% else %}המוכר{% endif %}
+                                    {{ seller.first_name }}
+                                </strong>
+                                {% if seller.gender == 'female' %}מציעה{% else %}מציע{% endif %}
+                                לך קופון חדש:
+                            </p>
                             <p>
                                 <strong class="highlight">חברה:</strong> {{ coupon.company }}<br>
                                 <strong class="highlight">ערך הקופון:</strong> {{ coupon.value }} ש"ח<br>
@@ -110,12 +117,17 @@
 
                             {% if seller_message %}
                             <p>
-                                <strong>הודעה אישית מהמוכר:</strong><br>
+                                <strong>הודעה אישית
+                                    {% if seller.gender == 'female' %} מהמוכרת {% else %} מהמוכר {% endif %}:
+                                </strong><br>
                                 {{ seller_message }}
                             </p>
                             {% endif %}
 
-                            <p>כדי לצפות בפרטי ההצעה או להשלים את הרכישה, לחץ על הכפתור:</p>
+                            <p>כדי לצפות בפרטי ההצעה או להשלים את הרכישה,
+                                {% if buyer.gender == 'female' %}לחצי{% else %}לחץ{% endif %}
+                                על הכפתור:
+                            </p>
                             <div class="button-container">
                                 <a href="{{ buy_link }}" class="button">לרכישה</a>
                             </div>

@@ -106,11 +106,10 @@
                         <p>שמחים לעדכן שהעסקה לקופון של
                             <span class="highlight">{{ coupon.company }}</span>,
                             שעולה <strong>{{ coupon.price }}</strong>,
-                            הסתיימה בהצלחה והועברה לבעלות הקונה
-                            <strong class="highlight">{{ buyer.first_name }}</strong>.
+                            הסתיימה בהצלחה והועברה ל<strong class="highlight">{{ buyer.first_name }}</strong>.
                         </p>
                         <p>הקופון כבר אינו בבעלותך.
-                            אם יש לך שאלות נוספות או נתקלת בבעיה, תוכל לפנות אלינו בכל עת.</p>
+                            אם יש לך שאלות נוספות או נתקלת בבעיה, {% if seller.gender == 'female' %}תוכלי{% else %}תוכל{% endif %} לפנות אלינו בכל עת.</p>
 
                         <div class="button-container">
                             <a href="{{ url_for('transactions.my_transactions', _external=True) }}" class="button">צפה בעסקאות שלי</a>
