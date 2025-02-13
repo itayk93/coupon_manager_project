@@ -159,7 +159,7 @@ def send_expiration_warnings():
 
                     # שליחת המייל
                     send_email(
-                        sender_email="CouponMasterIL2@gmail.com",
+                        sender_email="noreply@couponmasteril.com‏",
                         sender_name="Coupon Master",
                         recipient_email=user.email,
                         recipient_name=f"{user.first_name} {user.last_name}",

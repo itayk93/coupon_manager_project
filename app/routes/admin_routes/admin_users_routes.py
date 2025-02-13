@@ -194,7 +194,7 @@ def send_delete_confirmation_email(user, token):
     html_content = render_template('emails/account_delete_confirmation.html',
                                    user=user, deletion_link=deletion_link)
 
-    sender_email = 'CouponMasterIL2@gmail.com'
+    sender_email = 'noreply@couponmasteril.com‏'
     sender_name = 'Coupon Master'
     recipient_email = user.email
     recipient_name = user.first_name or 'משתמש יקר'
@@ -264,7 +264,7 @@ def resend_confirmation_email():
                            user=user, confirmation_link=confirm_url)
 
     # פרטי השולח והנמען (עדכן במידת הצורך)
-    sender_email = 'CouponMasterIL2@gmail.com'
+    sender_email = 'noreply@couponmasteril.com‏'
     sender_name = 'Coupon Master'
     recipient_email = user.email
     recipient_name = user.first_name or 'משתמש יקר'

@@ -237,7 +237,7 @@ def approve_transaction(transaction_id):
 
         try:
             send_email(
-                sender_email='CouponMasterIL2@gmail.com',
+                sender_email='noreply@couponmasteril.com‏',
                 sender_name='Coupon Master',
                 recipient_email=buyer.email,
                 recipient_name=f'{buyer.first_name} {buyer.last_name}',
@@ -557,7 +557,7 @@ def seller_confirm_transfer(transaction_id):
 
             try:
                 send_email(
-                    sender_email='CouponMasterIL2@gmail.com',
+                    sender_email='noreply@couponmasteril.com‏',
                     sender_name='Coupon Master',
                     recipient_email=buyer.email,
                     recipient_name=f'{buyer.first_name} {buyer.last_name}',
@@ -582,7 +582,7 @@ def seller_confirm_transfer(transaction_id):
 
             try:
                 send_email(
-                    sender_email='CouponMasterIL2@gmail.com',
+                    sender_email='noreply@couponmasteril.com‏',
                     sender_name='Coupon Master',
                     recipient_email=seller.email,
                     recipient_name=f'{seller.first_name} {seller.last_name}',
@@ -658,7 +658,7 @@ def buyer_confirm_transfer(transaction_id):
                         )
 
                         send_email(
-                            sender_email='CouponMasterIL2@gmail.com',
+                            sender_email='noreply@couponmasteril.com‏',
                             sender_name='Coupon Master',
                             recipient_email=seller.email,
                             recipient_name=f'{seller.first_name} {seller.last_name}',
@@ -762,7 +762,7 @@ def buy_coupon_direct():
         )
 
         send_email(
-            sender_email='CouponMasterIL2@gmail.com',
+            sender_email='noreply@couponmasteril.com‏',
             sender_name='Coupon Master',
             recipient_email=seller.email,
             recipient_name=f"{seller.first_name} {seller.last_name}",

@@ -866,10 +866,10 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
         return coupon_df, pricing_df
     except openai.error.RateLimitError:
         # **📧 שליחת מייל במקרה של חריגה מהמכסה**
-        recipients = ["CouponMasterIL2@gmail.com", "itayk93@gmail.com"]
+        recipients = ["noreply@couponmasteril.com‏", "itayk93@gmail.com"]
         for recipient in recipients:
             send_email(
-                sender_email="CouponMasterIL2@gmail.com",
+                sender_email="noreply@couponmasteril.com‏",
                 sender_name="Coupon Master System",
                 recipient_email=recipient,
                 recipient_name="Admin",
@@ -1064,10 +1064,10 @@ def extract_coupon_detail_image_proccess(client_id, image_path, companies_list):
 
                 except openai.error.RateLimitError:
                     # **📧 שליחת מייל במקרה של חריגה מהמכסה**
-                    recipients = ["CouponMasterIL2@gmail.com", "itayk93@gmail.com"]
+                    recipients = ["noreply@couponmasteril.com‏", "itayk93@gmail.com"]
                     for recipient in recipients:
                         send_email(
-                            sender_email="CouponMasterIL2@gmail.com",
+                            sender_email="noreply@couponmasteril.com‏",
                             sender_name="Coupon Master System",
                             recipient_email=recipient,
                             recipient_name="Admin",
@@ -1545,7 +1545,7 @@ def send_password_reset_email(user):
         reset_url = url_for('auth.reset_password', token=token, _external=True)
         html = render_template('emails/password_reset_email.html', user=user, reset_link=reset_url)
 
-        sender_email = 'CouponMasterIL2@gmail.com'
+        sender_email = 'noreply@couponmasteril.com‏'
         sender_name = 'Coupon Master'
         recipient_email = user.email
         recipient_name = user.first_name
@@ -1724,10 +1724,10 @@ def parse_user_usage_text(usage_text, user):
         print(error_message)
 
         # **📧 שליחת מייל אוטומטי ל-2 נמענים:**
-        recipients = ["CouponMasterIL2@gmail.com", "itayk93@gmail.com"]
+        recipients = ["noreply@couponmasteril.com‏", "itayk93@gmail.com"]
         for recipient in recipients:
             send_email(
-                sender_email="CouponMasterIL2@gmail.com",
+                sender_email="noreply@couponmasteril.com‏",
                 sender_name="Coupon Master System",
                 recipient_email=recipient,
                 recipient_name="Admin",
