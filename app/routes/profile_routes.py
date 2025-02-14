@@ -315,6 +315,11 @@ def index():
     companies = Company.query.all()
     company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
 
+    # הוספת בדיקה והגדרת לוגו ברירת מחדל אם חסר
+    for company_name in company_logo_mapping:
+        if not company_logo_mapping[company_name]:  # אם הנתיב חסר או None
+            company_logo_mapping[company_name] = 'images/default.png'
+
     # --------------------------------------------------------------------------------
     # 6. החזרת ה-Template 'index.html'
     # --------------------------------------------------------------------------------

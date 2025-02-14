@@ -297,7 +297,10 @@ def show_coupons():
     db.session.commit()
 
     companies = Company.query.order_by(Company.name).all()
-    company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
+    company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
+    for company_name in company_logo_mapping:
+        if not company_logo_mapping[company_name]:
+            company_logo_mapping[company_name] = 'images/default.png'
 
     active_coupons = [coupon for coupon in coupons if coupon.status == 'פעיל' and not coupon.is_one_time]
     active_one_time_coupons = [coupon for coupon in coupons if coupon.status == 'פעיל' and coupon.is_one_time]
@@ -1840,7 +1843,11 @@ ORDER BY
 
     companies = Company.query.order_by(Company.name).all()
     company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
-    company_logo = company_logo_mapping.get(coupon.company.lower(), 'default_logo.png')
+    company_logo = company_logo_mapping.get(coupon.company.lower())
+
+    # אם החברה לא נמצאה או שאין לה לוגו, השתמש בלוגו ברירת מחדל
+    if not company_logo:
+        company_logo = 'images/default_logo.png'  # ודא שהתמונה קיימת תחת static/images/
 
     return render_template(
         'coupon_detail.html',
@@ -2400,7 +2407,9 @@ def update_coupon_usage_route(id):
 
     coupon = Coupon.query.get_or_404(id)
     companies = Company.query.order_by(Company.name).all()
-    company_logo_mapping = {company.name.lower(): company.image_path for company in companies}
+    for company_name in company_logo_mapping:
+        if not company_logo_mapping[company_name]:
+            company_logo_mapping[company_name] = 'images/default.png'
     is_owner = (current_user.id == coupon.user_id)
 
     if coupon.user_id != current_user.id:

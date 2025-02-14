@@ -11,7 +11,7 @@ coffee_bp = Blueprint('coffee', __name__, url_prefix='/coffee')
 @login_required
 def index():
     """דף הבית של מודול הקפה – מציג את כל ההצעות."""
-    offers = CoffeeOffer.query.order_by(CoffeeOffer.created_at.desc()).all()
+    offers = CoffeeOffer.query.order_by(CoffeeOffer.expiration_date.desc()).all()
     return render_template('coffee/index.html', offers=offers)
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
@@ -57,7 +57,8 @@ def create_offer():
             customer_group=form.customer_group.data,  # Selected customer group
             points_offered=form.points_offered.data,  # Optional loyalty points
             is_buy_offer=True if form.offer_type.data == 'buy' else False,  # Determine if the user is buying or selling
-            description=form.description.data  # Optional description
+            expiration_date=form.expiration_date.data,  # שמירת תוקף ההנחה  
+            description=form.description.data,  # Optional description
         )
 
         db.session.add(new_offer)  # Add the new offer to the database session
@@ -73,7 +74,7 @@ def create_offer():
 @login_required
 def list_offers():
     """מציג את רשימת כל הצעות הקפה הקיימות."""
-    offers = CoffeeOffer.query.order_by(CoffeeOffer.created_at.desc()).all()
+    offers = CoffeeOffer.query.order_by(CoffeeOffer.expiration_date.desc()).all()
     return render_template('coffee/offer_list.html', offers=offers)
 
 @coffee_bp.route('/offer/<int:offer_id>')

@@ -10,6 +10,7 @@ class CoffeeOffer(db.Model):
     customer_group = db.Column(db.String(50), nullable=False)  # "Connoisseur", "Expert", "Ambassador"
     points_offered = db.Column(db.Integer, nullable=True)       # מספר נקודות במועדון (אופציונלי)
     is_buy_offer = db.Column(db.Boolean, default=False)           # אם True – זוהי בקשת קנייה (ולא הצעת מכירה)
+    expiration_date = db.Column(db.Date, nullable=False)  # הוספת שדה תוקף ההנחה
     description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

@@ -859,6 +859,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, TextAreaField, DecimalField, IntegerField, RadioField, SubmitField
 from wtforms.validators import DataRequired, NumberRange, Optional
 
+from wtforms.fields import DateField  # ייבוא שדה תאריך
+
 class CoffeeOfferForm(FlaskForm):
     discount_percent = DecimalField('אחוז הנחה', validators=[DataRequired(), NumberRange(min=0, max=100)], places=2)
     customer_group = SelectField('קבוצת לקוח', choices=[
@@ -868,5 +870,6 @@ class CoffeeOfferForm(FlaskForm):
     ], validators=[DataRequired()])
     points_offered = IntegerField('נקודות מועדון (אופציונלי)', validators=[Optional()])
     offer_type = RadioField('סוג ההצעה', choices=[('sell', 'אני מציע הנחה (מוכר)'), ('buy', 'אני מחפש הנחה (קונה)')], default='sell')
+    expiration_date = DateField('תוקף ההנחה', format='%Y-%m-%d', validators=[DataRequired()])  # הוספת תאריך תוקף
     description = TextAreaField('תיאור (אופציונלי)', validators=[Optional()])
     submit = SubmitField('צור הצעה')
