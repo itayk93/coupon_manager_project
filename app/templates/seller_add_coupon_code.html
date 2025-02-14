@@ -7,7 +7,7 @@
 {% block content %}
 <section class="approve-transaction">
     <h2>אשר עסקה</h2>
-    <p>יש להשלים את קוד הקופון לפני השלמת העסקה.</p>
+    <p>עליך להשלים את קוד הקופון לפני השלמת העסקה.</p>
 
     <form method="post" class="transaction-form" id="transaction-form" novalidate>
         {{ form.hidden_tag() }}
@@ -18,7 +18,8 @@
             {{ form.coupon_code(
                 class_="input-field",
                 placeholder="הכנס קוד קופון (חובה)",
-                id="coupon_code"
+                id="coupon_code",
+                value=form.coupon_code.data or ''
             )}}
             {% for error in form.coupon_code.errors %}
                 <span class="error-message">{{ error }}</span><br>
@@ -27,18 +28,20 @@
 
         <!-- צ'קבוקס לבחירת הכנסת פרטי כרטיס האשראי -->
         <div class="form-group">
-            <input type="checkbox" id="include_card_info" name="include_card_info">
+            <input type="checkbox" id="include_card_info" name="include_card_info"
+                {% if form.card_exp.data or form.cvv.data %}checked{% endif %}>
             <label for="include_card_info">האם להכניס תוקף כרטיס ו-CVV?</label>
         </div>
 
         <!-- שדות הכרטיס מופיעים רק אם המשתמש סימן את הצ'קבוקס -->
-        <div id="card_fields_container" style="display: none;">
+        <div id="card_fields_container" {% if not form.card_exp.data and not form.cvv.data %}style="display: none;"{% endif %}>
             <div class="form-group">
                 {{ form.card_exp.label }}
                 {{ form.card_exp(
                     class_="input-field",
                     placeholder="MM/YY",
-                    id="card_exp"
+                    id="card_exp",
+                    value=form.card_exp.data or ''
                 )}}
                 {% for error in form.card_exp.errors %}
                     <span class="error-message">{{ error }}</span><br>
@@ -49,7 +52,8 @@
                 {{ form.cvv(
                     class_="input-field",
                     placeholder="3 או 4 ספרות",
-                    id="cvv"
+                    id="cvv",
+                    value=form.cvv.data or ''
                 )}}
                 {% for error in form.cvv.errors %}
                     <span class="error-message">{{ error }}</span><br>
@@ -79,10 +83,8 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             cardFieldsContainer.style.display = 'none';
             // אם הצ'קבוקס לא מסומן, ננקה את השדות כדי למנוע מילוי שגוי
-            const cardExp = document.getElementById('card_exp');
-            const cvv = document.getElementById('cvv');
-            if (cardExp) cardExp.value = '';
-            if (cvv) cvv.value = '';
+            document.getElementById('card_exp').value = '';
+            document.getElementById('cvv').value = '';
         }
     }
 

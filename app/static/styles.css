@@ -1249,6 +1249,79 @@ h3 {
     text-align: center;
 }
 
+/* ======== התאמות רספונסיביות למסכים ניידים ======== */
+@media only screen and (max-width: 768px) {
+    /* הצגת כותרות הטבלה בכל תא */
+    .transaction-table thead {
+        display: none;
+    }
+
+    .transaction-table tr {
+        display: block;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        padding: 10px;
+        background-color: #fff;
+    }
+
+    .transaction-table tr {
+        background-color: #fff !important; /* רקע לבן לכל שורה */
+    }
+
+    .transaction-table td {
+        width: 100%;
+        min-height: 100px;  /* הגדלת הגובה כדי להכיל יותר תוכן */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 16px;
+        box-sizing: border-box;
+        border-bottom: 1px solid #ddd;
+        background-color: #fff;
+        font-size: 16px;
+        font-weight: 500;
+        word-wrap: break-word;
+        white-space: normal;
+        overflow-wrap: break-word;
+        position: relative;
+    }
+
+    /* הוספת שם השדה מעל כל תא בצורה ידנית לפי מיקומו בטבלה */
+    .transaction-table td:nth-child(1)::before { content: "שם החברה: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transaction-table td:nth-child(2)::before { content: "תאריך: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transaction-table td:nth-child(3)::before { content: "סטטוס: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transaction-table td:nth-child(4)::before { content: "סכום: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transaction-table td:nth-child(5)::before { content: "פעולות: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+
+    /* התאמת תמונות */
+    .transaction-table td img {
+        max-width: 60px;
+        max-height: 60px;
+        border-radius: 5px;
+        display: block;
+        margin: 10px auto;
+    }
+
+    /* התאמת תצוגת רשת לטבלאות שונות */
+    .transactions .transaction-table:not(.completed-table) tr,
+    .completed-transactions .transaction-table.completed-table tr {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: auto auto auto;
+        gap: 8px;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    /* מרווחים אחידים בין התאים ומניעת הדבקת טקסטים */
+    .transaction-table td {
+        padding: 16px;
+        line-height: 1.6;
+    }
+}
+
 /* ===================================================
    16. Flash Messages Styling
    =================================================== */

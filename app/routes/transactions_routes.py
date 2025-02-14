@@ -186,56 +186,93 @@ def buy_coupon():
 @transactions_bp.route('/approve_transaction/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 def approve_transaction(transaction_id):
+    """
+    פונקציה זו מאפשרת למוכר לאשר עסקה, להזין קוד קופון, CVV ותוקף כרטיס ולשלוח מייל לקונה.
+    """
     transaction = Transaction.query.get_or_404(transaction_id)
+
+    # וידוא שהמשתמש הנוכחי הוא המוכר
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
         return redirect(url_for('transactions.my_transactions'))
 
     form = ApproveTransactionForm()
+
     current_app.logger.debug(f"Request method: {request.method}")
-    current_app.logger.debug(f"Form data: {form.data}")
-    current_app.logger.debug(f"Form errors: {form.errors}")
-    if form.validate_on_submit():
-        current_app.logger.debug("Form validated successfully")
+
+    if request.method == "POST":
+        current_app.logger.debug(f"Raw request.form data: {request.form}")  # הצגת כל הנתונים שנשלחו
+
+        # בדיקת ולידציה של הטופס
+        if not form.validate_on_submit():
+            current_app.logger.error("Form validation failed.")
+            current_app.logger.error(f"Form data: {form.data}")
+            current_app.logger.error(f"Form errors: {form.errors}")
+
+            # הצגת שגיאות למשתמש
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"שגיאה בשדה {field}: {error}", 'danger')
+
+            return render_template('approve_transaction.html', form=form, transaction=transaction)
+
+        current_app.logger.debug("✅ Form validated successfully")
+
         try:
-            # עדכון פרטי המוכר והסטטוס
-            try:
-                transaction.seller_phone = form.seller_phone.data
-                transaction.seller_approved = True
-                transaction.status = 'ממתין לאישור הקונה'  # שינוי סטטוס
+            # עדכון פרטי העסקה
+            transaction.seller_phone = form.seller_phone.data
+            transaction.seller_approved = True
+            transaction.status = 'ממתין לאישור הקונה'  # שינוי סטטוס העסקה
 
-                db.session.commit()
+            # עדכון פרטי הקופון אם הוזנו
+            if transaction.coupon:
+                if form.code.data:
+                    transaction.coupon.code = form.code.data
+                    #current_app.logger.debug(f"🔹 Updated Coupon Code: {form.code.data}")
 
-                # לוג לבדיקה לאחר commit
-                updated_transaction = Transaction.query.get(transaction_id)
-                current_app.logger.debug(f"Updated transaction {transaction_id} status: {updated_transaction.status}")
-            except Exception as e:
-                db.session.rollback()
-                current_app.logger.error(f"Error updating transaction {transaction_id}: {e}")
+                if form.cvv.data:
+                    transaction.coupon.cvv = form.cvv.data
+                    #current_app.logger.debug(f"🔹 Updated Coupon CVV: {form.cvv.data}")
 
-            # לוג לעדכון מוצלח
-            current_app.logger.info(f"Transaction {transaction_id} updated to 'ממתין לאישור הקונה'")
-        except Exception as e:
+                if form.card_exp.data:
+                    transaction.coupon.card_exp = form.card_exp.data
+                    #current_app.logger.debug(f"🔹 Updated Coupon Expiry: {form.card_exp.data}")
+
+            db.session.commit()
+
+            # לוגים לבדיקה לאחר עדכון
+            updated_transaction = Transaction.query.get(transaction_id)
+            #current_app.logger.debug(f"✅ Updated transaction {transaction_id} status: {updated_transaction.status}")
+            #current_app.logger.debug(f"✅ Updated Coupon CVV: {updated_transaction.coupon.cvv}")
+            #current_app.logger.debug(f"✅ Updated Coupon Expiry: {updated_transaction.coupon.card_exp}")
+
+        except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.error(f"Error updating transaction {transaction_id}: {e}")
-            flash('אירעה שגיאה בעדכון העסקה.', 'danger')
+            #current_app.logger.error(f"Database error updating transaction {transaction_id}: {e}")
+            flash('אירעה שגיאה בעדכון העסקה. נסה שוב מאוחר יותר.', 'danger')
             return redirect(url_for('transactions.my_transactions'))
 
-        # שליחת מייל לקונה
-        seller = transaction.seller
-        buyer = transaction.buyer
-        coupon = transaction.coupon
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Unexpected error: {traceback.format_exc()}")
+            flash('שגיאה בלתי צפויה בעת עדכון העסקה.', 'danger')
+            return redirect(url_for('transactions.my_transactions'))
 
-        html_content = render_template(
-            'emails/seller_approved_transaction.html',
-            seller=seller,
-            buyer=buyer,
-            coupon=coupon,
-            buyer_gender=buyer.gender,
-            seller_gender=seller.gender
-        )
-
+        # שליחת מייל לקונה שהעסקה אושרה
         try:
+            seller = transaction.seller
+            buyer = transaction.buyer
+            coupon = transaction.coupon
+
+            html_content = render_template(
+                'emails/seller_approved_transaction.html',
+                seller=seller,
+                buyer=buyer,
+                coupon=coupon,
+                buyer_gender=buyer.gender,
+                seller_gender=seller.gender
+            )
+
             send_email(
                 sender_email='noreply@couponmasteril.com',
                 sender_name='Coupon Master',
@@ -244,17 +281,16 @@ def approve_transaction(transaction_id):
                 subject='המוכר אישר את העסקה',
                 html_content=html_content
             )
-            flash('אישרת את העסקה והמייל נשלח לקונה בהצלחה.', 'success')
+            flash('✔ העסקה אושרה והמייל נשלח לקונה בהצלחה.', 'success')
+            current_app.logger.info(f"📧 Email sent to {buyer.email} confirming the transaction.")
+
         except Exception as e:
             current_app.logger.error(f"Error sending email for transaction {transaction_id}: {e}")
-            flash('העסקה אושרה, אך לא הצלחנו לשלוח מייל לקונה.', 'warning')
+            flash('✔ העסקה אושרה, אך לא הצלחנו לשלוח מייל לקונה.', 'warning')
 
         return redirect(url_for('transactions.my_transactions'))
-    else:
-        current_app.logger.debug("Form validation failed")
 
     return render_template('approve_transaction.html', form=form, transaction=transaction)
-
 
 @transactions_bp.route('/decline_transaction/<int:transaction_id>')
 @login_required
@@ -550,7 +586,6 @@ def seller_confirm_transfer(transaction_id):
 
     return render_template('seller_confirm_transfer.html', transaction=transaction)
 
-
 @transactions_bp.route('/seller_add_coupon_code/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 def seller_add_coupon_code(transaction_id):
@@ -559,36 +594,54 @@ def seller_add_coupon_code(transaction_id):
     """
     transaction = Transaction.query.get_or_404(transaction_id)
 
-    # וידוא שהמשתמש הנוכחי הוא המוכר
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
         return redirect(url_for('transactions.my_transactions'))
 
-    form = SellerAddCouponCodeForm()
+    if not transaction.coupon:
+        flash('אין קופון מקושר לעסקה זו.', 'danger')
+        return redirect(url_for('transactions.my_transactions'))
 
-    if form.validate_on_submit():
-        # שמירת הנתונים למסד הנתונים
-        transaction.coupon.code = form.coupon_code.data
+    # ✅ Debugging: הדפסת הנתונים שיש לנו לפני שהטופס נטען
+    #current_app.logger.debug(f"📢 כניסה לדף seller_add_coupon_code - Transaction ID: {transaction_id}")
+    #current_app.logger.debug(f"📢 קוד קופון קיים: {transaction.coupon.code}")
+    #current_app.logger.debug(f"📢 CVV קיים: {transaction.coupon.cvv}")
+    #current_app.logger.debug(f"📢 תוקף כרטיס קיים: {transaction.coupon.card_exp}")
 
-        # אם המשתמש סימן את הצ'קבוקס - נשמור גם את פרטי הכרטיס, אחרת נמחק
-        if 'include_card_info' in request.form:
-            transaction.coupon.card_exp = form.card_exp.data
-            transaction.coupon.cvv = form.cvv.data
+    # אתחול טופס עם נתונים קיימים מהקופון
+    form = SellerAddCouponCodeForm(
+        coupon_code=transaction.coupon.code or '',
+        card_exp=transaction.coupon.card_exp or '',
+        cvv=transaction.coupon.cvv or ''
+    )
+
+    if request.method == "POST":
+        #current_app.logger.debug(f"📥 נתונים מהטופס: {request.form}")
+
+        if form.validate_on_submit():
+            try:
+                transaction.coupon.code = form.coupon_code.data
+                transaction.coupon.card_exp = form.card_exp.data if 'include_card_info' in request.form else None
+                transaction.coupon.cvv = form.cvv.data if 'include_card_info' in request.form else None
+
+                db.session.commit()
+
+                current_app.logger.info(f"נתוני הקופון נשמרו! קוד: {transaction.coupon.code}, CVV: {transaction.coupon.cvv}, תוקף: {transaction.coupon.card_exp}")
+                flash('קוד הקופון נשמר בהצלחה.', 'success')
+                return redirect(url_for('transactions.my_transactions', transaction_id=transaction.id))
+
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"שגיאה בשמירת הנתונים: {e}")
+                flash('אירעה שגיאה בשמירת הקוד.', 'danger')
+
         else:
-            transaction.coupon.card_exp = None
-            transaction.coupon.cvv = None
+            current_app.logger.error("ולידציה נכשלה.")
+            current_app.logger.error(f"Form errors: {form.errors}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"{error}", 'danger')
 
-        try:
-            db.session.commit()
-            flash('קוד הקופון נשמר בהצלחה.', 'success')
-            # נוכל להפנות לעמוד אחר, לדוגמה:
-            return redirect(url_for('transactions.seller_confirm_transfer', transaction_id=transaction.id))
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error saving coupon code for transaction {transaction_id}: {e}")
-            flash('אירעה שגיאה בשמירת הקוד.', 'danger')
-
-    # אם זו בקשת GET או שהוולידציה נכשלה, נרנדר את הטופס שוב (עם שגיאות אם יש)
     return render_template('seller_add_coupon_code.html', form=form, transaction=transaction)
 
 @transactions_bp.route('/buyer_confirm_transfer/<int:transaction_id>', methods=['GET', 'POST'])
