@@ -3618,7 +3618,7 @@ h2 {
 /* תוכן הטאבים – מעבר "fade" חלק בין טאבים */
 .tab-content {
     opacity: 0;               /* מוסתרת כברירת מחדל */
-    pointer-events: none;     /* שלא יוכלו ללחוץ על תוכן מוסתר */
+    pointer-events: auto;     /* שלא יוכלו ללחוץ על תוכן מוסתר */
     transform: translateY(20px);
     transition: opacity 0.3s ease-out, transform 0.3s ease-out;
     display: none;            /* כברירת מחדל מוסתר */

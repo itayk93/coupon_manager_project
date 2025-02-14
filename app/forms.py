@@ -498,11 +498,19 @@ class ProfileForm(FlaskForm):
 
 
 from app.models import Coupon 
+from wtforms.validators import DataRequired, Optional, Length, Regexp, ValidationError
 
 class ApproveTransactionForm(FlaskForm):
-    seller_phone = StringField('מספר טלפון', validators=[DataRequired()])
-    code = StringField('קוד קופון', validators=[DataRequired(), Length(max=255)])
-        # Relevant for specific coupons
+    seller_phone = StringField(
+        'מספר טלפון',
+        validators=[
+            DataRequired(message="יש להזין מספר טלפון."),
+            Regexp(r'^0\d{2}-\d{7}$', message="מספר הטלפון חייב להיות בפורמט 0xx-xxxxxxx.")
+        ]
+    )
+    
+    code = StringField('קוד קופון', validators=[Optional(), Length(max=255)])  # קוד קופון לא חובה
+    
     cvv = StringField(
         'CVV',
         validators=[
@@ -510,20 +518,49 @@ class ApproveTransactionForm(FlaskForm):
             Length(min=3, max=4, message="CVV צריך להיות בין 3 ל-4 ספרות.")
         ]
     )
+    
     card_exp = StringField(
         'תאריך כרטיס (MM/YY)',
         validators=[
             Optional(),
-            Regexp(r'^(0[1-9]|1[0-2])/[0-9]{2}$',
-                   message="יש להזין תאריך בפורמט MM/YY (לדוגמה: 12/29).")
+            Regexp(r'^(0[1-9]|1[0-2])/[0-9]{2}$', message="יש להזין תאריך בפורמט MM/YY (לדוגמה: 12/29).")
         ]
     )
+    
     submit = SubmitField('אשר עסקה')
 
     def validate_code(self, field):
-        if Coupon.query.filter_by(code=field.data.strip()).first():
+        if field.data and Coupon.query.filter_by(code=field.data.strip()).first():
             raise ValidationError('קוד קופון זה כבר קיים. אנא בחר קוד אחר.')
 
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired, Length, Regexp, Optional
+
+class SellerAddCouponCodeForm(FlaskForm):
+    coupon_code = StringField(
+        'קוד קופון',
+        validators=[
+            DataRequired(message="חובה עליך להקליד קוד קופון כי העסקה כבר בוצעה והקונה אישר את העברת הכסף"),
+            Length(min=4, max=20)
+        ]
+    )
+    card_exp = StringField(
+        'תוקף הכרטיס (MM/YY)',
+        validators=[
+            Optional(),
+            Regexp(r'^\d{2}/\d{2}$', message="פורמט חייב להיות MM/YY")
+        ]
+    )
+    cvv = StringField(
+        'CVV',
+        validators=[
+            Optional(),
+            Regexp(r'^\d{3,4}$', message="ה-CVV חייב להיות 3 או 4 ספרות")
+        ]
+    )
+    submit = SubmitField('שמור קוד קופון')
 
 class MarkCouponAsUsedForm(FlaskForm):
     submit = SubmitField('סמן כנוצל')

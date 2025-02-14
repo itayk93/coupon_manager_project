@@ -234,6 +234,8 @@
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 40px;
+        justify-content: center; /* למרכז אופקית */
+        align-items: center; /* למרכז אנכית */
     }
 
     .transaction-table th,
@@ -244,6 +246,7 @@
         vertical-align: middle;
     }
 
+    
     /* הסתרת עמודת "תאריך עדכון" במסכים קטנים */
     @media (max-width: 768px) {
         .transaction-table th:nth-child(6),

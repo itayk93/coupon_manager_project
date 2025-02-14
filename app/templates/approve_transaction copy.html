@@ -13,24 +13,18 @@
         <p>הקונה: {{ transaction.buyer.first_name }} {{ transaction.buyer.last_name }}</p>
         <form method="post" class="transaction-form" id="transaction-form">
             {{ form.hidden_tag() }}
-
+        
             <div class="form-group">
-                {{ form.code.label }}
+                {{ form.code.label }}<span class="required">*</span>
                 <input type="text"
                        id="code-field"
                        class="input-field"
                        name="code"
                        value="{{ transaction.coupon.code if transaction.coupon.code else '' }}"
-                       placeholder="הכנס קוד קופון">
-                <small class="info-text">
-                    {% if current_user.gender == 'male' %}
-                        אתה יכול לבחור האם לרשום את קוד הקופון כעת, או לתת אותו לקונה באופן פרטי בתהליך המכירה כדי לשמור על הביטחון של הקופון שלך.
-                    {% else %}
-                        את יכולה לבחור האם לרשום את קוד הקופון כעת, או לתת אותו לקונה באופן פרטי בתהליך המכירה כדי לשמור על הביטחון של הקופון שלך.
-                    {% endif %}
-                </small>
+                       placeholder="הכנס קוד קופון" required>
+                <span class="error-message" id="code-error" style="display:none;">קוד קופון הוא שדה חובה</span>
             </div>
-
+        
             <div class="form-group">
                 {{ form.seller_phone.label }}<span class="required">*</span>
                 <input type="tel" id="seller_phone" name="seller_phone" class="input-field" maxlength="11"
@@ -87,6 +81,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const phoneField = document.getElementById('seller_phone');
 
     form.addEventListener('submit', function (event) {
+        codeError.style.display = 'none';
+        if (!codeField.value.trim()) {
+            codeError.style.display = 'block';
+            event.preventDefault();
+        }
 
         const phoneValue = phoneField.value.trim();
         const phonePattern = /^0\d{2}-\d{7}$/;

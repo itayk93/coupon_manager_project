@@ -109,11 +109,26 @@
                                 שעולה <span class="highlight">{{ coupon.cost }} ₪</span>.
                             </p>
                             <p>
-                                כעת
-                                {% if buyer.gender == 'female' %}עלייך{% else %}עליך{% endif %}
-                                לאשר את ההעברה הכספית כדי להתקדם בתהליך. ניתן לעשות זאת בחשבון שלך.
+                                כעת 
+                                {% if buyer.gender == 'female' %}
+                                    עלייך לבצע את העסקה מול 
+                                    {% if seller.gender == 'female' %}
+                                        המוכרת
+                                    {% else %}
+                                        המוכר
+                                    {% endif %}
+                                    באופן פרטי, ולאחר מכן לאשר את ההעברה הכספית כדי להתקדם בתהליך. ניתן לעשות זאת בחשבון שלך.
+                                {% else %}
+                                    עליך לבצע את העסקה מול 
+                                    {% if seller.gender == 'female' %}
+                                        המוכרת
+                                    {% else %}
+                                        המוכר
+                                    {% endif %}
+                                    ולאחר מכן לאשר את ההעברה הכספית כדי להתקדם בתהליך. ניתן לעשות זאת בחשבון שלך.
+                                {% endif %}
                             </p>
-
+                            
                             <div class="button-container">
                                 <a href="{{ url_for('transactions.my_transactions', _external=True) }}" class="button">לחשבון שלי</a>
                             </div>
