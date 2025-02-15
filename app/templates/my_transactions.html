@@ -26,7 +26,7 @@
                             {% set logo_path = company_logo_mapping.get(transaction.coupon.company.lower(), 'images/default_logo.png') %}
                             <img src="{{ url_for('static', filename=logo_path) }}" alt="{{ transaction.coupon.company }}" width="50">
                         </td>
-                        <td>{{ transaction.buyer.first_name }} {{ transaction.buyer.last_name }}</td>
+                        <td>{{ transaction.buyer.first_name }}</td>
                         <td>
                             {% if transaction.status == 'ממתין לאישור המוכר' %}
                                 ממתין לאישור המוכר
@@ -93,7 +93,7 @@
                             {% set logo_path = company_logo_mapping.get(transaction.coupon.company.lower(), 'images/default_logo.png') %}
                             <img src="{{ url_for('static', filename=logo_path) }}" alt="{{ transaction.coupon.company }}" width="50">
                         </td>
-                        <td>{{ transaction.seller.first_name }} {{ transaction.seller.last_name }}</td>
+                        <td>{{ transaction.seller.first_name }}</td>
                         <td>
                             {% if transaction.status == 'ממתין לאישור המוכר' %}
                                 ממתין לאישור המוכר
@@ -159,8 +159,8 @@
                             {% set logo_path = company_logo_mapping.get(transaction.coupon.company.lower(), 'images/default_logo.png') %}
                             <img src="{{ url_for('static', filename=logo_path) }}" alt="{{ transaction.coupon.company }}" width="50">
                         </td>
-                        <td>{{ transaction.buyer.first_name }} {{ transaction.buyer.last_name }}</td>
-                        <td>{{ transaction.seller.first_name }} {{ transaction.seller.last_name }}</td>
+                        <td>{{ transaction.buyer.first_name }}</td>
+                        <td>{{ transaction.seller.first_name }}</td>
                         <td>
                             {% if transaction.status == 'מבוטל' %}
                                 <span class="text-danger">{{ transaction.status }}</span>
@@ -305,82 +305,5 @@
         font-weight: bold;
     }
 
-    /* Mobile view: שינוי תצוגת הטבלה לשתי שורות עבור כל עסקה */
-    @media only screen and (max-width: 768px) {
-        /* עבור טבלאות עם 5 עמודות (עסקאות כמוכר וכקונה) */
-        .transactions .transaction-table:not(.completed-table) tr {
-            display: grid;
-            grid-template-areas:
-                "company logo third"
-                "status status actions";
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 5px;
-            align-items: center;
-        }
-        .transactions .transaction-table:not(.completed-table) tr td:nth-child(1) {
-            grid-area: company;
-            text-align: left;
-        }
-        .transactions .transaction-table:not(.completed-table) tr td:nth-child(2) {
-            grid-area: logo;
-            text-align: center;
-        }
-        .transactions .transaction-table:not(.completed-table) tr td:nth-child(3) {
-            grid-area: third;
-            text-align: left;
-        }
-        .transactions .transaction-table:not(.completed-table) tr td:nth-child(4) {
-            grid-area: status;
-            text-align: left;
-        }
-        .transactions .transaction-table:not(.completed-table) tr td:nth-child(5) {
-            grid-area: actions;
-            text-align: right;
-        }
-
-        /* עבור טבלת עסקאות שהסתיימו (7 עמודות) */
-        .completed-transactions .transaction-table.completed-table tr {
-            display: grid;
-            grid-template-areas:
-                "company logo buyer seller"
-                "status updated actions actions";
-            grid-template-columns: repeat(4, 1fr);
-            gap: 5px;
-            align-items: center;
-        }
-        .completed-transactions .transaction-table.completed-table tr td:nth-child(1) {
-            grid-area: company;
-            text-align: left;
-        }
-        .completed-transactions .transaction-table.completed-table tr td:nth-child(2) {
-            grid-area: logo;
-            text-align: center;
-        }
-        .completed-transactions .transaction-table.completed-table tr td:nth-child(3) {
-            grid-area: buyer;
-            text-align: left;
-        }
-        .completed-transactions .transaction-table.completed-table tr td:nth-child(4) {
-            grid-area: seller;
-            text-align: left;
-        }
-        .completed-transactions .transaction-table.completed-table tr td:nth-child(5) {
-            grid-area: status;
-            text-align: left;
-        }
-        .completed-transactions .transaction-table.completed-table tr td:nth-child(6) {
-            grid-area: updated;
-            text-align: left;
-        }
-        .completed-transactions .transaction-table.completed-table tr td:nth-child(7) {
-            grid-area: actions;
-            text-align: right;
-        }
-
-        /* הסתרת כותרות הטבלה */
-        .transaction-table thead {
-            display: none;
-        }
-    }
 </style>
 {% endblock %}

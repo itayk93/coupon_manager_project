@@ -2049,7 +2049,7 @@ def update_all_coupons_route():
     # -- activity log snippet --
     #log_user_activity("update_all_coupons_process", None)
 
-    updated, failed = update_all_active_coupons(current_user.id)
+    updated, failed = update_all_active_coupons()
     if updated:
         flash(f"הקופונים הבאים עודכנו: {', '.join(updated)}", "success")
     if failed:

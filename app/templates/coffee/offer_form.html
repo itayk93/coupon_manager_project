@@ -1,32 +1,114 @@
-<!-- app/templates/coffee/offer_form.html -->
-{% extends "base.html" %}
+{% extends "coffee/base_coffee.html" %}
+
 {% block title %}הצע הנחה לקניית קפה{% endblock %}
-{% block content %}
+
+{% block coffee_content %}
+<section class="offer-coffee-discount">
     <h2>הצע הנחה לקניית קפה</h2>
     <p>עמוד זה מאפשר לאנשים עם הנחות לעזור למשתמשים ללא הנחות לקנות קפה בזול. שים לב: המחירים ייקבעו בין הצדדים, והתוכנה אינה אחראית לעסקאות.</p>
-    <form method="post">
+
+    <form method="post" class="styled-form">
         {{ form.hidden_tag() }}  <!-- מוסיף CSRF Token לטופס -->
-        <label for="discount_percent">אחוז הנחה (לדוגמה: 20):</label>
-        <input type="number" step="0.01" name="discount_percent" required> %
-        <br>
-        <label for="customer_group">קבוצת לקוח:</label>
-        <select name="customer_group" required>
-            <option value="">בחר</option>
-            <option value="Connoisseur">Connoisseur – עד 5 שנים או עד 500 קפסולות</option>
-            <option value="Expert">Expert – מעל 5 ועד 10 שנים או בין 500 ל-900 קפסולות</option>
-            <option value="Ambassador">Ambassador – 10 שנים ומעלה או מעל 900 קפסולות</option>
-        </select>
-        <br>
-        <label for="points_offered">נקודות מועדון (אופציונלי):</label>
-        <input type="number" name="points_offered">
-        <br>
-        <label>סוג ההצעה:</label>
-        <input type="radio" name="offer_type" value="sell" checked> אני מציע הנחה (מוכר)
-        <input type="radio" name="offer_type" value="buy"> אני מחפש הנחה (קונה)
-        <br>
-        <label for="description">תיאור (אופציונלי):</label>
-        <textarea name="description"></textarea>
-        <br>
-        <button type="submit">צור הצעה</button>
+
+        <div class="form-group">
+            <label for="discount_percent">אחוז הנחה (לדוגמה: 20):</label>
+            <input type="number" step="0.01" name="discount_percent" id="discount_percent" required class="input-field" aria-describedby="discount_help"> %
+            <small id="discount_help" class="form-text text-muted">הזן את אחוז ההנחה המוצע.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="customer_group">קבוצת לקוח:</label>
+            <select name="customer_group" id="customer_group" required class="input-field" aria-describedby="group_help">
+                <option value="">בחר</option>
+                <option value="Connoisseur">Connoisseur – עד 5 שנים או עד 500 קפסולות</option>
+                <option value="Expert">Expert – מעל 5 ועד 10 שנים או בין 500 ל-900 קפסולות</option>
+                <option value="Ambassador">Ambassador – 10 שנים ומעלה או מעל 900 קפסולות</option>
+            </select>
+            <small id="group_help" class="form-text text-muted">בחר את קבוצת הלקוח המתאימה.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="points_offered">נקודות מועדון (אופציונלי):</label>
+            <input type="number" name="points_offered" id="points_offered" class="input-field" aria-describedby="points_help">
+            <small id="points_help" class="form-text text-muted">הזן את מספר נקודות המועדון המוצעות, אם יש.</small>
+        </div>
+
+        <div class="form-group">
+            <label>סוג ההצעה:</label>
+            <div class="radio-group" aria-describedby="offer_type_help">
+                <input type="radio" name="offer_type" value="sell" id="offer_sell" checked>
+                <label for="offer_sell">אני מציע הנחה (מוכר)</label>
+                <input type="radio" name="offer_type" value="buy" id="offer_buy">
+                <label for="offer_buy">אני מחפש הנחה (קונה)</label>
+            </div>
+            <small id="offer_type_help" class="form-text text-muted">בחר את סוג ההצעה המתאימה.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="description">תיאור (אופציונלי):</label>
+            <textarea name="description" id="description" class="input-field" aria-describedby="description_help"></textarea>
+            <small id="description_help" class="form-text text-muted">הוסף תיאור נוסף להצעה, אם רצוי.</small>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="submit-button">צור הצעה</button>
+        </div>
     </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<style>
+    .offer-coffee-discount {
+        max-width: 600px;
+        margin: auto;
+        padding: 20px;
+        border-radius: 10px;
+        background: #f9f9f9;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .styled-form .form-group {
+        margin-bottom: 15px;
+    }
+
+    .styled-form label {
+        font-weight: bold;
+    }
+
+    .input-field {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 1rem;
+    }
+
+    .radio-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .submit-button {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1rem;
+        width: 100%;
+    }
+
+    .submit-button:hover {
+        background: #45a049;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+</style>
 {% endblock %}

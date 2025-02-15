@@ -1,16 +1,139 @@
-<!-- app/templates/coffee/offer_list.html -->
-{% extends "base.html" %}
+{% extends "coffee/base_coffee.html" %}
+
 {% block title %}הצעות קפה{% endblock %}
-{% block content %}
-    <h2>רשימת הצעות קפה</h2>
-    <ul>
-        {% for offer in offers %}
-            <li>
-                <a href="{{ url_for('coffee.offer_detail', offer_id=offer.id) }}">
-                    {{ offer.discount_percent }}% הנחה – קבוצה: {{ offer.customer_group }} – {{ 'בקנייה' if offer.is_buy_offer else 'במכירה' }}
-                </a>
-                <small>(נוצר ב-{{ offer.created_at.strftime('%Y-%m-%d') }})</small>
-            </li>
-        {% endfor %}
-    </ul>
+
+{% block coffee_content %}
+<section class="offer-management">
+    <div class="section-header">
+        <h2>הצעות הקפה שלך</h2>
+    </div>
+
+    <section class="offers">
+        {% if offers %}
+            <div class="offer-container">
+                {% for offer in offers %}
+                    <div class="offer-card">
+                        <div class="offer-icon">
+                            <i class="fa fa-coffee" aria-hidden="true"></i>
+                        </div>
+                        <div class="offer-details">
+                            <h3 class="offer-title">{{ offer.discount_percent }}% הנחה</h3>
+                            <p class="offer-group">קבוצה: {{ offer.customer_group }}</p>
+                            <p class="offer-type">{{ 'בקנייה' if offer.is_buy_offer else 'במכירה' }}</p>
+                            <p class="offer-date">נוצר ב-{{ offer.created_at.strftime('%Y-%m-%d') }}</p>
+                            <a href="{{ url_for('coffee.offer_detail', offer_id=offer.id) }}" class="action-button">פרטים נוספים</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-data-message">אין הצעות קפה זמינות.</p>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<style>
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f9f9f9;
+        margin: 0;
+        padding: 0;
+        direction: rtl;
+    }
+
+    .section-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .offer-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .offer-card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        max-width: 300px;
+        transition: transform 0.3s;
+        text-align: center;
+        padding: 15px;
+    }
+
+    .offer-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .offer-icon {
+        font-size: 40px;
+        color: #d2691e;
+        margin-bottom: 10px;
+    }
+
+    .offer-details {
+        padding: 10px;
+    }
+
+    .offer-title {
+        font-size: 1.5em;
+        margin: 0 0 10px;
+        color: #333;
+    }
+
+    .offer-group,
+    .offer-type,
+    .offer-date {
+        margin: 5px 0;
+        color: #666;
+    }
+
+    .action-button {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 10px 15px;
+        background-color: #007bff;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 5px;
+        transition: background-color 0.3s;
+    }
+
+    .action-button:hover {
+        background-color: #0056b3;
+    }
+
+    .no-data-message {
+        text-align: center;
+        color: #999;
+        font-size: 1.2em;
+        margin-top: 50px;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const offerCards = document.querySelectorAll('.offer-card');
+        const icons = ["fa-coffee", "fa-mug-hot", "fa-beer", "fa-wine-glass"];
+
+        offerCards.forEach((card, index) => {
+            let icon = card.querySelector('.offer-icon i');
+            icon.classList.add(icons[index % icons.length]);
+
+            card.addEventListener('mouseover', function() {
+                this.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.2)';
+            });
+
+            card.addEventListener('mouseout', function() {
+                this.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.1)';
+            });
+        });
+    });
+</script>
 {% endblock %}

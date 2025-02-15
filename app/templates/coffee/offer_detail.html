@@ -1,20 +1,206 @@
-<!-- app/templates/coffee/offer_detail.html -->
 {% extends "base.html" %}
-{% block title %}פרטי הצעת קפה{% endblock %}
+
+{% block title %}
+פרטי הצעת קפה
+{% endblock %}
+
 {% block content %}
+<section class="add-coupon">
     <h2>פרטי ההצעה</h2>
-    <p><strong>אחוז הנחה:</strong> {{ offer.discount_percent }}%</p>
-    <p><strong>קבוצת לקוח:</strong> {{ offer.customer_group }}</p>
-    {% if offer.points_offered %}
-        <p><strong>נקודות מועדון מוצעות:</strong> {{ offer.points_offered }}</p>
-    {% endif %}
-    <p><strong>סוג הצעה:</strong> {{ 'בקנייה' if offer.is_buy_offer else 'במכירה' }}</p>
-    {% if offer.description %}
-        <p><strong>תיאור:</strong> {{ offer.description }}</p>
-    {% endif %}
-    {% if current_user.id != offer.seller_id %}
-        <a href="{{ url_for('coffee.buy_offer', offer_id=offer.id) }}">רכוש/קנה בהצעה זו</a>
-    {% else %}
-        <p>זוהי ההצעה שלך.</p>
-    {% endif %}
+
+    <!-- כאן אפשר, אם רוצים, לשלב כפתורים או עיצוב עליון כלשהו, בדומה ל"דוגמה השנייה" -->
+    <!-- להמחשה בלבד: -->
+    <div class="add-coupons-buttons">
+        <div class="button-row">
+            <!-- כפתור דמה: -->
+            <a href="#" class="secondary-button">
+                <i class="fa fa-plus-circle" aria-hidden="true"></i> פעולה כלשהי
+            </a>
+            <a href="#" class="secondary-button">
+                <i class="fa fa-upload" aria-hidden="true"></i> פעולה אחרת
+            </a>
+        </div>
+        <div class="button-row full-width">
+            <a href="#" class="secondary-button wide-button">
+                <i class="fa fa-image" aria-hidden="true"></i> כפתור רחב לדוגמה
+            </a>
+        </div>
+    </div>
+
+    <!-- הצגת תוכן ההצעה כפי שהיה בקוד המקורי -->
+    <div class="offer-details-wrapper">
+        <p><strong>אחוז הנחה:</strong> {{ offer.discount_percent }}%</p>
+        <p><strong>קבוצת לקוח:</strong> {{ offer.customer_group }}</p>
+        {% if offer.points_offered %}
+            <p><strong>נקודות מועדון מוצעות:</strong> {{ offer.points_offered }}</p>
+        {% endif %}
+        <p><strong>סוג הצעה:</strong> {{ 'בקנייה' if offer.is_buy_offer else 'במכירה' }}</p>
+        {% if offer.description %}
+            <p><strong>תיאור:</strong> {{ offer.description }}</p>
+        {% endif %}
+
+        {% if current_user.id != offer.seller_id %}
+            <a href="{{ url_for('coffee.buy_offer', offer_id=offer.id) }}" class="secondary-button" style="margin-top: 10px; display: inline-block;">
+                <i class="fa fa-shopping-cart" aria-hidden="true"></i> רכוש/קנה בהצעה זו
+            </a>
+        {% else %}
+            <p>זוהי ההצעה שלך.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
+<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+
+<style>
+/* ========== עיצוב כללי וגלובאלי (כפי שבדוגמה השנייה) ========== */
+
+/* מרכז טקסט - שימושי כללי */
+.center-text {
+    text-align: center;
+}
+
+/* עטיפת עיקר התוכן (כאן "add-coupon" משמש כבסיס לעיצוב) */
+.add-coupon {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* עיצוב כותרת העמוד */
+.add-coupon h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* כפתורים למעלה (הדוגמה מרובת הקופונים) - מבנה גריד במסכים קטנים */
+.add-coupons-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.button-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+
+.button-row.full-width {
+    width: 100%;
+}
+
+.wide-button {
+    flex-grow: 1;
+    text-align: center;
+    display: block;
+    width: 100%;
+    max-width: 320px;
+}
+
+/* כפתורים כלליים */
+.secondary-button {
+    display: inline-block;
+    background-color: #f1f1f1;
+    color: #333;
+    padding: 10px 15px;
+    border: none;
+    text-decoration: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.secondary-button i {
+    margin-right: 5px;
+}
+
+/* לצורך צמצום/הרחבה רספונסיבית - הגדרות עבור מסכים קטנים */
+@media (max-width: 768px) {
+    .add-coupons-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .button-row {
+        display: contents; /* כך שכל כפתור הופך לפריט בגריד */
+        margin-bottom: 0;
+    }
+
+    .button-row.full-width {
+        grid-column: span 2;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .wide-button {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* דוגמה לעיטוף ויזואלי של פרטי ההצעה */
+.offer-details-wrapper {
+    background-color: #fafafa;
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 5px;
+}
+
+/* לדוגמה: אפשר להוסיף רווח בין הפסקאות */
+.offer-details-wrapper p {
+    margin-bottom: 10px;
+}
+
+/* ========== Tooltip-related ========== */
+/* בהנחה שכבר יש לך tooltip.css ו-tooltip.js, ניתן כאן הדגמה של שימוש מקביל במובנה (אם צריך) */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    /* מאפשר להראות את הטקסט אבל לא לתפוס את הקליקים/מגע */
+    pointer-events: none;
+}
+
+.tooltip .close-tooltip {
+    /* רק לכפתור הסגירה נאפשר קליקים */
+    pointer-events: auto;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    /* Position the tooltip text */
+    position: absolute;
+    z-index: 1;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+}
+
+/* וכדומה... */
+</style>
+
+<script>
+/* כאן אפשר להכניס את קוד ה-Tooltip או כל קוד JS משלים מהדוגמה השנייה, אם באמת דרוש */
+
+document.addEventListener('DOMContentLoaded', function() {
+    // אם אתה צריך לוגיקת tooltip או כל פונקציה אחרת – תוסיף/יש כאן
+    console.log("Offer detail page loaded with the new design!");
+});
+</script>
 {% endblock %}
