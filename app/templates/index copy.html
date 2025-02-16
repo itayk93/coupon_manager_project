@@ -1,19 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %} קופונים והנחות אונליין - Coupon Master {% endblock %}
-
-{% block meta_description %}
-<meta name="description" content="גלו את Coupon Master - האתר המוביל לניהול קופונים וארנק דיגיטלי לקופונים. חסכו כסף וקבלו הנחות שוות בכל החנויות הגדולות בישראל." />
-<meta property="og:title" content="ניהול קופונים וארנק דיגיטלי - Coupon Master">
-<meta property="og:description" content="הצטרפו ל-Coupon Master, האתר המתקדם לניהול קופונים וארנק דיגיטלי, חסכו כסף עם הנחות בלעדיות בכל החנויות הגדולות בישראל.">
-<meta property="og:image" content="{{ url_for('static', filename='images/coupons-banner.jpg', _external=True) }}">
-<meta property="og:url" content="{{ request.url }}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="אתר לניהול קופונים וארנק דיגיטלי - Coupon Master">
-<meta name="twitter:description" content="חסכו כסף עם Coupon Master - האתר לניהול קופונים וארנק דיגיטלי, קבלו הנחות בלעדיות בכל החנויות הגדולות בישראל.">
-<meta name="twitter:image" content="{{ url_for('static', filename='images/coupons-banner.jpg', _external=True) }}">
-{% endblock %}
-
+{% block title %}Coupon Master{% endblock %}
 
 {% block content %}
 {% if show_admin_message and admin_message %}
@@ -24,7 +11,7 @@
             {{ admin_message.link_text if admin_message.link_text else "למידע נוסף" }}
         </a>
     {% endif %}
-    <form method="post" action="{{ url_for('admin_messages_bp.dismiss_admin_message') }}">
+        <form method="post" action="{{ url_for('admin_messages_bp.dismiss_admin_message') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="close-button">×</button>
     </form>
@@ -32,16 +19,17 @@
 {% endif %}
 
 <section class="hero">
-    <!-- כותרת H1 ראשית למילות מפתח - מוסתרת -->
-    <h1 style="display:none;">קופונים והנחות בלעדיות בישראל - חסוך כסף עכשיו!</h1>
     <h2>{{ greeting }}, {{ current_user.first_name }}!</h2>
 
     {% if show_expiring_alert %}
     <!-- התראה לקופונים שעומדים לפוג -->
     <div class="expiring-coupons-alert">
+
         <!-- כפתור ה-X למעלה-משמאל -->
         <a class="close-expiring-alert" href="{{ url_for('profile.dismiss_expiring_alert') }}">×</a>
+
         <p><strong>שים לב!</strong> יש לך {{ expiring_coupons|length }} קופונים שעומדים לפוג תוקפם בשבוע הקרוב:</p>
+
         <!-- רשימת הקופונים -->
         <ul class="expiring-coupons-list">
             {% for c in expiring_coupons %}
@@ -57,7 +45,8 @@
                     התוקף יפוג מחר
                 {% else %}
                     התוקף יפוג ב-<strong>{{ expiration_date }}</strong>
-                {% endif %}
+                {% endif %}   
+
                 <!-- הוספת span עם קלאס כדי לשלוט רק עליו -->
                 <span class="coupon-button-wrapper">
                     <a class="view-coupon-button" href="{{ url_for('coupons.coupon_detail', id=c.id) }}">
@@ -65,8 +54,10 @@
                     </a>
                 </span>
             </li>
+            
             {% endfor %}
         </ul>
+        
     </div>
     {% endif %}
 
@@ -75,8 +66,6 @@
         <h1>{{ '%.2f'|format(total_value) }} ₪</h1>
     </div>
 
-    <!-- הוספת פסקה עם מילות מפתח -->
-    <p class="hidden-text">מצא את כל הקופונים וההנחות במקום אחד! אפליקציית <strong>Coupon Master</strong> עוזרת לך <strong>לחסוך כסף בקניות</strong> בכל החנויות הגדולות בישראל.</p>
     <p class="total-savings-line tooltip-trigger" style="position: relative; display: inline-block;">
         עד כה חסכת: {{ '%.0f'|format(total_savings) }} ₪ מתוך {{ '%.0f'|format(total_coupons_value) }} ₪
         (חיסכון של {{ '%.0f'|format(percentage_savings) }}%)
@@ -87,7 +76,7 @@
     </p>
 </section>
 
-<!-- עטיפת שני הטפסים בקונטיינר אחד -->
+<!-- עטיפת שתי הטפסים בקונטיינר אחד -->
 <div class="usage-forms-container">
 
     <section class="usage-form-wrapper">
@@ -96,11 +85,11 @@
             <div class="input-wrapper">
                 <label for="usage_explanation">דיווח אוטומטי על שימוש בקופונים</label>
                 <textarea id="usage_explanation"
-                          name="usage_explanation"
-                          rows="2"
-                          class="input-field_centered"
-                          placeholder="{% if current_user.gender == 'male' %}תפרט כאן באלו קופונים השתמשת ובכמה{% else %}תפרטי כאן באלו קופונים השתמשת ובכמה{% endif %}"></textarea>
-            </div>
+                        name="usage_explanation"
+                        rows="2"
+                        class="input-field_centered"
+                        placeholder="{% if current_user.gender == 'male' %}תפרט כאן באלו קופונים השתמשת ובכמה{% else %}תפרטי כאן באלו קופונים השתמשת ובכמה{% endif %}"></textarea>
+                  </div>
             <div class="button-with-explanation">
                 <button type="submit" class="submit-button">שלח</button>
                 <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
@@ -109,6 +98,7 @@
                     <span class="close-tooltip">×</span>
                 </div>
             </div>
+            
         </form>
     </section>
 
@@ -118,11 +108,13 @@
             {{ sms_form.hidden_tag() }}
             <div class="input-wrapper">
                 <label for="sms_text">זיהוי והוספה אוטומטית של קופון</label>
-                <textarea class="input-field_centered"
-                          id="sms_text"
-                          name="sms_text"
-                          rows="2"
-                          placeholder="{% if current_user.gender == 'male' %}תפרט כאן את הפרטים של הקופון שקנית להוספה אוטומטית שלו{% else %}תפרטי כאן את הפרטים של הקופון שקנית להוספה אוטומטית שלו{% endif %}"></textarea>
+                <textarea
+                    class="input-field_centered"
+                    id="sms_text"
+                    name="sms_text"
+                    rows="2"
+                    placeholder="{% if current_user.gender == 'male' %}תפרט כאן את הפרטים של הקופון שקנית להוספה אוטומטית שלו{% else %}תפרטי כאן את הפרטים של הקופון שקנית להוספה אוטומטית שלו{% endif %}"
+                ></textarea>
             </div>
             <div class="button-with-explanation">
                 <input class="submit-button" id="submit_sms" name="submit_sms" type="submit" value="הבא">
@@ -136,6 +128,7 @@
     </section>
 
 </div>
+
 
 <section class="coupon-list">
     {% macro get_company_logo(coupon) %}
@@ -160,6 +153,7 @@
                     {{ get_company_logo(coupon) }}
                     <p class="company-name">{{ coupon.company }}</p>
                     <p>קוד קופון: {{ coupon.code }}</p>
+
                     {% if coupon.is_one_time %}
                         <p>מטרה: {{ coupon.purpose }}</p>
                     {% else %}
@@ -175,6 +169,7 @@
                             {% endif %}
                         </p>
                     {% endif %}
+
                     {% if title == "קופונים למכירה" %}
                     <p style="color: var(--accent-color); font-weight: bold;">
                         למכירה במחיר {{ '%.2f'|format(coupon.cost) }} ש"ח
@@ -220,15 +215,15 @@
     background-color: #fff8e1; /* צבע צהוב עדין */
     color: #856404;
     border: 1px solid #ffeeba;
-    padding: 10px 15px;
+    padding: 10px 15px; /* הקטנת הרווחים בפנים */
     border-radius: 6px;
-    font-size: 1em;
-    font-weight: normal;
+    font-size: 1em; /* הקטנת גודל הפונט */
+    font-weight: normal; /* הקטנת הדגשה */
     text-align: center;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    margin: 15px auto;
-    max-width: 800px;
-    width: 90%;
+    margin: 15px auto; /* הקטנת המרווח העליון והתחתון */
+    max-width: 800px; /* הגדלת הרוחב למראה טוב יותר */
+    width: 90%; /* רוחב דינמי להתאמה למסכים קטנים */
     position: relative;
 }
 
@@ -244,6 +239,19 @@
     color: inherit;
 }
 
+/* כפתור X לסגירת ההודעה */
+.close-button {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    color: inherit;
+}
+
+/* הנפשה לסגירה */
 .admin-flash-message.fade-out {
     opacity: 0;
     transition: opacity 0.5s ease-out;
@@ -251,15 +259,15 @@
 
 /* === התראה מינימליסטית בפינה עם כפתור X למעלה-משמאל === */
 .expiring-coupons-alert {
-    background-color: #fff8e1;
-    color: #000;
+    background-color: #fff8e1; /* רקע בהיר ועדין */
+    color: #000;               /* טקסט כהה */
     padding: 15px 20px;
     border-radius: 8px;
     font-size: 1.1em;
-    position: relative;
+    position: relative; /* מאפשר מיקום מוחלט של כפתור ה-X */
     margin-top: 15px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    text-align: center;
+    text-align: center; /* ממורכז */
 }
 
 .close-expiring-alert {
@@ -290,7 +298,7 @@
 /* כפתור "צפה בקופון" מעוצב */
 .view-coupon-button {
     display: inline-block;
-    margin-right: 5px;
+    margin-right: 5px; /* מרווח קטן בין הטקסט לפני הכפתור */
     background-color: #3498db;
     color: #fff;
     text-decoration: none;
@@ -417,44 +425,47 @@
 @media (max-width: 600px) {
     .coupon-button-wrapper {
         display: block;
-        margin-top: 5px;
+        margin-top: 5px; /* הוספת רווח קטן */
     }
 }
-
 /* קונטיינר עוטף לשני הטפסים זה לצד זה */
 .usage-forms-container {
     display: flex;
-    gap: 5px;
+    gap: 5px;  /* רווח קטן מאוד ביניהן */
     justify-content: center;
-    align-items: stretch;
+    align-items: stretch; /* מוודא שכל התיבות יהיו באותו גובה */
     margin: 20px auto;
-    max-width: 800px;
-    border-radius: 10px;
+    max-width: 800px; /* שומר על גבול רוחב סביר */
+    border-radius: 10px; /* מעגל לי את התיבה */
+    /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);*/
 }
 
+/* הופך כל usage-form-wrapper לטופס צר יותר ובאותו גובה */
 .usage-form-wrapper {
-    flex: 1;
-    max-width: 360px;
+    flex: 1;  /* נותן לכל תיבה לקחת את אותו הגובה */
+    max-width: 360px; /* ניתן לשנות ל-370px אם רוצים */
     width: 100%;
     display: flex;
     flex-direction: column;
-    margin-top: 0;
-    margin-bottom: 0;
+    margin-top: 0; /* ביטול מרווחים בין התיבות */
+    margin-bottom: 0; /* ביטול מרווחים בין התיבות */
 }
 
+/* מוודא שהתוכן בתוך כל תיבה יתפרס באופן אחיד כך שהכפתור לא יזוז */
 .usage-form-wrapper form {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: 100%; /* גורם לכל תיבה להתפרס לגובה מלא */
 }
 
+/* מבטיח שהכפתור תמיד יישב בתחתית */
 .button-with-explanation {
-    margin-top: auto;
+    margin-top: auto; /* דוחף את הכפתור לתחתית */
 }
 
 .admin-flash-message p {
-    margin-top: 4px;
-    margin-bottom: 4px;
+    margin-top: 4px; /* צמצום הרווח מעל הטקסט */
+    margin-bottom: 4px; /* שומר על רווח מינימלי מעל הכפתור */
 }
 
 .admin-message-button {
@@ -467,66 +478,73 @@
     font-size: 0.85em;
     font-weight: bold;
     transition: background 0.3s ease-in-out;
-    margin-top: 2px;
+    margin-top: 2px; /* הקטנת הרווח בין הטקסט לכפתור */
 }
 
 .admin-message-button:hover {
     background-color: #2980b9;
 }
 
-.hidden-text {
-    display: none;
-}
 
 @media (max-width: 600px) {
     .usage-forms-container {
         flex-direction: column;
-        gap: 10px;
-        margin-top: 5px;
+        gap: 10px; /* ביטול הרווח ביניהן */
+        margin-top: 5px; /* אפשר לשנות ל-0px אם עדיין יש רווח גדול מדי */
         margin-bottom: 5px;
         margin: 5px auto;
-        padding: 0 15px;
-        max-width: 95%;
+        padding: 0 15px; /* מוסיף רווח מהקצוות כך שהתיבות לא ייגעו בקצה */
+        max-width: 95%; /* מוודא שהתיבות לא יתפרסו על כל הרוחב */
     }
+
     .usage-form-wrapper {
         max-width: 100%;
-        margin-bottom: 0px;
+        /*padding-bottom: 0px;  /*זה חותך את סוף של התיבה. ביטלתי את זה כי זה מכוער */
+        margin-bottom: 0px; /* שחק עם זה - אם עדיין רחוק מדי, נסה 0px */
     }
+
     .usage-form-wrapper form {
-        padding: 0px;
+        padding: 0px; /* מבטיח שאין padding נוסף בטפסים עצמם */
         margin: 0px;
     }
     .button-with-explanation {
-        position: relative;
-        display: flex;
-        align-items: center;
+    position: relative;
+    display: flex;
+    align-items: center;
     }
+
     @media (max-width: 768px) {
-        .tooltip-button-mobile {
-            position: relative;
-            margin-top: 10px;
-        }
-        .mobile-tooltip,
-        .tooltip {
-            position: absolute;
-            top: calc(100% + 8px);
-            left: 50%;
-            transform: translateX(-50%);
-            max-width: 90vw;
-            white-space: normal;
-            z-index: 9999;
-        }
+    /* כפתור סימן השאלה */
+    .tooltip-button-mobile {
+        position: relative; /* כדי לאפשר מיקום מוחלט של ה-tooltip בתוכו */
+        margin-top: 10px;    /* מגדירים מרווח עליון קטן כדי להנמיך אותו */
+    }
+
+    /* ה-tooltip עצמו */
+    .mobile-tooltip,
+    .tooltip {
+        position: absolute;
+        top: calc(100% + 8px); /* מופיע 8px מתחת לכפתור */
+        left: 50%;             /* מניח אותו באמצע הכפתור לרוחב */
+        transform: translateX(-50%); 
+        max-width: 90vw;       /* מגביל את הרוחב ל־90% מרוחב המסך (כדי שלא ייחתך) */
+        white-space: normal;   /* מאפשר שבירת שורות במקום גלילת רוחב או חיתוך */
+        z-index: 9999;         /* מבטיח שהוא יהיה מקדימה לכל תוכן אחר */
     }
 }
+
+
 </style>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll(".close-button").forEach(button => {
             button.addEventListener("click", function (event) {
-                event.preventDefault();
+                event.preventDefault();  // מניעת השליחה הרגילה של הטופס
+                
                 let form = this.closest("form");
                 let url = form.action;
                 let csrfToken = form.querySelector("input[name='csrf_token']").value;
+    
                 fetch(url, {
                     method: "POST",
                     headers: {
@@ -535,7 +553,7 @@
                     body: `csrf_token=${csrfToken}`
                 }).then(response => {
                     if (response.ok) {
-                        form.closest(".admin-flash-message").remove();
+                        form.closest(".admin-flash-message").remove(); // הסרת ההודעה מהעמוד
                     } else {
                         alert("שגיאה בעת סגירת ההודעה");
                     }
