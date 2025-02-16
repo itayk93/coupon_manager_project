@@ -5,6 +5,21 @@
 
 {% block content %}
 <section class="marketplace">
+    <section class="hero">
+        <h2>ברוכים הבאים ל-Marketplace!</h2>
+        <p>
+            יש לכם הנחה שווה שאתם לא צריכים? 🎉
+            הפכו אותה לכסף מזומן!
+            <br>
+            מכרו את הקופון למשתמש אחר - אתם מרוויחים, הם חוסכים. עסקה מנצחת! 💰
+        </p>
+
+        <button class="action-button"
+                onclick="window.location.href='{{ url_for('marketplace.transaction_about') }}'">
+            איך מוכרים ומעבירים?
+        </button>
+    </section>
+
 
     <!-- תיבה לעסקאות ממתינות (אם יש) -->
     {% if pending_as_seller_count > 0 or pending_as_buyer_count > 0 %}
@@ -332,6 +347,7 @@
         cursor: pointer;
         font-size: 0.9rem;
         transition: background-color 0.3s ease;
+        margin-top: 10px;
     }
     .action-button:hover {
         background-color: #0056b3;

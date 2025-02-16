@@ -561,3 +561,7 @@ def offer_coupon_process(request_id):
         flash('נוצר הקופון אך לא הצלחנו לשלוח מייל למבקש.', 'warning')
 
     return redirect(url_for('marketplace.marketplace'))
+
+@marketplace_bp.route('/transaction_about')
+def transaction_about():
+    return render_template('transaction_about.html')

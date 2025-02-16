@@ -1,0 +1,273 @@
+<!-- how-it-works.html -->
+{% extends 'base.html' %}
+
+{% block title %}איך זה עובד - Coupon Master{% endblock %}
+
+{% block content %}
+<section class="how-it-works-section">
+  <h2>איך זה עובד? מדריך פשוט לקנייה ומכירה של קופונים</h2>
+  
+  <!-- שלב למוכרים -->
+  <div class="process-container">
+    <h3>למוכרים - איך למכור קופון?</h3>
+    <div class="steps">
+      <div class="step">
+        <h4>1. בחירת הקופון למכירה</h4>
+        <ul>
+          <li>בחרו את הקופון שברצונכם למכור מרשימת הקופונים שלכם</li>
+          <li>קבעו מחיר הוגן (המערכת תציג את אחוז ההנחה באופן אוטומטי)</li>
+          <li>לחצו על "העמד למכירה" והקופון יופיע בשוק הקופונים שלנו</li>
+        </ul>
+      </div>
+      <div class="step">
+        <h4>2. לאחר שיש קונה מעוניין</h4>
+        <ul>
+          <li>תקבלו התראה במייל ובאתר כשמישהו מעוניין לקנות</li>
+          <li>היכנסו ל"העסקאות שלי" כדי לאשר את המכירה</li>
+          <li>תוכלו להזין את פרטי הקופון המדויקים (קוד, CVV או תוקף) – ניתן להשלים את הפרטים לפני העברת הקופון</li>
+        </ul>
+      </div>
+      <div class="step">
+        <h4>3. השלמת העסקה</h4>
+        <ul>
+          <li>לאחר שהקונה יעביר את התשלום (דרך ביט, העברה בנקאית או אמצעי תשלום מוסכם)</li>
+          <li>אשרו את קבלת התשלום במערכת</li>
+          <li>הזינו את כל פרטי הקופון הנדרשים</li>
+          <li>העסקה תושלם והקופון יעבור לבעלות הקונה</li>
+        </ul>
+      </div>
+    </div>
+    <div class="important-note">
+      <strong>חשוב לציין:</strong> ביצוע העסקה והעברת התשלום הם באחריות הקונה והמוכר בלבד. האתר משמש כפלטפורמה לחיבור בין הצדדים ואינו אחראי על העסקאות.
+    </div>
+  </div>
+
+  <!-- שלב לקונים -->
+  <div class="process-container">
+    <h3>לקונים - איך לקנות קופון?</h3>
+    <div class="steps">
+      <div class="step">
+        <h4>1. מציאת הקופון המתאים</h4>
+        <ul>
+          <li>גלשו בשוק הקופונים שלנו</li>
+          <li>בחרו קופון שמעניין אתכם</li>
+          <li>לחצו על "קנה" כדי להתחיל בתהליך</li>
+        </ul>
+      </div>
+      <div class="step">
+        <h4>2. אישור המוכר</h4>
+        <ul>
+          <li>המוכר יקבל את בקשתכם ויאשר את העסקה</li>
+          <li>תקבלו מייל עם אישור המוכר ופרטי התשלום</li>
+          <li>הקופון נשמר עבורכם בזמן קצר ואינו זמין למכירה לאחר אישור</li>
+        </ul>
+      </div>
+      <div class="step">
+        <h4>3. ביצוע התשלום והשלמת העסקה</h4>
+        <ul>
+          <li>העבירו את התשלום למוכר באמצעי התשלום המוסכם</li>
+          <li>סמנו במערכת שהעברתם את התשלום</li>
+          <li>המתינו לאישור המוכר על קבלת התשלום</li>
+          <li>לאחר אישור שני הצדדים, הקופון יועבר אליכם באופן אוטומטי</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- דגשים חשובים -->
+  <div class="highlights-section">
+    <h3>דגשים חשובים</h3>
+    <ul class="highlights-list">
+      <li>המערכת שולחת התראות במייל בכל שלב של העסקה, ומנחה את שני הצדדים לגבי השלב הבא</li>
+      <li>התשלום מתבצע ישירות בין הקונה למוכר באמצעי תשלום מוסכם</li>
+      <li>העסקה מושלמת רק לאחר אישור שני הצדדים על ביצוע התשלום</li>
+      <li>המערכת מבטיחה שהקופון לא יימכר פעמיים</li>
+    </ul>
+  </div>
+
+  <!-- שאלות נפוצות -->
+  <div class="qa-section">
+    <h3>שאלות נפוצות</h3>
+    <div class="question">
+      <h4>האם התשלום מתבצע דרך האתר?</h4>
+      <p>לא, התשלום מתבצע ישירות בין הקונה למוכר באמצעי תשלום מוסכם (כגון ביט, העברה בנקאית וכדומה).</p>
+    </div>
+    <div class="question">
+      <h4>מה קורה אם המוכר לא מאשר את העסקה?</h4>
+      <p>הקופון יחזור להיות זמין בשוק והעסקה תתבטל.</p>
+    </div>
+    <div class="question">
+      <h4>איך אני יודע שהקופון תקין?</h4>
+      <p>המוכר חייב להזין את כל פרטי הקופון המדויקים לפני השלמת העברת הבעלות.</p>
+    </div>
+    <div class="question">
+      <h4>מה קורה אם העברתי תשלום אך המוכר לא אישר?</h4>
+      <p>מומלץ לתעד את העברת התשלום ולשמור צילום מסך. במקרה של בעיה, ניתן לפנות לתמיכת האתר.</p>
+    </div>
+  </div>
+  
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+  /* עיצוב ראשי לעמוד */
+  .how-it-works-section {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    direction: rtl;
+    text-align: center;
+    font-family: 'Alef', sans-serif;
+  }
+  
+  .how-it-works-section h2 {
+    color: var(--primary-color);
+    font-size: 2.2em;
+    margin-bottom: 20px;
+  }
+  
+  .how-it-works-section h3 {
+    color: var(--secondary-color);
+    font-size: 1.8em;
+    margin: 40px 0 20px;
+  }
+  
+  /* עיצוב של תיבות התהליך (שלבים) */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .step {
+    background: #F8F9FB;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+  }
+  
+  .step:hover {
+    transform: translateY(-5px);
+  }
+  
+  .step h4 {
+    color: #2473CC;
+    font-size: 1.4em;
+    margin-bottom: 15px;
+    font-weight: bold;
+  }
+  
+  .step ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 auto;
+    display: inline-block;
+    text-align: left;
+  }
+  
+  .step ul li {
+    font-size: 1.15em;
+    line-height: 1.7;
+    margin-bottom: 10px;
+    position: relative;
+    padding-right: 25px;
+  }
+  
+  .step ul li:before {
+    content: "•";
+    position: absolute;
+    right: 0;
+    color: var(--secondary-color);
+    font-size: 1.5em;
+    top: 0;
+    line-height: 1;
+  }
+  
+  /* עיצוב הודעת אזהרה */
+  .important-note {
+    background: #fffbe5;
+    border: 1px solid #ffeda2;
+    padding: 15px 20px;
+    border-radius: 10px;
+    font-size: 1em;
+    margin: 20px auto;
+    text-align: center;
+    line-height: 1.6;
+  }
+  
+  /* עיצוב רשימת הדגשים */
+  .highlights-section {
+    margin: 40px 0;
+  }
+  
+  .highlights-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 auto;
+    display: inline-block;
+    text-align: left;
+  }
+  
+  .highlights-list li {
+    font-size: 1.15em;
+    line-height: 1.7;
+    margin-bottom: 10px;
+    position: relative;
+    padding-right: 25px;
+  }
+  
+  .highlights-list li:before {
+    content: "✓";
+    position: absolute;
+    right: 0;
+    color: var(--secondary-color);
+    font-size: 1.5em;
+    top: 0;
+    line-height: 1;
+  }
+  
+  /* עיצוב תיבות שאלות נפוצות */
+  .qa-section {
+    margin-top: 40px;
+  }
+  
+  .qa-section .question {
+    background: #F8F9FB;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+    margin: 25px auto;
+    max-width: 650px;
+    transition: transform 0.3s ease;
+  }
+  
+  .qa-section .question:hover {
+    transform: translateY(-5px);
+  }
+  
+  .qa-section .question h4 {
+    color: #2473CC;
+    font-weight: bold;
+    font-size: 1.4em;
+    margin-bottom: 15px;
+  }
+  
+  .qa-section .question p {
+    font-size: 1.15em;
+    line-height: 1.7;
+    margin: 0;
+  }
+  
+  /* עיצוב להערות תחתונות */
+  .disclaimer {
+    font-size: 0.9em;
+    color: #555;
+    margin-top: 20px;
+    text-align: center;
+    line-height: 1.5;
+  }
+</style>
+{% endblock %}

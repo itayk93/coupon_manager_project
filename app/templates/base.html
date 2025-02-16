@@ -19,6 +19,12 @@
     <meta name="author" content="Coupon Master">
     <meta name="language" content="he">
     <meta name="keywords" content="קופונים, הנחות, חסכון בכסף, מבצעים, ניהול קופונים, ארנק דיגיטלי, הנחות בישראל">
+    <meta name="rating" content="General">
+    <meta name="distribution" content="Global">
+    <meta name="geo.region" content="IL">
+    <meta name="geo.placename" content="Israel">
+    <meta name="geo.position" content="32.0853;34.7818">
+    <meta name="ICBM" content="32.0853, 34.7818">
     {% endblock %}
 
     <!-- Canonical URL למניעת תוכן כפול -->
@@ -360,6 +366,11 @@
 
             setupDropdowns();
             window.addEventListener('resize', setupDropdowns);
+            
+            window.addEventListener("load", function() {
+                let loadTime = window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart;
+                console.log("זמן טעינת העמוד:", loadTime + "ms");
+
         });
     </script>
 
