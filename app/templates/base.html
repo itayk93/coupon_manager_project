@@ -5,6 +5,32 @@
     <title>{% block title %}Coupon Master{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    {% block meta_description %}
+    <meta name="description" content="גלו את Coupon Master - האתר המוביל לניהול קופונים וארנק דיגיטלי לקופונים. חסכו כסף וקבלו הנחות שוות בכל החנויות הגדולות בישראל." />
+    <meta property="og:title" content="ניהול קופונים וארנק דיגיטלי - Coupon Master">
+    <meta property="og:description" content="הצטרפו ל-Coupon Master, האתר המתקדם לניהול קופונים וארנק דיגיטלי, חסכו כסף עם הנחות בלעדיות בכל החנויות הגדולות בישראל.">
+    <meta property="og:image" content="{{ url_for('static', filename='images/coupons-banner.jpg', _external=True) }}">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="אתר לניהול קופונים וארנק דיגיטלי - Coupon Master">
+    <meta name="twitter:description" content="חסכו כסף עם Coupon Master - האתר לניהול קופונים וארנק דיגיטלי, קבלו הנחות בלעדיות בכל החנויות הגדולות בישראל.">
+    <meta name="twitter:image" content="{{ url_for('static', filename='images/coupons-banner.jpg', _external=True) }}">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Coupon Master">
+    <meta name="language" content="he">
+    <meta name="keywords" content="קופונים, הנחות, חסכון בכסף, מבצעים, ניהול קופונים, ארנק דיגיטלי, הנחות בישראל">
+    {% endblock %}
+
+    <!-- Canonical URL למניעת תוכן כפול -->
+    <link rel="canonical" href="{{ request.url }}">
+
+    <!-- hreflang לתמיכה בשפות (כאן עברית) -->
+    <link rel="alternate" hreflang="he" href="{{ url_for('profile.index', _external=True) }}">
+
+    <!-- OpenGraph Fallback -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Coupon Master">
+
     {% if ga_tracking_id %}
     <script>
         // בודק אם המשתמש אישר עוגיות
@@ -27,10 +53,10 @@
                 gtag('config', '{{ ga_tracking_id }}');
             };
             // טעינת Microsoft Clarity
-                (function(c,l,a,r,i,t,y){
-                    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-                    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/{{ clarity_project_id }}";
-                    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            (function(c,l,a,r,i,t,y){
+                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/{{ clarity_project_id }}";
+                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
             })(window, document, "clarity", "script", "{{ clarity_project_id }}");
         }
     </script>
@@ -58,6 +84,44 @@
     <!-- מטא טאג ל-CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    <!-- Schema Markup: Breadcrumbs -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "דף הבית",
+          "item": "{{ url_for('profile.index', _external=True) }}"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "קופונים שלי",
+          "item": "{{ url_for('coupons.show_coupons', _external=True) }}"
+        }
+      ]
+    }
+    </script>
+    
+    <!-- Schema Markup: Website -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Coupon Master",
+      "url": "{{ url_for('profile.index', _external=True) }}",
+      "description": "Coupon Master - ניהול קופונים וחסכון בכסף עם ארנק דיגיטלי לקופונים.",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Coupon Master",
+        "logo": "{{ url_for('static', filename='images/logo.png', _external=True) }}"
+      }
+    }
+    </script>
+    
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -73,8 +137,7 @@
             <!-- אייקון הבית -->
             <a href="{{ url_for('profile.index') }}" class="home-icon"><i class="fa fa-home"></i></a>
             <span>
-                {% if current_user.gender == "male" %}ברוך הבא{% elif current_user.gender == "female" %}ברוכה הבאה{% else %}ברוך הבא
-                {% endif %}, {{ current_user.first_name }}
+                {% if current_user.gender == "male" %}ברוך הבא{% elif current_user.gender == "female" %}ברוכה הבאה{% else %}ברוך הבא{% endif %}, {{ current_user.first_name }}
             </span>
         </div>
         {% endif %}
@@ -201,13 +264,13 @@
                 consentBox.style.display = 'block';
                 setTimeout(() => {
                     consentBox.classList.add('visible');
-                }, 100); // מוסיף את האנימציה לאחר 100ms
+                }, 100);
             }
 
             // טיפול בלחיצה על כפתור "אני מסכים"
             document.getElementById('accept-cookies').onclick = function () {
                 const d = new Date();
-                d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000)); // שנה קדימה
+                d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000));
                 document.cookie = `cookies_accepted=true; expires=${d.toUTCString()}; path=/`;
                 sendConsentToServer(true);
             };
@@ -215,7 +278,7 @@
             // טיפול בלחיצה על כפתור "אני דוחה"
             document.getElementById('reject-cookies').onclick = function () {
                 const d = new Date();
-                d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000)); // שנה קדימה
+                d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000));
                 document.cookie = `cookies_accepted=false; expires=${d.toUTCString()}; path=/`;
 
                 // מחיקת כל העוגיות מהדומיין
@@ -227,64 +290,48 @@
                 localStorage.clear();
                 sessionStorage.clear();
 
-                // רענון הדף כדי לוודא שהעוגיות לא נטענות מחדש
+                // רענון הדף
                 location.reload();
             };
 
             // קריאה ראשונית להגדרת התפריטים
-            const mobileBreakpoint = 768; // נקודת שבירה למובייל
-            const dropdowns = document.querySelectorAll('.dropdown'); // הגדרת משתנה dropdowns
+            const mobileBreakpoint = 768;
+            const dropdowns = document.querySelectorAll('.dropdown');
 
             function toggleDropdownClick(event) {
-                event.stopPropagation(); // מונע סגירה מיידית של התפריט
-
+                event.stopPropagation();
                 const dropdownContent = this.querySelector(".dropdown-content");
                 if (!dropdownContent) return;
-
-                // סגירת כל שאר התפריטים הפתוחים
                 document.querySelectorAll(".dropdown-content").forEach(content => {
                     if (content !== dropdownContent) {
                         content.classList.remove("show");
                     }
                 });
-
-                // הצגת התפריט שנלחץ
                 dropdownContent.classList.toggle("show");
             }
 
-            // הוספת האזנה ללחיצה על הקישורים בתוך התפריט כדי למנוע סגירה מיידית
             document.querySelectorAll(".dropdown-content a").forEach(link => {
                 link.addEventListener("click", function (event) {
-                    event.stopPropagation(); // מונע סגירת התפריט לפני שהניווט מתרחש
+                    event.stopPropagation();
                 });
             });
 
-            // סגירת תפריטים כאשר לוחצים מחוץ אליהם
             document.addEventListener("click", function () {
                 document.querySelectorAll(".dropdown-content").forEach(content => {
                     content.classList.remove("show");
                 });
             });
 
-
             function openDropdownHover() {
                 const dropdownContent = this.querySelector('.dropdown-content');
                 if (!dropdownContent) return;
-
-                // ניקוי מחלקות קודמות
                 dropdownContent.classList.remove('adjust-left', 'adjust-right');
-
-                // בדיקת מיקום התפריט
                 const rect = dropdownContent.getBoundingClientRect();
-
                 if (rect.left < 0) {
-                    // אם התפריט חורג משמאל - מזיז אותו ימינה
                     dropdownContent.classList.add('adjust-right');
                 } else if (rect.right > window.innerWidth) {
-                    // אם התפריט חורג מימין - מזיז אותו שמאלה
                     dropdownContent.classList.add('adjust-left');
                 }
-
                 dropdownContent.classList.add('show');
             }
 
@@ -297,73 +344,59 @@
 
             function setupDropdowns() {
                 const isMobile = window.innerWidth < mobileBreakpoint;
-
                 dropdowns.forEach(dropdown => {
-                    const dropbtn = dropdown.querySelector('.dropbtn');
-                    const dropdownContent = dropdown.querySelector('.dropdown-content');
-
-                    // הסרת כל האירועים הקודמים כדי למנוע כפילויות
                     dropdown.removeEventListener('click', toggleDropdownClick);
                     dropdown.removeEventListener('mouseenter', openDropdownHover);
                     dropdown.removeEventListener('mouseleave', closeDropdownHover);
-
+    
                     if (isMobile) {
-                        // במכשירים ניידים: השתמש באירועי click על האלמנט dropdown
                         dropdown.addEventListener('click', toggleDropdownClick);
                     } else {
-                        // במחשבים שולחניים: השתמש באירועי hover
                         dropdown.addEventListener('mouseenter', openDropdownHover);
                         dropdown.addEventListener('mouseleave', closeDropdownHover);
                     }
                 });
             }
 
-            // קריאה ראשונית להגדרת dropdowns אחרי טעינת הדף
             setupDropdowns();
-
-            // טיפול באירוע שינוי גודל המסך
             window.addEventListener('resize', setupDropdowns);
         });
     </script>
 
-    <!-- הוספתי כאן למטה את סגנונות ה-Grid עבור ההדר -->
+    <!-- סגנונות Grid עבור ההדר -->
     <style>
         header {
             display: grid;
-            grid-template-columns: auto 1fr auto; /* שלוש עמודות: שמאל, אמצע, ימין */
+            grid-template-columns: auto 1fr auto;
             align-items: center;
-            padding: 0 16px; /* אפשר לשחק עם ה־padding לפי העיצוב */
+            padding: 0 16px;
         }
-
+    
         .header-left {
-            /* במקרה של RTL, start זה הצד הימני; אפשר להשאיר כך או להתאים */
             justify-self: start;
         }
-
+    
         .header-center {
             justify-self: center;
-            /* אם רוצים למרכז את התמונה עצמה באופן מדויק, אפשר להוסיף עוד הגדרות,
-               לדוגמה max-width מסוים, או margin auto וכו'. */
         }
-
+    
         .header-right {
             justify-self: end;
         }
-        /* ברירת מחדל לכל המסכים - אין מרווח */
+    
         .home-icon {
             margin: 0 !important;
         }
-
-        /* התאמה למסכים קטנים (טלפונים ניידים) */
-        @media (max-width: 768px) { /* מתאים למכשירים ניידים */
+    
+        @media (max-width: 768px) {
             .home-icon {
-                margin: 0 -10px 0 0 !important; /* מזיז את האייקון יותר ימינה */
+                margin: 0 -10px 0 0 !important;
             }
         }
-    .coffee-icon {
-        margin-right: 15px; /* אפשר לשנות את הערך לפי הצורך */
-    }
-
+    
+        .coffee-icon {
+            margin-right: 15px;
+        }
     </style>
 
     {% block scripts %}{% endblock %}

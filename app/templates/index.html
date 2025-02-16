@@ -2,18 +2,6 @@
 
 {% block title %} קופונים והנחות אונליין - Coupon Master {% endblock %}
 
-{% block meta_description %}
-<meta name="description" content="גלו את Coupon Master - האתר המוביל לניהול קופונים וארנק דיגיטלי לקופונים. חסכו כסף וקבלו הנחות שוות בכל החנויות הגדולות בישראל." />
-<meta property="og:title" content="ניהול קופונים וארנק דיגיטלי - Coupon Master">
-<meta property="og:description" content="הצטרפו ל-Coupon Master, האתר המתקדם לניהול קופונים וארנק דיגיטלי, חסכו כסף עם הנחות בלעדיות בכל החנויות הגדולות בישראל.">
-<meta property="og:image" content="{{ url_for('static', filename='images/coupons-banner.jpg', _external=True) }}">
-<meta property="og:url" content="{{ request.url }}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="אתר לניהול קופונים וארנק דיגיטלי - Coupon Master">
-<meta name="twitter:description" content="חסכו כסף עם Coupon Master - האתר לניהול קופונים וארנק דיגיטלי, קבלו הנחות בלעדיות בכל החנויות הגדולות בישראל.">
-<meta name="twitter:image" content="{{ url_for('static', filename='images/coupons-banner.jpg', _external=True) }}">
-{% endblock %}
-
 
 {% block content %}
 {% if show_admin_message and admin_message %}
