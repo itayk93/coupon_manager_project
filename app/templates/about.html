@@ -4,20 +4,20 @@
 {% block title %}אודות Coupon Master{% endblock %}
 
 {% block content %}
-<section class="about-section">
-    <h2>גלו את העוצמה של Coupon Master</h2>
-    <p>
+<section class="about-section" data-aos="fade-up">
+    <h2 data-aos="fade-up" data-aos-delay="100">גלו את העוצמה של Coupon Master</h2>
+    <p data-aos="fade-up" data-aos-delay="200">
         חסכו אלפי שקלים בשנה עם הארנק הדיגיטלי החכם שלכם! 
         עם <strong>Coupon Master</strong>, כל הקופונים שלכם - בין אם מהאפליקציה, מהאינטרנט או מחברים ומשפחה - 
         מתארגנים בצורה חכמה במקום אחד. סוף סוף תוכלו למקסם כל הטבה ולנהל את החיסכון שלכם בקלות!
     </p>
 
-    <small class="disclaimer">
+    <small class="disclaimer" data-aos="fade-up" data-aos-delay="300">
         <strong>הבהרה:</strong> הפלטפורמה משמשת לקישור בין קונים למוכרים ואינה אחראית על העסקאות ביניהם.
     </small>
     
-    <h3>למה דווקא Coupon Master?</h3>
-    <ul>
+    <h3 data-aos="fade-up" data-aos-delay="400">למה דווקא Coupon Master?</h3>
+    <ul data-aos="fade-up" data-aos-delay="500">
         <li>
             <strong>הוסיפו קופונים בשנייה אחת!</strong> 
             סרקו, צלמו או העתיקו קופונים ישירות לארנק הדיגיטלי שלכם. המערכת החכמה שלנו מזהה אוטומטית את כל הפרטים!<sup>*</sup>
@@ -40,14 +40,14 @@
         </li>
     </ul>
 
-    <h3>החזון שלנו</h3>
-    <p>
+    <h3 data-aos="fade-up" data-aos-delay="600">החזון שלנו</h3>
+    <p data-aos="fade-up" data-aos-delay="700">
         להפוך את החיסכון שלכם לחוויה פשוטה, מהנה ומשתלמת! אנחנו ב-<strong>Coupon Master</strong> 
         מאמינים שכל אחד יכול לחסוך אלפי שקלים בשנה - בקלות ובכיף. הצטרפו למהפכת החיסכון החכם!
     </p>
 
-    <h3>רוצים לדעת עוד?</h3>
-    <div class="qa-section">
+    <h3 data-aos="fade-up" data-aos-delay="800">רוצים לדעת עוד?</h3>
+    <div class="qa-section" data-aos="fade-up" data-aos-delay="900">
         <div class="question">
             <h4>איך מתחילים לחסוך?</h4>
             <p>
@@ -78,16 +78,15 @@
         </div>
     </div>
 
-    <h3>יש לכם שאלות?</h3>
-    <p>
+    <h3 data-aos="fade-up" data-aos-delay="1000">יש לכם שאלות?</h3>
+    <p data-aos="fade-up" data-aos-delay="1100">
         הצוות שלנו כאן בשבילכם! שלחו לנו מייל ל-
         <a href="mailto:couponmasteril2@gmail.com">couponmasteril2@gmail.com</a>
         ונחזור אליכם בהקדם.
     </p>
-    <small class="disclaimer">
+    <small class="disclaimer" data-aos="fade-up" data-aos-delay="1200">
         <sup>*</sup> משתמשים חדשים מקבלים 50 סלוטים חינמיים לשימוש במערכות ה-AI להוספת ועדכון קופונים. לאחר מכן, העלות היא 10 שקלים לכל 50 סלוטים נוספים.
     </small>
-       
 </section>
 {% endblock %}
 
@@ -99,6 +98,9 @@
         padding: 40px 20px;
         text-align: center;
         direction: rtl;
+        background-color: #FBFBFD;
+        border-radius: 10px;
+        font-family: 'Alef', sans-serif;
     }
 
     .about-section h2,
@@ -107,6 +109,7 @@
     .about-section ul,
     .about-section li {
         text-align: center;
+        margin: 0 auto;
     }
 
     .about-section h2 {
@@ -126,55 +129,73 @@
         margin-bottom: 25px;
         line-height: 1.7;
         font-size: 1.15em;
+        color: #444;
     }
 
     .about-section ul {
-        list-style-type: none;
+        list-style-type: none; 
         padding: 0;
         margin: 30px auto;
         display: inline-block;
+        text-align: left;
     }
 
     .about-section li {
         display: block;
-        text-align: center;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
         font-size: 1.15em;
         line-height: 1.7;
+        color: #333;
     }
 
+    .disclaimer {
+        font-size: 0.8em; 
+        color: #555;
+        margin-top: 20px;
+        text-align: center;
+        line-height: 1.5;
+        display: block;
+    }
+
+    /* ===== אזור השאלות והתשובות (אקורדיון) ===== */
     .qa-section {
         margin-top: 40px;
     }
 
     .qa-section .question {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
         background: #F8F9FB;
-        padding: 25px;
+        padding: 20px 25px;
         border-radius: 15px;
         box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
         max-width: 650px;
-        margin: 25px auto;
+        margin: 20px auto;
+        cursor: pointer;
         transition: transform 0.3s ease;
     }
 
     .qa-section .question:hover {
-        transform: translateY(-5px);
+        transform: translateY(-3px);
     }
 
     .qa-section .question h4 {
         color: #2473CC;
         font-weight: bold;
-        margin-bottom: 15px;
-        font-size: 1.4em;
+        font-size: 1.3em;
+        margin-bottom: 10px;
     }
 
+    /* בהתחלה התשובה מוסתרת (נשלט ע"י JS) */
     .qa-section .question p {
-        max-width: 90%;
-        font-size: 1.15em;
-        line-height: 1.7;
+        max-height: 0;
+        overflow: hidden;
+        margin: 0;
+        transition: max-height 0.4s ease;
+    }
+
+    /* מצב פתוח */
+    .qa-section .question.open p {
+        margin-top: 10px;
+        max-height: 300px; /* מספיק מקום לתוכן קצת יותר ארוך */
     }
 
     .about-section a {
@@ -187,14 +208,41 @@
     .about-section a:hover {
         color: var(--primary-color);
     }
-    .disclaimer {
-        font-size: 0.1em;
-        color: #555;
-        margin-top: 20px;
-        text-align: center;
-        font-family: 'Alef', sans-serif;
-        line-height: 1.5;
-    }
-
 </style>
+{% endblock %}
+
+{% block scripts %}
+<!-- ===== AOS (Animate On Scroll) ===== -->
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    AOS.init({
+      duration: 800,  // זמן האנימציה במילישניות
+      offset: 100,    // מרחק תחילת האנימציה מלמטה
+    });
+  });
+</script>
+
+<!-- ===== אקורדיון לשאלות נפוצות (FAQ) ===== -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const questions = document.querySelectorAll('.qa-section .question');
+
+    questions.forEach(question => {
+      question.addEventListener('click', () => {
+        // אם רוצים פתיחה מרובה במקביל - מוחקים את החלק שסוגר שאלות אחרות
+        // אם רוצים לסגור שאלות אחרות לפני פתיחת הנוכחית, מורידים את ההערה מהקטע הבא:
+        /*
+        questions.forEach(q => {
+          if (q !== question) {
+            q.classList.remove('open');
+          }
+        });
+        */
+        question.classList.toggle('open');
+      });
+    });
+  });
+</script>
 {% endblock %}
