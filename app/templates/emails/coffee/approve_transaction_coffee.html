@@ -1,0 +1,16 @@
+{% extends "coffee/base_coffee.html" %}
+{% block title %}אישור עסקת קפה{% endblock %}
+{% block coffee_content %}
+  <h2>אישור עסקת קפה</h2>
+  <form method="post">
+    {{ form.hidden_tag() }}
+    <div>
+      <label for="seller_phone">מספר טלפון:</label>
+      {{ form.seller_phone() }}
+    </div>
+    <div>
+      <button type="submit">אשר עסקה</button>
+    </div>
+  </form>
+  <p><a href="{{ url_for('coffee.my_transactions') }}">← חזרה לעסקאות</a></p>
+{% endblock %}

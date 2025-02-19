@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+{% block title %}בית – מערכת קפה{% endblock %}
+
+{% block content %}
+
+    {# === הודעת אדמין (אופציונלי) === #}
+    {% if show_admin_message and admin_message %}
+    <div class="admin-flash-message">
+        <p>{{ admin_message.message_text | replace("\n", "<br>") | safe }}</p>
+        {% if admin_message.link_url %}
+            <a href="{{ admin_message.link_url }}" target="_blank" class="admin-message-button">
+                {{ admin_message.link_text if admin_message.link_text else "למידע נוסף" }}
+            </a>
+        {% endif %}
+        <form method="post" action="{{ url_for('admin_messages_bp.dismiss_admin_message') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="close-button">×</button>
+        </form>
+    </div>
+    {% endif %}
+
+    {# === כותרת ותפריט מודול הקפה === #}
+    <header class="coffee-header">
+        <h1>מערכת קפה – הנחות לקניית קפה</h1>
+        <div class="coffee-buttons-container">
+            <a href="/coffee/" class="secondary-button">בית</a>
+            <a href="/coffee/offer" class="secondary-button">הצע הנחה</a>
+            <a href="/coffee/offers" class="secondary-button">הצעות קיימות</a>
+        </div>
+    </header>
+
+    {# === הודעות פלאש רגילות === #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    {# === אזור Hero (ברוכים הבאים) === #}
+    <section class="hero">
+        <h2>ברוכים הבאים למערכת הקפה!</h2>
+        <p>
+            מערכת זו מאפשרת למשתמשים עם הנחות (לדוגמה, Ambassador) לעזור לאנשים ללא הנחות
+            לקנות קפה בזול. המחירים והעברות הכספים נסגרות בין הצדדים – והתוכנה אינה אחראית לעסקאות.
+        </p>
+    </section>
+
+    {# === הצעות אחרונות === #}
+    <h3 class="coffee-subtitle">הצעות אחרונות</h3>
+    <div class="offers-container">
+        {% for offer in offers %}
+        <a href="{{ url_for('coffee.offer_detail', offer_id=offer.id) }}" class="offer-card">
+            <div class="offer-card-content">
+                <p>
+                    <strong>{{ offer.user_name }}</strong>
+                    {% if offer.user_gender == 'male' %}
+                        מציע
+                    {% else %}
+                        מציעה
+                    {% endif %}
+                    <strong>{{ offer.discount_percent }}%</strong> הנחה
+                </p>
+                <p>בקנייה ב<strong>{{ offer.store_name }}</strong></p>
+                <p>תחת קבוצת <strong>{{ offer.customer_group }}</strong></p>
+                <small>תוקף ההנחה: {{ offer.expiration_date.strftime('%Y-%m-%d') }}</small>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
+
+<style>
+/* ======== עיצוב הודעת אדמין ======== */
+.admin-flash-message {
+    background-color: #fff8e1;
+    color: #856404;
+    border: 1px solid #ffeeba;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 1em;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin: 15px auto;
+    max-width: 800px;
+    width: 90%;
+    position: relative;
+}
+.admin-flash-message .close-button {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.1em;
+    cursor: pointer;
+    color: inherit;
+}
+
+/* ======== עיצוב הודעות פלאש ======== */
+ul.flashes {
+    margin: 15px auto;
+    max-width: 800px;
+    list-style-type: none;
+    padding: 0;
+}
+ul.flashes li {
+    background-color: #fff8e1;
+    color: #856404;
+    border: 1px solid #ffeeba;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 5px;
+}
+
+/* ======== עיצוב כותרת ותפריט הקפה ======== */
+.coffee-header {
+    text-align: center;
+    margin: 0;
+}
+.coffee-header h1 {
+    margin-top: -5px; /* דוחף את הכותרת כלפי מעלה */
+}
+
+/* ======== עבור מסכים מעל 900px (לא נוגעים!) ======== */
+@media (min-width: 900px) {
+    .coffee-buttons-container {
+        display: flex;
+        justify-content: left;
+        margin-top: -25px;
+    }
+}
+
+.button-row {
+    display: flex;
+    gap: 10px;
+}
+.secondary-button {
+    display: inline-block;
+    color: #333;
+    background-color: #e0e0e0;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+.secondary-button:hover {
+    background-color: #d5d5d5;
+}
+
+/* ======== התאמה למסכים עד 900px ======== */
+@media (max-width: 900px) {
+    .coffee-header h1 {
+        display: none; /* מסתיר את הכותרת בטלפונים וטאבלטים */
+    }
+
+
+    /* הכפתורים תמיד ממורכזים, באותה שורה */
+    .coffee-buttons-container {
+        display: flex;
+        justify-content: center;    /* מרכז אופקית */
+        align-items: center;        /* מרכז אנכית (אם יש גובה) */
+        flex-wrap: nowrap;          /* לא נשבר לשורות */
+        gap: 10px;                  /* רווח בין כפתורים */
+        margin-top: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 0.85rem;         /* הקטנת גודל הטקסט */
+        max-width: 80%;     /* מגביל את הרוחב כך שלא יחרוג */
+        margin-left: 20%;
+        padding: 0 5%; /* מזיז מעט שמאלה כדי לא לגעת בקצה */
+        max-width: 95%; /* מגביל את הרוחב כדי למנוע חריגה */
+    }
+   /* הגדרת גודל קבוע לכל כפתור */
+    .secondary-button {
+        width: 80px;  /* רוחב קבוע */
+        height: 40px;  /* גובה קבוע */
+        padding: 8px 12px;  /* ריווח פנימי */
+        font-size: 0.8rem;  /* מקטין טקסט כדי להתאים */
+        text-align: center;
+        white-space: nowrap; /* מונע שבירה לשורות */
+    }
+
+}
+
+/* ======== מסכים עד 768px - פונט קטן יותר, שלא יגלשו מהמסך ======== */
+@media (max-width: 768px) {
+    .coffee-nav-buttons {
+        font-size: 0.75rem;  /* פונט אפילו קטן יותר */
+    }
+}
+
+/* ======== עיצוב אזור Hero ======== */
+.hero {
+    text-align: center;
+    background-color: #f7f7f7;
+    padding: 20px;
+    border-radius: 6px;
+    margin: 15px auto;
+    max-width: 800px;
+}
+.hero h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+.coffee-subtitle {
+    text-align: center;
+    margin: 20px 0 10px;
+}
+
+/* ======== רשת כרטיסי ההצעות ======== */
+.offers-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    max-width: 1000px;
+    margin: 0 auto 40px;
+}
+.offer-card {
+    text-decoration: none;
+    color: inherit;
+    width: 250px;
+    min-height: 120px;
+    background-color: #ffffff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.offer-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.offer-card-content {
+    padding: 15px;
+    text-align: center;
+}
+.offer-discount {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #d35400;
+}
+.offer-group {
+    margin: 5px 0;
+}
+.offer-created {
+    color: #777;
+    font-size: 0.8em;
+}
+.offer-type {
+    color: #2c3e50;
+    font-weight: 600;
+    margin: 4px 0;
+}
+
+/* ======== כפתור בהודעת אדמין ======== */
+.admin-message-button {
+    display: inline-block;
+    background-color: #3498db;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 0.85em;
+    font-weight: bold;
+    transition: background 0.3s ease-in-out;
+    margin-top: 2px;
+}
+.admin-message-button:hover {
+    background-color: #2980b9;
+}
+
+/* ======== הגדרות כפתורים (secondary-button) ======== */
+.secondary-button {
+    display: inline-block;
+    color: #fff; /* טקסט לבן לניגודיות טובה */
+    background-color: #ff9800; /* כתום בסיסי */
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+.secondary-button:hover {
+    transform: translateY(-3px); /* הכפתור עולה למעלה */
+    background-color: #fb8c00;   /* כתום כהה יותר בעת hover */
+}
+
+</style>
+
+<script>
+    // סגירת הודעת אדמין בעת לחיצה על כפתור הסגירה
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".close-button").forEach(button => {
+            button.addEventListener("click", function (event) {
+                event.preventDefault();
+                let form = this.closest("form");
+                let url = form.action;
+                let csrfToken = form.querySelector("input[name='csrf_token']").value;
+                fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: "csrf_token=" + csrfToken
+                }).then(response => {
+                    if (response.ok) {
+                        // הסרת הודעת האדמין מהדף
+                        form.closest(".admin-flash-message").remove();
+                    } else {
+                        alert("שגיאה בעת סגירת ההודעה");
+                    }
+                }).catch((error) => {
+                    console.error("Error:", error);
+                });
+            });
+        });
+    });
+</script>
+
+<!-- אם יש לך טולטיפים -->
+<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+{% endblock %}

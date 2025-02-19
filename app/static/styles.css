@@ -217,6 +217,15 @@ header {
     margin-left: 5px;
     font-size: 0.6em;
 }
+@media (max-width: 500px) {
+    .dropbtn::after {
+        content: none;
+    }
+
+    .dropbtn {
+        clip-path: inset(0px 0px 3px 0px); /* חותך 3px מלמטה */
+    }
+}
 
 /* מיכל ה-Dropdown */
 .dropdown {
@@ -2236,6 +2245,7 @@ h3 {
 
 .qa-section h4 {
     color: var(--primary-color);
+    margin-top: 0px;
     margin-bottom: 10px;
     font-size: 1.4em;
     position: relative;

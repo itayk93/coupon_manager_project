@@ -1,7 +1,7 @@
-<!-- app/templates/coffee/review.html -->
-{% extends "base.html" %}
+{% extends "coffee/base_coffee.html" %}
 {% block title %}השארת ביקורת על המוכר{% endblock %}
-{% block content %}
+
+{% block coffee_content %}
     <h2>השאר ביקורת על המוכר</h2>
     <form method="post">
         <label for="rating">דירוג (1-5):</label>
@@ -12,4 +12,6 @@
         <br>
         <button type="submit">שלח ביקורת</button>
     </form>
+    <!-- קישור חזרה לעמוד הבית -->
+    <p><a href="{{ url_for('coffee.index') }}">← חזרה לעמוד הבית</a></p>
 {% endblock %}

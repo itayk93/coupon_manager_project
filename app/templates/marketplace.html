@@ -5,411 +5,780 @@
 
 {% block content %}
 <section class="marketplace">
-    <section class="hero">
-        <h2>ברוכים הבאים ל-Marketplace!</h2>
-        <p>
-            יש לכם הנחה שווה שאתם לא צריכים? 🎉
-            הפכו אותה לכסף מזומן!
-            <br>
-            מכרו את הקופון למשתמש אחר - אתם מרוויחים, הם חוסכים. עסקה מנצחת! 💰
-        </p>
-
-        <button class="action-button"
-                onclick="window.location.href='{{ url_for('marketplace.transaction_about') }}'">
-            איך מוכרים ומעבירים?
-        </button>
-    </section>
-
+    <!-- כותרת ראשית לשוק הקופונים -->
+    <div class="main-header">
+        <h1>ברוכים הבאים לשוק הקופונים!</h1>
+        <div class="welcome-message">
+            <p>יש לכם הנחה שווה שאתם לא צריכים? 🎉 הפכו אותה לכסף מזומן!</p>
+            <p>מכרו את הקופון למשתמש אחר - אתם מרוויחים, הם חוסכים. עסקה מנצחת! 💰</p>
+            <a href="{{ url_for('marketplace.transaction_about') }}" class="primary-button">
+                איך מוכרים ומעבירים?
+            </a>
+        </div>
+    </div>
 
     <!-- תיבה לעסקאות ממתינות (אם יש) -->
     {% if pending_as_seller_count > 0 or pending_as_buyer_count > 0 %}
     <div class="pending-transactions-box">
-        {% if pending_as_seller_count > 0 and pending_as_buyer_count > 0 %}
-            <p>יש לך {{ pending_as_seller_count }} עסקאות ממתינות כמוכר ו-{{ pending_as_buyer_count }} עסקאות ממתינות כקונה</p>
-        {% elif pending_as_seller_count > 0 %}
-            <p>יש לך {{ pending_as_seller_count }} עסקאות ממתינות כמוכר</p>
-        {% elif pending_as_buyer_count > 0 %}
-            <p>יש לך {{ pending_as_buyer_count }} עסקאות ממתינות כקונה</p>
-        {% endif %}
-        <button type="button" class="close-btn" onclick="closeNotification(this)">X</button>
-    </div>
-    {% endif %}
-
-    <!-- כותרת העמוד -->
-    <div class="marketplace-header">
-        <h2>שוק הקופונים</h2>
-    </div>
-
-    <!-- הצגת מספר הסלוטים של המשתמש -->
-    <!--
-    <div class="slots-container">
-        <p class="slots-available">מספר הסלוטים הזמינים: {{ current_user.slots }}</p>
-    </div>
-    -->
-    <!-- רשימת הקופונים הזמינים למכירה -->
-    {% if coupons %}
-        <div class="coupon-container">
-            {% for coupon in coupons %}
-                <!-- הפכנו את ה-DIV לחיץ (onclick ל-detailed view) -->
-                <div class="coupon-card request-card"
-                     style="cursor: pointer;"
-                     onclick="window.location.href='{{ url_for('coupons.coupon_detail', id=coupon.id) }}'">
-
-                    {% set discount = 0 %}
-                    {% if coupon.value > 0 %}
-                        {% set calculated_discount = ((coupon.value - coupon.cost) / coupon.value) * 100 %}
-                        {% if calculated_discount > 0 %}
-                            {% set discount = calculated_discount %}
-                        {% endif %}
-                    {% endif %}
-
-                    {% if coupon.company.isdigit() %}
-                        {% set comp_id = coupon.company|int %}
-                        {% if comp_id in company_logo_mapping_by_id %}
-                            <img src="{{ url_for('static', filename=company_logo_mapping_by_id[comp_id]) }}"
-                                 alt="{{ company_name_mapping_by_id[comp_id] }} Logo"
-                                 class="company-logo">
-                        {% else %}
-                            <img src="{{ url_for('static', filename='images/default.png') }}"
-                                 alt="Default Logo"
-                                 class="company-logo">
-                        {% endif %}
-                    {% else %}
-                        {% set company_lower = coupon.company.lower() %}
-                        {% if company_lower in company_logo_mapping %}
-                            <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}"
-                                 alt="{{ coupon.company }} Logo"
-                                 class="company-logo">
-                        {% else %}
-                            <img src="{{ url_for('static', filename='images/default.png') }}"
-                                 alt="Default Logo"
-                                 class="company-logo">
-                        {% endif %}
-                    {% endif %}
-
-                    <p class="request-details">
-                        <span class="request-user">{{ coupon.user.first_name }}</span>
-                        {% if coupon.user.gender == 'female' %}
-                            מוכרת
-                        {% else %}
-                            מוכר
-                        {% endif %}
-                        קופון ל<span class="request-company">{{ coupon.company }}</span>
-                        בשווי
-                        <span class="request-value">{{ '%.0f'|format(coupon.value) }}₪</span>
-                        תמורת
-                        <span class="request-cost">{{ '%.0f'|format(coupon.cost) }}₪</span>
-                        <br>
-                        (<span class="request-discount">{{ '%.0f'|format(discount) }}% הנחה</span>)
-                    </p>
-
-                    {% if coupon.user_id|int == current_user.id|int %}
-                        <p class="your-coupon"
-                           onclick="event.stopPropagation();">
-                           זהו הקופון שלך שמוצע למכירה
-                        </p>
-                    {% elif coupon.id in requested_coupon_ids %}
-                        <!-- גם פה עושים stopPropagation -->
-                        <button class="action-button danger"
-                                disabled
-                                onclick="event.stopPropagation();">
-                            נשלחה בקשה לקופון זה
-                        </button>
-                    {% else %}
-                        <form action="{{ url_for('transactions.buy_coupon') }}"
-                              method="post"
-                              class="buy-form"
-                              onclick="event.stopPropagation();">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
-                            <button type="submit" class="action-button">בקש לקנות</button>
-                        </form>
-                    {% endif %}
-                </div>
-            {% endfor %}
+        <div class="notification-content">
+            {% if pending_as_seller_count > 0 and pending_as_buyer_count > 0 %}
+                <p>יש לך <span class="highlight-count">{{ pending_as_seller_count }}</span> עסקאות ממתינות כמוכר
+                   ו-<span class="highlight-count">{{ pending_as_buyer_count }}</span> עסקאות ממתינות כקונה</p>
+            {% elif pending_as_seller_count > 0 %}
+                <p>יש לך <span class="highlight-count">{{ pending_as_seller_count }}</span> עסקאות ממתינות כמוכר</p>
+            {% elif pending_as_buyer_count > 0 %}
+                <p>יש לך <span class="highlight-count">{{ pending_as_buyer_count }}</span> עסקאות ממתינות כקונה</p>
+            {% endif %}
         </div>
-    {% else %}
-        <p class="no-coupons">אין קופונים זמינים בשוק כרגע.</p>
+        <button type="button" class="close-btn" onclick="closeNotification(this)" aria-label="סגור הודעה">
+            <i class="fa fa-times"></i>
+        </button>
+    </div>
     {% endif %}
 
-    <!-- בקשות לקופונים -->
-    <section class="coupon-section">
-        <h2 class="coupon-section-title">בקשות לקופונים</h2>
-        {% if coupon_requests %}
-            <div class="coupon-container">
-                {% for request in coupon_requests %}
-                    <!-- הופכים את הבקשה ל-clickable לפרטי הבקשה -->
-                    <div class="coupon-card request-card"
-                         style="cursor: pointer;"
-                         onclick="window.location.href='{{ url_for('marketplace.coupon_request_detail_view', id=request.id) }}'">
+    <div class="marketplace-container">
+        <!-- כותרת לרשימת הקופונים -->
+        <div class="section-header-marketplace">
+            <h2>שוק הקופונים</h2>
+            <p class="sub-heading">גלה את הקופונים הזמינים וחסוך בקניות שלך</p>
+        </div>
+
+        <!-- רשימת הקופונים הזמינים למכירה -->
+        {% if coupons %}
+            <div class="offer-container">
+                {% for coupon in coupons %}
+                    <div class="offer-card"
+                         onclick="window.location.href='{{ url_for('coupons.coupon_detail', id=coupon.id) }}'">
 
                         {% set discount = 0 %}
-                        {% if request.value > 0 %}
-                            {% set discount = ((request.cost - request.value) / request.cost) * 100 %}
-                        {% endif %}
-                        {% if discount < 0 %}
-                            {% set discount = 0 %}
+                        {% if coupon.value > 0 %}
+                            {% set calculated_discount = ((coupon.value - coupon.cost) / coupon.value) * 100 %}
+                            {% if calculated_discount > 0 %}
+                                {% set discount = calculated_discount %}
+                            {% endif %}
                         {% endif %}
 
-                        {% if request.company.isdigit() %}
-                            {% set req_comp_id = request.company|int %}
-                            {% if req_comp_id in company_logo_mapping_by_id %}
-                                <img src="{{ url_for('static', filename=company_logo_mapping_by_id[req_comp_id]) }}"
-                                     alt="{{ company_name_mapping_by_id[req_comp_id] }} Logo"
+                        <div class="offer-ribbon">
+                            <span>למכירה</span>
+                        </div>
+
+                        {% if coupon.company.isdigit() %}
+                            {% set comp_id = coupon.company|int %}
+                            {% if comp_id in company_logo_mapping_by_id %}
+                                <img src="{{ url_for('static', filename=company_logo_mapping_by_id[comp_id]) }}"
+                                     alt="{{ company_name_mapping_by_id[comp_id] }} Logo"
                                      class="company-logo">
                             {% else %}
-                                <img src="{{ url_for('static', filename='images/default.png') }}"
-                                     alt="Default Logo"
-                                     class="company-logo">
+                                <div class="offer-icon">
+                                    <i class="fa fa-tag" aria-hidden="true"></i>
+                                </div>
                             {% endif %}
                         {% else %}
-                            {% set company_lower = request.company.lower() %}
+                            {% set company_lower = coupon.company.lower() %}
                             {% if company_lower in company_logo_mapping %}
                                 <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}"
-                                     alt="{{ request.company }} Logo"
+                                     alt="{{ coupon.company }} Logo"
                                      class="company-logo">
                             {% else %}
-                                <img src="{{ url_for('static', filename='images/default.png') }}"
-                                     alt="Default Logo"
-                                     class="company-logo">
+                                <div class="offer-icon">
+                                    <i class="fa fa-tag" aria-hidden="true"></i>
+                                </div>
                             {% endif %}
                         {% endif %}
 
-                        <p class="request-details">
-                            <span class="request-user">{{ request.user.first_name }}</span>
-                            {% if request.user.gender == 'female' %}
-                                מבקשת
-                            {% else %}
-                                מבקש
-                            {% endif %}
-                            לקנות קופון ל<span class="request-company">{{ request.company }}</span>
-                            בשווי
-                            <span class="request-cost">{{ '%.0f'|format(request.cost) }}₪</span>
-                            תמורת
-                            <span class="request-value">{{ '%.0f'|format(request.value) }}₪</span>
-                            <br>
-                            (<span class="request-discount">{{ '%.0f'|format(discount) }}% הנחה</span>)
-                        </p>
-                        <p class="request-explanation">
-                            הסבר: {{ request.description if request.description else '---' }}
-                        </p>
-
-                        {% if request.user_id == current_user.id %}
-                            <p class="your-request"
-                               onclick="event.stopPropagation();">
-                               זו הבקשה שלך
+                        <div class="offer-details">
+                            <h3 class="offer-title">{{ '%.0f'|format(discount) }}% הנחה</h3>
+                            <p class="offer-provider">
+                                <span class="request-user">{{ coupon.user.first_name }}</span>
+                                {% if coupon.user.gender == 'female' %}
+                                    מוכרת
+                                {% else %}
+                                    מוכר
+                                {% endif %}
+                                קופון ל<span class="request-company">{{ coupon.company }}</span>
                             </p>
-                        {% else %}
-                            <form action="{{ url_for('marketplace.offer_coupon_selection', request_id=request.id) }}"
-                                  method="get"
-                                  class="offer-form"
-                                  onclick="event.stopPropagation();">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="action-button">הצע למכירה</button>
-                            </form>
-                        {% endif %}
+                            <div class="offer-values">
+                                <span class="original-value">שווי: {{ '%.0f'|format(coupon.value) }}₪</span>
+                                <span class="selling-price">מחיר: {{ '%.0f'|format(coupon.cost) }}₪</span>
+                            </div>
+
+                            {% if coupon.user_id|int == current_user.id|int %}
+                                <p class="your-coupon"
+                                   onclick="event.stopPropagation();">
+                                   זהו הקופון שלך שמוצע למכירה
+                                </p>
+                            {% elif coupon.id in requested_coupon_ids %}
+                                <div class="offer-cta" onclick="event.stopPropagation();">
+                                    <button class="action-button disabled">
+                                        נשלחה בקשה לקופון זה
+                                    </button>
+                                </div>
+                            {% else %}
+                                <div class="offer-cta" onclick="event.stopPropagation();">
+                                    <form action="{{ url_for('transactions.buy_coupon') }}"
+                                        method="post"
+                                        class="buy-form">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
+                                        <button type="submit" class="action-button">בקש לקנות</button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 {% endfor %}
             </div>
         {% else %}
-            <p class="no-requests">אין בקשות לקופונים כרגע.</p>
+            <div class="no-data-container">
+                <div class="no-data-message">
+                    <i class="fa fa-search" aria-hidden="true"></i>
+                    <p>אין קופונים זמינים בשוק כרגע.</p>
+                </div>
+            </div>
         {% endif %}
-    </section>
+
+        <!-- בקשות לקופונים -->
+        <section class="coupon-requests">
+            <div class="section-header-marketplace">
+                <h2>בקשות לקופונים</h2>
+                <br>
+                <p class="sub-heading">משתמשים שמחפשים קופונים ומוכנים לקנות מכם</p>
+            </div>
+
+            {% if coupon_requests %}
+                <div class="offer-container">
+                    {% for request in coupon_requests %}
+                        <div class="offer-card request-card"
+                             onclick="window.location.href='{{ url_for('marketplace.coupon_request_detail_view', id=request.id) }}'">
+
+                            {% set discount = 0 %}
+                            {% if request.value > 0 %}
+                                {% set discount = ((request.cost - request.value) / request.cost) * 100 %}
+                            {% endif %}
+                            {% if discount < 0 %}
+                                {% set discount = 0 %}
+                            {% endif %}
+
+                            <div class="offer-ribbon request-ribbon">
+                                <span>בקנייה</span>
+                            </div>
+
+                            {% if request.company.isdigit() %}
+                                {% set req_comp_id = request.company|int %}
+                                {% if req_comp_id in company_logo_mapping_by_id %}
+                                    <img src="{{ url_for('static', filename=company_logo_mapping_by_id[req_comp_id]) }}"
+                                         alt="{{ company_name_mapping_by_id[req_comp_id] }} Logo"
+                                         class="company-logo">
+                                {% else %}
+                                    <div class="offer-icon">
+                                        <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                {% set company_lower = request.company.lower() %}
+                                {% if company_lower in company_logo_mapping %}
+                                    <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}"
+                                         alt="{{ request.company }} Logo"
+                                         class="company-logo">
+                                {% else %}
+                                    <div class="offer-icon">
+                                        <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+
+                            <div class="offer-details">
+                                <h3 class="offer-title">{{ '%.0f'|format(discount) }}% הנחה</h3>
+                                <p class="offer-provider">
+                                    <span class="request-user">{{ request.user.first_name }}</span>
+                                    {% if request.user.gender == 'female' %}
+                                        מבקשת
+                                    {% else %}
+                                        מבקש
+                                    {% endif %}
+                                    לקנות קופון ל<span class="request-company">{{ request.company }}</span>
+                                </p>
+                                <div class="offer-values">
+                                    <span class="original-value">מוכן לשלם: {{ '%.0f'|format(request.value) }}₪</span>
+                                    <span class="selling-price">שווי מבוקש: {{ '%.0f'|format(request.cost) }}₪</span>
+                                </div>
+
+                                <p class="request-explanation">
+                                    {{ request.description if request.description else '---' }}
+                                </p>
+
+                                {% if request.user_id == current_user.id %}
+                                    <p class="your-coupon"
+                                       onclick="event.stopPropagation();">
+                                       זו הבקשה שלך
+                                    </p>
+                                {% else %}
+                                    <div class="offer-cta" onclick="event.stopPropagation();">
+                                        <form action="{{ url_for('marketplace.offer_coupon_selection', request_id=request.id) }}"
+                                            method="get"
+                                            class="offer-form">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="action-button">הצע למכירה</button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-data-container">
+                    <div class="no-data-message">
+                        <i class="fa fa-search" aria-hidden="true"></i>
+                        <p>אין בקשות לקופונים כרגע.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </section>
+
+        <!-- קישורי ניווט -->
+        <div class="navigation-links">
+            <a href="{{ url_for('marketplace.transaction_about') }}" class="nav-link info-link">
+                <i class="fa fa-question-circle" aria-hidden="true"></i> איך עובד שוק הקופונים?
+            </a>
+            <a href="{{ url_for('profile.home') }}" class="nav-link home-link">
+                <i class="fa fa-home" aria-hidden="true"></i> חזרה לעמוד הבית
+            </a>
+        </div>
+    </div>
 </section>
 
 <!-- סקריפט לסגירת התיבה של העסקאות הממתינות -->
 <script>
     function closeNotification(button) {
-        const notificationBox = button.parentElement;
+        const notificationBox = button.closest('.pending-transactions-box');
         notificationBox.classList.add('closing');
         setTimeout(() => {
             notificationBox.remove();
         }, 300);
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const offerCards = document.querySelectorAll('.offer-card');
+
+        offerCards.forEach((card) => {
+            // אפקט לחיצה
+            card.addEventListener('mousedown', function() {
+                this.style.transform = 'scale(0.98)';
+            });
+
+            card.addEventListener('mouseup', function() {
+                this.style.transform = 'translateY(-8px)';
+            });
+
+            // חזרה למצב רגיל בסיום הלחיצה
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = '';
+            });
+        });
+    });
 </script>
 
-<!-- =======================
-     CSS בסוף הקובץ
-======================= -->
 <style>
-    /* כיוון טקסט כללי בעברית */
+    /* עיצוב כללי */
     body {
-        direction: rtl;
+        background-color: #f5f5f5;
         margin: 0;
         padding: 0;
-        font-family: "Alef", Arial, sans-serif; /* דוגמה לפונט עברי נעים */
+        direction: rtl;
+        font-family: 'Rubik', 'Heebo', 'Alef', Arial, sans-serif;
     }
 
-    /* מבנה כללי לאזור ה-Marketplace */
     .marketplace {
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
     }
-    .marketplace-header {
+
+    /* כותרת ראשית מעוצבת - הקטנת גודל */
+    .main-header {
         text-align: center;
-        margin-bottom: 20px;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 35px;
+        box-shadow: 0 10px 25px rgba(30, 60, 114, 0.2);
     }
 
-    /* תיבה עליונה של עסקאות ממתינות */
-    .pending-transactions-box {
-        background-color: #fff8c2;
-        border: 1px solid #f5d876;
-        border-radius: 8px;
-        padding: 15px 20px;
-        position: relative;
-        margin-bottom: 20px;
-        font-weight: bold;
-    }
-    .pending-transactions-box p {
-        margin: 0;
-    }
-    .close-btn {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        background: none;
-        border: none;
-        font-weight: bold;
-        font-size: 16px;
-        cursor: pointer;
-    }
-    .close-btn:hover {
-        color: #cc0000;
-    }
-    .pending-transactions-box.closing {
-        opacity: 0;
-        height: 0;
-        transition: opacity 0.3s ease, height 0.3s ease;
+    .main-header h1 {
+        font-size: 2.2em;
+        margin-bottom: 12px;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
     }
 
-    /* מספר הסלוטים הקיימים */
-    .slots-container {
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    .slots-available {
-        font-size: 1.2rem;
-        font-weight: bold;
-    }
-
-    /* כרטיסי הקופונים: תצוגה + מרכז */
-    .coupon-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: center; /* ממקם את הכרטיסים במרכז */
+    .welcome-message {
+        max-width: 750px;
         margin: 0 auto;
     }
 
-    .coupon-card {
-        width: 300px; /* גודל אחיד לכרטיס */
-        background-color: #f9f9f9;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        text-align: center;
-        transition: box-shadow 0.3s ease;
-        position: relative;
-    }
-    .coupon-card:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    .welcome-message p {
+        font-size: 1.1em;
+        margin: 8px 0;
+        line-height: 1.4;
     }
 
-    /* תמונת הלוגו והטקסט */
+    .primary-button {
+        display: inline-block;
+        padding: 10px 25px;
+        background-color: #ffcc00;
+        color: #1e3c72;
+        text-decoration: none;
+        border-radius: 50px;
+        font-weight: bold;
+        margin-top: 15px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    }
+
+    .primary-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        background-color: #ffd700;
+    }
+
+    /* תיבת התראות משופרת */
+    .pending-transactions-box {
+        background-color: #fff8e1;
+        border-right: 5px solid #f5d76e;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 18px 25px;
+        position: relative;
+        margin-bottom: 35px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .notification-content {
+        flex-grow: 1;
+    }
+
+    .pending-transactions-box p {
+        margin: 0;
+        font-size: 1.1em;
+        color: #333;
+    }
+
+    .highlight-count {
+        background-color: #1e3c72;
+        color: white;
+        padding: 3px 10px;
+        border-radius: 50px;
+        font-weight: bold;
+        margin: 0 3px;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        color: #666;
+    }
+
+    .close-btn:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+        color: #cc0000;
+    }
+
+    .pending-transactions-box.closing {
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.3s ease, transform 0.3s ease, height 0.3s ease;
+    }
+
+    /* מיכל שוק הקופונים */
+    .marketplace-container {
+        background-color: white;
+        border-radius: 15px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+    }
+
+    .section-header-marketplace h2 {
+        text-align: center;
+        font-size: 2em; /* מתאים את גודל הגופן לפי הצורך */
+        margin: 0; /* מסיר כל רווח ברירת מחדל מ-<h2> */
+        position: relative; /* נדרש למיקום ::after */
+        border-bottom: none; /* ביטול ה-border-bottom */
+    }
+    /* כותרת מדור בעמוד */
+    .section-header-marketplace {
+        text-align: center;
+        margin-bottom: 25px;
+        padding: 5px 0 20px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .section-header-marketplace h2 {
+        color: #1e3c72;
+        font-size: 2em;
+        margin-bottom: 5px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .sub-heading {
+        color: #555;
+        font-size: 1em;
+        margin: 0;
+    }
+
+    /* כרטיסי הצעות */
+    .offer-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 25px;
+        padding: 20px 10px;
+    }
+
+    .offer-card {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        overflow: hidden;
+        width: 300px;
+        transition: all 0.3s ease;
+        text-align: center;
+        padding: 20px;
+        position: relative;
+        border: 1px solid #e0e0e0;
+        cursor: pointer;
+    }
+
+    .offer-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 10px 20px rgba(30, 60, 114, 0.2);
+    }
+
+    .offer-ribbon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        padding: 5px 15px;
+        border-radius: 0 12px 0 12px;
+        font-size: 0.8em;
+        font-weight: bold;
+        box-shadow: -2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .request-ribbon {
+        background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+    }
+
+    .offer-icon {
+        font-size: 50px;
+        color: #2a5298;
+        margin: 15px 0;
+        transition: transform 0.3s;
+    }
+
+    .offer-card:hover .offer-icon {
+        transform: scale(1.2);
+    }
+
     .company-logo {
         max-height: 60px;
-        margin-bottom: 10px;
-    }
-    .company-name {
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    .coupon-name {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 5px;
+        margin: 15px auto;
+        display: block;
+        transition: transform 0.3s;
     }
 
-    /* מציין שזה הקופון שלי */
+    .offer-card:hover .company-logo {
+        transform: scale(1.1);
+    }
+
+    .offer-details {
+        padding: 5px 10px 15px;
+    }
+
+    .offer-title {
+        font-size: 2em;
+        margin: 0 0 10px;
+        color: #1e3c72;
+        font-weight: bold;
+    }
+
+    .request-card .offer-title {
+        color: #ff7e5f;
+    }
+
+    .offer-provider {
+        color: #666;
+        font-size: 0.95em;
+        margin: 10px 0;
+    }
+
+    .offer-values {
+        display: flex;
+        justify-content: space-around;
+        margin: 15px 0;
+    }
+
+    .original-value, .selling-price {
+        background-color: #f0f0f0;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.9em;
+        color: #333;
+    }
+
+    .original-value {
+        text-decoration: line-through;
+        color: #666;
+    }
+
+    .selling-price {
+        font-weight: bold;
+        color: #1e3c72;
+    }
+
+    /* שינוי עיצוב עבור "מוכן לשלם" בבקשות קופונים */
+    .coupon-requests .original-value {
+        text-decoration: none;
+        font-weight: bold;
+        color: #1e3c72;
+    }
+
+    .request-explanation {
+        margin: 15px 0;
+        font-style: italic;
+        color: #666;
+        background-color: #f8f8f8;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 0.9em;
+    }
+
     .your-coupon {
-        color: #a00;
+        color: #ff6b6b;
         font-weight: bold;
+        margin: 15px 0;
+        font-size: 0.9em;
+        padding: 5px;
+        background-color: #fff0f0;
+        border-radius: 5px;
     }
 
-    /* כפתורי פעולה */
+    .request-user, .request-company {
+        font-weight: bold;
+        color: #1e3c72;
+    }
+
+    .request-card .request-user,
+    .request-card .request-company {
+        color: #ff7e5f;
+    }
+
+    .offer-cta {
+        margin: 20px 0 10px;
+    }
+
     .action-button {
-        background-color: #007BFF;
+        display: inline-block;
+        padding: 12px 25px;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         color: #fff;
+        text-decoration: none;
+        border-radius: 50px;
+        transition: all 0.3s;
+        font-weight: bold;
+        box-shadow: 0 4px 8px rgba(30, 60, 114, 0.3);
         border: none;
-        border-radius: 4px;
-        padding: 10px 15px;
         cursor: pointer;
-        font-size: 0.9rem;
-        transition: background-color 0.3s ease;
-        margin-top: 10px;
     }
+
     .action-button:hover {
-        background-color: #0056b3;
+        background: linear-gradient(135deg, #162f50 0%, #204a6b 100%);
+        transform: scale(1.05);
+        box-shadow: 0 6px 12px rgba(30, 60, 114, 0.4);
     }
-    .action-button.danger {
-        background-color: #ccc;
+
+    .request-card .action-button {
+        background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+    }
+
+    .request-card .action-button:hover {
+        background: linear-gradient(135deg, #e66e50 0%, #e5a36c 100%);
+    }
+
+    .action-button.disabled {
+        background: #aaa;
         cursor: not-allowed;
     }
 
-    /* הודעה כשאין קופונים/בקשות */
-    .no-coupons, .no-requests {
+    .action-button.disabled:hover {
+        transform: none;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* חלק בקשות קופונים */
+    .coupon-requests {
+        margin-top: 50px;
+        padding-top: 20px;
+        border-top: 1px dashed #ccc;
+    }
+
+    /* אין נתונים */
+    .no-data-container {
         text-align: center;
-        font-weight: bold;
-        font-size: 1.1rem;
-        margin: 40px 0;
+        padding: 40px 20px;
     }
 
-    /* אזור בקשות לקופונים */
-    .coupon-section {
-        margin-top: 40px;
-    }
-    .coupon-section-title {
-        font-size: 1.5rem;
-        margin-bottom: 20px;
-        text-align: center;
+    .no-data-message {
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        padding: 30px;
+        display: inline-block;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
 
-    /* כרטיס הבקשות (מעט שונה מהקופונים למכירה) */
-    .request-card {
-        background-color: #fffefe;
+    .no-data-message i {
+        font-size: 50px;
+        color: #2a5298;
+        margin-bottom: 15px;
     }
 
-    /* טקסט הבקשה: שורת תיאור מורחבת עם אלמנטים מודגשים */
-    .request-details {
-        font-size: 1rem;
-        line-height: 1.6;
-        margin: 10px 0;
+    .no-data-message p {
+        color: #333;
+        font-size: 1.2em;
+        margin-bottom: 0;
     }
-    .request-user {
-        font-weight: bold;
-        color: #007BFF;
+
+    /* קישורי ניווט */
+    .navigation-links {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin: 40px 0 10px;
     }
-    .request-company {
-        font-weight: bold;
-        color: #007BFF;
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 12px 25px;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all 0.3s;
+        color: #1e3c72;
+        background: #f5f7fa;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        font-weight: 500;
     }
-    .request-cost, .request-value {
-        font-weight: 600;
+
+    .nav-link i {
+        margin-left: 10px;
+        font-size: 1.2em;
+    }
+
+    .nav-link:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(30, 60, 114, 0.2);
+        background: #e9ecf3;
+    }
+
+    .info-link {
+        color: #2a5298;
+    }
+
+    .home-link {
         color: #333;
     }
-    .request-discount {
-        color: #28a745;
-        font-weight: 600;
+
+    /* כרטיסים מתוזמנים לפג תוקף */
+    .ending-soon {
+        border: 2px solid #ff6b6b;
+        animation: pulse 1.5s infinite;
     }
-    .request-explanation {
-        margin-bottom: 10px;
-        font-style: italic;
-        color: #666;
+
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
     }
-    .your-request {
-        color: #a00;
-        font-weight: bold;
+
+    /* התאמה למובייל */
+    @media (max-width: 768px) {
+        .main-header {
+            padding: 20px 15px;
+        }
+
+        .main-header h1 {
+            font-size: 1.8em;
+        }
+
+        .welcome-message p {
+            font-size: 1em;
+        }
+
+        .pending-transactions-box {
+            padding: 15px;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+
+        .notification-content {
+            margin-bottom: 10px;
+        }
+
+        .marketplace-container {
+            padding: 20px 15px;
+        }
+
+        .offer-container {
+            gap: 15px;
+        }
+
+        .offer-card {
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .section-header-marketplace h2 {
+            font-size: 1.8em;
+        }
+
+        .navigation-links {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .offer-values {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .original-value, .selling-price {
+            width: 80%;
+            margin: 0 auto;
+        }
     }
 </style>
 {% endblock %}

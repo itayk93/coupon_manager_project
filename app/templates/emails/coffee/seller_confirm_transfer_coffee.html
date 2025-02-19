@@ -1,0 +1,10 @@
+{% extends "coffee/base_coffee.html" %}
+{% block title %}אישור העברת כסף - מוכר{% endblock %}
+{% block coffee_content %}
+<h2>אישור העברת כסף</h2>
+<p>אנא אשר שהכסף התקבל ושסיימת את העברת ההצעה.</p>
+<form method="post">
+    <button type="submit">אשר העברה</button>
+</form>
+<p><a href="{{ url_for('coffee.my_transactions') }}">← חזרה לעסקאות</a></p>
+{% endblock %}

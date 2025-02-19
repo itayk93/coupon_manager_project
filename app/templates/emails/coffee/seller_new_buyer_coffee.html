@@ -1,0 +1,7 @@
+{% extends "coffee/base_coffee.html" %}
+{% block coffee_content %}
+  <p>שלום {{ seller.first_name }},</p>
+  <p>{{ buyer.first_name }} {{ buyer.last_name }} מבקש לרכוש את הצעת הקפה שלך ({{ offer.discount_percent }}% הנחה).</p>
+  <p>אנא היכנס לחשבונך כדי לאשר את העסקה.</p>
+  <p><a href="{{ url_for('coffee.my_transactions', _external=True) }}">לחץ כאן לעסקאות</a></p>
+{% endblock %}

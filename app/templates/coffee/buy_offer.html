@@ -1,6 +1,6 @@
-<!-- app/templates/coffee/buy_offer.html -->
-{% extends "base.html" %}
+{% extends "coffee/base_coffee.html" %}
 {% block title %}רכישת הצעת קפה{% endblock %}
+
 {% block coffee_content %}
     <h2>רכישת ההצעה</h2>
     <p>הצעת ההנחה: {{ offer.discount_percent }}% הנחה – קבוצה: {{ offer.customer_group }}</p>
@@ -16,4 +16,6 @@
         <br>
         <button type="submit">שלח בקשת רכישה</button>
     </form>
+    <!-- קישור חזרה לעמוד הבית -->
+    <p><a href="{{ url_for('coffee.index') }}">← חזרה לעמוד הבית</a></p>
 {% endblock %}

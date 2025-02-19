@@ -1,7 +1,7 @@
-<!-- app/templates/coffee/transaction_detail.html -->
-{% extends "base.html" %}
+{% extends "coffee/base_coffee.html" %}
 {% block title %}פרטי עסקת קפה{% endblock %}
-{% block content %}
+
+{% block coffee_content %}
     <h2>פרטי עסקת הקפה</h2>
     <p><strong>הצעת הנחה:</strong> {{ transaction.coffee_offer.discount_percent }}% – קבוצה: {{ transaction.coffee_offer.customer_group }}</p>
     <p><strong>מחיר שסוכם לפני ההנחה:</strong> {{ transaction.negotiated_price_before or 'לא הוזן' }} ₪</p>
@@ -22,6 +22,8 @@
         </form>
     {% else %}
         <p>העסקה הושלמה.</p>
-        <p><a href="{{ url_for('coffee.review_seller', transaction_id=transaction.id) }}">השאר ביקורת על המוכר</a></p>
+        <p><a href="{{ url_for('coffee.review', transaction_id=transaction.id) }}">השאר ביקורת על המוכר</a></p>
     {% endif %}
+    <!-- קישור חזרה לעמוד הבית -->
+    <p><a href="{{ url_for('coffee.index') }}">← חזרה לעמוד הבית</a></p>
 {% endblock %}

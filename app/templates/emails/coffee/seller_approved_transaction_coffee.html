@@ -1,0 +1,7 @@
+{% extends "coffee/base_coffee.html" %}
+{% block coffee_content %}
+  <p>שלום {{ buyer.first_name }},</p>
+  <p>המוכר {{ seller.first_name }} אישר את העסקה עבור הצעת הקפה שלך.</p>
+  <p>אנא המתן לאישור סופי או אשר את ההעברה במידת הצורך.</p>
+  <p><a href="{{ url_for('coffee.my_transactions', _external=True) }}">לחץ כאן לעסקאות</a></p>
+{% endblock %}

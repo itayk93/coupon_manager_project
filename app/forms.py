@@ -898,15 +898,43 @@ from wtforms.validators import DataRequired, NumberRange, Optional
 
 from wtforms.fields import DateField  # ייבוא שדה תאריך
 
+# טפסים עבור תהליכי הצעות קפה
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, TextAreaField, SelectField, BooleanField, DecimalField, IntegerField, DateField, \
+    HiddenField
+from wtforms.validators import DataRequired, Optional, NumberRange
+
+
 class CoffeeOfferForm(FlaskForm):
-    discount_percent = DecimalField('אחוז הנחה', validators=[DataRequired(), NumberRange(min=0, max=100)], places=2)
-    customer_group = SelectField('קבוצת לקוח', choices=[
-        ('Connoisseur', 'Connoisseur – עד 5 שנים או עד 500 קפסולות'),
-        ('Expert', 'Expert – מעל 5 ועד 10 שנים או בין 500 ל-900 קפסולות'),
-        ('Ambassador', 'Ambassador – 10 שנים ומעלה או מעל 900 קפסולות')
-    ], validators=[DataRequired()])
-    points_offered = IntegerField('נקודות מועדון (אופציונלי)', validators=[Optional()])
-    offer_type = RadioField('סוג ההצעה', choices=[('sell', 'אני מציע הנחה (מוכר)'), ('buy', 'אני מחפש הנחה (קונה)')], default='sell')
-    expiration_date = DateField('תוקף ההנחה', format='%Y-%m-%d', validators=[DataRequired()])  # הוספת תאריך תוקף
-    description = TextAreaField('תיאור (אופציונלי)', validators=[Optional()])
-    submit = SubmitField('צור הצעה')
+    discount_percent = DecimalField("אחוז הנחה", validators=[Optional(), NumberRange(min=0, max=100)])
+    customer_group = SelectField("דרגת חבר מועדון", choices=[("Connoisseur", "Connoisseur"), ("Expert", "Expert"),
+                                                             ("Ambassador", "Ambassador")], validators=[Optional()])
+    points_offered = IntegerField("נקודות נספרסו", validators=[Optional()])
+    expiration_date = DateField("תאריך תפוגה", format="%Y-%m-%d", validators=[DataRequired()])
+    description = TextAreaField("תיאור", validators=[Optional()])
+
+    # ✅ השדות החסרים:
+    is_buy_offer = BooleanField("האם מדובר בבקשת רכישה?")
+    desired_discount = DecimalField("אחוז הנחה מבוקש", validators=[Optional(), NumberRange(min=0, max=100)])
+    buyer_description = TextAreaField("תיאור הבקשה", validators=[Optional()])
+
+    offer_type = HiddenField("offer_type")  # כדי לאחסן אם מדובר במוכר או קונה
+
+
+class ApproveCoffeeTransactionForm(FlaskForm):
+    seller_phone = StringField(
+        'מספר טלפון',
+        validators=[DataRequired(), Regexp(r'^0\d{2}-\d{7}$', message="פורמט: 0xx-xxxxxxx")]
+    )
+    submit = SubmitField('אשר עסקה')
+
+
+class SellerAddCoffeeOfferCodeForm(FlaskForm):
+    coffee_offer_code = StringField('קוד הצעת קפה', validators=[DataRequired(), Length(min=4, max=20)])
+    submit = SubmitField('שמור קוד הצעה')
+
+
+class CoffeeImageUploadForm(FlaskForm):
+    offer_image = FileField('העלה תמונה של הצעת הקפה', validators=[Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'רק קבצי תמונה מותרים!')])
+    submit_upload = SubmitField('העלה תמונה')

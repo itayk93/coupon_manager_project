@@ -1,114 +1,372 @@
 {% extends "coffee/base_coffee.html" %}
-
-{% block title %}הצע הנחה לקניית קפה{% endblock %}
+{% block title %}שוק ההנחות - קהילת הקפה הגדולה בישראל{% endblock %}
 
 {% block coffee_content %}
-<section class="offer-coffee-discount">
-    <h2>הצע הנחה לקניית קפה</h2>
-    <p>עמוד זה מאפשר לאנשים עם הנחות לעזור למשתמשים ללא הנחות לקנות קפה בזול. שים לב: המחירים ייקבעו בין הצדדים, והתוכנה אינה אחראית לעסקאות.</p>
-
-    <form method="post" class="styled-form">
-        {{ form.hidden_tag() }}  <!-- מוסיף CSRF Token לטופס -->
+    <section class="offer-coffee-discount">
+        <h2>הצטרפו לקהילת החיסכון בקפה!</h2>
+        <p class="intro-text">ברוכים הבאים למקום שבו אוהבי קפה עוזרים זה לזה! כאן תוכלו למצוא הנחות שוות במיוחד או להציע את ההטבות שלכם לחברי הקהילה. בנוסף, תוכלו לסחור בנקודות מועדון נספרסו ולהפוך אותן למתנות מהממות!</p>
 
         <div class="form-group">
-            <label for="discount_percent">אחוז הנחה (לדוגמה: 20):</label>
-            <input type="number" step="0.01" name="discount_percent" id="discount_percent" required class="input-field" aria-describedby="discount_help"> %
-            <small id="discount_help" class="form-text text-muted">הזן את אחוז ההנחה המוצע.</small>
-        </div>
-
-        <div class="form-group">
-            <label for="customer_group">קבוצת לקוח:</label>
-            <select name="customer_group" id="customer_group" required class="input-field" aria-describedby="group_help">
-                <option value="">בחר</option>
-                <option value="Connoisseur">Connoisseur – עד 5 שנים או עד 500 קפסולות</option>
-                <option value="Expert">Expert – מעל 5 ועד 10 שנים או בין 500 ל-900 קפסולות</option>
-                <option value="Ambassador">Ambassador – 10 שנים ומעלה או מעל 900 קפסולות</option>
-            </select>
-            <small id="group_help" class="form-text text-muted">בחר את קבוצת הלקוח המתאימה.</small>
-        </div>
-
-        <div class="form-group">
-            <label for="points_offered">נקודות מועדון (אופציונלי):</label>
-            <input type="number" name="points_offered" id="points_offered" class="input-field" aria-describedby="points_help">
-            <small id="points_help" class="form-text text-muted">הזן את מספר נקודות המועדון המוצעות, אם יש.</small>
-        </div>
-
-        <div class="form-group">
-            <label>סוג ההצעה:</label>
-            <div class="radio-group" aria-describedby="offer_type_help">
-                <input type="radio" name="offer_type" value="sell" id="offer_sell" checked>
-                <label for="offer_sell">אני מציע הנחה (מוכר)</label>
-                <input type="radio" name="offer_type" value="buy" id="offer_buy">
-                <label for="offer_buy">אני מחפש הנחה (קונה)</label>
+            <label class="choice-label">איך תרצו להשתתף היום?</label>
+            <div class="button-group">
+                <button type="button" class="offer-button" data-offer="sell">יש לי הנחה לחלוק 🎁</button>
+                <button type="button" class="offer-button" data-offer="buy">מחפש/ת הנחה מעולה ☕</button>
             </div>
-            <small id="offer_type_help" class="form-text text-muted">בחר את סוג ההצעה המתאימה.</small>
         </div>
 
-        <div class="form-group">
-            <label for="description">תיאור (אופציונלי):</label>
-            <textarea name="description" id="description" class="input-field" aria-describedby="description_help"></textarea>
-            <small id="description_help" class="form-text text-muted">הוסף תיאור נוסף להצעה, אם רצוי.</small>
-        </div>
+        <!-- שים לב: חשוב להוסיף action ל-URL המתאים, וכן שדה offer_type מוסתר -->
+        <form method="post" action="{{ url_for('coffee.offer_form') }}" class="styled-form" id="offer-form" style="display: none;">
+            {{ form.hidden_tag() }}
+            <input type="hidden" name="offer_type" id="offer_type" value="">
 
-        <div class="form-group">
-            <button type="submit" class="submit-button">צור הצעה</button>
-        </div>
-    </form>
-</section>
+            <!-- שדות עבור "מוכר" -->
+            <div id="seller-fields" style="display: none;">
+                <div class="form-group">
+                    <label class="group-label">בחר/י את דרגת ההנחה שלך:</label>
+                    <div class="button-group">
+                        <button type="button" class="group-button connoisseur" data-discount="10" data-group="Connoisseur">
+                            Connoisseur
+                            <span class="discount-badge">10% הנחה</span>
+                        </button>
+                        <button type="button" class="group-button expert" data-discount="15" data-group="Expert">
+                            Expert
+                            <span class="discount-badge">15% הנחה</span>
+                        </button>
+                        <button type="button" class="group-button ambassador" data-discount="20" data-group="Ambassador">
+                            Ambassador
+                            <span class="discount-badge">20% הנחה</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="discount_percent">אחוז ההנחה המוצע:</label>
+                    <input type="number" step="0.01" name="discount_percent" id="discount_percent" required
+                       class="input-field" aria-describedby="discount_help" min="0" max="100">
+                    <span class="input-suffix">%</span>
+                    <small id="discount_help" class="form-text">ההנחה תלויה בדרגת החברות שלך</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="customer_group">דרגת החברות שלך:</label>
+                    <select name="customer_group" id="customer_group" required class="input-field">
+                        <option value="">בחר/י דרגה</option>
+                        <option value="Connoisseur">Connoisseur</option>
+                        <option value="Expert">Expert</option>
+                        <option value="Ambassador">Ambassador</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="points_offered">נקודות נספרסו למתנה:</label>
+                    <input type="number" name="points_offered" id="points_offered" class="input-field" min="0" aria-describedby="points_help">
+                    <small id="points_help" class="form-text">יש לך נקודות נספרסו? ציין/י כמה נקודות את/ה מוכן/ה להציע כמתנה</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">ספר/י לנו על ההצעה שלך:</label>
+                    <textarea name="description" id="description" class="input-field" aria-describedby="description_help"></textarea>
+                    <small id="description_help" class="form-text">למשל: זמינות, העדפות לגבי סוגי קפה, או כל מידע חשוב אחר</small>
+                </div>
+            </div>
+
+            <!-- שדות עבור "קונה" -->
+            <div id="buyer-fields" style="display: none;">
+                <div class="form-group">
+                    <label for="desired_discount">מהו אחוז ההנחה המבוקש?</label>
+                    <input type="number" step="0.01" name="desired_discount" id="desired_discount"
+                           class="input-field" aria-describedby="desired_discount_help" min="0" max="100">
+                    <span class="input-suffix">%</span>
+                    <small id="desired_discount_help" class="form-text">טיפ: ההנחות הנפוצות הן 10%, 15% ו-20% בהתאם לדרגות החברות</small>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="interested_in_points" id="interested_in_points" class="styled-checkbox">
+                    <label for="interested_in_points">אשמח לשמוע גם על הצעות הכוללות מתנות מנקודות נספרסו 🎁</label>
+                </div>
+
+                <div class="form-group">
+                    <label for="buyer_description">פרטים נוספים על הבקשה שלך:</label>
+                    <textarea name="buyer_description" id="buyer_description" class="input-field" aria-describedby="buyer_description_help"></textarea>
+                    <small id="buyer_description_help" class="form-text">ספר/י לנו מה את/ה מחפש/ת - סוגי קפה מועדפים, כמויות, או כל מידע רלוונטי אחר</small>
+                </div>
+            </div>
+
+            <!-- תאריך תפוגה (רצוי בכל מקרה, כי בעמודת המודל זה לא NULL) -->
+            <div class="form-group">
+                <label for="expiration_date">תאריך תפוגה:</label>
+                <input type="date" name="expiration_date" id="expiration_date" class="input-field" required>
+                <small id="expiration_help" class="form-text">מתי ההנחה פג תוקף?</small>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="submit-button">פרסם את ההצעה 🚀</button>
+            </div>
+        </form>
+    </section>
+
+    <p class="back-link"><a href="{{ url_for('coffee.index') }}">← חזרה לדף הבית</a></p>
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}
-<style>
-    .offer-coffee-discount {
-        max-width: 600px;
-        margin: auto;
-        padding: 20px;
-        border-radius: 10px;
-        background: #f9f9f9;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-    }
+    {{ super() }}
+    <style>
+        .offer-coffee-discount {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            border-radius: 15px;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
 
-    .styled-form .form-group {
-        margin-bottom: 15px;
-    }
+        .intro-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 2rem;
+        }
 
-    .styled-form label {
-        font-weight: bold;
-    }
+        .choice-label {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1rem;
+            display: block;
+        }
 
-    .input-field {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        font-size: 1rem;
-    }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 1.5rem;
+        }
 
-    .radio-group {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
+        .offer-button {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
 
-    .submit-button {
-        background: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 1rem;
-        width: 100%;
-    }
+        .offer-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
 
-    .submit-button:hover {
-        background: #45a049;
-    }
+        .group-button {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            background: #f8f9fa;
+            color: #333;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: center;
+        }
 
-    .form-text {
-        font-size: 0.875rem;
-        color: #6c757d;
-    }
-</style>
+        .group-button:hover {
+            background: #e9ecef;
+        }
+
+        .group-button.connoisseur { border-left: 4px solid #bronze; }
+        .group-button.expert { border-left: 4px solid #silver; }
+        .group-button.ambassador { border-left: 4px solid #gold; }
+
+        .discount-badge {
+            background: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .input-field:focus {
+            border-color: #1e3c72;
+            outline: none;
+        }
+
+        .input-suffix {
+            margin-left: 0.5rem;
+            color: #666;
+        }
+
+        .form-text {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .styled-checkbox {
+            width: 20px;
+            height: 20px;
+        }
+
+        .submit-button {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            width: 100%;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.2);
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .back-link a {
+            color: #666;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .back-link a:hover {
+            color: #1e3c72;
+        }
+    </style>
+
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // ✅ קובע את תאריך התפוגה כברירת מחדל לסוף החודש
+            function setEndOfMonth() {
+                let today = new Date();
+                let year = today.getFullYear();
+                let month = today.getMonth() + 1; // כי חודשים ב-JS מתחילים מ-0
+                let lastDay = new Date(year, month, 0); // היום האחרון של החודש הנוכחי
+
+                // ✅ קביעת תאריך בפורמט YYYY-MM-DD בלי תלות ב-UTC
+                let formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+
+                document.getElementById("expiration_date").value = formattedDate; // קביעת ברירת המחדל
+            }
+
+            // קריאה לפונקציה כאשר הדף נטען
+            setEndOfMonth();
+
+            // ✅ פונקציה להגבלת ערכים בתיבות ההנחה עם הצגת התראה במקום שינוי אוטומטי
+            function enforceMaxValue(input) {
+                input.addEventListener("input", function() {
+                    if (this.value > 100) {
+                        alert("🔴 לא ניתן להזין ערך מעל 100%");
+                        this.value = 100;
+                    } else if (this.value < 0) {
+                        alert("🔴 לא ניתן להזין ערך מתחת ל-0%");
+                        this.value = 0;
+                    }
+                });
+            }
+
+            // הוספת ההגבלה לשדות הרלוונטיים
+            enforceMaxValue(document.getElementById("discount_percent"));
+            enforceMaxValue(document.getElementById("desired_discount"));
+
+            // ✅ מאזין לכפתורי בחירת סוג ההצעה (מוכר או קונה)
+            document.querySelectorAll('.offer-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    // הסרת הדגשה מכל הכפתורים
+                    document.querySelectorAll('.offer-button').forEach(btn => {
+                        btn.style.opacity = '0.7';
+                    });
+                    // הדגשת הכפתור הנבחר
+                    this.style.opacity = '1';
+
+                    // הצגת הטופס
+                    document.getElementById('offer-form').style.display = 'block';
+
+                    // קביעת סוג ההצעה בהתאם ללחיצה
+                    const offerType = this.getAttribute('data-offer');
+                    document.getElementById('offer_type').value = offerType;
+
+                    // הצגת השדות הרלוונטיים בלבד
+                    if (offerType === 'sell') {
+                        document.getElementById('seller-fields').style.display = 'block';
+                        document.getElementById('buyer-fields').style.display = 'none';
+                        document.getElementById("desired_discount").removeAttribute("required");
+                    } else if (offerType === 'buy') {
+                        document.getElementById('seller-fields').style.display = 'none';
+                        document.getElementById('buyer-fields').style.display = 'block';
+                        document.getElementById("desired_discount").setAttribute("required", "required");
+                    }
+                });
+            });
+
+            // ✅ מאזין לכפתורי בחירת דרגת הנחה (Connoisseur/Expert/Ambassador)
+            document.querySelectorAll('.group-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    // הסרת סימון active מכל הכפתורים
+                    document.querySelectorAll('.group-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    // סימון הכפתור שנבחר כ-active
+                    this.classList.add('active');
+
+                    // עדכון שדות הטופס בהתאם לדרגה שנבחרה
+                    document.getElementById('discount_percent').value = this.getAttribute('data-discount');
+                    document.getElementById('customer_group').value = this.getAttribute('data-group');
+                });
+            });
+
+            // ✅ מאזין לכפתור השליחה של הטופס עם בדיקות תקינות
+            const submitButton = document.querySelector(".submit-button");
+            if (submitButton) {
+                submitButton.addEventListener("click", function(event) {
+                    let discountInput = document.getElementById("discount_percent");
+                    let desiredDiscountInput = document.getElementById("desired_discount");
+
+                    // בדיקת תקינות לפני שליחת הטופס
+                    if (discountInput && discountInput.value > 100) {
+                        alert("🔴 אחוז ההנחה שהוזן גבוה מ-100%");
+                        event.preventDefault();
+                        return;
+                    }
+                    if (desiredDiscountInput && desiredDiscountInput.value > 100) {
+                        alert("🔴 אחוז ההנחה המבוקש גבוה מ-100%");
+                        event.preventDefault();
+                        return;
+                    }
+
+                    console.log("🚀 Button clicked! Submitting form...");
+                    document.querySelector("#offer-form").submit();
+                });
+            }
+        });
+    </script>
+
 {% endblock %}
