@@ -24,7 +24,7 @@ class CoffeeOffer(db.Model):
     """טבלת הצעות קפה."""
     __tablename__ = 'coffee_offer'
     id = db.Column(db.Integer, primary_key=True)
-    discount_percent = db.Column(db.Float, nullable=False)
+    discount_percent = db.Column(db.Float, nullable=True, default=0)
     customer_group = db.Column(db.String(50), nullable=False)
     points_offered = db.Column(db.Integer, nullable=True)
     offer_type = db.Column(db.String(10), nullable=False, default='sell')

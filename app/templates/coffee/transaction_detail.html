@@ -2,28 +2,185 @@
 {% block title %}פרטי עסקת קפה{% endblock %}
 
 {% block coffee_content %}
+<section class="transaction-details">
     <h2>פרטי עסקת הקפה</h2>
-    <p><strong>הצעת הנחה:</strong> {{ transaction.coffee_offer.discount_percent }}% – קבוצה: {{ transaction.coffee_offer.customer_group }}</p>
-    <p><strong>מחיר שסוכם לפני ההנחה:</strong> {{ transaction.negotiated_price_before or 'לא הוזן' }} ₪</p>
-    <p><strong>מחיר שסוכם אחרי ההנחה:</strong> {{ transaction.negotiated_price_after or 'לא הוזן' }} ₪</p>
-    {% if transaction.points_used %}
-        <p><strong>נקודות שהשתמשו:</strong> {{ transaction.points_used }}</p>
-    {% endif %}
+    <div class="transaction-info">
+        <div class="info-row">
+            <strong>הצעת הנחה:</strong>
+            <span>{{ transaction.coffee_offer.discount_percent }}% – קבוצה: {{ transaction.coffee_offer.customer_group }}</span>
+        </div>
+        <div class="info-row">
+            <strong>מחיר שסוכם לפני ההנחה:</strong>
+            <span>{{ transaction.negotiated_price_before or 'לא הוזן' }} ₪</span>
+        </div>
+        <div class="info-row">
+            <strong>מחיר שסוכם אחרי ההנחה:</strong>
+            <span>{{ transaction.negotiated_price_after or 'לא הוזן' }} ₪</span>
+        </div>
+        {% if transaction.points_used %}
+        <div class="info-row">
+            <strong>נקודות שהשתמשו:</strong>
+            <span>{{ transaction.points_used }}</span>
+        </div>
+        {% endif %}
+    </div>
+
     {% if transaction.status != 'completed' %}
+    <div class="transaction-form">
         <h3>עדכן פרטי עסקה והשלם עסקה</h3>
         <form method="post">
-            <label for="negotiated_price_before">מחיר לפני ההנחה:</label>
-            <input type="number" step="0.01" name="negotiated_price_before" required value="{{ transaction.negotiated_price_before or '' }}">
-            <br>
-            <label for="negotiated_price_after">מחיר אחרי ההנחה:</label>
-            <input type="number" step="0.01" name="negotiated_price_after" required value="{{ transaction.negotiated_price_after or '' }}">
-            <br>
-            <button type="submit">עדכן והשלם עסקה</button>
+            <div class="form-group">
+                <label for="negotiated_price_before">מחיר לפני ההנחה:</label>
+                <input type="number"
+                       step="0.01"
+                       name="negotiated_price_before"
+                       required
+                       value="{{ transaction.negotiated_price_before or '' }}"
+                       class="form-input">
+            </div>
+            <div class="form-group">
+                <label for="negotiated_price_after">מחיר אחרי ההנחה:</label>
+                <input type="number"
+                       step="0.01"
+                       name="negotiated_price_after"
+                       required
+                       value="{{ transaction.negotiated_price_after or '' }}"
+                       class="form-input">
+            </div>
+            <button type="submit" class="action-button">עדכן והשלם עסקה</button>
         </form>
+    </div>
     {% else %}
+    <div class="transaction-completed">
         <p>העסקה הושלמה.</p>
-        <p><a href="{{ url_for('coffee.review', transaction_id=transaction.id) }}">השאר ביקורת על המוכר</a></p>
+        <p><a href="{{ url_for('coffee.review', transaction_id=transaction.id) }}" class="action-button">השאר ביקורת על המוכר</a></p>
+    </div>
     {% endif %}
-    <!-- קישור חזרה לעמוד הבית -->
-    <p><a href="{{ url_for('coffee.index') }}">← חזרה לעמוד הבית</a></p>
+
+    <div class="back-link">
+        <a href="{{ url_for('coffee.index') }}" class="action-button">← חזרה לעמוד הבית</a>
+    </div>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    :root {
+        --primary-color: #007bff;
+        --secondary-color: #6c757d;
+        --accent-color: #0056b3;
+        --danger-color: #dc3545;
+        --light-gray: #ddd;
+        --text-color: #333;
+        --background-light: #f8f9fa;
+    }
+
+    body {
+        direction: rtl;
+    }
+
+    .transaction-details {
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .transaction-details h2 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: var(--primary-color);
+    }
+
+    .transaction-details h3 {
+        color: var(--secondary-color);
+        margin: 20px 0;
+    }
+
+    .transaction-info {
+        background-color: var(--background-light);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--light-gray);
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-row strong {
+        color: var(--secondary-color);
+    }
+
+    .transaction-form {
+        background-color: var(--background-light);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--text-color);
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid var(--light-gray);
+        border-radius: 4px;
+        font-size: 1em;
+    }
+
+    .action-button {
+        display: inline-block;
+        padding: 8px 16px;
+        background-color: var(--primary-color);
+        color: #fff;
+        text-decoration: none;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background-color 0.3s;
+    }
+
+    .action-button:hover {
+        background-color: var(--accent-color);
+        text-decoration: none;
+        color: #fff;
+    }
+
+    .transaction-completed {
+        text-align: center;
+        margin: 20px 0;
+    }
+
+    .back-link {
+        text-align: center;
+        margin-top: 30px;
+    }
+
+    @media (max-width: 768px) {
+        .transaction-details {
+            padding: 10px;
+        }
+
+        .info-row {
+            flex-direction: column;
+            gap: 5px;
+        }
+    }
+</style>
 {% endblock %}

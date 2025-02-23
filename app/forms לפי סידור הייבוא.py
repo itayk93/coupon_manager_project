@@ -1,28 +1,117 @@
-# Flask-WTF
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, DecimalField, DateField, TextAreaField, SelectField, FileField
+from wtforms.validators import DataRequired, Email, Length, EqualTo
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
-
-# WTForms - שדות (Fields)
 from wtforms import (
-    StringField, PasswordField, SubmitField, BooleanField, DecimalField,
-    DateField, TextAreaField, SelectField, SelectMultipleField, HiddenField,
-    IntegerField, FloatField, FieldList, FormField, RadioField
+    SubmitField, StringField, DecimalField, TextAreaField, BooleanField,
+    DateField, SelectMultipleField, widgets, HiddenField, PasswordField,
+    IntegerField, SelectField, FloatField, FieldList, FormField
 )
-
-# WTForms - וולידציות (Validators)
 from wtforms.validators import (
-    DataRequired, Optional, Email, EqualTo, InputRequired, Length,
-    NumberRange, Regexp, ValidationError, URL
+    DataRequired, Optional, Email, EqualTo, InputRequired, Length, NumberRange
+)
+from wtforms import Form  # Importing Form for subforms
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed, FileRequired
+from wtforms import (
+    SubmitField, StringField, DecimalField, TextAreaField, BooleanField,
+    DateField, HiddenField, FloatField, FieldList, FormField
+)
+from wtforms.validators import DataRequired, Optional, Email, EqualTo, InputRequired, Length, NumberRange
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired, Length, Optional
+from flask_wtf.file import FileField, FileAllowed
+
+# forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import (
+    SubmitField, StringField, DecimalField, TextAreaField, BooleanField,
+    DateField, SelectField, FloatField, IntegerField, HiddenField
+)
+from wtforms.validators import (
+    DataRequired, Optional, Email, EqualTo, InputRequired, Length, NumberRange
+)
+from wtforms.validators import DataRequired, Optional, Length, NumberRange, Regexp
+
+# forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import (
+    SubmitField, StringField, DecimalField, TextAreaField, BooleanField,
+    DateField, SelectField, FloatField, IntegerField, HiddenField
+)
+from wtforms.validators import (
+    DataRequired, Optional, Email, EqualTo, InputRequired, Length, NumberRange
 )
 
-# WTForms - ווידג'טים (Widgets)
-from wtforms import widgets
+# forms.py
+from flask_wtf import FlaskForm
+from wtforms import (
+    StringField, FloatField, TextAreaField, BooleanField, DateField, SelectField, SubmitField
+)
+from wtforms.validators import DataRequired, Optional, Length, NumberRange
 
-# ייבוא משלים
-from wtforms.fields import DateField  # ייבוא נוסף של שדה תאריך
+from flask_wtf import FlaskForm
+from wtforms import (
+    SubmitField, StringField, DecimalField, TextAreaField, BooleanField,
+    DateField, SelectField
+)
+from wtforms.validators import (
+    DataRequired, Optional, Length, NumberRange
+)
 
-# מודלים נוספים
-from app.models import Coupon
+from flask_wtf import FlaskForm
+from wtforms import StringField, DecimalField, SubmitField, SelectField
+from wtforms.validators import DataRequired, Optional
+
+# forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import (
+    SubmitField, StringField, SelectField, FloatField, DecimalField
+)
+from wtforms.validators import (
+    DataRequired, Optional, Length, NumberRange, ValidationError
+)
+
+from flask_wtf import FlaskForm
+from wtforms import SubmitField
+
+# forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import FloatField, SubmitField
+from wtforms.validators import DataRequired, NumberRange
+
+# forms.py
+# forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import SubmitField
+
+from flask_wtf import FlaskForm
+from wtforms import TextAreaField, SubmitField
+from wtforms.validators import DataRequired
+
+from flask_wtf import FlaskForm
+from wtforms import SubmitField
+from flask_wtf import FlaskForm
+from wtforms import StringField, SelectField, FloatField, BooleanField, DateField, FormField, FieldList
+from wtforms.validators import DataRequired, Optional
+
+from flask_wtf import FlaskForm
+from wtforms import (
+    SubmitField, StringField, DecimalField, TextAreaField, BooleanField,
+    DateField, SelectField, FloatField
+)
+from wtforms.validators import DataRequired, Optional, Length, NumberRange, ValidationError
+
+
+# forms.py
 
 
 class CouponForm(FlaskForm):
@@ -190,7 +279,6 @@ class BulkCouponForm(FlaskForm):
         ]
     )
 
-
 class AddCouponsBulkForm(FlaskForm):
     coupons = FieldList(FormField(CouponForm), min_entries=1)
     cvv = StringField('CVV', validators=[Optional()])
@@ -225,6 +313,8 @@ class DeleteCouponsForm(FlaskForm):
     )
     submit = SubmitField('מחק קופונים')
 
+
+# forms.py
 
 class SellCouponForm(FlaskForm):
     company_select = SelectField(
@@ -323,7 +413,6 @@ class SellCouponForm(FlaskForm):
             return False
         return True
 
-
 class EditCouponForm(FlaskForm):
     company_id = SelectField("חברה", choices=[], validators=[DataRequired()])
     other_company = StringField("חברה אחרת")
@@ -358,6 +447,8 @@ class EditCouponForm(FlaskForm):
 
     submit = SubmitField('שמור שינויים')
 
+
+# forms.py
 
 class RegisterForm(FlaskForm):
     first_name = StringField('שם פרטי', validators=[DataRequired(), Length(min=2, max=150)])
@@ -406,6 +497,9 @@ class ProfileForm(FlaskForm):
     submit = SubmitField('שמור')
 
 
+from app.models import Coupon
+from wtforms.validators import DataRequired, Optional, Length, Regexp, ValidationError
+
 class ApproveTransactionForm(FlaskForm):
     seller_phone = StringField(
         'מספר טלפון',
@@ -440,6 +534,10 @@ class ApproveTransactionForm(FlaskForm):
             raise ValidationError('קוד קופון זה כבר קיים. אנא בחר קוד אחר.')
 
 
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired, Length, Regexp, Optional
+
 class SellerAddCouponCodeForm(FlaskForm):
     coupon_code = StringField(
         'קוד קופון',
@@ -464,7 +562,6 @@ class SellerAddCouponCodeForm(FlaskForm):
     )
     submit = SubmitField('שמור קוד קופון')
 
-
 class MarkCouponAsUsedForm(FlaskForm):
     submit = SubmitField('סמן כנוצל')
 
@@ -478,6 +575,18 @@ class BuySlotsForm(FlaskForm):
     slot_amount = HiddenField('slot_amount', validators=[DataRequired()])
     submit = SubmitField('רכישת סלוטים')
 
+
+# forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import (
+    SubmitField, StringField, DecimalField, SelectField
+)
+from wtforms.validators import DataRequired, Optional, Length, NumberRange
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, DecimalField, TextAreaField, SelectField, SubmitField
+from wtforms.validators import DataRequired, Optional, Length, NumberRange
 
 class RequestCouponForm(FlaskForm):
     company = SelectField(
@@ -542,10 +651,8 @@ class RequestCouponForm(FlaskForm):
 
         return True
 
-
 class UpdateMultipassForm(FlaskForm):
     submit = SubmitField('עדכון נתונים מ-Multipass')
-
 
 class SMSInputForm(FlaskForm):
     sms_text = TextAreaField('תוכן ההודעה שהתקבלה ב-SMS:', validators=[Optional()])
@@ -555,11 +662,13 @@ class SMSInputForm(FlaskForm):
 class DeleteCouponRequestForm(FlaskForm):
     submit = SubmitField('מחק בקשה')
 
+from flask_wtf import FlaskForm
+from wtforms import FileField, SubmitField
+from wtforms.validators import DataRequired
 
 class ImageUploadForm(FlaskForm):
     image_file = FileField('בחר תמונה', validators=[Optional()])
     submit_image = SubmitField('שלח תמונה')
-
 
 class UploadImageForm(FlaskForm):
     coupon_image = FileField(
@@ -571,10 +680,12 @@ class UploadImageForm(FlaskForm):
     )
     submit_upload_image = SubmitField('שלח תמונה')
 
+# forms.py
+from flask_wtf import FlaskForm
+from wtforms import SubmitField
 
 class MarkCouponAsFullyUsedForm(FlaskForm):
     submit = SubmitField('סימן הקופון כ"נוצל לגמרי"')
-
 
 class TagManagementForm(FlaskForm):
     name = StringField(
@@ -586,11 +697,19 @@ class TagManagementForm(FlaskForm):
     )
     submit = SubmitField('צור תגית חדשה')
 
+# forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import SubmitField, HiddenField
+from wtforms.validators import DataRequired
 
 class DeleteTagForm(FlaskForm):
     tag_id = HiddenField('Tag ID', validators=[DataRequired()])
     submit = SubmitField('מחק תגית')
 
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField, HiddenField
+from wtforms.validators import DataRequired, Length
 
 class CompanyManagementForm(FlaskForm):
     name = StringField(
@@ -602,11 +721,17 @@ class CompanyManagementForm(FlaskForm):
     )
     submit = SubmitField('צור חברה חדשה')
 
-
 class DeleteCompanyForm(FlaskForm):
     company_id = HiddenField('Company ID', validators=[DataRequired()])
     submit = SubmitField('מחק חברה')
 
+from flask_wtf import FlaskForm
+from wtforms import SelectField, SubmitField, HiddenField
+from wtforms.validators import DataRequired
+
+from flask_wtf import FlaskForm
+from wtforms import SelectField, SubmitField
+from wtforms.validators import DataRequired
 
 class CouponTagForm(FlaskForm):
     coupon_id = SelectField(
@@ -621,6 +746,11 @@ class CouponTagForm(FlaskForm):
     )
     submit = SubmitField('עדכן תגית')
 
+# app/forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import SelectField, HiddenField, SubmitField
+from wtforms.validators import DataRequired
 
 class ManageCouponTagForm(FlaskForm):
     coupon_id = HiddenField('Coupon ID', validators=[DataRequired()])
@@ -628,6 +758,12 @@ class ManageCouponTagForm(FlaskForm):
     submit = SubmitField('עדכן תגית')
     auto_download_details = SelectField("הורדה אוטומטית", choices=[], coerce=str)  # שדה חדש
 
+# app/forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, TextAreaField, SubmitField, IntegerField, FileField
+from wtforms.validators import DataRequired, NumberRange, Optional
+from flask_wtf.file import FileAllowed
 
 class UserProfileForm(FlaskForm):
     """
@@ -655,6 +791,11 @@ class RateUserForm(FlaskForm):
     comment = TextAreaField('הערה (אופציונלי)', validators=[Optional()])
     submit = SubmitField('שלח דירוג')
 
+# forms.py
+
+from flask_wtf import FlaskForm
+from wtforms import IntegerField, TextAreaField, SubmitField
+from wtforms.validators import DataRequired, NumberRange, Optional
 
 class ReviewSellerForm(FlaskForm):
     rating = IntegerField(
@@ -667,6 +808,12 @@ class ReviewSellerForm(FlaskForm):
     comment = TextAreaField('הערה (אופציונלי)', validators=[Optional()])
     submit = SubmitField('שלח ביקורת')
 
+# app/forms.py
+from flask_wtf import FlaskForm
+from wtforms import (
+    StringField, FloatField, RadioField, TextAreaField, SelectField, SubmitField
+)
+from wtforms.validators import DataRequired, Optional, Length, NumberRange
 
 class OfferCouponForm(FlaskForm):
     seller_message = TextAreaField(
@@ -708,11 +855,13 @@ class OfferCouponForm(FlaskForm):
 
     submit = SubmitField("שלח הצעה")
 
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Email, EqualTo, Length
 
 class ForgotPasswordForm(FlaskForm):
     email = StringField('אימייל', validators=[DataRequired(), Email(message="כתובת אימייל לא תקינה")])
     submit = SubmitField('שליחת הבקשה לשחזור הסיסמה')
-
 
 class ResetPasswordForm(FlaskForm):
     password = PasswordField('סיסמה חדשה', validators=[
@@ -725,17 +874,36 @@ class ResetPasswordForm(FlaskForm):
     ])
     submit = SubmitField('אפס סיסמה')
 
-
+# forms.py
 class UsageExplanationForm(FlaskForm):
     usage_explanation = TextAreaField('פירוט שימוש', validators=[DataRequired()])
     submit_usage_explanation = SubmitField('שלח')
 
+from flask_wtf import FlaskForm
+from wtforms import TextAreaField, SubmitField
+from wtforms.validators import DataRequired
+from flask_wtf import FlaskForm
+from wtforms import TextAreaField, StringField, SubmitField
+from wtforms.validators import DataRequired, Optional, URL
 
 class AdminMessageForm(FlaskForm):
     message_text = TextAreaField("תוכן ההודעה", validators=[DataRequired()])
     link_url = StringField("קישור (אופציונלי)", validators=[Optional(), URL(message="כתובת לא תקינה")])
     link_text = StringField("טקסט לכפתור (אופציונלי)", validators=[Optional()])
     submit = SubmitField("שמור הודעה")
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, SelectField, TextAreaField, DecimalField, IntegerField, RadioField, SubmitField
+from wtforms.validators import DataRequired, NumberRange, Optional
+
+from wtforms.fields import DateField  # ייבוא שדה תאריך
+
+# טפסים עבור תהליכי הצעות קפה
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, TextAreaField, SelectField, BooleanField, DecimalField, IntegerField, DateField, \
+    HiddenField
+from wtforms.validators import DataRequired, Optional, NumberRange
 
 
 class CoffeeOfferForm(FlaskForm):
@@ -772,17 +940,28 @@ class SellerAddCoffeeOfferCodeForm(FlaskForm):
 
 
 class CoffeeImageUploadForm(FlaskForm):
-    offer_image = FileField('העלה תמונה של הצעת הקפה', validators=[Optional(),
-                                                                   FileAllowed(['jpg', 'jpeg', 'png', 'gif'],
-                                                                               'רק קבצי תמונה מותרים!')])
+    offer_image = FileField('העלה תמונה של הצעת הקפה', validators=[Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'רק קבצי תמונה מותרים!')])
     submit_upload = SubmitField('העלה תמונה')
 
+# app/forms.py
+from flask_wtf import FlaskForm
+
+from flask_wtf import FlaskForm
+from wtforms import SubmitField
 
 class DeleteOfferForm(FlaskForm):
     submit = SubmitField("מחק הצעה")
 
+from flask_wtf import FlaskForm
+from wtforms import SubmitField
 
 class ConfirmTransferForm(FlaskForm):
     """טופס אישור העברה כספית על ידי הקונה"""
     submit = SubmitField('אשר העברה')
 
+from flask_wtf import FlaskForm
+from wtforms import SubmitField
+
+class ConfirmTransferForm(FlaskForm):
+    """טופס אישור העברה כספית"""
+    submit = SubmitField('אשר העברה')

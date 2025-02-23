@@ -198,7 +198,7 @@
                     <tr>
                         <td>
                             {% if row.timestamp %}
-                                {{ row.timestamp|to_israel_time }}
+                                {{ row.timestamp }}
                             {% else %}
                                 -
                             {% endif %}
@@ -277,13 +277,43 @@
         evt.currentTarget.classList.add("active");
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         var defaultTab = document.querySelector(".tab-button.active");
         if (defaultTab) {
             var tabName = defaultTab.getAttribute("onclick").split("'")[1];
             document.getElementById(tabName).classList.add("active");
         }
+
+        // המרת פורמט התאריך בטבלה
+        document.querySelectorAll(".transaction-table td:first-child").forEach(function (cell) {
+            let originalText = cell.textContent.trim();
+
+            // בדיקה שהתאריך בפורמט הצפוי (YYYY-MM-DD HH:MM:SS)
+            let match = originalText.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+            if (match) {
+                let year = match[1];
+                let month = match[2];
+                let day = match[3];
+                let hours = match[4];
+                let minutes = match[5];
+
+                // יצירת פורמט חדש DD/MM/YYYY HH:MM
+                let formattedDate = `${day}/${month}/${year} ${hours}:${minutes}`;
+                cell.textContent = formattedDate;
+            }
+        });
     });
 </script>
+<style>
+    .transaction-table td:first-child {
+        direction: ltr; /* שומר שהתאריך והשעה יהיו מסודרים נכון */
+        unicode-bidi: plaintext; /* מונע ערבוב בין עברית לאנגלית */
+    }
+
+    .transaction-table td:nth-child(2) {
+        direction: ltr; /* מבטיח שהמספרים יישארו בכיוון נכון */
+    }
+</style>
+
 {% endblock %}
 

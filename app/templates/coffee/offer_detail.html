@@ -3,7 +3,7 @@
 
 {% block coffee_content %}
 <section class="offer-detail-section">
-    <div class="section-header">
+    <div class="offer-section-header">
         <h2>פרטי הצעת הקפה</h2>
         <p class="sub-heading">גלה את כל הפרטים על ההנחה המיוחדת הזו</p>
     </div>
@@ -28,86 +28,98 @@
             </div>
         </div>
 
-        <div class="offer-attributes">
+        <div class="offer-attributes-center">
             <div class="attribute-item">
-                <div class="attribute-icon"><i class="fa fa-users" aria-hidden="true"></i></div>
-                <div class="attribute-content">
-                    <h4>קבוצת לקוח</h4>
-                    <p>{{ offer.customer_group }}</p>
+                <div class="attribute-icon">
+                    <i class="fa fa-star" aria-hidden="true"></i>
                 </div>
-            </div>
-
-            {% if offer.points_offered %}
-            <div class="attribute-item">
-                <div class="attribute-icon"><i class="fa fa-star" aria-hidden="true"></i></div>
                 <div class="attribute-content">
                     <h4>נקודות מועדון</h4>
-                    <p>{{ offer.points_offered }} נקודות</p>
+                    {% if offer.points_offered is not none %}
+                        {% if offer.user.gender == 'male' %}
+                            <p>ל{{ offer.user.first_name }} יש {{ offer.points_offered }} נקודות שהוא מוכן שתשתמש בהן</p>
+                        {% else %}
+                            <p>ל{{ offer.user.first_name }} יש {{ offer.points_offered }} נקודות שהיא מוכנה שתשתמש בהן</p>
+                     {% endif %}
+                    {% else %}
+                        <!-- כאן טקסט חלופי כשהערך None -->
+                        {% if offer.user.gender == 'male' %}
+                            <p>ל{{ offer.user.first_name }} אין נקודות פנויות שהוא יכול להציע</p>
+                        {% else %}
+                            <p>ל{{ offer.user.first_name }} אין נקודות פנויות שהיא יכולה להציע</p>
+                        {% endif %}
+                    {% endif %}
                 </div>
             </div>
-            {% endif %}
-
-            {% if offer.description %}
-            <div class="attribute-item full-width">
-                <div class="attribute-icon"><i class="fa fa-info-circle" aria-hidden="true"></i></div>
-                <div class="attribute-content">
-                    <h4>תיאור ההצעה</h4>
-                    <p>{{ offer.description }}</p>
-                </div>
-            </div>
-            {% endif %}
 
             <div class="attribute-item">
-                <div class="attribute-icon"><i class="fa fa-calendar" aria-hidden="true"></i></div>
-                <div class="attribute-content">
-                    <h4>תאריך יצירה</h4>
+                <div class="attribute-icon">
+                    <i class="fa fa-calendar" aria-hidden="true"></i>
+                </div>
+                <div class="attribute-content-date">
+                    <h4>ההצעה הועלת ב:</h4>
                     <p>{{ offer.created_at.strftime('%d/%m/%Y') }}</p>
                 </div>
             </div>
 
             <div class="attribute-item">
-                <div class="attribute-icon"><i class="fa fa-user" aria-hidden="true"></i></div>
+                <div class="attribute-icon">
+                    <i class="fa fa-user" aria-hidden="true"></i>
+                </div>
                 <div class="attribute-content">
                     <h4>הוצע על ידי</h4>
-                    <p>{{ offer.provider_name if offer.provider_name else "חבר קבוצת " + offer.customer_group }}</p>
+                    {% if offer.customer_group %}
+                        {% if offer.user.gender == 'male' %}
+                            <p>{{ offer.user.first_name }} הוא חבר בקבוצת {{ offer.customer_group }} של נספרסו</p>
+                        {% else %}
+                            <p>{{ offer.user.first_name }} היא חברה בקבוצת {{ offer.customer_group }} של נספרסו</p>
+                        {% endif %}
+                    {% else %}
+                        <!-- אם המשתמש לא הגדיר קבוצת נספרסו -->
+                        {% if offer.user.gender == 'male' %}
+                            <p>הוצע על ידי {{ offer.user.first_name }}</p>
+                        {% else %}
+                            <p>הוצע על ידי {{ offer.user.first_name }}</p>
+                        {% endif %}
+                    {% endif %}
                 </div>
             </div>
         </div>
 
+        <!-- אזור הפעולות (רכישה או "הצעה שלי") -->
         <div class="action-container">
-            {% if current_user.id != offer.seller_id %}
-                <a href="{{ url_for('coffee.buy_offer', offer_id=offer.id) }}" class="primary-action-button">
-                    <i class="fa fa-shopping-cart" aria-hidden="true"></i> נצל הנחה זו עכשיו
-                </a>
-                <div class="action-note">
-                    <i class="fa fa-info-circle" aria-hidden="true"></i>
-                    <span>ההנחה תופעל באופן אוטומטי בסל הקניות</span>
-                </div>
-            {% else %}
+            {% if current_user.is_authenticated and current_user.id == offer.user_id %}
+                <!-- אם המשתמש הוא המוכר -->
                 <div class="own-offer-notice">
                     <i class="fa fa-check-circle" aria-hidden="true"></i>
                     <span>זוהי ההצעה שיצרת</span>
                 </div>
-                <a href="{{ url_for('coffee.edit_offer', offer_id=offer.id) }}" class="secondary-action-button">
-                    <i class="fa fa-pencil" aria-hidden="true"></i> ערוך הצעה
-                </a>
+                <div class="owner-actions">
+                    <a href="{{ url_for('coffee.edit_offer', offer_id=offer.id) }}" class="secondary-action-button">
+                        <i class="fa fa-pencil" aria-hidden="true"></i> ערוך הצעה
+                    </a>
+                    <!-- מעבר לעמוד אישור המחיקה -->
+                    <a href="{{ url_for('coffee.confirm_delete_offer', offer_id=offer.id) }}" class="delete-action-button">
+                        <i class="fa fa-trash" aria-hidden="true"></i> מחק הצעה
+                    </a>
+                </div>
+            {% else %}
+                <!-- אם המשתמש הוא קונה -->
+                <form action="{{ url_for('coffee.buy_offer') }}" method="POST" style="display: inline;">
+                    {{ form.hidden_tag() }}
+                    <input type="hidden" name="offer_id" value="{{ offer.id }}">
+                    <button type="submit" class="primary-action-button">
+                        <i class="fa fa-shopping-cart" aria-hidden="true"></i> נצל הנחה זו עכשיו
+                    </button>
+                </form>
+
+                <div class="action-note">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                    <span>ההנחה תופעל באופן אוטומטי בסל הקניות</span>
+                </div>
             {% endif %}
         </div>
-    </div>
-</section>
 
-<section class="additional-info">
-    <div class="info-cards">
-        <div class="info-card">
-            <i class="fa fa-check-circle" aria-hidden="true"></i>
-            <h4>איך זה עובד?</h4>
-            <p>בחר את ההצעה, והמערכת תחל אוטומטית את ההנחה על מוצרי הקפה הרלוונטיים</p>
-        </div>
-        <div class="info-card">
-            <i class="fa fa-question-circle" aria-hidden="true"></i>
-            <h4>שאלות נפוצות</h4>
-            <p>לשאלות ותמיכה פנה למנהל המערכת או בדוק במדריך המשתמש</p>
-        </div>
     </div>
 </section>
 
@@ -123,6 +135,10 @@
 
 {% block scripts %}
     {{ super() }}
+    <!-- וודא שהספריות של בוטסטרפ נטענות כראוי -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
     <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
     <style>
@@ -135,28 +151,33 @@
             font-family: 'Rubik', 'Heebo', sans-serif;
         }
 
-        .section-header {
+        /* שם חדש במקום .section-header */
+        .offer-section-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             padding: 15px 0;
         }
 
-        .section-header h2 {
+        .offer-section-header h2 {
+            display: block;
+            margin-bottom: 5px;
+            margin-top: 5px;
             color: #1e3c72;
             font-size: 2.2em;
-            margin-bottom: 5px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
 
-        .sub-heading {
+        .offer-section-header .sub-heading {
+            display: block;
             color: #555;
             font-size: 1.1em;
             margin-top: 0;
+            margin-bottom: 0px;
         }
 
         .offer-detail-section {
             max-width: 900px;
-            margin: 20px auto 40px;
+            margin: 0 auto 20px;
             padding: 0 20px;
         }
 
@@ -173,7 +194,7 @@
 
         .offer-detail-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(30, 60, 114, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
 
         .offer-ribbon {
@@ -218,11 +239,14 @@
             font-weight: bold;
         }
 
+        /* מרכז את הבלוק של offer-expires */
         .offer-expires {
             background-color: #f0f0f0;
             padding: 10px 15px;
             border-radius: 50px;
-            display: inline-block;
+            display: block;
+            margin: 0 auto; /* מרכז את האלמנט אופקית */
+            text-align: center; /* מרכז את התוכן */
             font-size: 1em;
             color: #1e3c72;
         }
@@ -244,41 +268,56 @@
             100% { opacity: 1; }
         }
 
-        .offer-attributes {
+        /* מחלקה חדשה במקום offer-attributes */
+        .offer-attributes-center {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
             margin-bottom: 30px;
+            justify-content: center;
+            text-align: center; /* כדי למרכז טקסט בתוך כל בולט */
         }
 
         .attribute-item {
             flex: 1 1 calc(50% - 20px);
             display: flex;
+            flex-direction: column; /* מאפשר למקם את האייקון והטקסט אחד מתחת לשני */
+            align-items: center;    /* מרכז את הפריטים אופקית */
             background-color: #f0f0f0;
             border-radius: 10px;
             padding: 15px;
             min-width: 200px;
-        }
-
-        .full-width {
-            flex: 1 1 100%;
+            margin-bottom: 0; /* ביטול מרווח תחתון נוסף */
         }
 
         .attribute-icon {
             font-size: 24px;
             color: #2a5298;
-            margin-left: 15px;
+            margin-bottom: 10px; /* מרווח בין האייקון לכותרת */
             display: flex;
             align-items: center;
+            justify-content: center;
         }
 
-        .attribute-content h4 {
+        .attribute-content {
+            text-align: center;
+        }
+
+        /* מחלקה חדשה כדי למרכז את אזור תאריך ההצעה הועלת ב: */
+        .attribute-content-date {
+            text-align: center;
+            margin: 0 auto;
+        }
+
+        .attribute-content h4,
+        .attribute-content-date h4 {
             margin: 0 0 5px;
             color: #1e3c72;
             font-size: 1em;
         }
 
-        .attribute-content p {
+        .attribute-content p,
+        .attribute-content-date p {
             margin: 0;
             color: #333;
             font-size: 1.1em;
@@ -289,6 +328,16 @@
             text-align: center;
             padding: 20px 0 10px;
             border-top: 1px dashed #e6d7c3;
+            margin-bottom: 10px; /* מרווח בין הכותרת לצומת הפעולות */
+        }
+
+        /* סגנון חדש למיכל כפתורי הבעלים */
+        .owner-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
         }
 
         .primary-action-button {
@@ -302,6 +351,8 @@
             font-weight: bold;
             font-size: 1.1em;
             box-shadow: 0 4px 8px rgba(30, 60, 114, 0.3);
+            border: none;
+            cursor: pointer;
         }
 
         .primary-action-button:hover {
@@ -324,6 +375,8 @@
             transition: all 0.3s;
             font-weight: bold;
             box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+            border: none;
+            cursor: pointer;
         }
 
         .secondary-action-button:hover {
@@ -332,6 +385,31 @@
         }
 
         .secondary-action-button i {
+            margin-left: 8px;
+        }
+
+        /* סגנון כפתור המחיקה החדש */
+        .delete-action-button {
+            display: inline-block;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 50px;
+            transition: all 0.3s;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+            border: none;
+            cursor: pointer;
+        }
+
+        .delete-action-button:hover {
+            background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(231, 76, 60, 0.4);
+        }
+
+        .delete-action-button i {
             margin-left: 8px;
         }
 
@@ -421,11 +499,121 @@
             transform: translateY(-3px);
             box-shadow: 0 6px 12px rgba(30, 60, 114, 0.2);
         }
+
+        /* עיצוב המודל של אישור מחיקה - שונה להיות קטן יותר */
+        .modal-content {
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            direction: rtl;
+            text-align: right;
+        }
+
+        .modal-sm {
+            max-width: 300px; /* מגדיר רוחב מקסימלי קטן יותר לחלונית */
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            border-bottom: 0;
+            padding: 12px 15px;
+        }
+
+        .modal-title {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .modal-body {
+            padding: 15px;
+            font-size: 0.95em;
+        }
+
+        .modal-footer {
+            border-top: 0;
+            padding: 10px 15px 15px;
+            display: flex;
+            justify-content: center; /* מרכז את הכפתורים */
+            gap: 10px;
+        }
+
+        .modal-footer .btn {
+            border-radius: 50px;
+            padding: 6px 15px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .close {
+            color: white;
+            opacity: 0.8;
+            font-size: 1.2em;
+            padding: 0;
+            margin: -5px -5px 0 0;
+        }
+
+        .close:hover {
+            color: white;
+            opacity: 1;
+        }
+
+
+        .modal-dialog {
+            margin: 0 auto; /* ממרכז אופקית */
+            display: flex;
+            justify-content: center; /* מוודא שהמודל נמצא באמצע */
+        }
+
+        @media (max-width: 768px) {
+            .owner-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .secondary-action-button,
+            .delete-action-button {
+                width: 100%;
+            }
+
+            .modal-sm {
+                max-width: 90%; /* על מסכים קטנים, החלונית תופיע ברוחב של 90% מהמסך */
+                margin: auto;
+            }
+        }
     </style>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // וודא שהמודל נפתח בלחיצה על כפתור המחיקה
+            const deleteButton = document.querySelector('.delete-action-button');
+            const deleteModal = document.getElementById('deleteConfirmModal');
+
+            if (deleteButton && deleteModal) {
+                deleteButton.addEventListener('click', function() {
+                    console.log("כפתור מחיקה נלחץ - ניסיון לפתוח את המודל");
+                    $("#deleteConfirmModal").modal("show"); // הפעלה ידנית של המודל
+                });
+            } else {
+                console.warn("⚠️ deleteButton או deleteModal לא נמצא(ים) ב-DOM.");
+            }
+
+            console.log("מצב המודל:", document.getElementById("deleteConfirmModal"));
+
+            // הגדרת משתנה now גלובלי, אם תרצה להשתמש בו גם בצד ה-JS
             window.now = new Date();
 
+            // בדיקה האם התוקף קרוב לסיום (דוגמה)
             const expiryInfo = document.querySelector('.offer-expires span:first-child');
             if (expiryInfo) {
                 const expiryDate = parseExpiryDate(expiryInfo.textContent);
@@ -439,6 +627,7 @@
             }
 
             function parseExpiryDate(text) {
+                // מחפש תבנית של DD/MM/YYYY בתוך הטקסט
                 const match = text.match(/(\d{2})\/(\d{2})\/(\d{4})/);
                 if (match) {
                     return new Date(match[3], match[2] - 1, match[1]);
@@ -453,7 +642,8 @@
                 return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             }
 
-            const actionButtons = document.querySelectorAll('.primary-action-button, .secondary-action-button');
+            // אפקט לחיצה על הכפתורים
+            const actionButtons = document.querySelectorAll('.primary-action-button, .secondary-action-button, .delete-action-button');
             actionButtons.forEach(button => {
                 button.addEventListener('mousedown', function() {
                     this.style.transform = 'scale(0.98)';
@@ -462,6 +652,16 @@
                     this.style.transform = 'scale(1)';
                 });
             });
+
+            // אפקט ריחוף מיוחד לכפתור המחיקה
+            if (deleteButton) {
+                deleteButton.addEventListener('mouseover', function() {
+                    this.style.boxShadow = '0 6px 12px rgba(231, 76, 60, 0.6)';
+                });
+                deleteButton.addEventListener('mouseout', function() {
+                    this.style.boxShadow = '0 4px 8px rgba(231, 76, 60, 0.3)';
+                });
+            }
         });
     </script>
 {% endblock %}

@@ -1,0 +1,267 @@
+{% extends "coffee/base_coffee.html" %}
+{% block title %}העסקאות שלי - הצעות קפה{% endblock %}
+
+{% block coffee_content %}
+<section class="transactions-list">
+    <h2>העסקאות שלי</h2>
+
+    {% if transactions %}
+    <div class="table-responsive">
+        <table class="transaction-table">
+            <thead>
+                <tr>
+                    <th>הצעה</th>
+                    <th>סטטוס</th>
+                    <th>תאריך</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td class="offer-cell">
+                        <div class="offer-info">
+                            <span class="offer-id">#{{ tx.offer.id }}</span>
+                            <span class="discount-badge">{{ tx.offer.discount_percent }}% הנחה</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge
+                            {% if tx.status == 'completed' %}status-completed
+                            {% elif tx.status == 'pending' %}status-pending
+                            {% elif tx.status == 'cancelled' %}status-cancelled
+                            {% endif %}">
+                            {{ tx.status }}
+                        </span>
+                    </td>
+                    <td class="date-cell">
+                        <div class="date-info">
+                            <span class="date">{{ tx.created_at.strftime('%d/%m/%Y') }}</span>
+                            <span class="time">{{ tx.created_at.strftime('%H:%M') }}</span>
+                        </div>
+                    </td>
+                    <td class="actions-cell">
+                        {% if current_user.id == tx.seller_id %}
+                            <div class="action-buttons">
+                                <a href="{{ url_for('coffee.approve_transaction', transaction_id=tx.id) }}"
+                                   class="action-button">אישור</a>
+                                <a href="{{ url_for('coffee.seller_confirm_transfer', transaction_id=tx.id) }}"
+                                   class="action-button confirm">אישור העברה</a>
+                            </div>
+                        {% elif current_user.id == tx.buyer_id %}
+                            <a href="{{ url_for('coffee.buyer_confirm_transfer', transaction_id=tx.id) }}"
+                               class="action-button confirm">אישור העברה</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="no-transactions">
+            <p>אין עסקאות.</p>
+        </div>
+    {% endif %}
+
+    <div class="back-link">
+        <a href="{{ url_for('coffee.index') }}" class="action-button secondary">← חזרה לעמוד הבית</a>
+    </div>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    :root {
+        --primary-color: #007bff;
+        --secondary-color: #6c757d;
+        --accent-color: #0056b3;
+        --success-color: #28a745;
+        --warning-color: #ffc107;
+        --danger-color: #dc3545;
+        --light-gray: #f8f9fa;
+        --border-color: #dee2e6;
+        --text-color: #333;
+        --text-light: #666;
+    }
+
+    .transactions-list {
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .transactions-list h2 {
+        text-align: center;
+        color: var(--primary-color);
+        margin-bottom: 30px;
+        font-size: 1.8em;
+    }
+
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        margin-bottom: 30px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .transaction-table {
+        width: 100%;
+        border-collapse: collapse;
+        direction: rtl;
+    }
+
+    .transaction-table th {
+        background-color: var(--light-gray);
+        color: var(--text-color);
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .transaction-table td {
+        padding: 15px;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+
+    .offer-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .offer-id {
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .discount-badge {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        font-weight: 500;
+    }
+
+    .status-completed {
+        background-color: var(--success-color);
+        color: white;
+    }
+
+    .status-pending {
+        background-color: var(--warning-color);
+        color: var(--text-color);
+    }
+
+    .status-cancelled {
+        background-color: var(--danger-color);
+        color: white;
+    }
+
+    .date-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .date {
+        color: var(--text-color);
+        font-weight: 500;
+    }
+
+    .time {
+        color: var(--text-light);
+        font-size: 0.9em;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .action-button {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-align: center;
+        min-width: 100px;
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .action-button:hover {
+        background-color: var(--accent-color);
+        text-decoration: none;
+        color: white;
+    }
+
+    .action-button.confirm {
+        background-color: var(--success-color);
+    }
+
+    .action-button.confirm:hover {
+        background-color: #218838;
+    }
+
+    .action-button.secondary {
+        background-color: var(--secondary-color);
+    }
+
+    .action-button.secondary:hover {
+        background-color: #5a6268;
+    }
+
+    .no-transactions {
+        text-align: center;
+        padding: 40px;
+        background-color: var(--light-gray);
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+
+    .back-link {
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+        .transactions-list {
+            padding: 10px;
+        }
+
+        .transaction-table th,
+        .transaction-table td {
+            padding: 10px;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .action-button {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .offer-info {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
+{% endblock %}

@@ -29,6 +29,7 @@
         </div>
     </section>
 
+
     <!-- הצעות אחרונות -->
     <section class="offer-management">
         <div class="section-header">
@@ -48,15 +49,33 @@
                                     <span>במכירה</span>
                                 {% endif %}
                             </div>
-                            <div class="offer-icon">
-                                <i class="fa fa-coffee" aria-hidden="true"></i>
+
+                            <!-- הצגת לוגו לפי המשתמש -->
+                            <div class="offer-logo">
+                                {% if offer.user and offer.user.id in company_logo_mapping_by_id %}
+                                    <img src="{{ url_for('static', filename=company_logo_mapping_by_id[offer.user.id]) }}"
+                                         alt="{{ offer.user.first_name }} Logo"
+                                         class="company-logo">
+                                {% else %}
+                                    <div class="offer-icon">
+                                        <i class="fa fa-coffee" aria-hidden="true"></i>
+                                    </div>
+                                {% endif %}
                             </div>
+
                             <div class="offer-details">
                                 <h3 class="offer-title">{{ offer.discount_percent|int }}% הנחה</h3>
+
+                                <!-- הצגת שם המשתמש -->
                                 <p class="offer-provider">
-                                    הוצע ע"י {{ offer.user_name }}
+                                    {% if offer.user and offer.user.first_name %}
+                                        הוצע ע"י {{ offer.user.first_name }}
+                                    {% else %}
+                                        הוצע ע"י משתמש לא ידוע
+                                    {% endif %}
                                 </p>
-                                <p>בקנייה ב<strong>{{ offer.store_name }}</strong></p>
+
+                                <p>בקנייה ב<strong>נספרסו</strong></p>
                                 <div class="offer-expires">
                                     <i class="fa fa-clock-o" aria-hidden="true"></i>
                                     <span>בתוקף עד {{ offer.expiration_date.strftime('%d/%m/%Y') }}</span>
@@ -64,10 +83,13 @@
                                         <span class="expiry-alert">פג תוקף בקרוב!</span>
                                     {% endif %}
                                 </div>
+
                                 <div class="offer-cta">
                                     {% if offer.user_id == current_user.id %}
-                                        <span class="own-offer-label">זו ההצעה שלך</span>
+                                        <!-- אם המשתמש הנוכחי הוא זה שהזין את ההצעה -->
+                                        <a href="{{ url_for('coffee.offer_detail', offer_id=offer.id) }}" class="own-offer-label">זו ההצעה שלך</a>
                                     {% else %}
+                                        <!-- אחרת מציגים כפתור ״נצל הנחה עכשיו״ -->
                                         <form action="{{ url_for('coffee.buy_offer') }}" method="POST">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="offer_id" value="{{ offer.id }}">
@@ -75,6 +97,7 @@
                                         </form>
                                     {% endif %}
                                 </div>
+
                                 <div class="offer-group-tag">
                                     <span>{{ offer.customer_group }}</span>
                                 </div>
@@ -119,13 +142,13 @@
 
         /* אזור hero */
         .hero {
-            background-color: #2c3e50;
-            color: #78c3ed;
-            padding: 40px 20px;
             text-align: center;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(44, 62, 80, 0.2);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 35px;
+            box-shadow: 0 10px 25px rgba(30, 60, 114, 0.2);
         }
 
         .hero-content {
@@ -134,10 +157,10 @@
         }
 
         .hero h2 {
-            font-size: 2.5em;
-            margin-bottom: 15px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-            color: #78c3ed;
+            font-size: 2.2em;
+            margin-top: 0px;
+            margin-bottom: 12px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
         }
 
         .hero p {
@@ -183,21 +206,30 @@
 
         .section-header {
             text-align: center;
-            margin-bottom: 30px;
-            padding: 15px 0;
+            margin-bottom: 10px; /* צמצום הרווח התחתון */
+            padding: 5px 0; /* צמצום הרווח הפנימי */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
+        /* עיצוב לכותרת */
         .section-header h2 {
             color: #2c3e50;
             font-size: 2.2em;
-            margin-bottom: 5px;
+            font-weight: bold;
+            margin-bottom: 5px; /* רווח מינימלי בין הכותרת לטקסט */
             text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            display: block;
         }
 
+        /* עיצוב לפסקה */
         .sub-heading {
-            color: #555;
-            font-size: 1.1em;
-            margin-top: 0;
+            font-size: 1.2em;
+            color: #666;
+            margin-top: 0px; /* רווח מינימלי מעל הטקסט */
+            text-align: center;
+            max-width: 80%;
         }
 
         .offer-container {
@@ -261,6 +293,20 @@
             transform: scale(1.2);
         }
 
+        /* עיצוב ללוגואים של משתמשים */
+        .company-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin: 15px auto;
+            display: block;
+            transition: transform 0.3s;
+        }
+
+        .offer-card:hover .company-logo {
+            transform: scale(1.1);
+        }
+
         .offer-details {
             padding: 5px 10px 15px;
         }
@@ -314,7 +360,7 @@
         }
 
         .offer-cta {
-            margin: 20px 0 10px;
+            margin: 20px 0 30px;
         }
 
         .action-button {
@@ -407,12 +453,12 @@
             window.now = new Date();
 
             const offerCards = document.querySelectorAll('.offer-card');
-            const icons = ["fa-coffee", "fa-mug-hot", "fa-coffee", "fa-coffee-bean"];
+            const icons = ["fa-coffee", "fa-mug-hot", "fa-mug-saucer", "fa-coffee"];
 
             offerCards.forEach((card, index) => {
                 let icon = card.querySelector('.offer-icon i');
-                // ודא שיש תמיד אייקון מתאים
-                if (index % icons.length !== 0) {
+                // ודא שיש תמיד אייקון מתאים אם אין לוגו
+                if (icon && index % icons.length !== 0) {
                     icon.classList.remove('fa-coffee');
                     icon.classList.add(icons[index % icons.length]);
                 }
