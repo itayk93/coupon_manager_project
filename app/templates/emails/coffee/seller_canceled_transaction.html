@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="he" dir="rtl" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="UTF-8">
-    <title>המוכר אישר את העסקה</title>
+    <title>{% if is_seller %}המוכר ביטל את העסקה{% else %}הקונה ביטל את העסקה{% endif %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style>
         body {
@@ -27,7 +27,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .header {
-            background-color: #2E86C1;
+            background-color: #C0392B;
             color: #ffffff;
             padding: 20px;
             text-align: center;
@@ -47,7 +47,7 @@
             line-height: 1.5;
         }
         .highlight {
-            color: #2E86C1;
+            color: #C0392B;
             font-weight: bold;
         }
         .button-container {
@@ -55,7 +55,7 @@
             margin: 30px 0;
         }
         .button {
-            background-color: #2E86C1;
+            background-color: #C0392B;
             color: #ffffff;
             padding: 15px 25px;
             text-decoration: none;
@@ -66,7 +66,7 @@
             transition: background-color 0.3s;
         }
         .button:hover {
-            background-color: #A9CCE3;
+            background-color: #F1948A;
         }
         .footer {
             background-color: #f0f0f0;
@@ -89,29 +89,56 @@
         }
     </style>
 </head>
-<body>
+<body dir="rtl">
     <div class="email-container">
         <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
             <tr>
                 <td align="center">
                     <div class="email-content">
+                        <!-- Header -->
                         <div class="header">
-                            <h1>המוכר אישר את העסקה!</h1>
+                            <h1>
+                                {% if is_seller %}
+                                    המוכר ביטל את העסקה
+                                {% else %}
+                                    הקונה ביטל את העסקה
+                                {% endif %}
+                            </h1>
                         </div>
+                        <!-- Body -->
                         <div class="body">
                             <p>שלום {{ buyer.first_name }},</p>
+
+                            {% if is_seller %}
                             <p>
-                                המוכר <strong class="highlight">{{ seller.first_name }}</strong> מסכים למכור לך את ההטבה לקפה,
-                                והעביר את מספר הטלפון שלו: <span class="highlight">{{ offer.seller_phone }}</span>.
+                                <strong class="highlight">{{ seller.first_name }}</strong>
+                                {% if seller.gender == 'female' %}החליטה{% else %}החליט{% endif %}
+                                לבטל את העסקה עבור הקופון של
+                                <span class="highlight">{{ coupon.company }}</span>.
                             </p>
-                            <p>אנא צור קשר עם המוכר באמצעות המספר הנ"ל להמשך טיפול בתהליך העסקה.</p>
+                            {% else %}
+                            <p>
+                                <strong class="highlight">{{ buyer.first_name }}</strong>
+                                {% if buyer.gender == 'female' %}החליטה{% else %}החליט{% endif %}
+                                לבטל את העסקה עבור הקופון של
+                                <span class="highlight">{{ coupon.company }}</span>.
+                            </p>
+                            {% endif %}
+
+                            <p>העסקה בוטלה במערכת, והקופון לא עבר צד.</p>
+
                             <div class="button-container">
-                                <a href="{{ url_for('coffee.my_transactions', _external=True) }}" class="button">לחשבון שלי</a>
+                                <!-- לדוגמה: מפנה לעמוד העסקאות שלך -->
+                                <a href="{{ url_for('coffee.my_transactions', _external=True) }}" class="button">
+                                    לבדיקת העסקאות שלך
+                                </a>
                             </div>
-                            <p>בברכה,<br>Coupon Master</p>
+                            <p>נשמח לעזור במידה ויש לך שאלות נוספות.</p>
+                            <p>בברכה,<br>צוות Coupon Master</p>
                         </div>
+                        <!-- Footer -->
                         <div class="footer">
-                            <p>כל הזכויות שמורות. © 2024 Coupon Master</p>
+                            <p>© 2024 Coupon Master. כל הזכויות שמורות.</p>
                         </div>
                     </div>
                 </td>

@@ -6,20 +6,12 @@
     <header class="coffee-header">
         <h1>מערכת קפה – הנחות לקניית קפה</h1>
         <div class="coffee-nav-container">
-            <a href="{{ url_for('coffee.index') }}" class="secondary-button">בית</a>
             <a href="{{ url_for('coffee.offer_form') }}" class="secondary-button">הצע הנחה</a>
             <a href="{{ url_for('coffee.list_offers') }}" class="secondary-button">הצעות קיימות</a>
-
-            {% for transaction in transactions %}
-                <a href="{{ url_for('coffee.review_seller', transaction_id=transaction.id) }}" class="secondary-button">
-                    השאר ביקורת על עסקה #{{ transaction.id }}
-                </a>
-            {% endfor %}
+            <a href="{{ url_for('coffee.my_transactions') }}" class="secondary-button">העסקאות שלי</a>
         </div>
     </header>
 
-
-    <!-- תוכן העמוד -->
     {% block coffee_content %}{% endblock %}
 {% endblock %}
 

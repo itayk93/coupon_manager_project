@@ -39,6 +39,8 @@ class CoffeeOffer(db.Model):
     desired_discount = db.Column(db.Float, nullable=True)
     buyer_description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # ✅ הוספת מספר טלפון של המוכר
+    seller_phone = db.Column(db.String(20), nullable=True)
 
     def __repr__(self):
         return f"<CoffeeOffer {self.id} {self.discount_percent}% for {self.customer_group}>"

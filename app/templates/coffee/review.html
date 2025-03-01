@@ -3,15 +3,39 @@
 
 {% block coffee_content %}
     <h2>השאר ביקורת על המוכר</h2>
-    <form method="post">
-        <label for="rating">דירוג (1-5):</label>
-        <input type="number" name="rating" min="1" max="5" required>
-        <br>
-        <label for="comment">הערה (אופציונלי):</label>
-        <textarea name="comment"></textarea>
-        <br>
-        <button type="submit">שלח ביקורת</button>
+
+    <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div>
+            {{ form.rating.label }}
+            {{ form.rating() }}
+            {% if form.rating.errors %}
+                <div class="error-message">
+                    {% for error in form.rating.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div>
+            {{ form.comment.label }}
+            {{ form.comment() }}
+            {% if form.comment.errors %}
+                <div class="error-message">
+                    {% for error in form.comment.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div>
+            {{ form.submit() }}
+        </div>
     </form>
-    <!-- קישור חזרה לעמוד הבית -->
-    <p><a href="{{ url_for('coffee.index') }}">← חזרה לעמוד הבית</a></p>
+
+    <!-- קישור חזרה לעמוד העסקאות -->
+    <p><a href="{{ url_for('coffee.my_transactions') }}">← חזרה לעסקאות</a></p>
 {% endblock %}

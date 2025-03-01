@@ -1,0 +1,512 @@
+{% extends 'coffee/base_coffee.html' %}
+
+{% block title %}ערוך הצעת קפה{% endblock %}
+
+{% block coffee_content %}
+<section class="edit-offer-container">
+    <div class="edit-offer">
+        <h2>ערוך הצעת קפה</h2>
+
+        <form method="post" action="{{ url_for('coffee.edit_offer', offer_id=offer.id) }}">
+            {{ form.hidden_tag() }}
+
+            {# הודעות שגיאה כלליות #}
+            {% if form.errors %}
+                <div class="error-messages">
+                    <ul>
+                        {% for field, errors in form.errors.items() %}
+                            {% for error in errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <div class="form-card">
+                <div class="form-header">
+                    <div class="form-icon">
+                        <i class="fas fa-coffee"></i>
+                    </div>
+                    <h3>מידע בסיסי</h3>
+                </div>
+
+                <!-- שדה סוג ההצעה -->
+                <div class="form-group">
+                    {{ form.offer_type.label }}
+                    <div class="select-wrapper">
+                        {{ form.offer_type(class="input-field", id="offer_type") }}
+                        <span class="select-arrow"></span>
+                    </div>
+                    {% for error in form.offer_type.errors %}
+                        <span class="error"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- שדה תיאור כללי -->
+                <div class="form-group">
+                    {{ form.description.label }}
+                    {{ form.description(class="input-field textarea", rows="4", placeholder="הוסף תיאור מפורט...") }}
+                    {% for error in form.description.errors %}
+                        <span class="error"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- שדה תאריך תפוגה -->
+                <div class="form-group">
+                    {{ form.expiration_date.label }}
+                    <div class="date-input-wrapper">
+                        <i class="fas fa-calendar"></i>
+                        {{ form.expiration_date(class="input-field date-input", type="date", value=form.expiration_date.data.strftime('%Y-%m-%d') if form.expiration_date.data else '') }}
+                    </div>
+                    {% for error in form.expiration_date.errors %}
+                        <span class="error"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- אפשרויות למוכר -->
+            <div id="seller_options" class="form-card">
+                <div class="form-header">
+                    <div class="form-icon seller-icon">
+                        <i class="fas fa-tag"></i>
+                    </div>
+                    <h3>אפשרויות למוכר</h3>
+                </div>
+
+                <!-- שדה קבוצת לקוחות (רלוונטי למוכר) -->
+                <div class="form-group" id="customer_group_group">
+                    {{ form.customer_group.label }}
+                    <div class="select-wrapper">
+                        {{ form.customer_group(class="input-field") }}
+                        <span class="select-arrow"></span>
+                    </div>
+                    {% for error in form.customer_group.errors %}
+                        <span class="error"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- שדה נקודות מוצעות (רלוונטי למוכר) -->
+                <div class="form-group" id="points_offered_group">
+                    {{ form.points_offered.label }}
+                    <div class="number-input-wrapper">
+                        <i class="fas fa-coins"></i>
+                        {{ form.points_offered(class="input-field", type="number", step="1", min="0", placeholder="0") }}
+                    </div>
+                    {% for error in form.points_offered.errors %}
+                        <span class="error"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- שדה אחוז הנחה (רלוונטי למוכר) -->
+                <div class="form-group" id="discount_percent_group">
+                    {{ form.discount_percent.label }}
+                    <div class="number-input-wrapper">
+                        <i class="fas fa-percent"></i>
+                        {{ form.discount_percent(class="input-field", type="number", step="0.01", min="0", max="100", placeholder="0.00") }}
+                    </div>
+                    {% for error in form.discount_percent.errors %}
+                        <span class="error"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- אפשרויות לקונה -->
+            <div id="buyer_options" class="form-card">
+                <div class="form-header">
+                    <div class="form-icon buyer-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <h3>אפשרויות לקונה</h3>
+                </div>
+
+                <!-- שדה הנחה רצויה (רלוונטי לקונה) -->
+                <div class="form-group" id="desired_discount_group">
+                    {{ form.desired_discount.label }}
+                    <div class="number-input-wrapper">
+                        <i class="fas fa-percent"></i>
+                        {{ form.desired_discount(class="input-field", type="number", step="0.01", min="0", max="100", placeholder="0.00") }}
+                    </div>
+                    {% for error in form.desired_discount.errors %}
+                        <span class="error"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- שדה תיאור לקונה (רלוונטי לקונה) -->
+                <div class="form-group" id="buyer_description_group">
+                    {{ form.buyer_description.label }}
+                    {{ form.buyer_description(class="input-field textarea", rows="4", placeholder="תיאור מפורט של מה שאתה מחפש...") }}
+                    {% for error in form.buyer_description.errors %}
+                        <span class="error"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- כפתורי פעולה -->
+            <div class="form-actions">
+                <button type="submit" class="submit-button">
+                    <i class="fas fa-save"></i> שמור שינויים
+                </button>
+                <a href="{{ url_for('coffee.list_offers') }}" class="cancel-button">
+                    <i class="fas fa-times"></i> ביטול
+                </a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* הוספת Font Awesome */
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
+    /* גופנים */
+    @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap');
+
+    /* מאפיינים כלליים */
+    .edit-offer-container {
+        background-color: #f8f9fa;
+        min-height: 100vh;
+        padding: 40px 20px;
+        font-family: 'Rubik', sans-serif;
+    }
+
+    .edit-offer {
+        max-width: 800px;
+        margin: 0 auto;
+        direction: rtl;
+    }
+
+    .edit-offer h2 {
+        text-align: center;
+        color: #2e4a62;
+        margin-bottom: 30px;
+        font-weight: 600;
+        font-size: 2rem;
+        position: relative;
+    }
+
+    .edit-offer h2:after {
+        content: '';
+        display: block;
+        width: 80px;
+        height: 4px;
+        background: linear-gradient(90deg, #1e3c72, #6e98c5);
+        margin: 8px auto;
+        border-radius: 2px;
+    }
+
+    /* כרטיסים */
+    .form-card {
+        background-color: #fff;
+        border-radius: 16px;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+        padding: 25px;
+        margin-bottom: 30px;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .form-card:hover {
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+        transform: translateY(-3px);
+    }
+
+    .form-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 12px;
+    }
+
+    .form-icon {
+        background-color: #1e3c72;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 15px;
+        font-size: 1.2rem;
+    }
+
+    .seller-icon {
+        background-color: #28a745;
+    }
+
+    .buyer-icon {
+        background-color: #0275d8;
+    }
+
+    .form-header h3 {
+        margin: 0;
+        color: #333;
+        font-weight: 500;
+        font-size: 1.2rem;
+    }
+
+    /* קבוצות שדות */
+    .form-group {
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #2e4a62;
+        font-size: 0.95rem;
+    }
+
+    .input-field {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #e1e5eb;
+        border-radius: 10px;
+        box-sizing: border-box;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        background-color: #f8fafb;
+        color: #333;
+        font-family: 'Rubik', sans-serif;
+    }
+
+    .input-field:focus {
+        outline: none;
+        border-color: #1e3c72;
+        box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        background-color: #fff;
+    }
+
+    .textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    /* אייקונים בשדות */
+    .number-input-wrapper, .date-input-wrapper {
+        position: relative;
+    }
+
+    .number-input-wrapper i, .date-input-wrapper i {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+
+    .number-input-wrapper .input-field, .date-input-wrapper .input-field {
+        padding-right: 40px;
+    }
+
+    /* שדות בחירה */
+    .select-wrapper {
+        position: relative;
+    }
+
+    .select-arrow {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+
+    .select-arrow:after {
+        content: '\f107';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        color: #6c757d;
+    }
+
+    select.input-field {
+        appearance: none;
+        padding-left: 40px;
+    }
+
+    /* שגיאות */
+    .error-messages {
+        background-color: #fff5f5;
+        border: 1px solid #ffd1d1;
+        border-radius: 10px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+    }
+
+    .error-messages ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .error-messages li, .error {
+        color: #dc3545;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        margin-top: 5px;
+    }
+
+    .error i {
+        margin-left: 5px;
+    }
+
+    /* כפתורי פעולה */
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .submit-button, .cancel-button {
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Rubik', sans-serif;
+    }
+
+    .submit-button {
+        background: linear-gradient(90deg, #1e3c72, #2a5298);
+        color: #fff;
+        border: none;
+        flex: 1;
+    }
+
+    .submit-button:hover {
+        background: linear-gradient(90deg, #162f50, #1e3c72);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(30, 60, 114, 0.2);
+    }
+
+    .cancel-button {
+        background-color: #f8f9fa;
+        color: #6c757d;
+        border: 2px solid #e1e5eb;
+        text-decoration: none;
+        padding: 10px 20px;
+    }
+
+    .cancel-button:hover {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+
+    .submit-button i, .cancel-button i {
+        margin-left: 8px;
+    }
+
+    /* רספונסיביות */
+    @media (max-width: 768px) {
+        .edit-offer-container {
+            padding: 20px 10px;
+        }
+
+        .form-card {
+            padding: 20px 15px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .submit-button, .cancel-button {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const offerTypeField = document.getElementById("offer_type");
+    const sellerOptions = document.getElementById("seller_options");
+    const buyerOptions = document.getElementById("buyer_options");
+
+    // שדות ספציפיים
+    const customerGroupGroup = document.getElementById("customer_group_group");
+    const pointsOfferedGroup = document.getElementById("points_offered_group");
+    const discountPercentGroup = document.getElementById("discount_percent_group");
+    const desiredDiscountGroup = document.getElementById("desired_discount_group");
+    const buyerDescriptionGroup = document.getElementById("buyer_description_group");
+
+    function toggleFields() {
+        const offerType = offerTypeField.value;
+
+        if (offerType === 'sell') {
+            // הצגת אפשרויות למוכר
+            sellerOptions.style.display = 'block';
+            buyerOptions.style.display = 'none';
+
+            // עדכון שדות ספציפיים
+            customerGroupGroup.style.display = 'block';
+            pointsOfferedGroup.style.display = 'block';
+            discountPercentGroup.style.display = 'block';
+            desiredDiscountGroup.style.display = 'none';
+            buyerDescriptionGroup.style.display = 'none';
+
+        } else if (offerType === 'buy') {
+            // הצגת אפשרויות לקונה
+            sellerOptions.style.display = 'none';
+            buyerOptions.style.display = 'block';
+
+            // עדכון שדות ספציפיים
+            customerGroupGroup.style.display = 'none';
+            pointsOfferedGroup.style.display = 'none';
+            discountPercentGroup.style.display = 'none';
+            desiredDiscountGroup.style.display = 'block';
+            buyerDescriptionGroup.style.display = 'block';
+
+        } else {
+            // אם לא נבחר סוג, הצג את כל האפשרויות
+            sellerOptions.style.display = 'block';
+            buyerOptions.style.display = 'block';
+
+            // עדכון שדות ספציפיים
+            customerGroupGroup.style.display = 'block';
+            pointsOfferedGroup.style.display = 'block';
+            discountPercentGroup.style.display = 'block';
+            desiredDiscountGroup.style.display = 'block';
+            buyerDescriptionGroup.style.display = 'block';
+        }
+    }
+
+    // אפקט הנפשה לשדות בעת מילוי
+    const allInputs = document.querySelectorAll('.input-field');
+    allInputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.closest('.form-group').classList.add('active');
+        });
+
+        input.addEventListener('blur', function() {
+            if (this.value === '') {
+                this.parentElement.closest('.form-group').classList.remove('active');
+            }
+        });
+
+        // בדיקה התחלתית אם יש ערך כבר
+        if (input.value !== '') {
+            input.parentElement.closest('.form-group').classList.add('active');
+        }
+    });
+
+    if (offerTypeField) {
+        offerTypeField.addEventListener('change', toggleFields);
+        // הפעלה בטעינת העמוד
+        toggleFields();
+    }
+});
+</script>
+{% endblock %}

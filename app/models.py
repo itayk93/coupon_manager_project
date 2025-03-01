@@ -555,6 +555,7 @@ class UserReview(db.Model):
     reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # מי שנתן את הביקורת
     reviewed_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # המשתמש שמקבל את הביקורת
     transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=True)  # עמודה חדשה
+    coffee_transaction = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=True)
     rating = db.Column(db.Integer, nullable=True)  # דירוג 1-5
     comment = db.Column(db.Text, nullable=True)    # הערה טקסטואלית
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

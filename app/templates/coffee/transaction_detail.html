@@ -1,64 +1,83 @@
 {% extends "coffee/base_coffee.html" %}
-{% block title %}פרטי עסקת קפה{% endblock %}
+{% block title %}העסקאות שלי - הצעות קפה{% endblock %}
 
 {% block coffee_content %}
-<section class="transaction-details">
-    <h2>פרטי עסקת הקפה</h2>
-    <div class="transaction-info">
-        <div class="info-row">
-            <strong>הצעת הנחה:</strong>
-            <span>{{ transaction.coffee_offer.discount_percent }}% – קבוצה: {{ transaction.coffee_offer.customer_group }}</span>
-        </div>
-        <div class="info-row">
-            <strong>מחיר שסוכם לפני ההנחה:</strong>
-            <span>{{ transaction.negotiated_price_before or 'לא הוזן' }} ₪</span>
-        </div>
-        <div class="info-row">
-            <strong>מחיר שסוכם אחרי ההנחה:</strong>
-            <span>{{ transaction.negotiated_price_after or 'לא הוזן' }} ₪</span>
-        </div>
-        {% if transaction.points_used %}
-        <div class="info-row">
-            <strong>נקודות שהשתמשו:</strong>
-            <span>{{ transaction.points_used }}</span>
-        </div>
-        {% endif %}
-    </div>
+<section class="transactions-list">
+    <h2>העסקאות שלי</h2>
 
-    {% if transaction.status != 'completed' %}
-    <div class="transaction-form">
-        <h3>עדכן פרטי עסקה והשלם עסקה</h3>
-        <form method="post">
-            <div class="form-group">
-                <label for="negotiated_price_before">מחיר לפני ההנחה:</label>
-                <input type="number"
-                       step="0.01"
-                       name="negotiated_price_before"
-                       required
-                       value="{{ transaction.negotiated_price_before or '' }}"
-                       class="form-input">
-            </div>
-            <div class="form-group">
-                <label for="negotiated_price_after">מחיר אחרי ההנחה:</label>
-                <input type="number"
-                       step="0.01"
-                       name="negotiated_price_after"
-                       required
-                       value="{{ transaction.negotiated_price_after or '' }}"
-                       class="form-input">
-            </div>
-            <button type="submit" class="action-button">עדכן והשלם עסקה</button>
-        </form>
+    {% if transactions %}
+    <div class="table-responsive">
+        <table class="transaction-table">
+            <thead>
+                <tr>
+                    <th>הצעה</th>
+                    <th>סטטוס</th>
+                    <th>תאריך</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td class="offer-cell">
+                        <div class="offer-info">
+                            <span class="offer-id">#{{ tx.offer.id }}</span>
+                            <span class="discount-badge">{{ tx.offer.discount_percent }}% הנחה</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge {% if tx.status == 'completed' %}status-completed{% elif tx.status == 'pending' %}status-pending{% elif tx.status == 'cancelled' %}status-cancelled{% endif %}">
+                            {{ tx.status }}
+                        </span>
+                    </td>
+                    <td class="date-cell">
+                        <div class="date-info">
+                            <span class="date">{{ tx.created_at.strftime('%d/%m/%Y') }}</span>
+                            <span class="time">{{ tx.created_at.strftime('%H:%M') }}</span>
+                        </div>
+                    </td>
+                    <td class="actions-cell">
+                        <div class="action-buttons">
+                            {% if current_user.id == tx.seller_id %}
+                                {% if tx.offer.seller_phone %}
+                                    <span class="action-text">שלחת את הטלפון שלך לקונה, ממתין לתגובתו</span>
+                                {% else %}
+                                    <a href="{{ url_for('coffee.approve_transaction', transaction_id=tx.id) }}"
+                                       class="action-button">
+                                       אישור ושליחת מספר טלפון לקונה
+                                    </a>
+                                {% endif %}
+                            {% elif current_user.id == tx.buyer_id %}
+                                <a href="{{ url_for('coffee.buyer_confirm_transfer', transaction_id=tx.id) }}"
+                                   class="action-button confirm">אישור העברה</a>
+                            {% endif %}
+
+                            {% if tx.status not in ['completed', 'buyer_confirmed', 'cancelled'] %}
+                                <form method="post"
+                                      action="{{ url_for('coffee.cancel_transaction', transaction_id=tx.id) }}"
+                                      style="display:inline;"
+                                      onsubmit="return confirm('האם אתה בטוח שברצונך לבטל את העסקה?');">
+                                    {{ form.hidden_tag() }}
+                                    <button type="submit" class="action-button cancel">
+                                        ביטול עסקה
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     {% else %}
-    <div class="transaction-completed">
-        <p>העסקה הושלמה.</p>
-        <p><a href="{{ url_for('coffee.review', transaction_id=transaction.id) }}" class="action-button">השאר ביקורת על המוכר</a></p>
-    </div>
+        <div class="no-transactions">
+            <p>אין עסקאות.</p>
+        </div>
     {% endif %}
 
     <div class="back-link">
-        <a href="{{ url_for('coffee.index') }}" class="action-button">← חזרה לעמוד הבית</a>
+        <a href="{{ url_for('coffee.index') }}" class="action-button secondary">← חזרה לעמוד הבית</a>
     </div>
 </section>
 {% endblock %}
@@ -69,117 +88,201 @@
         --primary-color: #007bff;
         --secondary-color: #6c757d;
         --accent-color: #0056b3;
+        --success-color: #28a745;
+        --warning-color: #ffc107;
         --danger-color: #dc3545;
-        --light-gray: #ddd;
+        --light-gray: #f8f9fa;
+        --border-color: #dee2e6;
         --text-color: #333;
-        --background-light: #f8f9fa;
+        --text-light: #666;
     }
 
-    body {
-        direction: rtl;
-    }
-
-    .transaction-details {
+    .transactions-list {
         padding: 20px;
-        max-width: 800px;
+        max-width: 1200px;
         margin: 0 auto;
     }
 
-    .transaction-details h2 {
+    .transactions-list h2 {
         text-align: center;
-        margin-bottom: 30px;
         color: var(--primary-color);
-    }
-
-    .transaction-details h3 {
-        color: var(--secondary-color);
-        margin: 20px 0;
-    }
-
-    .transaction-info {
-        background-color: var(--background-light);
-        padding: 20px;
-        border-radius: 8px;
         margin-bottom: 30px;
+        font-size: 1.8em;
     }
 
-    .info-row {
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        margin-bottom: 30px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .transaction-table {
+        width: 100%;
+        border-collapse: collapse;
+        direction: rtl;
+    }
+
+    .transaction-table th {
+        background-color: var(--light-gray);
+        color: var(--text-color);
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .transaction-table td {
+        padding: 15px;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+
+    .offer-info {
         display: flex;
-        justify-content: space-between;
-        padding: 10px 0;
-        border-bottom: 1px solid var(--light-gray);
+        align-items: center;
+        gap: 10px;
     }
 
-    .info-row:last-child {
-        border-bottom: none;
-    }
-
-    .info-row strong {
-        color: var(--secondary-color);
-    }
-
-    .transaction-form {
-        background-color: var(--background-light);
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 30px;
-    }
-
-    .form-group {
-        margin-bottom: 15px;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 5px;
+    .offer-id {
+        font-weight: 600;
         color: var(--text-color);
     }
 
-    .form-input {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid var(--light-gray);
+    .discount-badge {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 4px 8px;
         border-radius: 4px;
-        font-size: 1em;
+        font-size: 0.9em;
+    }
+
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        font-weight: 500;
+    }
+
+    .status-completed {
+        background-color: var(--success-color);
+        color: white;
+    }
+
+    .status-pending {
+        background-color: var(--warning-color);
+        color: var(--text-color);
+    }
+
+    .status-cancelled {
+        background-color: var(--danger-color);
+        color: white;
+    }
+
+    .date-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .date {
+        color: var(--text-color);
+        font-weight: 500;
+    }
+
+    .time {
+        color: var(--text-light);
+        font-size: 0.9em;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
     }
 
     .action-button {
         display: inline-block;
         padding: 8px 16px;
-        background-color: var(--primary-color);
-        color: #fff;
-        text-decoration: none;
         border-radius: 5px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-align: center;
+        min-width: 100px;
+        background-color: var(--primary-color);
+        color: white;
         border: none;
-        cursor: pointer;
-        font-size: 1em;
-        transition: background-color 0.3s;
     }
 
     .action-button:hover {
         background-color: var(--accent-color);
         text-decoration: none;
-        color: #fff;
+        color: white;
     }
 
-    .transaction-completed {
+    .action-button.confirm {
+        background-color: var(--success-color);
+    }
+
+    .action-button.confirm:hover {
+        background-color: #218838;
+    }
+
+    .action-button.secondary {
+        background-color: var(--secondary-color);
+    }
+
+    .action-button.secondary:hover {
+        background-color: #5a6268;
+    }
+
+    .action-button.cancel {
+        background-color: var(--danger-color);
+    }
+
+    .action-button.cancel:hover {
+        background-color: #a71d2a;
+    }
+
+    .no-transactions {
         text-align: center;
-        margin: 20px 0;
+        padding: 40px;
+        background-color: var(--light-gray);
+        border-radius: 8px;
+        margin-bottom: 30px;
     }
 
     .back-link {
         text-align: center;
-        margin-top: 30px;
+        margin-top: 20px;
     }
 
     @media (max-width: 768px) {
-        .transaction-details {
+        .transactions-list {
             padding: 10px;
         }
 
-        .info-row {
+        .transaction-table th,
+        .transaction-table td {
+            padding: 10px;
+        }
+
+        .action-buttons {
             flex-direction: column;
-            gap: 5px;
+        }
+
+        .action-button {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .offer-info {
+            flex-direction: column;
+            align-items: flex-start;
         }
     }
 </style>

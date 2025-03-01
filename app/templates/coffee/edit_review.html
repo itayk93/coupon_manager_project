@@ -1,0 +1,35 @@
+{% extends "coffee/base_coffee.html" %}
+{% block title %}עריכת ביקורת על המוכר{% endblock %}
+
+{% block coffee_content %}
+<h2>עריכת ביקורת על המוכר</h2>
+<form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+        {{ form.rating.label }}
+        {{ form.rating(class="form-control", placeholder="הזן דירוג 1-5") }}
+        {% if form.rating.errors %}
+            <div class="error-message">
+                {% for error in form.rating.errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+    <div class="form-group">
+        {{ form.comment.label }}
+        {{ form.comment(class="form-control", placeholder="הזן הערה (אופציונלי)") }}
+        {% if form.comment.errors %}
+            <div class="error-message">
+                {% for error in form.comment.errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+    <div class="form-group">
+        {{ form.submit(class="action-button") }}
+    </div>
+</form>
+<p><a href="{{ url_for('coffee.my_transactions') }}">← חזרה לעסקאות</a></p>
+{% endblock %}

@@ -147,39 +147,58 @@ def transaction_detail(transaction_id):
         return redirect(url_for('coffee.transaction_detail', transaction_id=transaction_id))
     return render_template('coffee/transaction_detail.html', transaction=transaction)
 
+from app.models import UserReview
+from app.forms import ReviewSellerForm
 @coffee_bp.route('/review/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 def review_seller(transaction_id):
     """
-    מאפשר לקונה להשאיר ביקורת על המוכר לאחר השלמת העסקה.
+    מאפשר לקונה להשאיר ביקורת על המוכר, נשמר בטבלת user_reviews בעמודה coffee_transaction.
     """
+    # שליפת העסקה מטבלת transactions (או coffee_transaction)
     transaction = CoffeeTransaction.query.get_or_404(transaction_id)
+
+    # וידוא שהמשתמש הנוכחי הוא הקונה בעסקה
     if current_user.id != transaction.buyer_id:
         flash("אינך מורשה להשאיר ביקורת על עסקה זו.", "danger")
         return redirect(url_for('coffee.index'))
-    # בדיקה אם כבר נכתבה ביקורת עבור עסקה זו
-    existing_review = CoffeeReview.query.filter_by(transaction_id=transaction.id, reviewer_id=current_user.id).first()
+
+    # בדיקה אם כבר קיימת ביקורת
+    existing_review = UserReview.query.filter_by(
+        reviewer_id=current_user.id,
+        reviewed_user_id=transaction.seller_id,
+        coffee_transaction=transaction.id
+    ).first()
     if existing_review:
         flash("כבר השארת ביקורת על עסקה זו.", "info")
-        return redirect(url_for('coffee.transaction_detail', transaction_id=transaction.id))
-    if request.method == 'POST':
+        return redirect(url_for('coffee.my_transactions'))
+
+    # טופס ביקורת
+    form = ReviewSellerForm()
+    if form.validate_on_submit():
         try:
-            rating = int(request.form.get('rating'))
-        except (TypeError, ValueError):
-            flash("יש להזין דירוג תקין (מספר בין 1 ל-5).", "danger")
-            return redirect(url_for('coffee.review_seller', transaction_id=transaction.id))
-        comment = request.form.get('comment')
-        new_review = CoffeeReview(
-            transaction_id=transaction.id,
-            reviewer_id=current_user.id,
-            rating=rating,
-            comment=comment
-        )
-        db.session.add(new_review)
-        db.session.commit()
-        flash("תודה! הביקורת נשמרה.", "success")
-        return redirect(url_for('coffee.transaction_detail', transaction_id=transaction.id))
-    return render_template('coffee/review.html', transaction=transaction)
+            new_review = UserReview(
+                reviewer_id=current_user.id,
+                reviewed_user_id=transaction.seller_id,
+                coffee_transaction=transaction.id,  # ← שדה חדש במקום transaction_id
+                rating=form.rating.data,
+                comment=form.comment.data
+            )
+            db.session.add(new_review)
+            db.session.commit()
+            flash("תודה! הביקורת נשמרה.", "success")
+            return redirect(url_for('coffee.my_transactions'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash("אירעה שגיאה בעת שמירת הביקורת.", "danger")
+            return redirect(url_for('coffee.my_transactions'))
+    else:
+        if request.method == 'POST':
+            print("Form errors:", form.errors)
+            flash("יש לתקן את השגיאות בטופס.", "danger")
+
+    return render_template('coffee/review.html', form=form, transaction=transaction)
 
 @coffee_bp.route('/offer/edit/<int:offer_id>', methods=['GET', 'POST'], endpoint='edit_offer')
 @login_required
@@ -199,6 +218,92 @@ def edit_offer(offer_id):
         return redirect(url_for('coffee.offer_detail', offer_id=offer.id))
 
     return render_template('coffee/edit_offer.html', form=form, offer=offer)
+
+
+from flask_wtf import FlaskForm
+from wtforms import HiddenField
+from app.helpers import send_email
+from app.models import User
+from app.forms import CancelTransactionForm
+
+
+@coffee_bp.route('/cancel_transaction/<int:transaction_id>', methods=['POST'])
+@login_required
+def cancel_transaction(transaction_id):
+    """
+    מאפשר לבטל עסקה במצב שממתין (לא הושלמה)
+    ומחזיר את מצב ההצעה למה שהיה לפני תחילת העסקה.
+    שולח מייל לצד השני (המוכר/הקונה) שהעסקה בוטלה.
+    """
+    form = CancelTransactionForm()
+    # validate_on_submit יבצע אימות CSRF
+    if not form.validate_on_submit():
+        flash("בקשת הביטול נכשלה עקב שגיאת אבטחה. נסה שוב.", "danger")
+        return redirect(url_for('coffee.my_transactions'))
+
+    transaction = CoffeeTransaction.query.get_or_404(transaction_id)
+    
+    # בדיקה שהמשתמש הוא הקונה או המוכר
+    if current_user.id not in [transaction.buyer_id, transaction.seller_id]:
+        flash("אין לך הרשאה לבטל עסקה זו.", "danger")
+        return redirect(url_for('coffee.my_transactions'))
+    
+    # אם העסקה כבר הושלמה, לא ניתן לבטל אותה
+    if transaction.status in ['completed', 'buyer_confirmed']:
+        flash("לא ניתן לבטל עסקה שהושלמה.", "danger")
+        return redirect(url_for('coffee.my_transactions'))
+    
+    try:
+        # החזרת ההצעה למצב זמין
+        transaction.offer.is_available = True
+        
+        # שמירת נתונים כדי שנוכל להשתמש בהם אחר כך
+        seller_user = User.query.get(transaction.seller_id)
+        buyer_user  = User.query.get(transaction.buyer_id)
+
+        # מחיקת העסקה
+        db.session.delete(transaction)
+        db.session.commit()
+
+        flash("העסקה בוטלה והמצב הוחזר למצב המקורי.", "success")
+
+        # ---------------------
+        # שליחת מייל לצד השני
+        # ---------------------
+        # נקבע האם הנוכחי הוא המוכר
+        is_seller = (current_user.id == seller_user.id)
+
+        # המשתמש הנגדי (צד שני בעסקה)
+        if is_seller:
+            other_user = buyer_user
+        else:
+            other_user = seller_user
+
+        # נניח שנגדיר "coupon" = dict עם company = תיאור ההצעה
+        coupon = {
+            'company': transaction.offer.description if transaction.offer.description else "קופון"
+        }
+
+        # שליחת מייל עם התבנית
+        send_email(
+            sender_email='noreply@couponmasteril.com',
+            sender_name='מערכת הנחות קפה',
+            recipient_email=other_user.email,
+            recipient_name=f"{other_user.first_name} {other_user.last_name}",
+            subject="העסקה בוטלה",
+            html_content=render_template(
+                'emails/coffee/seller_canceled_transaction.html',
+                seller=seller_user,
+                buyer=buyer_user,
+                coupon=coupon,
+                is_seller=is_seller  # מאפשר בתוך התבנית לדעת מי ביטל
+            )
+        )
+    except Exception as e:
+        db.session.rollback()
+        flash("אירעה שגיאה בעת ביטול העסקה או שליחת המייל.", "danger")
+
+    return redirect(url_for('coffee.my_transactions'))
 
 @coffee_bp.route('/offer/delete/<int:offer_id>', methods=['POST'], endpoint='delete_offer')
 @login_required
@@ -383,54 +488,72 @@ def buy_offer():
 # ----------------------------
 # 2. אישור עסקה – המוכר מאשר את העסקה (עדכון פרטי העסקה)
 # ----------------------------
+from app.forms import ApproveCoffeeTransactionForm  # עדכון ייבוא לטופס החדש
+
 @coffee_bp.route('/approve_transaction/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 def approve_transaction(transaction_id):
     """
-    עמוד שבו המוכר מאשר עסקה.
-    על המוכר להזין, למשל, טלפון לצורך קשר או להשלים פרטים במידת הצורך.
-    לאחר העדכון, העיסקה משנה סטטוס ל"ממתין לאישור הקונה".
+    עמוד שבו המוכר מאשר עסקה ומזין את מספר הטלפון לשליחה לקונה.
+    אם כבר קיים מספר טלפון בהצעה, המשתמש לא יכול לעדכן אותו מחדש.
+    לאחר העדכון, העסקה משנה סטטוס ל"ממתין לאישור הקונה" ונשלח מייל לקונה.
     """
     transaction = CoffeeTransaction.query.get_or_404(transaction_id)
+    offer = transaction.offer  # שולפים את ההצעה המקושרת
+
+    # בודקים שהמוכר הוא המשתמש הנוכחי
     if transaction.seller_id != current_user.id:
         flash('אין לך הרשאה לפעולה זו.', 'danger')
         return redirect(url_for('coffee.my_transactions'))
-    form = ApproveTransactionForm()  # טופס לאישור עסקה – יש להגדיר אותו במודולי הטפסים
-    if request.method == "POST":
-        if form.validate_on_submit():
-            try:
-                transaction.seller_phone = form.seller_phone.data
-                transaction.seller_approved = True
-                transaction.status = 'ממתין לאישור הקונה'
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                current_app.logger.error(f"Error approving transaction: {e}")
-                flash('אירעה שגיאה בעדכון העסקה.', 'danger')
-                return redirect(url_for('coffee.my_transactions'))
+
+    # אם כבר הוגדר טלפון בהצעה, אי אפשר להזין שוב
+    if offer.seller_phone:
+        flash(f"נתת כבר את הטלפון שלך: {offer.seller_phone}", "info")
+        return redirect(url_for('coffee.my_transactions'))
+
+    form = ApproveCoffeeTransactionForm()
+    if request.method == "POST" and form.validate_on_submit():
+        try:
+            # כאן מעדכנים את עמודת seller_phone בהצעה
+            offer.seller_phone = form.seller_phone.data
+            transaction.seller_approved = True
+            transaction.status = 'ממתין לאישור הקונה'
+            db.session.commit()
+
+            flash("העסקה עודכנה בהצלחה. מספר הטלפון נשלח לקונה.", "success")
 
             # שליחת מייל לקונה
             seller = current_user
             buyer = User.query.get(transaction.buyer_id)
-            offer = transaction.offer
-            try:
-                send_email(
-                    sender_email='noreply@couponmasteril.com',
-                    sender_name='מערכת הנחות קפה',
-                    recipient_email=buyer.email,
-                    recipient_name=f"{buyer.first_name} {buyer.last_name}",
-                    subject="המוכר אישר את העסקה",
-                    html_content=render_template('emails/coffee/seller_approved_transaction_coffee.html',
-                                                  seller=seller, buyer=buyer, offer=offer)
+            send_email(
+                sender_email='noreply@couponmasteril.com',
+                sender_name='מערכת הנחות קפה',
+                recipient_email=buyer.email,
+                recipient_name=f"{buyer.first_name} {buyer.last_name}",
+                subject="המוכר אישר את העסקה ושלח את מספר הטלפון שלו",
+                html_content=render_template(
+                    'emails/coffee/seller_approved_transaction_coffee.html',
+                    seller=seller,
+                    buyer=buyer,
+                    offer=offer
                 )
-            except Exception as e:
-                current_app.logger.error(f"Error sending email to buyer: {e}")
-                flash('העסקה עודכנה אך לא נשלח מייל לקונה.', 'warning')
-            flash('העסקה עודכנה בהצלחה. המייל נשלח לקונה.', 'success')
-            return redirect(url_for('coffee.my_transactions'))
-        else:
+            )
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error approving transaction: {e}")
+            flash('אירעה שגיאה בעדכון העסקה.', 'danger')
+
+        return redirect(url_for('coffee.my_transactions'))
+
+    else:
+        if request.method == "POST":
+            # הדפסת שגיאות הטופס
+            print("Form errors:", form.errors)
             flash('יש לתקן את השגיאות בטופס.', 'danger')
-    return render_template('approve_transaction_coffee.html', form=form, transaction=transaction)
+
+    return render_template('coffee/approve_transaction_coffee.html',
+                           form=form, transaction=transaction)
 
 # ----------------------------
 # 3. אישור העברה – המוכר מאשר שהכסף התקבל
@@ -609,7 +732,144 @@ def my_transactions():
     מציג את כל העסקאות הקשורות להצעות הקפה של המשתמש (כמוכר וכקונה).
     """
     transactions = CoffeeTransaction.query.filter(
-        (CoffeeTransaction.seller_id == current_user.id) | (CoffeeTransaction.buyer_id == current_user.id)
+        (CoffeeTransaction.seller_id == current_user.id) |
+        (CoffeeTransaction.buyer_id == current_user.id)
     ).order_by(CoffeeTransaction.created_at.desc()).all()
-    return render_template('coffee/my_transactions_coffee.html', transactions=transactions)
 
+    form = CancelTransactionForm()
+
+    # ייבוא טבלת הביקורות
+    from app.models import UserReview
+
+    # בדיקה עבור כל עסקה אם כבר קיימת ביקורת
+    for tx in transactions:
+        tx.has_review = False
+        # אם המשתמש הנוכחי הוא הקונה, נחפש ביקורת מתאימה
+        if tx.buyer_id == current_user.id:
+            existing_review = UserReview.query.filter_by(
+                reviewer_id=current_user.id,
+                reviewed_user_id=tx.seller_id,
+                coffee_transaction=tx.id
+            ).first()
+            if existing_review:
+                tx.has_review = True
+
+    return render_template('coffee/my_transactions_coffee.html',
+                           transactions=transactions,
+                           form=form)
+
+# ----------------------------
+# 7. סיום העסקה
+# ----------------------------
+@coffee_bp.route('/finalize_transaction/<int:transaction_id>', methods=['POST'], endpoint='finalize_transaction')
+@login_required
+def finalize_transaction(transaction_id):
+    """
+    Allows the seller to finalize the transaction once the buyer has confirmed.
+    On success, the transaction status is set to 'completed' (or 'הושלם'), 
+    an email is sent to the buyer using the provided email template, and no action buttons
+    will be displayed in the transactions view.
+    """
+    transaction = CoffeeTransaction.query.get_or_404(transaction_id)
+    
+    # Only the seller can finalize the transaction.
+    if current_user.id != transaction.seller_id:
+        flash("אין לך הרשאה לסיים את העסקה.", "danger")
+        return redirect(url_for('coffee.my_transactions'))
+    
+    # Ensure that the buyer has confirmed the transfer.
+    if not transaction.buyer_confirmed:
+        flash("הקונה עדיין לא אישר את העסקה.", "warning")
+        return redirect(url_for('coffee.my_transactions'))
+    
+    try:
+        # Finalize the transaction
+        transaction.status = 'completed'  # or 'הושלם'
+        transaction.seller_confirmed = True
+        transaction.seller_confirmed_at = datetime.utcnow()
+        db.session.commit()
+        flash("העסקה הושלמה בהצלחה.", "success")
+        
+        # Send an email to the buyer to notify that the seller has finalized the transaction.
+        seller = current_user
+        buyer = User.query.get(transaction.buyer_id)
+        send_email(
+            sender_email='noreply@couponmasteril.com',
+            sender_name='מערכת הנחות קפה',
+            recipient_email=buyer.email,
+            recipient_name=f"{buyer.first_name} {buyer.last_name}",
+            subject="המוכר אישר את העסקה",
+            html_content=render_template(
+                'emails/coffee/seller_approved_transaction_coffee.html',
+                seller=seller,
+                buyer=buyer,
+                offer=transaction.offer
+            )
+        )
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error finalizing transaction: {e}")
+        flash("אירעה שגיאה בעת סיום העסקה.", "danger")
+    
+    return redirect(url_for('coffee.my_transactions'))
+
+
+# 8. Delete Review (for the buyer)
+@coffee_bp.route('/review/delete/<int:transaction_id>', methods=['POST'])
+@login_required
+def delete_review(transaction_id):
+    """
+    Allows the buyer to delete their review for the given coffee transaction.
+    The review is identified by the current user (reviewer) and the coffee_transaction field.
+    """
+    review = UserReview.query.filter_by(
+        reviewer_id=current_user.id,
+        coffee_transaction=transaction_id
+    ).first()
+    if not review:
+        flash("ביקורת לא נמצאה לעסקה זו.", "warning")
+        return redirect(url_for('coffee.my_transactions'))
+    try:
+        db.session.delete(review)
+        db.session.commit()
+        flash("הביקורת נמחקה בהצלחה.", "success")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting review: {e}")
+        flash("אירעה שגיאה בעת מחיקת הביקורת.", "danger")
+    return redirect(url_for('coffee.my_transactions'))
+
+# 9. Edit Review (for the buyer)
+@coffee_bp.route('/review/edit/<int:transaction_id>', methods=['GET', 'POST'])
+@login_required
+def edit_review(transaction_id):
+    """
+    Allows the buyer to edit their review for the given coffee transaction.
+    The review is identified by the current user and the coffee_transaction field.
+    """
+    review = UserReview.query.filter_by(
+        reviewer_id=current_user.id,
+        coffee_transaction=transaction_id
+    ).first()
+    if not review:
+        flash("ביקורת לא נמצאה לעסקה זו.", "warning")
+        return redirect(url_for('coffee.my_transactions'))
+    
+    form = ReviewSellerForm(obj=review)
+    if form.validate_on_submit():
+        try:
+            review.rating = form.rating.data
+            review.comment = form.comment.data
+            db.session.commit()
+            flash("הביקורת עודכנה בהצלחה.", "success")
+            return redirect(url_for('coffee.my_transactions'))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating review: {e}")
+            flash("אירעה שגיאה בעת עדכון הביקורת.", "danger")
+            return redirect(url_for('coffee.my_transactions'))
+    else:
+        if request.method == "POST":
+            print("Form errors:", form.errors)
+            flash("יש לתקן את השגיאות בטופס.", "danger")
+    return render_template('coffee/edit_review.html', form=form, transaction_id=transaction_id)

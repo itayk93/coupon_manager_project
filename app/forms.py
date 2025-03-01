@@ -656,16 +656,23 @@ class RateUserForm(FlaskForm):
     submit = SubmitField('שלח דירוג')
 
 
+from flask_wtf import FlaskForm
+from wtforms import IntegerField, TextAreaField, SubmitField
+from wtforms.validators import DataRequired, NumberRange, Optional, Length
+
 class ReviewSellerForm(FlaskForm):
     rating = IntegerField(
-        'דירוג (1 עד 5)',
+        "דירוג (1-5)",
         validators=[
             DataRequired(message="חובה להזין דירוג"),
-            NumberRange(min=1, max=5, message="הדירוג צריך להיות בין 1 ל-5")
+            NumberRange(min=1, max=5, message="הדירוג חייב להיות בין 1 ל-5")
         ]
     )
-    comment = TextAreaField('הערה (אופציונלי)', validators=[Optional()])
-    submit = SubmitField('שלח ביקורת')
+    comment = TextAreaField(
+        "הערה (אופציונלי)",
+        validators=[Optional(), Length(max=1000)]
+    )
+    submit = SubmitField("שלח ביקורת")
 
 
 class OfferCouponForm(FlaskForm):
@@ -758,12 +765,6 @@ class CoffeeOfferForm(FlaskForm):
     offer_type = HiddenField("offer_type")  # כדי לאחסן אם מדובר במוכר או קונה
 
 
-class ApproveCoffeeTransactionForm(FlaskForm):
-    seller_phone = StringField(
-        'מספר טלפון',
-        validators=[DataRequired(), Regexp(r'^0\d{2}-\d{7}$', message="פורמט: 0xx-xxxxxxx")]
-    )
-    submit = SubmitField('אשר עסקה')
 
 
 class SellerAddCoffeeOfferCodeForm(FlaskForm):
@@ -786,3 +787,21 @@ class ConfirmTransferForm(FlaskForm):
     """טופס אישור העברה כספית על ידי הקונה"""
     submit = SubmitField('אשר העברה')
 
+
+from flask_wtf import FlaskForm
+from wtforms import HiddenField
+
+
+class CancelTransactionForm(FlaskForm):
+    csrf_token = HiddenField()
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired, Regexp
+
+class ApproveCoffeeTransactionForm(FlaskForm):
+    seller_phone = StringField("מספר טלפון (עם קפה)", validators=[
+        DataRequired(message="יש להזין מספר טלפון"),
+        Regexp(r'^0\d{2}-\d{7}$', message="יש להזין מספר טלפון בפורמט 0xx-xxxxxxx")
+    ])
+    submit = SubmitField("אשר עסקה")
