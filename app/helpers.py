@@ -245,7 +245,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
 
     # אם מדובר ב-Max, נוסיף מצב Headless
     if coupon_kind == "Max":
-        chrome_options.add_argument("--headless=new")  # מצב Headless חדש יותר, תומך ביכולות מתקדמות
+        #chrome_options.add_argument("--headless=new")  # מצב Headless חדש יותר, תומך ביכולות מתקדמות
         chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # חוסם תמונות מהדפדפן
 
     df = None  # כאן נאחסן את ה-DataFrame המתקבל

@@ -2403,19 +2403,23 @@ def update_coupon_usage_from_multipass(id):
 @coupons_bp.route('/update_coupon_usage/<int:id>', methods=['GET', 'POST'])
 @login_required
 def update_coupon_usage_route(id):
-    #log_user_activity("complete_transaction")
-
     coupon = Coupon.query.get_or_404(id)
+
+    # שליפת רשימת החברות ובניית מיפוי לוגו
     companies = Company.query.order_by(Company.name).all()
+    company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
     for company_name in company_logo_mapping:
         if not company_logo_mapping[company_name]:
             company_logo_mapping[company_name] = 'images/default.png'
+
     is_owner = (current_user.id == coupon.user_id)
 
-    if coupon.user_id != current_user.id:
+    # אם הקופון לא שלך, חסימה
+    if not is_owner:
         flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
         return redirect(url_for('coupons.show_coupons'))
 
+    # אם הקופון חד-פעמי, פשוט מסמנים כנוצל
     if coupon.is_one_time:
         coupon.status = 'נוצל'
         try:
@@ -2423,7 +2427,7 @@ def update_coupon_usage_route(id):
             flash('סטטוס הקופון עודכן בהצלחה ל"נוצל".', 'success')
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error updating one-time coupon status: {e}")
+            current_app.logger.error(f"Error updating one-time coupon status: {e}")
             flash('אירעה שגיאה בעת עדכון סטטוס הקופון.', 'danger')
         return redirect(url_for('coupons.coupon_detail', id=id))
 
@@ -2434,11 +2438,11 @@ def update_coupon_usage_route(id):
         new_used_amount = form.used_amount.data
         if new_used_amount < 0:
             flash('כמות השימוש חייבת להיות חיובית.', 'danger')
-            return redirect(url_for('coupons.update_coupon_usage', id=id))
+            return redirect(url_for('coupons.update_coupon_usage_route', id=id))
 
         if (coupon.used_value + new_used_amount) > coupon.value:
             flash('הכמות שהשתמשת בה גדולה מערך הקופון הנותר.', 'danger')
-            return redirect(url_for('coupons.update_coupon_usage', id=id))
+            return redirect(url_for('coupons.update_coupon_usage_route', id=id))
 
         try:
             update_coupon_usage(coupon, new_used_amount, details='שימוש ידני')
@@ -2446,7 +2450,7 @@ def update_coupon_usage_route(id):
             return redirect(url_for('coupons.coupon_detail', id=coupon.id))
         except Exception as e:
             flash('אירעה שגיאה בעת עדכון כמות השימוש.', 'danger')
-            logger.error(f"Error updating coupon usage: {e}")
+            current_app.logger.error(f"Error updating coupon usage: {e}")
 
     return render_template(
         'update_coupon_usage.html',
