@@ -26,6 +26,7 @@
     {% if show_expiring_alert %}
     <!-- התראה לקופונים שעומדים לפוג -->
     <div class="expiring-coupons-alert">
+        <!-- כפתור ה־X למעלה-משמאל -->
         <a class="close-expiring-alert" href="{{ url_for('profile.dismiss_expiring_alert') }}">×</a>
         <p><strong>שים לב!</strong> יש לך {{ expiring_coupons|length }} קופונים שעומדים לפוג תוקפם בשבוע הקרוב:</p>
         <ul class="expiring-coupons-list">
@@ -70,7 +71,7 @@
     </p>
 </section>
 
-<!-- שורת כרטיסי חברות (Company Cards) -->
+<!-- שורת כרטיסי חברות -->
 <div id="company-cards-row" class="company-cards-row"></div>
 
 <div class="usage-forms-container">
@@ -179,19 +180,25 @@
 <!-- Modal להצגת קופונים של חברה -->
 <div id="companyModal" class="modal" style="display:none;">
   <div class="modal-content">
-    <span class="close-modal" style="cursor:pointer;">×</span>
-    <h2 id="modal-company-name"></h2>
-    <ul id="modal-coupons-list" style="list-style: none;"></ul>
+    <!-- כפתור סגירה מימין עם מרווח נוסף -->
+    <span class="close-modal">×</span>
+    <!-- כותרת החברה -->
+    <h2 id="modal-company-name">קופונים מחברת ...</h2>
+    <!-- לוגו החברה מתחת לכותרת -->
+    <img id="modal-company-logo" alt="Company Logo" style="display:none;">
+    <ul id="modal-coupons-list"></ul>
   </div>
 </div>
 
 <!-- Modal לעדכון שימוש -->
 <div id="usageModal" class="modal" style="display:none;">
-  <div class="modal-content" style="text-align:center;">
-    <span class="close-usage-modal" style="cursor:pointer; float:right; font-size:1.5em;">×</span>
+  <div class="modal-content">
+    <span class="close-usage-modal">×</span>
     <h3>עדכון סכום שימוש</h3>
-    <p id="usage-modal-company"></p>
-    <p id="usage-modal-code" style="margin-bottom:10px;"></p>
+    <p id="usage-modal-company">חברה: Carrefour</p>
+    <p id="usage-modal-code" style="margin-bottom:10px;">קוד קופון: קופון לקרפור</p>
+    <!-- שורת יתרה נוכחית -->
+    <p id="usage-modal-remaining" style="margin-bottom:10px;">יתרה נוכחית: <span id="remainingValue">15.44</span> ש"ח</p>
     <input type="number" id="usageAmount" step="0.01" placeholder="הקלד כמה ניצלת" style="padding:8px; width:120px;">
     <br>
     <button id="usageConfirmButton" style="margin-top:10px; padding:8px 16px; background-color:#3498db; color:#fff; border:none; border-radius:5px; cursor:pointer;">
@@ -203,8 +210,8 @@
 
 <!-- Modal להצגה בגדול -->
 <div id="bigDisplayModal" class="modal" style="display:none;">
-  <div class="modal-content" style="text-align:center;">
-    <span class="close-big-modal" style="cursor:pointer; float:right; font-size:1.5em;">×</span>
+  <div class="modal-content">
+    <span class="close-big-modal">×</span>
     <h2 id="bigModalCompanyName"></h2>
     <img id="bigModalLogo" alt="Logo" style="width:120px;height:120px;object-fit:cover;margin:10px auto;border-radius:8px;">
     <h1 id="bigModalCouponCode" style="margin-top:20px;"></h1>
@@ -236,8 +243,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
 
 <style>
-/* ===== עיצוב כללי ===== */
-/* הודעה מנהלית */
+/* ===== עיצוב כללי והודעות ===== */
 .admin-flash-message {
     background-color: #fff8e1;
     color: #856404;
@@ -261,6 +267,21 @@
     font-size: 1.1em;
     cursor: pointer;
     color: inherit;
+}
+.admin-message-button {
+    display: inline-block;
+    background-color: #3498db;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 0.85em;
+    font-weight: bold;
+    transition: background 0.3s ease-in-out;
+    margin-top: 2px;
+}
+.admin-message-button:hover {
+    background-color: #2980b9;
 }
 
 /* התראה לקופונים שעומדים לפוג */
@@ -292,8 +313,27 @@
 .expiring-coupons-list li {
     margin-bottom: 5px;
 }
+.coupon-button-wrapper {
+    display: inline;
+}
 
-/* ערכי הארנק והחיסכון */
+/* כפתור צפייה בקופון */
+.view-coupon-button {
+    display: inline-block;
+    margin-right: 5px;
+    background-color: #3498db;
+    color: #fff;
+    text-decoration: none;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-weight: normal;
+}
+.view-coupon-button:hover {
+    background-color: #2980b9;
+}
+
+/* ===== כותרות וסכומים ===== */
 .total-value p {
     font-size: 1.25em;
     font-weight: bold;
@@ -302,7 +342,7 @@
     display: none;
 }
 
-/* ===== כרטיסי חברות ===== */
+/* ===== כרטיסי חברות (שורת הסינון) ===== */
 .company-cards-row {
     display: flex;
     flex-wrap: wrap;
@@ -343,8 +383,25 @@
     font-size: 0.9em;
     color: #666;
 }
+@media (max-width: 450px) {
+    .company-cards-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* 2 בעמודה במסכים קטנים */
+        gap: 15px;
+        padding: 0 10px; /* ריווח משני הצדדים */
+    }
+    .company-card-box {
+        width: 100%; /* מבטיח שהכרטיסים יתאימו לרוחב העמודות */
+    }
+    /* כרטיס בודד בשורה האחרונה יישאר בגודל רגיל אבל יהיה ממורכז */
+    .company-card-box:nth-child(odd):last-child {
+        grid-column: 1 / -1; /* גורם לו להיות בשורה נפרדת */
+        justify-self: center; /* מיישר למרכז */
+        width: 50%; /* מבטיח שהוא בגודל של עמודה רגילה */
+    }
+}
 
-/* ===== עיצוב טופס הקופונים ===== */
+/* ===== טפסים (דיווח על שימוש / הוספת קופון) ===== */
 .usage-forms-container {
     display: flex;
     gap: 5px;
@@ -361,16 +418,28 @@
     display: flex;
     flex-direction: column;
 }
+.usage-form-wrapper form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.input-wrapper {
+    margin-bottom: 10px;
+}
 .button-with-explanation {
     position: relative;
     display: inline-block;
     margin-top: auto;
 }
-.input-wrapper {
-    margin-bottom: 10px;
+.button-with-explanation:hover .tooltip,
+.tooltip-trigger:hover .tooltip {
+    display: block;
+}
+.tooltip-button-mobile {
+    margin-left: 10px;
 }
 
-/* ===== רשימת הקופונים ===== */
+/* ===== רשימת הקופונים בעמוד הראשי ===== */
 .coupon-container {
     display: flex;
     flex-wrap: wrap;
@@ -415,8 +484,21 @@
     gap: 15px;
     margin: 20px 0;
 }
+.export-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background-color: #2ecc71;
+    color: #fff;
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+}
+.export-button:hover {
+    background-color: #27ae60;
+}
 
-/* ===== Responsive ===== */
+/* ===== Responsiveness ===== */
 @media (max-width: 1200px) {
     .coupon-card {
         flex: 1 1 calc(33.333% - 20px);
@@ -444,9 +526,74 @@
     .usage-form-wrapper {
         max-width: 100%;
     }
+    .button-with-explanation {
+        display: flex;
+        align-items: center;
+    }
 }
 
-/* ===== עיצוב מודלים ===== */
+/* ===== Tooltip ===== */
+.tooltip {
+    display: none;
+    position: absolute;
+    background-color: #333;
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    max-width: 250px;
+    z-index: 9999;
+}
+.tooltip::after {
+    content: "";
+    position: absolute;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+    top: 0;
+    left: 10px;
+    transform: translateY(-100%);
+}
+.close-tooltip {
+    float: right;
+    cursor: pointer;
+    margin-left: 8px;
+}
+
+/* מיקום tooltip עבור השורה של "עד כה חסכת..." */
+.total-savings-line {
+    position: relative;
+    display: inline-block;
+    margin-top: 5px;
+    padding-top: 0;
+}
+.total-savings-line .tooltip {
+    top: -20px !important;
+    left: 110% !important;
+}
+.total-savings-line .tooltip:after {
+    top: 50%;
+    right: 100%;
+    margin-top: -5px;
+    border-color: transparent #333 transparent transparent !important;
+}
+
+/* התאמה לסימן שאלה בנייד */
+@media (max-width: 768px) {
+    .tooltip-button-mobile {
+        position: relative;
+        margin-top: 10px;
+    }
+    .tooltip {
+        top: calc(100% + 8px) !important;
+        left: 50% !important;
+        transform: translateX(-50%);
+        white-space: normal;
+        max-width: 90vw;
+    }
+}
+
+/* ===== עיצוב המודלים (Modal) ===== */
 .modal {
   position: fixed;
   z-index: 1000;
@@ -465,19 +612,95 @@
   width: 90%;
   max-width: 500px;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
   text-align: center;
 }
+.modal-content h2,
+.modal-content h3 {
+  margin: 10px 0;
+}
+/* כפתורי סגירה - כל הכפתורים (כולל .close-modal) ימוקמו בצד ימין עם מרווח נוסף */
 .close-modal,
 .close-usage-modal,
 .close-big-modal {
-  float: right;
+  position: absolute;
+  top: 10px;
+  right: 20px;  /* מרווח נוסף מהגבול */
   font-size: 1.5em;
   cursor: pointer;
+}
+/* לוגו החברה במודל */
+#modal-company-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin: 10px auto 0 auto;
+  display: none;
+}
+
+/* רשימת הקופונים במודל להצגת קופוני החברה */
+#modal-coupons-list {
+  margin-top: 20px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+  list-style: none;
+  padding: 0;
+}
+#modal-coupons-list li {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#modal-coupons-list li a {
+  text-decoration: none;
+  color: #3498db;
+  margin-bottom: 5px;
+  text-align: center;
+}
+#modal-coupons-list li a:hover {
+  text-decoration: underline;
+}
+.coupon-info-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.update-usage-btn,
+.show-big-btn {
+  border: none;
+  border-radius: 5px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 0.9em;
+}
+.update-usage-btn {
+  background-color: #27ae60;
+}
+.update-usage-btn:hover {
+  background-color: #229954;
+}
+.show-big-btn {
+  background-color: #8e44ad;
+}
+.show-big-btn:hover {
+  background-color: #7d3c98;
 }
 </style>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+  // משתנה חדש למעקב אחרי עדכון שימוש
+  let usageUpdated = false;
+
   // 1) איסוף הקופונים הפעילים (לפי כותרת "קופונים פעילים")
   const activeHeading = Array.from(document.querySelectorAll(".coupon-section-title"))
     .find(h => h.textContent.trim() === "קופונים פעילים");
@@ -529,36 +752,45 @@ document.addEventListener("DOMContentLoaded", function() {
   // 4) Modal להצגת קופונים של חברה
   const modal = document.getElementById("companyModal");
   const modalCompanyName = document.getElementById("modal-company-name");
+  const modalCompanyLogo = document.getElementById("modal-company-logo");
   const modalCouponsList = document.getElementById("modal-coupons-list");
   const closeModal = document.querySelector(".close-modal");
 
   function openCompanyModal(companyName, cardList) {
-    modalCompanyName.textContent = "קופונים מחברת " + companyName;
-    modalCouponsList.innerHTML = "";
+    // נזהה את הלוגו מהקופון הראשון ברשימה
+    const firstCard = cardList[0];
+    const logoSrc = firstCard.getAttribute("data-logo-src") || "";
 
+    // עדכון התמונה
+    modalCompanyLogo.src = logoSrc;
+    modalCompanyLogo.style.display = logoSrc ? "block" : "none";
+
+    // עדכון כותרת
+    modalCompanyName.textContent = "קופונים מחברת " + companyName;
+
+    // בניית רשימת הקופונים
+    modalCouponsList.innerHTML = "";
     cardList.forEach(card => {
       const couponCode = card.getAttribute("data-coupon-code");
       const couponId = card.getAttribute("data-coupon-id");
       const remainingRaw = card.getAttribute("data-remaining") || "0";
       const remaining = parseFloat(remainingRaw).toFixed(2);
       const couponLink = card.getAttribute("href");
-      const logoSrc = card.getAttribute("data-logo-src") || "";
+      const logoSrcItem = card.getAttribute("data-logo-src") || "";
 
       const li = document.createElement("li");
-      li.style.marginBottom = "10px";
       li.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <a href="${couponLink}" style="text-decoration:none; color:#3498db;">
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <a href="${couponLink}">
             קוד: ${couponCode} - נותר: ${remaining} ₪
           </a>
-          <div style="display:flex; justify-content:center; gap:6px;">
+          <div class="coupon-info-buttons">
             <button 
               class="update-usage-btn"
               data-coupon-id="${couponId}"
               data-coupon-code="${couponCode}"
               data-company="${companyName}"
               data-remaining="${remaining}"
-              style="background-color:#27ae60; color:#fff; border:none; border-radius:5px; padding:4px 8px; cursor:pointer;"
             >
               עדכון שימוש
             </button>
@@ -566,8 +798,7 @@ document.addEventListener("DOMContentLoaded", function() {
               class="show-big-btn"
               data-company="${companyName}"
               data-coupon-code="${couponCode}"
-              data-logo-src="${logoSrc}"
-              style="background-color:#8e44ad; color:#fff; border:none; border-radius:5px; padding:4px 8px; cursor:pointer;"
+              data-logo-src="${logoSrcItem}"
             >
               הצגת קוד הקופון
             </button>
@@ -599,6 +830,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const usageConfirmBtn = document.getElementById("usageConfirmButton");
 
   let currentCouponId = null;
+  let currentRemaining = 0;
 
   document.addEventListener("click", function(e) {
     if (e.target && e.target.classList.contains("update-usage-btn")) {
@@ -606,21 +838,30 @@ document.addEventListener("DOMContentLoaded", function() {
       currentCouponId = btn.getAttribute("data-coupon-id");
       const cName = btn.getAttribute("data-company");
       const cCode = btn.getAttribute("data-coupon-code");
+      currentRemaining = parseFloat(btn.getAttribute("data-remaining"));
 
       usageCompany.textContent = "חברה: " + cName;
       usageCode.textContent = "קוד קופון: " + cCode;
       usageAmountInput.value = "";
       usageErrorMsg.style.display = "none";
+      document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
       usageModal.style.display = "block";
     }
   });
 
+  // שינוי: בעת סגירת מודל עדכון השימוש, אם כבר עודכן שימוש - רענון העמוד
   closeUsageModal.addEventListener("click", function() {
     usageModal.style.display = "none";
+    if (usageUpdated) {
+      window.location.reload();
+    }
   });
   window.addEventListener("click", function(e) {
     if (e.target === usageModal) {
       usageModal.style.display = "none";
+      if (usageUpdated) {
+        window.location.reload();
+      }
     }
   });
 
@@ -628,6 +869,11 @@ document.addEventListener("DOMContentLoaded", function() {
     const usedAmount = parseFloat(usageAmountInput.value);
     if (isNaN(usedAmount) || usedAmount <= 0) {
       usageErrorMsg.textContent = "אנא הזן סכום חוקי (> 0).";
+      usageErrorMsg.style.display = "block";
+      return;
+    }
+    if (usedAmount > currentRemaining) {
+      usageErrorMsg.textContent = "הסכום שהוזן חורג מהיתרה הקיימת (" + currentRemaining.toFixed(2) + " ש\"ח).";
       usageErrorMsg.style.display = "block";
       return;
     }
@@ -648,6 +894,8 @@ document.addEventListener("DOMContentLoaded", function() {
         usageErrorMsg.style.display = "block";
         return;
       }
+      // סימון כי עדכון השימוש בוצע
+      usageUpdated = true;
       usageModal.style.display = "none";
       const theButton = document.querySelector(`.update-usage-btn[data-coupon-id="${currentCouponId}"]`);
       if (theButton) {
@@ -724,6 +972,5 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 });
 </script>
-
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
 {% endblock %}
