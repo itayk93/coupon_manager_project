@@ -144,12 +144,7 @@
                    data-coupon-code="{{ coupon.code }}"
                    data-coupon-id="{{ coupon.id }}"
                    data-remaining="{{ '%.2f'|format(coupon.remaining_value) }}"
-                   data-logo-src="{{ url_for('static', filename=company_logo_mapping.get(coupon.company|lower, 'images/default.png')) }}"
-                   {% if coupon.is_one_time %}
-                       data-is-one-time="true" data-purpose="{{ coupon.purpose }}"
-                   {% else %}
-                       data-is-one-time="false"
-                   {% endif %}>
+                   data-logo-src="{{ url_for('static', filename=company_logo_mapping.get(coupon.company|lower, 'images/default.png')) }}">
                     {{ get_company_logo(coupon) }}
                     <p class="company-name">{{ coupon.company }}</p>
                     <p>קוד קופון: {{ coupon.code }}</p>
@@ -191,8 +186,6 @@
     <h2 id="modal-company-name">קופונים מחברת ...</h2>
     <!-- לוגו החברה מתחת לכותרת -->
     <img id="modal-company-logo" alt="Company Logo" style="display:none;">
-    <!-- סך כל הכסף שנותר - חדש: מופיע מתחת ללוגו, בגופן גדול וב-bold עם מרווח קטן -->
-    <p id="modal-total-remaining" style="font-size: 1.2em; font-weight: bold; margin: 5px 0;"></p>
     <ul id="modal-coupons-list"></ul>
   </div>
 </div>
@@ -223,9 +216,9 @@
 <div id="bigDisplayModal" class="modal" style="display:none;">
   <div class="modal-content">
     <span class="close-big-modal">×</span>
-    <h2 id="bigModalCompanyName">Be שופרסל</h2>
-    <img id="bigModalLogo" alt="Logo" style="width:120px;height:120px;object-fit:cover;margin:10px auto;border-radius:8px;" src="/static/images/be_shufersal.png">
-    <h1 id="bigModalCouponCode" style="margin-top:20px;">91381000401555109674</h1>
+    <h2 id="bigModalCompanyName"></h2>
+    <img id="bigModalLogo" alt="Logo" style="width:120px;height:120px;object-fit:cover;margin:10px auto;border-radius:8px;">
+    <h1 id="bigModalCouponCode" style="margin-top:20px;"></h1>
   </div>
 </div>
 
@@ -309,11 +302,11 @@
 }
 .close-expiring-alert {
     position: absolute;
-    top: 5px;
-    right: 10px;
+    top: 5px; 
+    right: 10px; 
     font-size: 1.2em;
     text-decoration: none;
-    color: #ff9800;
+    color: #ff9800; 
     font-weight: bold;
 }
 .expiring-coupons-list {
@@ -397,17 +390,18 @@
 @media (max-width: 450px) {
     .company-cards-row {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr); /* 2 בעמודה במסכים קטנים */
         gap: 15px;
-        padding: 0 10px;
+        padding: 0 10px; /* ריווח משני הצדדים */
     }
     .company-card-box {
-        width: 100%;
+        width: 100%; /* מבטיח שהכרטיסים יתאימו לרוחב העמודות */
     }
+    /* כרטיס בודד בשורה האחרונה יישאר בגודל רגיל אבל יהיה ממורכז */
     .company-card-box:nth-child(odd):last-child {
-        grid-column: 1 / -1;
-        justify-self: center;
-        width: 50%;
+        grid-column: 1 / -1; /* גורם לו להיות בשורה נפרדת */
+        justify-self: center; /* מיישר למרכז */
+        width: 50%; /* מבטיח שהוא בגודל של עמודה רגילה */
     }
 }
 
@@ -632,15 +626,17 @@
 .modal-content h3 {
   margin: 10px 0;
 }
+/* כפתורי סגירה - כל הכפתורים (כולל .close-modal) ימוקמו בצד ימין עם מרווח נוסף */
 .close-modal,
 .close-usage-modal,
 .close-big-modal {
   position: absolute;
   top: 10px;
-  right: 20px;
+  right: 20px;  /* מרווח נוסף מהגבול */
   font-size: 1.5em;
   cursor: pointer;
 }
+/* לוגו החברה במודל */
 #modal-company-logo {
   width: 80px;
   height: 80px;
@@ -649,6 +645,8 @@
   margin: 10px auto 0 auto;
   display: none;
 }
+
+/* רשימת הקופונים במודל להצגת קופוני החברה */
 #modal-coupons-list {
   margin-top: 20px;
   width: 100%;
@@ -700,15 +698,6 @@
 .show-big-btn:hover {
   background-color: #7d3c98;
 }
-
-/* ===== תיקון שבירת שורה לטקסט ארוך במודל ===== */
-#bigModalCouponCode {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  white-space: normal;
-  text-align: center;
-  max-width: 100%;
-}
 </style>
 
 <script>
@@ -721,7 +710,7 @@ document.addEventListener("DOMContentLoaded", function() {
     .find(h => h.textContent.trim() === "קופונים פעילים");
   const activeContainer = activeHeading ? activeHeading.nextElementSibling : null;
   const activeCoupons = activeContainer ? activeContainer.querySelectorAll(".coupon-card") : [];
-
+  
   // 1.1) איסוף קופונים חד פעמיים
   const oneTimeHeading = Array.from(document.querySelectorAll(".coupon-section-title"))
     .find(h => h.textContent.trim() === "קופונים חד פעמיים");
@@ -737,7 +726,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     companyMap[company].push(card);
   });
-
+  
   // הוספת אירוע לכפתור עדכון כל היתרה
   const updateFullAmountButton = document.getElementById("updateFullAmountButton");
   updateFullAmountButton.addEventListener("click", function() {
@@ -753,6 +742,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     companyMap[company].push(card);
   });
+
 
   // 3) יצירת כרטיסי חברה בשורת הסינון
   const companyCardsRow = document.getElementById("company-cards-row");
@@ -790,26 +780,23 @@ document.addEventListener("DOMContentLoaded", function() {
   const modal = document.getElementById("companyModal");
   const modalCompanyName = document.getElementById("modal-company-name");
   const modalCompanyLogo = document.getElementById("modal-company-logo");
-  const modalTotalRemaining = document.getElementById("modal-total-remaining");
   const modalCouponsList = document.getElementById("modal-coupons-list");
   const closeModal = document.querySelector(".close-modal");
 
   function openCompanyModal(companyName, cardList) {
+    // נזהה את הלוגו מהקופון הראשון ברשימה
     const firstCard = cardList[0];
     const logoSrc = firstCard.getAttribute("data-logo-src") || "";
 
+    // עדכון התמונה
     modalCompanyLogo.src = logoSrc;
     modalCompanyLogo.style.display = logoSrc ? "block" : "none";
+
+    // עדכון כותרת
     modalCompanyName.textContent = "קופונים מחברת " + companyName;
 
-    // חשב את סך כל הכסף שנותר בקופונים עבור החברה
-    let totalRemaining = 0;
-    cardList.forEach(card => {
-      const remainingVal = parseFloat(card.getAttribute("data-remaining")) || 0;
-      totalRemaining += remainingVal;
-    });
-    modalTotalRemaining.textContent = "סה\"כ נותר: " + totalRemaining.toFixed(2) + " ₪";
-
+    // בניית רשימת הקופונים
+    // בניית רשימת הקופונים
     modalCouponsList.innerHTML = "";
     cardList.forEach(card => {
       const couponCode = card.getAttribute("data-coupon-code");
@@ -818,7 +805,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const remaining = parseFloat(remainingRaw).toFixed(2);
       const couponLink = card.getAttribute("href");
       const logoSrcItem = card.getAttribute("data-logo-src") || "";
-      const isOneTime = card.getAttribute("data-is-one-time") === "true";
+      const isOneTime = card.getAttribute("data-is-one-time") === "true"; // Assuming you have a data attribute for this
 
       const li = document.createElement("li");
       li.innerHTML = `
@@ -855,16 +842,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
   closeModal.addEventListener("click", function() {
     modal.style.display = "none";
-    if (usageUpdated) {
-      window.location.href = window.location.href;
-    }
   });
   window.addEventListener("click", function(e) {
     if (e.target === modal) {
       modal.style.display = "none";
-      if (usageUpdated) {
-        window.location.href = window.location.href;
-      }
     }
   });
 
@@ -897,17 +878,18 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
+  // שינוי: בעת סגירת מודל עדכון השימוש, אם כבר עודכן שימוש - רענון העמוד
   closeUsageModal.addEventListener("click", function() {
     usageModal.style.display = "none";
     if (usageUpdated) {
-      window.location.href = window.location.href;
+      window.location.reload();
     }
   });
   window.addEventListener("click", function(e) {
     if (e.target === usageModal) {
       usageModal.style.display = "none";
       if (usageUpdated) {
-        window.location.href = window.location.href;
+        window.location.reload();
       }
     }
   });
@@ -941,6 +923,7 @@ document.addEventListener("DOMContentLoaded", function() {
         usageErrorMsg.style.display = "block";
         return;
       }
+      // סימון כי עדכון השימוש בוצע
       usageUpdated = true;
       usageModal.style.display = "none";
       const theButton = document.querySelector(`.update-usage-btn[data-coupon-id="${currentCouponId}"]`);

@@ -1257,14 +1257,14 @@ h3 {
 .transactions {
     text-align: center;
 }
-/* ======== התאמות רספונסיביות למסכים ניידים ======== */
+/* ======== התאמות רספונסיביות למסכים ניידים - לעמוד My Transactions בלבד ======== */
 @media only screen and (max-width: 768px) {
-    /* הצגת כותרות הטבלה בכל תא */
-    .transaction-table thead {
+    /* החלת התאמות רק אם האלמנט נמצא בתוך .transactions */
+    .transactions .transaction-table thead {
         display: none;
     }
 
-    .transaction-table tr {
+    .transactions .transaction-table tr {
         display: block;
         margin-bottom: 15px;
         border: 1px solid #ddd;
@@ -1272,11 +1272,11 @@ h3 {
         background-color: #fff;
     }
 
-    .transaction-table tr {
+    .transactions .transaction-table tr {
         background-color: #fff !important; /* רקע לבן לכל שורה */
     }
 
-    .transaction-table td {
+    .transactions .transaction-table td {
         width: 100%;
         min-height: 100px;  /* הגדלת הגובה כדי להכיל יותר תוכן */
         display: flex;
@@ -1297,15 +1297,15 @@ h3 {
     }
 
     /* הוספת שם השדה מעל כל תא בצורה ידנית לפי מיקומו בטבלה */
-    .transaction-table td:nth-child(1)::before { content: "חברה: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
-    .transaction-table td:nth-child(2)::before { content: "לוגו: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
-    .transaction-table td:nth-child(3)::before { content: "קונה: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
-    .transaction-table td:nth-child(4)::before { content: "מוכר: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
-    .transaction-table td:nth-child(5)::before { content: "סטטוס: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
-    .transaction-table td:nth-child(6)::before { content: "תאריך: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(1)::before { content: "חברה: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(2)::before { content: "לוגו: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(3)::before { content: "קונה: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(4)::before { content: "מוכר: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(5)::before { content: "סטטוס: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(6)::before { content: "תאריך: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
 
     /* התאמת תמונות */
-    .transaction-table td img {
+    .transactions .transaction-table td img {
         max-width: 60px;
         max-height: 60px;
         border-radius: 5px;
@@ -1315,7 +1315,7 @@ h3 {
 
     /* התאמת תצוגת רשת לטבלאות שונות */
     .transactions .transaction-table:not(.completed-table) tr,
-    .completed-transactions .transaction-table.completed-table tr {
+    .transactions .completed-transactions .transaction-table.completed-table tr {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         grid-template-rows: auto auto auto;
@@ -1326,13 +1326,13 @@ h3 {
     }
 
     /* מרווחים אחידים בין התאים ומניעת הדבקת טקסטים */
-    .transaction-table td {
+    .transactions .transaction-table td {
         padding: 16px;
         line-height: 1.6;
     }
 
     /* יישור עמודת הפעולות למרכז */
-    .transaction-table td:last-child {
+    .transactions .transaction-table td:last-child {
         text-align: center;
         display: flex;
         flex-direction: column;
@@ -1341,7 +1341,7 @@ h3 {
     }
 
     /* יישור כל הכפתורים במרכז */
-    .action-button {
+    .transactions .action-button {
         margin: 5px auto;
     }
 }
