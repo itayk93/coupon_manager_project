@@ -182,36 +182,38 @@
     {% endfor %}
 </section>
 
-<!-- Modal להצגת קופונים של חברה -->
-<div id="companyModal" class="modal" style="display:none;">
+<!-- Modal להצגת קופונים של חברה עם אנימציה -->
+<div id="companyModal" class="modal">
   <div class="modal-content">
     <!-- כפתור סגירה מימין עם מרווח נוסף -->
     <span class="close-modal">×</span>
     <!-- כותרת החברה -->
     <h2 id="modal-company-name">קופונים מחברת ...</h2>
     <!-- לוגו החברה מתחת לכותרת -->
-    <img id="modal-company-logo" alt="Company Logo" style="display:none;">
-    <!-- סך כל הכסף שנותר - חדש: מופיע מתחת ללוגו, בגופן גדול וב-bold עם מרווח קטן -->
+    <img id="modal-company-logo" alt="Company Logo" style="display: block;" src="/static/images/carrefour.png">
+    <!-- סך כל הכסף שנותר - מופיע מתחת ללוגו -->
     <p id="modal-total-remaining" style="font-size: 1.2em; font-weight: bold; margin: 5px 0;"></p>
     <ul id="modal-coupons-list"></ul>
   </div>
 </div>
 
-<!-- Modal לעדכון שימוש -->
-<div id="usageModal" class="modal" style="display:none;">
-  <div class="modal-content">
+<!-- Modal לעדכון שימוש עם אנימציה -->
+<div id="usageModal" class="modal">
+  <div class="modal-content usage-modal-content" style="max-width: 600px;">
     <span class="close-usage-modal">×</span>
     <h3>עדכון סכום שימוש</h3>
-    <p id="usage-modal-company">חברה: GoodPharm</p>
-    <p id="usage-modal-code" style="margin-bottom:10px;">קוד קופון: 1117251328725</p>
+    <h2 id="usage-modal-company" style="color: #00bfff; font-size: 1.8em; margin-bottom: 5px;">חברה: Carrefour</h2>
+    <!-- הוספת לוגו בדומה למודל הקודם -->
+    <img id="usage-modal-logo" alt="Company Logo" style="display: block; margin: 0 auto 10px auto;" src="/static/images/carrefour.png">
+    <p id="usage-modal-code" style="margin-bottom:10px;"><strong>קוד קופון: 108028334-8681</strong></p>
     <!-- שורת יתרה נוכחית -->
-    <p id="usage-modal-remaining" style="margin-bottom:10px;">יתרה נוכחית: <span id="remainingValue">100.00</span> ש"ח</p>
-    <input type="number" id="usageAmount" step="0.01" placeholder="כמה ניצלת מהקופון?" style="padding:8px; width:120px;">
+    <p id="usage-modal-remaining" style="margin-bottom:10px;"><strong>יתרה נוכחית: <span id="remainingValue">70.30</span> ש"ח</strong></p>
+    <input type="number" id="usageAmount" step="0.01" placeholder="בכמה השתמשת?" style="padding:8px; width:200px;">
     <br>
     <button id="usageConfirmButton" style="margin-top:10px; padding:8px 16px; background-color:#3498db; color:#fff; border:none; border-radius:5px; cursor:pointer;">
       אישור
     </button>
-    <!-- הוספת כפתור לעדכון כל היתרה -->
+    <!-- כפתור לעדכון כל היתרה -->
     <button id="updateFullAmountButton" style="margin-top:10px; padding:8px 16px; background-color:#2ecc71; color:#fff; border:none; border-radius:5px; cursor:pointer;">
       עדכון כל היתרה
     </button>
@@ -219,8 +221,8 @@
   </div>
 </div>
 
-<!-- Modal להצגה בגדול -->
-<div id="bigDisplayModal" class="modal" style="display:none;">
+<!-- Modal להצגה בגדול עם אנימציה -->
+<div id="bigDisplayModal" class="modal">
   <div class="modal-content">
     <span class="close-big-modal">×</span>
     <h2 id="bigModalCompanyName">Be שופרסל</h2>
@@ -603,7 +605,7 @@
     }
 }
 
-/* ===== עיצוב המודלים (Modal) ===== */
+/* ===== עיצוב המודלים (Modal) עם אנימציה ===== */
 .modal {
   position: fixed;
   z-index: 1000;
@@ -611,8 +613,14 @@
   top: 0;
   width: 100%;
   height: 100%;
-  overflow: auto;
   background-color: rgba(0,0,0,0.4);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.modal.active {
+  opacity: 1;
+  visibility: visible;
 }
 .modal-content {
   background-color: #fff;
@@ -647,7 +655,7 @@
   object-fit: cover;
   border-radius: 8px;
   margin: 10px auto 0 auto;
-  display: none;
+  display: block;
 }
 #modal-coupons-list {
   margin-top: 20px;
@@ -786,7 +794,7 @@ document.addEventListener("DOMContentLoaded", function() {
     companyCardsRow.appendChild(cardBox);
   });
 
-  // 4) Modal להצגת קופונים של חברה
+  // 4) Modal להצגת קופונים של חברה עם אנימציה
   const modal = document.getElementById("companyModal");
   const modalCompanyName = document.getElementById("modal-company-name");
   const modalCompanyLogo = document.getElementById("modal-company-logo");
@@ -827,7 +835,7 @@ document.addEventListener("DOMContentLoaded", function() {
             קוד: ${couponCode} - ${isOneTime ? 'מטרה: ' + card.getAttribute("data-purpose") : 'נותר: ' + remaining + ' ₪'}
           </a>
           <div class="coupon-info-buttons">
-            <button 
+            <button
               class="update-usage-btn"
               data-coupon-id="${couponId}"
               data-coupon-code="${couponCode}"
@@ -850,25 +858,26 @@ document.addEventListener("DOMContentLoaded", function() {
       modalCouponsList.appendChild(li);
     });
 
-    modal.style.display = "block";
+    // הוספת מחלקת active למודאל ל- fade in
+    modal.classList.add("active");
   }
 
   closeModal.addEventListener("click", function() {
-    modal.style.display = "none";
+    modal.classList.remove("active");
     if (usageUpdated) {
       window.location.href = window.location.href;
     }
   });
   window.addEventListener("click", function(e) {
     if (e.target === modal) {
-      modal.style.display = "none";
+      modal.classList.remove("active");
       if (usageUpdated) {
         window.location.href = window.location.href;
       }
     }
   });
 
-  // 5) Modal לעדכון שימוש
+  // 5) Modal לעדכון שימוש עם אנימציה
   const usageModal = document.getElementById("usageModal");
   const closeUsageModal = document.querySelector(".close-usage-modal");
   const usageCompany = document.getElementById("usage-modal-company");
@@ -893,19 +902,19 @@ document.addEventListener("DOMContentLoaded", function() {
       usageAmountInput.value = "";
       usageErrorMsg.style.display = "none";
       document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
-      usageModal.style.display = "block";
+      usageModal.classList.add("active");
     }
   });
 
   closeUsageModal.addEventListener("click", function() {
-    usageModal.style.display = "none";
+    usageModal.classList.remove("active");
     if (usageUpdated) {
       window.location.href = window.location.href;
     }
   });
   window.addEventListener("click", function(e) {
     if (e.target === usageModal) {
-      usageModal.style.display = "none";
+      usageModal.classList.remove("active");
       if (usageUpdated) {
         window.location.href = window.location.href;
       }
@@ -942,7 +951,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
       }
       usageUpdated = true;
-      usageModal.style.display = "none";
+      usageModal.classList.remove("active");
       const theButton = document.querySelector(`.update-usage-btn[data-coupon-id="${currentCouponId}"]`);
       if (theButton) {
         const oldRemaining = parseFloat(theButton.getAttribute("data-remaining")) || 0;
@@ -963,7 +972,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   });
 
-  // 6) Modal להצגה בגדול
+  // 6) Modal להצגה בגדול עם אנימציה
   const bigModal = document.getElementById("bigDisplayModal");
   const closeBigModal = document.querySelector(".close-big-modal");
   const bigModalCompanyName = document.getElementById("bigModalCompanyName");
@@ -981,16 +990,16 @@ document.addEventListener("DOMContentLoaded", function() {
       bigModalLogo.src = logoSrc;
       bigModalCouponCode.textContent = couponCode;
 
-      bigModal.style.display = "block";
+      bigModal.classList.add("active");
     }
   });
 
   closeBigModal.addEventListener("click", function() {
-    bigModal.style.display = "none";
+    bigModal.classList.remove("active");
   });
   window.addEventListener("click", function(e) {
     if (e.target === bigModal) {
-      bigModal.style.display = "none";
+      bigModal.classList.remove("active");
     }
   });
 
