@@ -202,10 +202,11 @@
   <div class="modal-content usage-modal-content" style="max-width: 600px;">
     <span class="close-usage-modal">×</span>
     <h3>עדכון סכום שימוש</h3>
-    <h2 id="usage-modal-company" style="color: #00bfff; font-size: 1.8em; margin-bottom: 5px;">חברה: Carrefour</h2>
-    <!-- הוספת לוגו בדומה למודל הקודם -->
-    <img id="usage-modal-logo" alt="Company Logo" style="display: block; margin: 0 auto 10px auto;" src="/static/images/carrefour.png">
-    <p id="usage-modal-code" style="margin-bottom:10px;"><strong>קוד קופון: 108028334-8681</strong></p>
+    <!-- אין נתונים סטטיים, הנתונים יתמלאו דינאמית -->
+    <h2 id="usage-modal-company" style="color: #00bfff; font-size: 1.8em; margin-bottom: 5px;"></h2>
+    <!-- לוגו החברה יעודכן לפי הקופון; כעת מוגדר בגודל 80x80px כמו במודל "companyModal" -->
+    <img id="usage-modal-logo" alt="Company Logo" style="display: block; margin: 10px auto 0 auto; width: 80px; height: 80px;" src="/static/images/carrefour.png">
+    <p id="usage-modal-code" style="margin-bottom:10px;"><strong></strong></p>
     <!-- שורת יתרה נוכחית -->
     <p id="usage-modal-remaining" style="margin-bottom:10px;"><strong>יתרה נוכחית: <span id="remainingValue">70.30</span> ש"ח</strong></p>
     <input type="number" id="usageAmount" step="0.01" placeholder="בכמה השתמשת?" style="padding:8px; width:200px;">
@@ -841,6 +842,7 @@ document.addEventListener("DOMContentLoaded", function() {
               data-coupon-code="${couponCode}"
               data-company="${companyName}"
               data-remaining="${remaining}"
+              data-logo-src="${logoSrcItem}"
             >
               עדכון שימוש
             </button>
@@ -896,12 +898,14 @@ document.addEventListener("DOMContentLoaded", function() {
       const cName = btn.getAttribute("data-company");
       const cCode = btn.getAttribute("data-coupon-code");
       currentRemaining = parseFloat(btn.getAttribute("data-remaining"));
+      const logoSrc = btn.getAttribute("data-logo-src") || "";
 
       usageCompany.textContent = "חברה: " + cName;
-      usageCode.textContent = "קוד קופון: " + cCode;
+      usageCode.innerHTML = "<strong>קוד קופון: " + cCode + "</strong>";
       usageAmountInput.value = "";
       usageErrorMsg.style.display = "none";
       document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
+      document.getElementById("usage-modal-logo").src = logoSrc;
       usageModal.classList.add("active");
     }
   });

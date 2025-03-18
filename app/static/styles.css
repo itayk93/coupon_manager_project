@@ -130,13 +130,7 @@ header {
     margin-right: 8px; /* הוספת רווח בין סמל הבית לטקסט */
 }
 
-/* Header Right Navigation */
-.header-right nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between; /* פיזור שווה בין האייקונים */
-    gap: 5px; /* מינימום רווח בין כל האייקונים */
-}
+
 
 .header-right nav .dropdown {
     position: relative;
@@ -155,14 +149,6 @@ header {
     color: var(--secondary-color);
 }
 
-/* ספציפית לאייקונים של הפעמון והמשתמש, כדי ליצור מרווח גדול יותר ביניהם */
-.bell-icon {
-    margin-right: 10px; /* מגדיל מרווח מצד ימין של אייקון הפעמון */
-}
-
-.profile-icon {
-    margin-left: 10px; /* מגדיל מרווח מצד שמאל של אייקון המשתמש */
-}
 
 /* Hamburger Icon for Mobile */
 .hamburger {

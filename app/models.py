@@ -576,3 +576,8 @@ class AdminMessage(db.Model):
     link_url = db.Column(db.String(255), nullable=True)   # קישור אופציונלי
     link_text = db.Column(db.String(255), nullable=True)  # טקסט הכפתור
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class FeatureAccess(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    feature_name = db.Column(db.String(255), nullable=False)
+    access_mode = db.Column(db.String(50), default=None)

@@ -1,15 +1,18 @@
 # admin_routes.py
 
-from flask import Blueprint, redirect, url_for, flash, request
+from flask import Blueprint, redirect, url_for, flash, request, render_template
 from flask_login import login_required, current_user
-from app.models import Coupon, CouponTransaction
-from app.helpers import get_coupon_data
+from app.models import Coupon, CouponTransaction, FeatureAccess, User
+from app.helpers import get_coupon_data, has_feature_access, send_password_reset_email
 from app.extensions import db
 import logging
 
 admin_bp = Blueprint('admin', __name__)
-
 logger = logging.getLogger(__name__)
+
+# -------------------
+# Routes
+# -------------------
 
 @admin_bp.route('/update_coupon_transactions', methods=['POST'])
 @login_required
@@ -77,12 +80,6 @@ def update_coupon_transactions():
 
     return redirect(url_for('coupon_detail', id=coupon.id))
 
-# app/routes/admin_routes.py
-from flask import render_template, request, flash, redirect, url_for
-from flask_login import login_required, current_user
-from app.models import User
-from app.helpers import send_password_reset_email
-
 @admin_bp.route('/manage_users', methods=['GET'])
 @login_required
 def manage_users():
@@ -111,3 +108,34 @@ def reset_user_password():
     send_password_reset_email(user)
     flash(f'נשלח מייל שחזור סיסמה ל-{user.email} בהצלחה!', 'success')
     return redirect(url_for('admin.manage_users'))
+
+# ---------------------------------------------------
+# רוט חדש: ניהול טבלת feature_access
+# ---------------------------------------------------
+@admin_bp.route('/feature_access', methods=['GET', 'POST'])
+@login_required
+def manage_feature_access():
+    """מסך לניהול רשומות בטבלת feature_access (לדוגמה: הוספה/צפייה)."""
+    # בדיקת הרשאות אפליקטיבית: רק אדמין יכול לגשת
+    if not current_user.is_admin:
+        flash('אין לך הרשאה לגשת לעמוד זה.', 'danger')
+        return redirect(url_for('auth.login'))  # או הפניה לאן שרוצים
+
+    if request.method == 'POST':
+        feature_name = request.form.get('feature_name')
+        access_mode = request.form.get('access_mode')
+
+        new_feature = FeatureAccess(
+            feature_name=feature_name,
+            access_mode=access_mode
+        )
+        db.session.add(new_feature)
+        db.session.commit()
+
+        flash('הפיצ’ר נוסף בהצלחה!', 'success')
+        # מפנה חזרה לרוט לצפייה בכל הרשומות
+        return redirect(url_for('admin.manage_feature_access'))
+
+    # בשיטת GET – שולפים את כל הרשומות מהטבלה
+    features = FeatureAccess.query.all()
+    return render_template('manage_features.html', features=features)

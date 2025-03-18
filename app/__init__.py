@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.routes.coupons_routes import to_israel_time_filter  # Import the function
 from scheduler_config import configure_scheduler
+from app.helpers import has_feature_access
+
 
 # ייבוא הגדרות ו"הרחבות"
 from app.config import Config
@@ -123,6 +125,10 @@ def create_app():
     # 📌 קרא למתזמן **רק אחרי שהאפליקציה נטענה**
     from scheduler_config import configure_scheduler
     configure_scheduler()
+
+    @app.context_processor
+    def utility_processor():
+        return dict(has_feature_access=has_feature_access)
 
     return app
 

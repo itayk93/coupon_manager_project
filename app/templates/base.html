@@ -111,7 +111,7 @@
       ]
     }
     </script>
-    
+
     <!-- Schema Markup: Website -->
     <script type="application/ld+json">
     {
@@ -127,7 +127,7 @@
       }
     }
     </script>
-    
+
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -153,7 +153,7 @@
         </div>
         <div class="header-right">
             <nav>
-                <!-- התפריט הרגיל -->
+                <!-- תפריט הקופונים -->
                 <div class="dropdown">
                     <button class="dropbtn"><i class="fa fa-bars"></i></button>
                     <div class="dropdown-content">
@@ -166,32 +166,44 @@
                         <a href="{{ url_for('auth.logout') }}">יציאה מהחשבון</a>
                     </div>
                 </div>
+
                 <!-- תפריט שוק הקופונים -->
+                {% if has_feature_access('CouponMarketplace', current_user) %}
                 <div class="dropdown">
                     <button class="dropbtn"><i class="fa fa-shopping-cart"></i></button>
                     <div class="dropdown-content">
                         <a href="{{ url_for('marketplace.marketplace') }}">שוק הקופונים</a>
                         <a href="{{ url_for('coupons.sell_coupon') }}">הוספת קופון למכירה</a>
                         <a href="{{ url_for('requests.request_coupon') }}">הוספת בקשת קופון</a>
-                        <!--<a href="{{ url_for('requests.buy_slots') }}">רכישת סלוטים</a>-->
                         <hr class="dropdown-divider">
                         <a href="{{ url_for('transactions.my_transactions') }}">העסקאות שלי</a>
                     </div>
                 </div>
-                <!-- קישור לעמוד הפרופיל -->
+                {% endif %}
+
+                <!-- תפריט הצעות הקפה (Coffee System) - עם ריווח אחיד -->
+                {% if has_feature_access('CoffeeSystem', current_user) %}
+                <div class="dropdown">
+                    <button class="dropbtn" title="Coffee System">
+                        <i class="fa fa-coffee" style="font-size: 24px;"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('coffee.offer_form') }}">הצע הנחה</a>
+                        <a href="{{ url_for('coffee.list_offers') }}">הצעות קיימות</a>
+                        <a href="{{ url_for('coffee.my_transactions') }}">העסקאות שלי</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- פרופיל -->
                 <a href="{{ url_for('profile.user_profile_default') }}" class="nav-icon profile-icon">
                     <i class="fa fa-user" style="font-size: 24px;"></i>
                 </a>
-                <!-- קישור לעמוד ההתראות -->
+
+                <!-- התראות -->
                 <a href="{{ url_for('profile.notifications') }}" class="nav-icon bell-icon">
                     <i class="fa fa-bell"></i>
                 </a>
-                <!-- כאן תוסיף את התנאי לאדמין + כפתור הקפה -->
-                {% if current_user.is_admin %}
-                <a href="{{ url_for('coffee.index') }}" class="nav-icon coffee-icon" title="Coffee System">
-                    <i class="fa fa-coffee" style="font-size: 24px;"></i>
-                </a>
-                {% endif %}
             </nav>
 
             <!-- אייקון המבורגר למובייל -->
@@ -229,7 +241,6 @@
         </button>
     </div>
 
-    <!-- הכללת script.js -->
     <script>
         // פונקציה לבדיקת קיום עוגיה
         function getCookie(name) {
@@ -263,7 +274,6 @@
             });
         }
 
-        // הצגת הודעת עוגיות אם העוגיה לא קיימת
         document.addEventListener("DOMContentLoaded", function () {
             if (!getCookie('cookies_accepted')) {
                 const consentBox = document.getElementById('cookie-consent');
@@ -273,34 +283,28 @@
                 }, 100);
             }
 
-            // טיפול בלחיצה על כפתור "אני מסכים"
             document.getElementById('accept-cookies').onclick = function () {
                 const d = new Date();
-                d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000));
+                d.setTime(d.getTime() + (365*24*60*60*1000));
                 document.cookie = `cookies_accepted=true; expires=${d.toUTCString()}; path=/`;
                 sendConsentToServer(true);
             };
 
-            // טיפול בלחיצה על כפתור "אני דוחה"
             document.getElementById('reject-cookies').onclick = function () {
                 const d = new Date();
-                d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000));
+                d.setTime(d.getTime() + (365*24*60*60*1000));
                 document.cookie = `cookies_accepted=false; expires=${d.toUTCString()}; path=/`;
 
-                // מחיקת כל העוגיות מהדומיין
                 document.cookie.split(";").forEach(function(c) {
-                    document.cookie = c.trim().split("=")[0] + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    document.cookie = c.trim().split("=")[0]
+                        + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                 });
-
-                // ניקוי localStorage ו-sessionStorage
                 localStorage.clear();
                 sessionStorage.clear();
-
-                // רענון הדף
                 location.reload();
             };
 
-            // קריאה ראשונית להגדרת התפריטים
+            // הגדרת dropdowns למובייל / דסקטופ
             const mobileBreakpoint = 768;
             const dropdowns = document.querySelectorAll('.dropdown');
 
@@ -308,6 +312,7 @@
                 event.stopPropagation();
                 const dropdownContent = this.querySelector(".dropdown-content");
                 if (!dropdownContent) return;
+                // סגירת שאר התפריטים
                 document.querySelectorAll(".dropdown-content").forEach(content => {
                     if (content !== dropdownContent) {
                         content.classList.remove("show");
@@ -316,18 +321,21 @@
                 dropdownContent.classList.toggle("show");
             }
 
+            // מניעת סגירת dropdown בהקלקה על link
             document.querySelectorAll(".dropdown-content a").forEach(link => {
                 link.addEventListener("click", function (event) {
                     event.stopPropagation();
                 });
             });
 
+            // סגירה כשמקישים מחוץ לתפריט
             document.addEventListener("click", function () {
                 document.querySelectorAll(".dropdown-content").forEach(content => {
                     content.classList.remove("show");
                 });
             });
 
+            // Hover / Click
             function openDropdownHover() {
                 const dropdownContent = this.querySelector('.dropdown-content');
                 if (!dropdownContent) return;
@@ -340,7 +348,6 @@
                 }
                 dropdownContent.classList.add('show');
             }
-
             function closeDropdownHover() {
                 const dropdownContent = this.querySelector('.dropdown-content');
                 if (dropdownContent) {
@@ -354,7 +361,7 @@
                     dropdown.removeEventListener('click', toggleDropdownClick);
                     dropdown.removeEventListener('mouseenter', openDropdownHover);
                     dropdown.removeEventListener('mouseleave', closeDropdownHover);
-    
+
                     if (isMobile) {
                         dropdown.addEventListener('click', toggleDropdownClick);
                     } else {
@@ -366,11 +373,12 @@
 
             setupDropdowns();
             window.addEventListener('resize', setupDropdowns);
-            
-            window.addEventListener("load", function() {
-                let loadTime = window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart;
-                console.log("זמן טעינת העמוד:", loadTime + "ms");
 
+            window.addEventListener("load", function() {
+                let loadTime = window.performance.timing.domContentLoadedEventEnd
+                               - window.performance.timing.navigationStart;
+                console.log("זמן טעינת העמוד:", loadTime + "ms");
+            });
         });
     </script>
 
@@ -382,29 +390,51 @@
             align-items: center;
             padding: 0 16px;
         }
-    
+
         .header-left {
             justify-self: start;
         }
-    
+
         .header-center {
             justify-self: center;
         }
-    
+
         .header-right {
             justify-self: end;
         }
-    
+
         .home-icon {
             margin: 0 !important;
         }
-    
+
         @media (max-width: 768px) {
             .home-icon {
                 margin: 0 -10px 0 0 !important;
             }
         }
-    
+
+        /* ------------------------------------------
+         * ריווח אחיד בין הפריטים ב-nav
+         * ------------------------------------------ */
+        .header-right nav {
+            display: flex;
+            align-items: center;
+            gap: 0px; /* ניתן לשנות 16px לערך אחר לפי טעמך */
+        }
+
+
+        .bell-icon {
+            margin-right: 20px; /* מגדיל את המרווח משמאל לאייקון ההתראות */
+        }
+
+
+        /* אפשר לשחק עם גודל האייקון כדי לשמור על אחידות */
+        .header-right nav .dropbtn i,
+        .header-right nav a.nav-icon i {
+            font-size: 24px;
+            margin: 0;
+        }
+
         .coffee-icon {
             margin-right: 15px;
         }

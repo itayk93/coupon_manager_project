@@ -1787,3 +1787,36 @@ def get_greeting():
     else:
         return "ערב טוב"
 
+# app/helpers.py
+from app.models import FeatureAccess
+
+def has_feature_access(feature_name, user):
+    """
+    בודק את גישת המשתמש לפיצ'ר מסוים לפי טבלת feature_access:
+    - אם אין שורה עבור feature_name => חזור False (סגור לכולם).
+    - אם access_mode='V' => חזור True (פתוח לכולם).
+    - אם access_mode='Admin' => חזור True רק אם user.is_admin.
+    - אחרת חזור False.
+    """
+    from app.models import FeatureAccess
+
+    feature = FeatureAccess.query.filter_by(feature_name=feature_name).first()
+    if not feature:
+        # אם אין רשומה => סגור
+        return False
+
+    mode = feature.access_mode
+
+    # אם המשתמש אנונימי (לא מחובר)
+    if not user.is_authenticated:
+        # אם הפיצ'ר הוא 'V' (פתוח לכולם) => אפשר לאפשר גם לאנונימי
+        return (mode == 'V')
+
+    # אם המשתמש מחובר:
+    if mode == 'V':
+        return True
+    elif mode == 'Admin':
+        return bool(user.is_admin)
+    else:
+        # ערך אחר (כולל NULL) => סגור לכולם
+        return False
