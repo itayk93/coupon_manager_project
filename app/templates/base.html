@@ -181,20 +181,6 @@
                 </div>
                 {% endif %}
 
-                <!-- תפריט הצעות הקפה (Coffee System) - עם ריווח אחיד -->
-                {% if has_feature_access('CoffeeSystem', current_user) %}
-                <div class="dropdown">
-                    <button class="dropbtn" title="Coffee System">
-                        <i class="fa fa-coffee" style="font-size: 24px;"></i>
-                    </button>
-                    <div class="dropdown-content">
-                        <a href="{{ url_for('coffee.offer_form') }}">הצע הנחה</a>
-                        <a href="{{ url_for('coffee.list_offers') }}">הצעות קיימות</a>
-                        <a href="{{ url_for('coffee.my_transactions') }}">העסקאות שלי</a>
-                    </div>
-                </div>
-                {% endif %}
-
                 <!-- פרופיל -->
                 <a href="{{ url_for('profile.user_profile_default') }}" class="nav-icon profile-icon">
                     <i class="fa fa-user" style="font-size: 24px;"></i>

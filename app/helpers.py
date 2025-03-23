@@ -30,6 +30,18 @@ import numpy as np
 from sqlalchemy.sql import text
 import pytz
 from flask import flash  # ייבוא הפונקציה להצגת הודעות למשתמש
+# app/helpers.py
+from app.models import FeatureAccess
+from flask import render_template  # ייבוא render_template
+from sqlalchemy import func
+from app.models import Tag, Coupon, coupon_tags
+import openai
+import json
+import pandas as pd
+import os
+from datetime import datetime
+from app.models import Company  # נניח שזה מביא את החברות מה-DB
+import logging
 
 load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
@@ -1126,7 +1138,6 @@ def extract_coupon_detail_image_proccess(client_id, image_path, companies_list):
     except Exception:
         return pd.DataFrame(), pd.DataFrame()
 
-from flask import render_template  # ייבוא render_template
 
 
 def send_coupon_purchase_request_email(seller, buyer, coupon):
@@ -1456,8 +1467,6 @@ def complete_transaction(transaction):
         logger.error(f"Error completing transaction {transaction.id}: {e}")
         flash('אירעה שגיאה בעת השלמת העסקה. נא לנסות שוב.', 'danger')
 
-from sqlalchemy import func
-from app.models import Tag, Coupon, coupon_tags
 
 # -----------------------------------------------------------------------------
 # פונקציה לזיהוי התגית הנפוצה ביותר עבור חברה נתונה
@@ -1599,12 +1608,6 @@ def confirm_password_reset_token(token, expiration=3600):
     return email
 
 
-import openai
-import json
-import pandas as pd
-import os
-from datetime import datetime
-from app.models import Company  # נניח שזה מביא את החברות מה-DB
 
 def parse_user_usage_text(usage_text, user):
     openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -1760,7 +1763,6 @@ def parse_user_usage_text(usage_text, user):
         print(error_message)
         return pd.DataFrame(), pd.DataFrame()
 
-import logging
 
 def decrypt_coupon_code(encrypted_code):
     try:
@@ -1787,8 +1789,6 @@ def get_greeting():
     else:
         return "ערב טוב"
 
-# app/helpers.py
-from app.models import FeatureAccess
 
 def has_feature_access(feature_name, user):
     """

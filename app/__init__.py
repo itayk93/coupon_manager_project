@@ -85,7 +85,6 @@ def create_app():
     from app.routes.admin_routes.admin_dashboard_routes import admin_dashboard_bp
     from app.routes.admin_routes.admin_messages_routes import admin_messages_bp
     from app.extensions import google_bp
-    from app.routes import coffee_routes
     # from app.routes.profile_routes import profile_bp
 
     app.register_blueprint(google_bp, url_prefix="/login")  # ✅ הוספנו את Google Login כאן!
@@ -104,7 +103,6 @@ def create_app():
     app.register_blueprint(admin_dashboard_bp, url_prefix="/admin")
     app.register_blueprint(admin_messages_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
-    app.register_blueprint(coffee_routes.coffee_bp)
 
 
     # אם צריך - יצירת תיקיית instance
