@@ -211,7 +211,7 @@ def update_all_active_coupons(user_id):
 '''''''''''''''
 
 
-def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html"):
+def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_html"):
     """
     מפעילה Selenium כדי להיכנס לאתר Multipass או Max (לפי coupon.auto_download_details),
     מורידה את המידע הרלוונטי וממירה אותו ל-DataFrame.
@@ -565,6 +565,422 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
         return df_new  # מחזירים את העסקאות החדשות
     except Exception as e:
         print(f"An error occurred during data parsing or database operations: {e}")
+        traceback.print_exc()
+        db.session.rollback()
+        return None
+
+
+# Global debug flag to control print statements
+DEBUG_MODE = True
+
+
+def set_debug_mode(mode):
+    """
+    Set the debug mode for printing debug information.
+
+    Args:
+        mode (bool): True to enable debug prints, False to disable
+    """
+    global DEBUG_MODE
+    DEBUG_MODE = mode
+
+
+def debug_print(message):
+    """
+    Print debug message only if DEBUG_MODE is True.
+
+    Args:
+        message (str): Debug message to print
+    """
+    if DEBUG_MODE:
+        print(f"[DEBUG] {message}")
+
+
+def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html"):
+    """
+    Runs Selenium to access Multipass or Max website (based on coupon.auto_download_details),
+    downloads relevant information and converts it to a DataFrame.
+    Then checks what already exists in the DB's coupon_transaction table and compares,
+    with the aim of adding only new transactions and adjusting coupon status accordingly.
+
+    Returns DataFrame with only new transactions, or None if no new transactions or if an error occurred.
+    """
+    debug_print(f"Starting coupon data retrieval for coupon: {coupon.code}")
+
+    os.makedirs(save_directory, exist_ok=True)
+
+    coupon_number = coupon.code
+    coupon_kind = coupon.auto_download_details  # "Multipass" / "Max" (or others)
+    card_exp = coupon.card_exp
+    cvv = coupon.cvv
+
+    # Set basic Selenium options
+    debug_print("Configuring Chrome options")
+    chrome_options = Options()
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument("--disable-images")  # Prevent image loading
+    chrome_options.add_argument("--disable-extensions")  # Prevent unnecessary extensions
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+
+    # If it's Max, add Headless mode
+    if coupon_kind == "Max":
+        chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # Block images in browser
+
+    df = None  # Will store the DataFrame
+
+    # ----------------------------------------------------------------------
+    # Handling Multipass scenario
+    # ----------------------------------------------------------------------
+    if coupon_kind == "Multipass":
+        driver = None
+        try:
+            debug_print("Initializing Selenium for Multipass")
+            driver = webdriver.Chrome(options=chrome_options)
+            driver.get("https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/")
+            wait = WebDriverWait(driver, 30)
+            time.sleep(5)
+
+            debug_print("Locating card number field")
+            card_number_field = driver.find_element(By.XPATH, "//input[@id='newcardid']")
+            card_number_field.clear()
+
+            cleaned_coupon_number = str(coupon_number).replace("-", "")
+            debug_print(f"Entering coupon number: {cleaned_coupon_number}")
+            card_number_field.send_keys(cleaned_coupon_number)
+
+            # reCAPTCHA handling
+            debug_print("Handling reCAPTCHA")
+            recaptcha_iframe = wait.until(
+                EC.presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'recaptcha')]"))
+            )
+            driver.switch_to.frame(recaptcha_iframe)
+
+            checkbox = wait.until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, ".recaptcha-checkbox-border"))
+            )
+            checkbox.click()
+            debug_print("reCAPTCHA checkbox clicked")
+
+            driver.switch_to.default_content()
+
+            check_balance_button = wait.until(
+                EC.element_to_be_clickable((By.ID, "submit"))
+            )
+
+            if check_balance_button.is_enabled():
+                debug_print("Clicking submit button")
+                check_balance_button.click()
+            else:
+                debug_print("Submit button is disabled. CAPTCHA not solved properly?")
+                driver.quit()
+                return None
+
+            wait.until(EC.presence_of_element_located((By.XPATH, "//table")))
+            time.sleep(10)
+
+            page_html = driver.page_source
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"coupon_{coupon_number}_{timestamp}.html"
+            file_path = os.path.join(save_directory, filename)
+
+            debug_print(f"Saving page HTML to {file_path}")
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(page_html)
+
+        except Exception as e:
+            debug_print(f"An error occurred during Selenium operations (Multipass): {e}")
+            if driver:
+                driver.quit()
+            return None
+        finally:
+            if driver:
+                driver.quit()
+
+        # Attempt to read table from saved HTML
+        try:
+            debug_print("Reading tables from HTML")
+            dfs = pd.read_html(file_path)
+            os.remove(file_path)
+
+            if not dfs:
+                debug_print("No tables found in HTML (Multipass)")
+                return None
+
+            df = dfs[0]
+
+            # Column renaming
+            debug_print("Renaming columns")
+            df = df.rename(columns={
+                'שם בית עסק': 'location',
+                'סכום טעינת תקציב': 'recharge_amount',
+                'סכום מימוש תקציב': 'usage_amount',
+                'תאריך': 'transaction_date',
+                'מספר אסמכתא': 'reference_number',
+            })
+
+            # Handle missing columns
+            debug_print("Handling missing columns")
+            if 'recharge_amount' not in df.columns:
+                df['recharge_amount'] = 0.0
+            if 'usage_amount' not in df.columns:
+                df['usage_amount'] = 0.0
+
+            # Date conversion
+            debug_print("Converting transaction date")
+            df['transaction_date'] = pd.to_datetime(
+                df['transaction_date'],
+                format='%H:%M %d/%m/%Y',
+                errors='coerce'
+            )
+
+            # Numeric column conversion
+            debug_print("Converting numeric columns")
+            numeric_columns = ['recharge_amount', 'usage_amount']
+            for col in numeric_columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+
+        except Exception as e:
+            debug_print(f"An error occurred during data parsing (Multipass): {e}")
+            traceback.print_exc()
+            return None
+
+    # ----------------------------------------------------------------------
+    # Handling Max scenario
+    # ----------------------------------------------------------------------
+    elif coupon_kind == "Max":
+        try:
+            # Use 'with' so Selenium closes automatically
+            debug_print("Initializing Selenium for Max")
+            with webdriver.Chrome(options=chrome_options) as driver:
+                wait = WebDriverWait(driver, 30)
+                driver.get("https://www.max.co.il/gift-card-transactions/main")
+
+                def safe_find(by, value, timeout=10):
+                    """ Try to find an element with a waiting timeout """
+                    debug_print(f"Searching for element: {by}={value}")
+                    return WebDriverWait(driver, timeout).until(EC.visibility_of_element_located((by, value)))
+
+                # Enter card details
+                debug_print("Entering card details")
+                card_number_field = safe_find(By.ID, "giftCardNumber")
+                card_number_field.clear()
+                card_number_field.send_keys(coupon_number)
+
+                exp_field = safe_find(By.ID, "expDate")
+                exp_field.clear()
+                exp_field.send_keys(card_exp)
+
+                cvv_field = safe_find(By.ID, "cvv")
+                cvv_field.clear()
+                cvv_field.send_keys(cvv)
+
+                # Click continue
+                debug_print("Clicking continue button")
+                continue_button = wait.until(EC.element_to_be_clickable((By.ID, "continue")))
+                continue_button.click()
+
+                time.sleep(7)
+
+                # Find and extract table
+                debug_print("Locating transaction table")
+                table = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "mat-table")))
+
+                headers = [header.text.strip() for header in table.find_elements(By.TAG_NAME, "th")]
+                debug_print(f"Table headers: {headers}")
+                rows = []
+
+                # Table rows (skip header row)
+                all_rows = table.find_elements(By.TAG_NAME, "tr")
+                for row in all_rows[1:]:
+                    cells = [cell.text.strip() for cell in row.find_elements(By.TAG_NAME, "td")]
+                    if cells:
+                        rows.append(cells)
+
+                debug_print(f"Number of rows extracted: {len(rows)}")
+                debug_print(f"Extracted rows: {rows}")
+
+                df = pd.DataFrame(rows, columns=headers)
+                debug_print("DataFrame from scraped table:")
+                debug_print(df.head().to_string())
+
+                # Data cleaning and refinement
+                debug_print("Cleaning and refining data")
+                if "שולם בתאריך" in df.columns:
+                    df["שולם בתאריך"] = pd.to_datetime(df["שולם בתאריך"], format="%d.%m.%Y", errors='coerce')
+                else:
+                    df["שולם בתאריך"] = None
+
+                if "סכום בשקלים" in df.columns:
+                    df["סכום בשקלים"] = (
+                        df["סכום בשקלים"]
+                        .str.replace("₪", "", regex=False)
+                        .str.strip()
+                        .replace("", "0")
+                        .astype(float)
+                    )
+                else:
+                    df["סכום בשקלים"] = 0.0
+
+                if "יתרה" in df.columns:
+                    df["יתרה"] = (
+                        df["יתרה"]
+                        .str.replace("₪", "", regex=False)
+                        .str.strip()
+                        .replace("", "0")
+                        .astype(float)
+                    )
+                else:
+                    df["יתרה"] = 0.0
+
+                debug_print("DataFrame after cleaning:")
+                debug_print(df.head().to_string())
+
+                # Column renaming
+                debug_print("Renaming columns")
+                col_map = {
+                    "שולם בתאריך": "transaction_date",
+                    "שם בית העסק": "location",
+                    "סכום בשקלים": "amount",
+                    "יתרה": "balance",
+                    "פעולה": "action",
+                    "הערות": "notes"
+                }
+                for k, v in col_map.items():
+                    if k in df.columns:
+                        df.rename(columns={k: v}, inplace=True)
+
+                # Create usage and recharge amount columns
+                debug_print("Creating usage and recharge amount columns")
+                df["usage_amount"] = df.apply(
+                    lambda x: x["amount"] if ("action" in df.columns and "עסקה" in x["action"]) else 0.0,
+                    axis=1
+                )
+                df["recharge_amount"] = df.apply(
+                    lambda x: -(x["amount"]) if ("action" in df.columns and x["action"] == "טעינה") else 0.0,
+                    axis=1
+                )
+
+                # Add reference number column
+                debug_print("Adding reference number column")
+                df["reference_number"] = df.index.map(lambda i: f"max_ref_{int(time.time())}_{i}")
+
+                # Remove unnecessary columns
+                debug_print("Removing unnecessary columns")
+                for col_to_drop in ["action", "notes"]:
+                    if col_to_drop in df.columns:
+                        df.drop(columns=[col_to_drop], inplace=True)
+
+                debug_print("Final DataFrame before export:")
+                debug_print(df.head().to_string())
+
+                # Export the DataFrame to CSV for debugging purposes
+                export_directory = "automatic_coupon_update/export_csv"
+                os.makedirs(export_directory, exist_ok=True)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                export_file = os.path.join(export_directory, f"coupon_{coupon_number}_{timestamp}_max.csv")
+                df.to_csv(export_file, index=False, encoding="utf-8-sig")
+                debug_print(f"Exported scraped data to {export_file}")
+
+        except Exception as e:
+            debug_print(f"An error occurred during Selenium operations (Max): {e}")
+            traceback.print_exc()
+            return None
+
+    else:
+        # If there's another scenario that is neither Multipass nor Max
+        debug_print(f"Unsupported coupon kind: {coupon_kind}")
+        return None
+
+    # At this point, we should have a df ready
+    if df is None or df.empty:
+        debug_print("No data frame (df) was created or df is empty.")
+        return None
+
+    # ----------------------------------------------------------------------
+    # Common stage - check data against DB and update
+    # ----------------------------------------------------------------------
+    try:
+        # Retrieve existing data from DB (reference_number only)
+        debug_print("Retrieving existing data from database")
+        existing_data = pd.read_sql_query(
+            """
+            SELECT reference_number
+            FROM coupon_transaction
+            WHERE coupon_id = %(coupon_id)s
+            """,
+            db.engine,
+            params={"coupon_id": coupon.id}
+        )
+
+        # Check if number of rows in DB is different from new rows
+        # If so (in case there are > 0 rows in DB) - delete and re-insert
+        debug_print("Checking existing database entries")
+        if len(existing_data) != len(df):
+            if len(existing_data) > 0:
+                debug_print("Different number of entries, deleting existing entries")
+                db.session.execute(
+                    text("DELETE FROM coupon_transaction WHERE coupon_id = :coupon_id"),
+                    {"coupon_id": coupon.id}
+                )
+                db.session.commit()
+
+                # Update after deletion
+                existing_data = pd.read_sql_query(
+                    """
+                    SELECT reference_number
+                    FROM coupon_transaction
+                    WHERE coupon_id = %(coupon_id)s
+                    """,
+                    db.engine,
+                    params={"coupon_id": coupon.id}
+                )
+
+        existing_refs = set(existing_data['reference_number'].astype(str))
+
+        # Convert reference_number to string for correct comparison
+        df['reference_number'] = df['reference_number'].astype(str)
+
+        # Filter out existing records
+        df_new = df[~df['reference_number'].isin(existing_refs)]
+
+        if df_new.empty:
+            debug_print("No new transactions to add (all references already exist in DB).")
+            return None
+
+        # Add new records
+        debug_print(f"Adding {len(df_new)} new transactions")
+        for idx, row in df_new.iterrows():
+            transaction = CouponTransaction(
+                coupon_id=coupon.id,
+                transaction_date=row.get('transaction_date'),
+                location=row.get('location', ''),
+                recharge_amount=row.get('recharge_amount', 0.0),
+                usage_amount=row.get('usage_amount', 0.0),
+                reference_number=row.get('reference_number', '')
+            )
+            db.session.add(transaction)
+
+        # Update total actual usage
+        debug_print("Calculating total used value")
+        total_used = db.session.query(func.sum(CouponTransaction.usage_amount)) \
+                         .filter_by(coupon_id=coupon.id).scalar() or 0.0
+        coupon.used_value = float(total_used)
+
+        # Call status update function
+        debug_print("Updating coupon status")
+        update_coupon_status(coupon)
+
+        db.session.commit()
+
+        debug_print(f"Transactions for coupon {coupon.code} have been updated in the database.")
+        return df_new  # Return new transactions
+    except Exception as e:
+        debug_print(f"An error occurred during data parsing or database operations: {e}")
         traceback.print_exc()
         db.session.rollback()
         return None

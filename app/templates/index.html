@@ -149,6 +149,12 @@
                        data-is-one-time="true" data-purpose="{{ coupon.purpose }}"
                    {% else %}
                        data-is-one-time="false"
+                   {% endif %}
+                   {% if coupon.cvv %}
+                       data-coupon-cvv="{{ coupon.cvv }}"
+                   {% endif %}
+                   {% if coupon.card_exp %}
+                       data-coupon-card-exp="{{ coupon.card_exp }}"
                    {% endif %}>
                     {{ get_company_logo(coupon) }}
                     <p class="company-name">{{ coupon.company }}</p>
@@ -229,6 +235,13 @@
     <h2 id="bigModalCompanyName">Be שופרסל</h2>
     <img id="bigModalLogo" alt="Logo" style="width:120px;height:120px;object-fit:cover;margin:10px auto;border-radius:8px;" src="/static/images/be_shufersal.png">
     <h1 id="bigModalCouponCode" style="margin-top:20px;">91381000401555109674</h1>
+    <!-- בלוק חדש להצגת CVV ותוקף הכרטיס, באותו גודל של הקוד -->
+    <div id="bigModalExtraDetails" style="margin-top:20px; display:none;">
+      <!-- CVV בשורה נפרדת, אותו סגנון H1 -->
+      <h1 id="bigModalCouponCVV" style="margin:0; font-weight: bold;"></h1>
+      <!-- תוקף בשורה נפרדת, אותו סגנון H1 -->
+      <h1 id="bigModalCardExp" style="margin:0; font-weight: bold;"></h1>
+    </div>
   </div>
 </div>
 
@@ -828,6 +841,8 @@ document.addEventListener("DOMContentLoaded", function() {
       const couponLink = card.getAttribute("href");
       const logoSrcItem = card.getAttribute("data-logo-src") || "";
       const isOneTime = card.getAttribute("data-is-one-time") === "true";
+      const cvv = card.getAttribute("data-coupon-cvv") || "";
+      const cardExp = card.getAttribute("data-coupon-card-exp") || "";
 
       const li = document.createElement("li");
       li.innerHTML = `
@@ -851,6 +866,8 @@ document.addEventListener("DOMContentLoaded", function() {
               data-company="${companyName}"
               data-coupon-code="${couponCode}"
               data-logo-src="${logoSrcItem}"
+              data-coupon-cvv="${cvv}"
+              data-coupon-card-exp="${cardExp}"
             >
               הצגת קוד הקופון
             </button>
@@ -982,6 +999,9 @@ document.addEventListener("DOMContentLoaded", function() {
   const bigModalCompanyName = document.getElementById("bigModalCompanyName");
   const bigModalLogo = document.getElementById("bigModalLogo");
   const bigModalCouponCode = document.getElementById("bigModalCouponCode");
+  const bigModalExtraDetails = document.getElementById("bigModalExtraDetails");
+  const bigModalCouponCVV = document.getElementById("bigModalCouponCVV");
+  const bigModalCardExp = document.getElementById("bigModalCardExp");
 
   document.addEventListener("click", function(e) {
     if (e.target && e.target.classList.contains("show-big-btn")) {
@@ -989,10 +1009,22 @@ document.addEventListener("DOMContentLoaded", function() {
       const companyName = btn.getAttribute("data-company");
       const couponCode = btn.getAttribute("data-coupon-code");
       const logoSrc = btn.getAttribute("data-logo-src") || "";
+      const couponCVV = btn.getAttribute("data-coupon-cvv");
+      const couponCardExp = btn.getAttribute("data-coupon-card-exp");
 
       bigModalCompanyName.textContent = companyName;
       bigModalLogo.src = logoSrc;
       bigModalCouponCode.textContent = couponCode;
+
+      // עדכון CVV ותוקף
+      if (couponCVV || couponCardExp) {
+        bigModalExtraDetails.style.display = "block";
+        // מציגים בסגנון: "456 :CVV" ובשורה הבאה "תוקף: 08/28"
+        bigModalCouponCVV.textContent = couponCVV ? `${couponCVV} :CVV` : "";
+        bigModalCardExp.textContent = couponCardExp ? `תוקף: ${couponCardExp}` : "";
+      } else {
+        bigModalExtraDetails.style.display = "none";
+      }
 
       bigModal.classList.add("active");
     }
