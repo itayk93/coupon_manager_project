@@ -189,6 +189,15 @@
             {% endfor %}
         </div>
 
+        <!-- Source Field -->
+        <div class="form-group">
+            {{ coupon_form.source.label(class="form-label") }}
+            {{ coupon_form.source(class="input-field", id="source") }}
+            {% for error in coupon_form.source.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
         <!-- Checkbox: האם להכניס תוקף כרטיס ו-CVV -->
         <div class="form-group checkbox-inline">
             <label for="include_card_info">

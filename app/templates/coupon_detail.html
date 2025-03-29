@@ -2,294 +2,456 @@
 {% block title %}פרטי קופון{% endblock %}
 
 {% block content %}
-<section class="coupon-detail">
-    <h2>פרטי קופון</h2>
-
-    <div class="company-info">
-        <img src="{{ url_for('static', filename=company_logo) }}" alt="{{ coupon.company }} Logo" class="company-logo">
-        <h3>{{ coupon.company }}</h3>
-    </div>
-
-    {% if coupon.is_for_sale %}
-        <div class="sale-message">
-            {{ coupon.user.first_name }} {{ coupon.user.last_name }} מוכר קופון על סך {{ coupon.value|int }} ₪ ל{{ coupon.company }}<br>
-            ב-{{ coupon.cost|int }} ₪ ({{ discount_percentage }}% הנחה)
+<section class="coupon-detail-container">
+    <div class="coupon-card-details">
+        <div class="coupon-header">
+            <div class="company-info">
+                <img src="{{ url_for('static', filename=company_logo) }}" alt="{{ coupon.company }} Logo" class="company-logo">
+                <h3 class="company-name">{{ coupon.company }}</h3>
+            </div>
         </div>
-
-        {% if not is_owner %}
-            <div class="request-coupon-button">
-                <a href="{{ url_for('profile.user_profile', user_id=coupon.user.id) }}" class="action-button" style="margin-right: 10px;">פרופיל המוכר</a>
-                <a href="{{ url_for('marketplace.request_coupon_detail', id=coupon.id) }}" class="action-button">בקש קופון</a>
-            </div>
-        {% else %}
-            <div class="your-coupon small-button-style">
-                זהו הקופון שלך שעומד למכירה
-            </div>
-        {% endif %}
-    {% endif %}
-
-    <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'tab1')">פרטי קופון</button>
-        {% if not coupon.is_for_sale %}
-            <button class="tab-button" onclick="openTab(event, 'tab2')">ערכים כספיים</button>
-        {% endif %}
-        <button class="tab-button" onclick="openTab(event, 'tab3')">נתונים נוספים</button>
-    </div>
-
-    <div id="tab1" class="tab-content active">
-        {% if not coupon.is_for_sale %}
-            <div class="info-box">
-                <span class="info-title">קוד מוצר:</span>
-                <span class="info-value">{{ coupon.code }}</span>
-            </div>
-        {% endif %}
-        <div class="info-box">
-            <span class="info-title">חברה:</span>
-            <span class="info-value">{{ coupon.company }}</span>
-        </div>
-
-        {% if coupon.card_exp %}
-        <div class="info-box">
-            <span class="info-title">תוקף הכרטיס:</span>
-            <span class="info-value">{{ coupon.card_exp }}</span>
-        </div>
-        {% endif %}
-
-        {% if coupon.cvv %}
-        <div class="info-box">
-            <span class="info-title">CVV:</span>
-            <span class="info-value">{{ coupon.cvv }}</span>
-        </div>
-        {% endif %}
-
-        {% if coupon.is_one_time %}
-            <div class="info-box">
-                <span class="info-title">מטרת הקופון:</span>
-                <span class="info-value">{{ coupon.purpose }}</span>
-            </div>
-            <div class="info-box">
-                <span class="info-title">קוד לשימוש חד פעמי:</span>
-                <span class="info-value">כן</span>
-            </div>
-
-            {% if is_owner and coupon.status == 'פעיל' %}
-                <div class="mark-as-used-container">
-                    <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
-                        {{ mark_form.hidden_tag() }}
-                        {{ mark_form.submit(class="action-button danger",
-                            onclick="return confirm('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');") }}
-                    </form>
-                </div>
-            {% endif %}
-        {% endif %}
 
         {% if coupon.is_for_sale %}
-            <div class="info-box">
-                <span class="info-title">כמה הקופון שווה בפועל:</span>
-                <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
-            </div>
-            <div class="info-box">
-                <span class="info-title">כמה שילמת על הקופון:</span>
-                <span class="info-value">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
+            <div class="sale-info-box">
+                <div class="sale-message">
+                    <div class="sale-icon"><i class="fas fa-tags"></i></div>
+                    <div class="sale-details">
+                        <span class="seller-name">{{ coupon.user.first_name }} {{ coupon.user.last_name }}</span>
+                        מוכר קופון על סך <span class="highlight-value">{{ coupon.value|int }} ₪</span> ל{{ coupon.company }}<br>
+                        ב-<span class="highlight-value">{{ coupon.cost|int }} ₪</span>
+                        <span class="discount-badge">{{ discount_percentage }}% הנחה</span>
+                    </div>
+                </div>
+
+                {% if not is_owner %}
+                    <div class="action-buttons-container">
+                        <a href="{{ url_for('profile.user_profile', user_id=coupon.user.id) }}" class="secondary-button">
+                            <i class="fas fa-user-circle"></i> פרופיל המוכר
+                        </a>
+                        <a href="{{ url_for('marketplace.request_coupon_detail', id=coupon.id) }}" class="primary-button pulse-animation">
+                            <i class="fas fa-shopping-cart"></i> בקש קופון
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="your-coupon-badge">
+                        <i class="fas fa-check-circle"></i> זהו הקופון שלך שעומד למכירה
+                    </div>
+                {% endif %}
             </div>
         {% endif %}
-    </div>
 
-    {% if not coupon.is_for_sale %}
-        <div id="tab2" class="tab-content">
-            <div class="info-box">
-                <span class="info-title">ערך מקורי:</span>
-                <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="tab1">
+                    <i class="fas fa-info-circle"></i> פרטי קופון
+                </button>
+                {% if not coupon.is_for_sale %}
+                    <button class="tab-button" data-tab="tab2">
+                        <i class="fas fa-shekel-sign"></i> ערכים כספיים
+                    </button>
+                {% endif %}
+                <button class="tab-button" data-tab="tab3">
+                    <i class="fas fa-clipboard-list"></i> נתונים נוספים
+                </button>
             </div>
-            <div class="info-box">
-                <span class="info-title">ערך שהשתמשת בו:</span>
-                <span class="info-value">
-                    {{ '%.2f'|format(coupon.used_value) }} ש"ח
-                </span>
+
+            <div class="tab-content-container">
+                <div id="tab1" class="tab-content active">
+                    <div class="info-grid">
+                        {% if not coupon.is_for_sale %}
+                            <div class="info-box">
+                                <div class="info-icon"><i class="fas fa-barcode"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">קוד מוצר:</span>
+                                    <span class="info-value code-value">{{ coupon.code }}</span>
+                                    <button class="copy-button" data-clipboard-text="{{ coupon.code }}" title="העתק קוד">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <div class="info-box">
+                            <div class="info-icon"><i class="fas fa-building"></i></div>
+                            <div class="info-content">
+                                <span class="info-title">חברה:</span>
+                                <span class="info-value">{{ coupon.company }}</span>
+                            </div>
+                        </div>
+
+                        {% if coupon.card_exp %}
+                        <div class="info-box">
+                            <div class="info-icon"><i class="far fa-calendar-alt"></i></div>
+                            <div class="info-content">
+                                <span class="info-title">תוקף הכרטיס:</span>
+                                <span class="info-value">{{ coupon.card_exp }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if coupon.cvv %}
+                        <div class="info-box sensitive-data">
+                            <div class="info-icon"><i class="fas fa-lock"></i></div>
+                            <div class="info-content">
+                                <span class="info-title">CVV:</span>
+                                <span class="info-value cvv-value">•••</span>
+                                <button class="reveal-button" title="הצג/הסתר CVV">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <span class="hidden-value">{{ coupon.cvv }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if coupon.is_one_time %}
+                            <div class="info-box">
+                                <div class="info-icon"><i class="fas fa-bullseye"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">מטרת הקופון:</span>
+                                    <span class="info-value">{{ coupon.purpose }}</span>
+                                </div>
+                            </div>
+                            <div class="info-box">
+                                <div class="info-icon"><i class="fas fa-check-circle"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">קוד לשימוש חד פעמי:</span>
+                                    <span class="info-value">כן</span>
+                                </div>
+                            </div>
+
+                            {% if is_owner and coupon.status == 'פעיל' %}
+                                <div class="mark-as-used-container">
+                                    <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
+                                        {{ mark_form.hidden_tag() }}
+                                        {{ mark_form.submit(class="danger-button",
+                                            onclick="return confirmAction('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');") }}
+                                    </form>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+
+                        {% if coupon.is_for_sale %}
+                            <div class="info-box highlight-box">
+                                <div class="info-icon"><i class="fas fa-shekel-sign"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">ערך הקופון בפועל:</span>
+                                    <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
+                                </div>
+                            </div>
+                            <div class="info-box highlight-box">
+                                <div class="info-icon"><i class="fas fa-money-bill-wave"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">מחיר מבוקש:</span>
+                                    <span class="info-value">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if not coupon.is_for_sale %}
+                    <div id="tab2" class="tab-content">
+                        <div class="value-summary">
+                            <div class="value-chart-container">
+                                <canvas id="valueChart" width="250" height="250"></canvas>
+                            </div>
+                            <div class="value-details">
+                                <div class="info-box highlight-box">
+                                    <div class="info-icon"><i class="fas fa-tag"></i></div>
+                                    <div class="info-content">
+                                        <span class="info-title">ערך מקורי:</span>
+                                        <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
+                                    </div>
+                                </div>
+                                <div class="info-box highlight-box">
+                                    <div class="info-icon"><i class="fas fa-shopping-cart"></i></div>
+                                    <div class="info-content">
+                                        <span class="info-title">ערך שהשתמשת בו:</span>
+                                        <span class="info-value">{{ '%.2f'|format(coupon.used_value) }} ש"ח</span>
+                                    </div>
+                                </div>
+                                {% if not coupon.is_one_time %}
+                                    <div class="info-box highlight-box">
+                                        <div class="info-icon"><i class="fas fa-coins"></i></div>
+                                        <div class="info-content">
+                                            <span class="info-title">ערך נותר:</span>
+                                            <span class="info-value">{{ '%.2f'|format(coupon.value - coupon.used_value) }} ש"ח</span>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div id="tab3" class="tab-content">
+                    <div class="info-grid">
+                        {% if not coupon.is_for_sale %}
+                            {% if coupon.source and coupon.source != 'לא צוין' %}
+                            <div class="info-box">
+                                <div class="info-icon"><i class="fas fa-store"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">מאיפה קיבלת את הקופון:</span>
+                                    <span class="info-value">{{ coupon.source }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        
+                            <div class="info-box">
+                                <div class="info-icon"><i class="fas fa-percentage"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">אחוז שימוש:</span>
+                                    <span class="info-value">
+                                        {% if coupon.value > 0 %}
+                                            <div class="progress-bar">
+                                                <div class="progress" style="width: {{ (coupon.used_value / coupon.value * 100)|round(2) }}%"></div>
+                                            </div>
+                                            <span class="percentage-value">{{ (coupon.used_value / coupon.value * 100)|round(2) }}%</span>
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="info-box">
+                                <div class="info-icon"><i class="fas fa-calendar-plus"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">תאריך הזנה:</span>
+                                    <span class="info-value">{{ coupon.date_added | to_israel_time }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <div class="info-box">
+                            <div class="info-icon"><i class="fas fa-tags"></i></div>
+                            <div class="info-content">
+                                <span class="info-title">קטגוריה:</span>
+                                <span class="info-value">
+                                    {% if coupon.tags %}
+                                        {% for tag in coupon.tags %}
+                                            <span class="tag">{{ tag.name }}</span>{% if not loop.last %} {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        אין קטגוריה
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="info-box">
+                            <div class="info-icon"><i class="fas fa-money-bill-wave"></i></div>
+                            <div class="info-content">
+                                <span class="info-title">כמה שילמת על הקופון:</span>
+                                <span class="info-value">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
+                            </div>
+                        </div>
+
+                        <div class="info-box">
+                            <div class="info-icon"><i class="fas fa-percentage"></i></div>
+                            <div class="info-content">
+                                <span class="info-title">כמה אחוז חסכת:</span>
+                                <span class="info-value">
+                                    {% if coupon.value > 0 %}
+                                        <span class="saving-percentage">{{ ((coupon.value - coupon.cost) / coupon.value * 100)|round(2) }}%</span>
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        {% if coupon.expiration %}
+                            <div class="info-box {% if is_expiring %}expiring{% endif %}">
+                                <div class="info-icon"><i class="far fa-calendar-alt"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">תוקף עד:</span>
+                                    <span class="info-value">{{ coupon.expiration }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if coupon.description %}
+                            {% if coupon.description and coupon.description != 'nan' %}
+                            <div class="info-box description-box">
+                                <div class="info-icon"><i class="fas fa-align-left"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">תיאור:</span>
+                                    <span class="info-value">{{ coupon.description }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            {% if not coupon.is_one_time %}
-                <div class="info-box">
-                    <span class="info-title">ערך נותר:</span>
-                    <span class="info-value">
-                        {{ '%.2f'|format(coupon.value - coupon.used_value) }} ש"ח
-                    </span>
+        </div>
+
+        <div class="section-divider">
+            <div class="divider-line"></div>
+            <div class="divider-icon"><i class="fas fa-history"></i></div>
+            <div class="divider-line"></div>
+        </div>
+
+        <h3 class="usage-history-title">היסטוריית טעינות / שימושים</h3>
+
+        <div class="transaction-container">
+            {% if consolidated_rows and consolidated_rows|length > 0 %}
+                <div class="transaction-table-wrapper">
+                    <table class="transaction-table">
+                        <thead>
+                            <tr>
+                                <th><i class="far fa-calendar-alt"></i> תאריך</th>
+                                <th><i class="fas fa-shekel-sign"></i> סכום</th>
+                                <th><i class="fas fa-info-circle"></i> פרטים</th>
+                                <th><i class="fas fa-cog"></i> פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in consolidated_rows %}
+                                <tr class="{% if row.source_table == 'sum_row' %}summary-row{% endif %}">
+                                    <td>
+                                        {% if row.timestamp %}
+                                            <span class="transaction-date">{{ row.timestamp }}</span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="amount-cell {% if row.transaction_amount < 0 %}negative{% else %}positive{% endif %}">
+                                        {{ row.transaction_amount }}
+                                    </td>
+                                    <td>{{ row.details or '' }}</td>
+                                    <td>
+                                        {% if row.source_table == 'sum_row' %}
+                                            <span class="status-badge sum">סה״כ יתרה</span>
+                                        {% elif row.source_table == 'coupon_transaction' and row.action == 'Multipass' %}
+                                            <span class="status-badge locked"><i class="fas fa-lock"></i> לא ניתן למחוק</span>
+                                        {% else %}
+                                            <form method="POST"
+                                                action="{{ url_for('coupons.delete_transaction_record',
+                                                                source_table=row.source_table,
+                                                                record_id=row.id) }}"
+                                                onsubmit="return confirmAction('האם אתה בטוח שברצונך למחוק את הרשומה הזו?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="icon-button danger" title="מחק">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="no-data-message">
+                    <i class="fas fa-info-circle"></i>
+                    <p>אין תנועות להצגה.</p>
                 </div>
             {% endif %}
+        </div>        
+        <div class="action-buttons secondary-row">
+            <a href="{{ url_for('coupons.update_coupon_usage_route', id=coupon.id) }}" class="action-button update-button">
+                <i class="fas fa-sync-alt"></i> עדכון שימוש בקופון
+            </a>
+            <a href="{{ url_for('coupons.edit_coupon', id=coupon.id) }}" class="action-button edit-button">
+                <i class="fas fa-edit"></i> ערוך קופון
+            </a>
         </div>
-    {% endif %}
 
-    <div id="tab3" class="tab-content">
-        {% if not coupon.is_for_sale %}
-            <div class="info-box">
-                <span class="info-title">אחוז שימוש:</span>
-                <span class="info-value">
-                    {% if coupon.value > 0 %}
-                        {{ (coupon.used_value / coupon.value * 100)|round(2) }}%
-                    {% else %}
-                        0%
-                    {% endif %}
-                </span>
-            </div>
-            <div class="info-box">
-                <span class="info-title">תאריך הזנה:</span>
-                <span class="info-value">{{ coupon.date_added | to_israel_time }}</span>
-            </div>
-        {% endif %}
+        <div class="action-buttons primary-row">
 
-        {% if coupon.tags %}
-            <div class="info-box">
-                <span class="info-title">קטגוריה:</span>
-                <span class="info-value">
-                    {% for tag in coupon.tags %}
-                        <span class="tag">{{ tag.name }}</span>{% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                </span>
-            </div>
-        {% else %}
-            <div class="info-box">
-                <span class="info-title">קטגוריה:</span>
-                <span class="info-value">אין קטגוריה.</span>
-            </div>
-        {% endif %}
-
-        <div class="info-box">
-            <span class="info-title">כמה שילמת על הקופון:</span>
-            <span class="info-value">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
-        </div>
-        <div class="info-box">
-            <span class="info-title">כמה אחוז חסכת:</span>
-            <span class="info-value">
-                {% if coupon.value > 0 %}
-                    {{ ((coupon.value - coupon.cost) / coupon.value * 100)|round(2) }}%
-                {% else %}
-                    0%
-                {% endif %}
-            </span>
-        </div>
-        {% if coupon.expiration %}
-            <div class="info-box">
-                <span class="info-title">תוקף עד:</span>
-                <span class="info-value">{{ coupon.expiration }}</span>
-            </div>
-        {% endif %}
-
-        {% if coupon.description %}
-            <div class="info-box description-box">
-                <span class="info-title">תיאור:</span>
-                <span class="info-value">{{ coupon.description }}</span>
-            </div>
-        {% endif %}
-    </div>
-
-    <h3 class="usage-history-title">היסטוריית טעינות / שימושים</h3>
-
-    {% if consolidated_rows and consolidated_rows|length > 0 %}
-        <table class="transaction-table">
-            <thead>
-                <tr>
-                    <th>תאריך</th>
-                    <th>סכום (₪)</th>
-                    <th>פרטים</th>
-                    <th>פעולות</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in consolidated_rows %}
-                    <tr>
-                        <td>
-                            {% if row.timestamp %}
-                                {{ row.timestamp }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>{{ row.transaction_amount }}</td>
-                        <td>{{ row.details or '' }}</td>
-                        <td>
-                            {% if row.source_table == 'sum_row' %}
-                                <span style="color: #777;">סה״כ יתרה</span>
-                            {% elif row.source_table == 'coupon_transaction' and row.action == 'Multipass' %}
-                                <span style="color: #777;">לא ניתן למחוק (מ-Multipass)</span>
-                            {% else %}
-                                <form method="POST"
-                                      action="{{ url_for('coupons.delete_transaction_record',
-                                                         source_table=row.source_table,
-                                                         record_id=row.id) }}"
-                                      onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את הרשומה הזו?');">
-                                    <!-- במקום {{ csrf_token() }} -->
-                                    <!-- כך לא תוצג מחרוזת ארוכה למשתמש -->
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="action-button danger">מחק</button>
-                                </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p class="no-data-message">אין תנועות להצגה.</p>
-    {% endif %}
-
-    {% if is_owner %}
-    <div class="action-buttons">
-        <a href="{{ url_for('coupons.edit_coupon', id=coupon.id) }}" class="action-button">ערוך קופון</a>
-        <form action="{{ url_for('coupons.delete_coupon', id=coupon.id) }}" method="post" style="display: inline;">
-            {{ delete_form.hidden_tag() }}
-            {{ delete_form.submit(class="action-button danger",
-                onclick="return confirm('האם אתה בטוח שברצונך למחוק קופון זה?');") }}
-        </form>
-        <a href="{{ url_for('coupons.show_coupons') }}" class="action-button">חזור לקופונים</a>
-    </div>
-
-    <div class="update-usage-button" style="margin-top: 10px;">
-        <a href="{{ url_for('coupons.update_coupon_usage_route', id=coupon.id) }}" class="action-button">עדכון שימוש בקופון</a>
-    </div>
-    {% endif %}
-
-    {% if current_user.is_admin %}
-        {% if show_multipass_button %}
-        <div class="admin-actions">
-            <form action="/update_coupon_transactions" method="POST" class="admin-actions-form">
-                <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
-                <input type="hidden" name="coupon_code" value="{{ coupon.coupon_code }}">
-                <input id="csrf_token" name="csrf_token" type="hidden" value="{{ csrf_token() }}">
-                {{ update_form.submit(class="action-button small-button") }}  <!-- ✅ עדכון השם -->
+            <form action="{{ url_for('coupons.delete_coupon', id=coupon.id) }}" method="post" class="inline-form">
+                {{ delete_form.hidden_tag() }}
+                <button type="submit"
+                        class="action-button delete-button fade-in-up"
+                        onclick="return confirmAction('האם אתה בטוח שברצונך למחוק קופון זה?');">
+                    <i class="fas fa-trash-alt"></i> מחק קופון
+                </button>
             </form>
+            <a href="{{ url_for('coupons.show_coupons') }}" class="action-button back-button fade-in-up">
+                <i class="fas fa-chevron-right"></i> חזור לקופונים
+            </a>
         </div>
-        {% endif %}
-    {% endif %}
+
+        
+    </div>
 </section>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.8/clipboard.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
 <script>
-    function openTab(evt, tabName) {
-        var tabContents = document.getElementsByClassName("tab-content");
-        for (var i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-        var tabButtons = document.getElementsByClassName("tab-button");
-        for (var i = 0; i < tabButtons.length; i++) {
-            tabButtons[i].classList.remove("active");
-        }
-        document.getElementById(tabName).classList.add("active");
-        evt.currentTarget.classList.add("active");
-    }
-
     document.addEventListener("DOMContentLoaded", function () {
-        var defaultTab = document.querySelector(".tab-button.active");
-        if (defaultTab) {
-            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
-            document.getElementById(tabName).classList.add("active");
+        // טאבים
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.getAttribute('data-tab');
+
+                // הסרת האקטיב מכל הטאבים
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                // הוספת אקטיב לטאב הנבחר
+                button.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+
+                // אנימציה לכניסת התוכן
+                document.getElementById(tabId).classList.add('fade-in');
+                setTimeout(() => {
+                    document.getElementById(tabId).classList.remove('fade-in');
+                }, 500);
+            });
+        });
+
+        // כפתור העתקה
+        if (typeof ClipboardJS !== 'undefined') {
+            const clipboard = new ClipboardJS('.copy-button');
+
+            clipboard.on('success', function(e) {
+                const button = e.trigger;
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                button.classList.add('copied');
+
+                setTimeout(() => {
+                    button.innerHTML = '<i class="fas fa-copy"></i>';
+                    button.classList.remove('copied');
+                }, 2000);
+            });
         }
 
-        // המרת פורמט התאריך בטבלה
-        document.querySelectorAll(".transaction-table td:first-child").forEach(function (cell) {
-            let originalText = cell.textContent.trim();
+        // כפתור הצגת מידע רגיש (CVV)
+        document.querySelectorAll('.reveal-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const parent = button.closest('.sensitive-data');
+                const hiddenValue = parent.querySelector('.hidden-value');
+                const displayValue = parent.querySelector('.cvv-value');
+                const icon = button.querySelector('i');
+
+                if (displayValue.textContent === '•••') {
+                    displayValue.textContent = hiddenValue.textContent;
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    displayValue.textContent = '•••';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+        });
+
+        // עיצוב תאריכים בטבלת העסקאות
+        document.querySelectorAll('.transaction-date').forEach(function (elem) {
+            let originalText = elem.textContent.trim();
 
             // בדיקה שהתאריך בפורמט הצפוי (YYYY-MM-DD HH:MM:SS)
-            let match = originalText.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+            let match = originalText.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,6})?)?$/);
             if (match) {
                 let year = match[1];
                 let month = match[2];
@@ -299,21 +461,665 @@
 
                 // יצירת פורמט חדש DD/MM/YYYY HH:MM
                 let formattedDate = `${day}/${month}/${year} ${hours}:${minutes}`;
-                cell.textContent = formattedDate;
+                elem.textContent = formattedDate;
             }
         });
+
+        // הודעת אישור לפעולות מחיקה
+        window.confirmAction = function(message) {
+            return confirm(message);
+        };
+
+        {% if not coupon.is_for_sale %}
+        // גרף ערכים כספיים משופר
+        const ctx = document.getElementById('valueChart');
+        if (ctx) {
+            const totalValue = {{ coupon.value }};
+            const usedValue = {{ coupon.used_value }};
+            const remainingValue = totalValue - usedValue;
+            
+            // Calculate percentages for display
+            const usedPercentage = Math.round((usedValue / totalValue) * 100) || 0;
+            const remainingPercentage = 100 - usedPercentage;
+            
+            // Better color palette - more accessible and visually pleasing
+            const chartColors = {
+                used: {
+                    main: 'rgba(231, 76, 60, 0.8)',
+                    hover: 'rgba(231, 76, 60, 1)',
+                    border: 'rgba(231, 76, 60, 0.2)'
+                },
+                remaining: {
+                    main: 'rgba(46, 204, 113, 0.8)',
+                    hover: 'rgba(46, 204, 113, 1)',
+                    border: 'rgba(46, 204, 113, 0.2)'
+                }
+            };
+            
+            // Create center text plugin for better information visibility
+            const centerTextPlugin = {
+                id: 'centerText',
+                beforeDraw: function(chart) {
+                    const width = chart.width;
+                    const height = chart.height;
+                    const ctx = chart.ctx;
+                    
+                    ctx.restore();
+                    ctx.font = 'bold 16px Rubik, Assistant, sans-serif';
+                    ctx.textBaseline = 'middle';
+                    ctx.textAlign = 'center';
+                    
+                    const centerX = width / 2;
+                    const centerY = height / 2;
+                    
+                    // Draw total amount
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.font = 'bold 18px Rubik, Assistant, sans-serif';
+                    ctx.fillText(`${totalValue.toFixed(2)} ₪`, centerX, centerY - 10);
+                    
+                    // Draw label
+                    ctx.font = '14px Rubik, Assistant, sans-serif';
+                    ctx.fillStyle = '#7f8c8d';
+                    ctx.fillText('סה״כ', centerX, centerY + 15);
+                    
+                    ctx.save();
+                }
+            };
+            
+            const chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ערך שנוצל', 'ערך נותר'],
+                    datasets: [{
+                        data: [usedValue, remainingValue],
+                        backgroundColor: [
+                            chartColors.used.main,
+                            chartColors.remaining.main
+                        ],
+                        hoverBackgroundColor: [
+                            chartColors.used.hover,
+                            chartColors.remaining.hover
+                        ],
+                        borderColor: [
+                            chartColors.used.border,
+                            chartColors.remaining.border
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    family: 'Rubik, Assistant, sans-serif',
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleFont: {
+                                family: 'Rubik, Assistant, sans-serif',
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                family: 'Rubik, Assistant, sans-serif',
+                                size: 13
+                            },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.parsed || 0;
+                                    let percentage = context.dataIndex === 0 ? usedPercentage : remainingPercentage;
+                                    return [
+                                        `${label}`,
+                                        `${value.toFixed(2)} ₪ (${percentage}%)`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%',
+                    rotation: -90,
+                    circumference: 360,
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 1500,
+                        easing: 'easeOutQuart'
+                    }
+                },
+                plugins: [centerTextPlugin]
+            });
+            
+        }
+        {% endif %}
+
+        // אנימציות כניסה לדף
+        function animateElements() {
+            const elements = document.querySelectorAll('.coupon-card-details, .info-box, .action-button');
+            elements.forEach((element, index) => {
+                setTimeout(() => {
+                    element.classList.add('fade-in-up');
+                }, 100 * index);
+            });
+        }
+
+        // הפעלת אנימציות לאחר טעינת הדף
+        setTimeout(animateElements, 300);
     });
 </script>
+
 <style>
-    .transaction-table td:first-child {
-        direction: ltr; /* שומר שהתאריך והשעה יהיו מסודרים נכון */
-        unicode-bidi: plaintext; /* מונע ערבוב בין עברית לאנגלית */
-    }
+/* ===== כללי ===== */
+:root {
+    --primary-color: #3498db;
+    --primary-dark: #2980b9;
+    --secondary-color: #f39c12;
+    --accent-color: #e74c3c;
+    --success-color: #2ecc71;
+    --warning-color: #f1c40f;
+    --danger-color: #e74c3c;
+    --light-bg: #f8f9fa;
+    --light-grey: #ecf0f1;
+    --medium-grey: #bdc3c7;
+    --dark-grey: #7f8c8d;
+    --text-color: #2c3e50;
+    --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    --hover-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    --border-radius: 12px;
+    --box-radius: 8px;
+    --transition-time: 0.3s;
+    --card-bg: white;
+}
 
-    .transaction-table td:nth-child(2) {
-        direction: ltr; /* מבטיח שהמספרים יישארו בכיוון נכון */
+.coupon-detail-container {
+    /* שים לב: כאן שינינו את ההגדרות לרוחב מורחב יותר */
+    width: 100%;  /* Change from 80% to 100% */
+    max-width: 1000px; /* Adjust based on your preference */
+    margin: 30px auto;
+    padding: 0 15px; /* Add some padding on the sides */
+    font-family: 'Rubik', 'Assistant', sans-serif;
+    color: var(--text-color);
+    direction: rtl;
+}
+
+.coupon-card-details {
+    width: 100%; /* Make sure the card takes full width of container */
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    transition: all var(--transition-time);
+    padding: 0;
+    transform: translateY(0);
+}
+
+.coupon-card-details:hover {
+    box-shadow: var(--hover-shadow);
+    transform: translateY(-5px);
+}
+
+/* ===== אנימציות ===== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
     }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s ease forwards;
+    opacity: 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse-animation {
+    animation: pulse 2s infinite;
+}
+
+.coupon-header h2 {
+    margin: 0 0 15px 0;
+    font-size: 1.8em;
+    font-weight: 700;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.company-info {
+    text-align: center;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.company-logo {
+    width: 100px;
+    height: auto;
+    object-fit: contain;
+    margin-bottom: 10px;
+}
+
+
+.company-logo-container:hover {
+    transform: scale(1.1);
+}
+
+
+
+.company-name {
+    font-size: 1.5em;
+    margin: 0;
+    padding: 0;
+}
+
+/* ===== טאבים ===== */
+.tabs-container {
+    padding: 20px;
+}
+
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.tab-button {
+    background: var(--light-grey);
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background var(--transition-time);
+    font-size: 1em;
+    margin: 0 5px;
+    border-radius: var(--box-radius);
+}
+
+.tab-button.active,
+.tab-button:hover {
+    background: var(--medium-grey);
+}
+
+.tab-content-container {
+    padding: 10px;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ===== מידע ===== */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.info-box {
+    background: var(--light-bg);
+    border-radius: var(--box-radius);
+    padding: 15px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    align-items: center;
+}
+
+.info-box .info-icon {
+    margin-left: 10px;
+    font-size: 1.5em;
+}
+
+.info-content {
+    flex: 1;
+}
+
+.info-title {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    font-size: 1em;
+}
+
+/* ===== פרטי מכירה ===== */
+.sale-info-box {
+    background: var(--light-grey);
+    padding: 20px;
+    margin: 20px;
+    border-radius: var(--box-radius);
+    box-shadow: var(--card-shadow);
+}
+
+.sale-message {
+    display: flex;
+    align-items: center;
+}
+
+.sale-icon {
+    font-size: 2em;
+    margin-left: 10px;
+}
+
+.sale-details {
+    flex: 1;
+    font-size: 1em;
+}
+
+.highlight-value {
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+.discount-badge {
+    background: var(--success-color);
+    color: white;
+    padding: 3px 8px;
+    border-radius: var(--box-radius);
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+
+/* ===== כפתורים ===== */
+.action-buttons-container,
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.action-button,
+.secondary-button,
+.primary-button {
+    background: var(--primary-color);
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: var(--box-radius);
+    cursor: pointer;
+    transition: background var(--transition-time);
+    text-decoration: none;
+    font-size: 1em;
+}
+
+.action-button:hover,
+.secondary-button:hover,
+.primary-button:hover {
+    background: var(--primary-dark);
+}
+
+.inline-form {
+    display: inline;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+}
+
+.danger-button,
+.delete-button {
+    background: var(--danger-color);
+    color: white;
+}
+
+.your-coupon-badge {
+    background: var(--success-color);
+    color: white;
+    padding: 10px;
+    text-align: center;
+    font-size: 1em;
+    border-radius: var(--box-radius);
+    margin: 20px;
+}
+
+/* ===== היסטוריית עסקאות ===== */
+.section-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 30px 0;
+}
+
+.divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--medium-grey);
+}
+
+.divider-icon {
+    margin: 0 10px;
+}
+
+.transaction-container {
+    margin: 20px;
+}
+
+.transaction-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.transaction-table th,
+.transaction-table td {
+    border: 1px solid var(--medium-grey);
+    padding: 10px;
+    text-align: center;
+}
+
+.summary-row {
+    background: var(--light-grey);
+    font-weight: bold;
+}
+
+.amount-cell.negative {
+    color: var(--danger-color);
+}
+
+.amount-cell.positive {
+    color: var(--success-color);
+}
+
+/* ===== הודעות ===== */
+.no-data-message {
+    text-align: center;
+    padding: 20px;
+    background: var(--light-grey);
+    border-radius: var(--box-radius);
+    box-shadow: var(--card-shadow);
+}
+
+.admin-actions {
+    margin: 20px;
+    text-align: center;
+}
+
+.admin-button {
+    background: var(--secondary-color);
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: var(--box-radius);
+    cursor: pointer;
+    font-size: 1em;
+    text-decoration: none;
+}
+
+.admin-actions-form {
+    display: inline;
+}
+
+/* ===== כפתור העתקה ===== */
+.copy-button,
+.reveal-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+}
+.tab-content {
+    opacity: 0;
+    pointer-events: auto;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    display: none;
+    padding: 20px;
+    border: 1px solid var(--light-gray);
+    border-radius: 15px;  /* Increase this value for more rounded corners */
+    margin: -1px auto;    /* מרכז את האלמנט אופקית */
+    text-align: center;
+    width: 90%;           /* Set a wider width (adjust as needed) */
+    max-width: 800px;     /* Optional: limit the maximum width */
+}
+.tab-content.active {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+.usage-history-title {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 1.4em;
+    font-weight: bold;
+}
+.value-chart-container {
+    max-width: 300px; /* או כל גודל אחר שתרצה */
+    margin: 0 auto;   /* מרכז את הגרף */
+}
+
+.value-chart-container canvas {
+    width: 100% !important;
+    height: auto !important;
+}
+.value-details .info-box {
+    margin-bottom: 20px; /* שולט על הרווח בין הקופסאות */
+}
+.value-details {
+    padding: 10px 20px;
+}
+.value-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.info-icon {
+    margin-right: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+}
+
+/* למסכים קטנים (ניידים) */
+@media (max-width: 576px) {
+    .info-icon {
+        margin-right: 10px;
+    }
+}
+.action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* מרווח בין האייקון לטקסט */
+    height: 42px; /* או מה שיש לך ל-a */
+    line-height: 1;
+}
+/* Chart Enhancements */
+.value-chart-container {
+    position: relative;
+    max-width: 300px; 
+    height: 300px;
+    margin: 0 auto 20px;
+    padding: 10px;
+}
+
+
+
+.chart-stat-row {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.chart-stat-item {
+    text-align: center;
+}
+
+.chart-stat-value {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.chart-stat-label {
+    font-size: 14px;
+    margin-top: 5px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: white;
+}
+
+.chart-stat-used {
+    background-color: rgba(231, 76, 60, 0.8);
+}
+
+.chart-stat-remaining {
+    background-color: rgba(46, 204, 113, 0.8);
+}
+
+/* For better mobile display */
+@media (max-width: 576px) {
+    .value-chart-container {
+        height: 250px;
+    }
+    
+    .chart-stat-value {
+        font-size: 14px;
+    }
+    
+    .chart-stat-label {
+        font-size: 12px;
+    }
+}
 </style>
-
 {% endblock %}
-

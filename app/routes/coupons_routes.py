@@ -872,6 +872,7 @@ def add_coupon():
                     expiration = coupon_form.expiration.data or None
                     is_one_time = coupon_form.is_one_time.data
                     purpose = (coupon_form.purpose.data.strip() if is_one_time else '') or None
+                    source = coupon_form.source.data.strip()  # הוספתי את שדה המקור
 
                     selected_company_id = coupon_form.company_id.data
                     other_company_name = (coupon_form.other_company.data or '').strip()
@@ -914,7 +915,8 @@ def add_coupon():
                         expiration=expiration,
                         user_id=current_user.id,
                         is_one_time=is_one_time,
-                        purpose=purpose
+                        purpose=purpose,
+                        source=source  # הוספתי את השדה החדש
                     )
 
                     chosen_company_name = company.name

@@ -1,9 +1,8 @@
+/* # Global Imports and Variables */
 @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap');
 
-/* ===================================================
-   1. CSS Variables for Consistency
-   =================================================== */
 :root {
+    /* CSS Variables for Consistency */
     --primary-color: #2E86C1; /* Calm Blue */
     --secondary-color: #A9CCE3; /* Light Blue */
     --accent-color: #F5B041; /* Light Orange for emphasis */
@@ -23,17 +22,13 @@
     --max-width: 1200px;
 }
 
-/* ===================================================
-   2. Reset and Base Styles
-   =================================================== */
+/* # Reset and Base Styles */
 html {
     box-sizing: border-box;
 }
-
 *, *::before, *::after {
     box-sizing: inherit;
 }
-
 body {
     margin: 0;
     padding: 0;
@@ -44,60 +39,46 @@ body {
     line-height: 1.6;
     padding-bottom: 50px; /* Bottom padding for the page */
 }
-
-/* Remove underline from all links permanently */
 a {
     text-decoration: none !important;
 }
-
 a:hover {
     text-decoration: none !important;
 }
 
-/* ===================================================
-   3. Header Styles
-   =================================================== */
-
+/* # Header Styles */
 header {
     display: grid;
-    grid-template-columns: auto 1fr auto; /* שלוש עמודות: שמאל, אמצע, ימין */
-    justify-content: space-between; /* Space between left, center, and right sections */
+    grid-template-columns: auto 1fr auto; /* three columns: left, center, right */
+    justify-content: space-between;
     align-items: center;
     background-color: var(--primary-color);
     color: var(--white);
-    padding: 0 16px; /* אפשר לשחק עם ה־padding לפי העיצוב */
+    padding: 0 16px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     top: 0;
     z-index: 1000;
     height: 50px;
 }
-/* טריק קטן: מוזיזים את התמונה קצת שמאלה כדי שלא תופיע לך "יותר מדי ימינה" */
 .header-center .header-logo {
-    transform: translateX(-20px); /* 20px שמאלה; אפשר לשנות פחות/יותר לפי הצורך */
+    transform: translateX(-20px);
 }
-
-/* Header Sections */
 .header-left, .header-right {
     display: flex;
     align-items: center;
-    flex: 0 1 auto; /* Allow these sections to resize naturally */
+    flex: 0 1 auto;
 }
-
 .header-center {
-    flex: 1; /* Allows the center section to take remaining space */
+    flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
 }
-
-/* Adjust the logo size to fit within the new header height */
 .header-center img {
     max-height: 40px;
     width: auto;
-    margin-right: 20px; /* הזזת הלוגו מעט שמאלה */
+    margin-right: 20px;
 }
-
-/* Header Left Links */
 .header-left a {
     color: var(--white);
     text-decoration: none;
@@ -106,57 +87,40 @@ header {
     transition: color var(--transition-speed);
     font-size: 16px;
 }
-
 .header-left a:hover {
     color: var(--secondary-color);
 }
-
-/* החוקים הרגילים לכל אייקון בתוך header-left חוץ מהבית */
 .header-left a:not(.home-icon) i {
-    font-size: 1.8em; /* נשאר אותו דבר */
+    font-size: 1.8em;
     color: var(--white);
-    margin-left: 8px; /* שמירה על רווח עבור אייקונים אחרים */
+    margin-left: 8px;
 }
-
-/* חוקים נפרדים רק לאייקון של הבית */
 .header-left a.home-icon i.fa-home {
-    font-size: 1.5em; /* מקטין טיפה את האייקון */
-    margin-left: 3px; /* מרווח מינימלי */
+    font-size: 1.5em;
+    margin-left: 3px;
 }
-
-/* Optional: style for the home icon text */
 .header-left span {
-    font-size: 14px; /* Adjusted font size */
-    margin-right: 8px; /* הוספת רווח בין סמל הבית לטקסט */
+    font-size: 14px;
+    margin-right: 8px;
 }
-
-
-
 .header-right nav .dropdown {
     position: relative;
-    margin-left: 0; /* ביטול מרווחים נוספים */
+    margin-left: 0;
 }
-
-/* Navigation Icons */
 .nav-icon {
     color: var(--white);
     font-size: 1.3em;
     text-decoration: none;
     transition: color var(--transition-speed);
 }
-
 .nav-icon:hover {
     color: var(--secondary-color);
 }
-
-
-/* Hamburger Icon for Mobile */
 .hamburger {
     display: none;
     flex-direction: column;
     cursor: pointer;
 }
-
 .hamburger div {
     width: 25px;
     height: 3px;
@@ -164,24 +128,17 @@ header {
     margin: 4px 0;
     transition: 0.4s;
 }
-
 .hamburger.active .bar1 {
     transform: rotate(-45deg) translate(-5px, 6px);
 }
-
 .hamburger.active .bar2 {
     opacity: 0;
 }
-
 .hamburger.active .bar3 {
     transform: rotate(45deg) translate(-5px, -6px);
 }
 
-/* ===================================================
-   4. Dropdown Menu Styles - גרסה מתוקנת
-   =================================================== */
-
-/* כפתור התפריט */
+/* # Dropdown Menu Styles */
 .dropbtn {
     background-color: var(--primary-color);
     color: var(--white);
@@ -192,12 +149,9 @@ header {
     transition: background-color var(--transition-speed);
     position: relative;
 }
-
 .dropbtn:hover {
     background-color: var(--secondary-color);
 }
-
-/* חץ ליד כפתור התפריט */
 .dropbtn::after {
     content: '\25BC';
     margin-left: 5px;
@@ -207,65 +161,50 @@ header {
     .dropbtn::after {
         content: none;
     }
-
     .dropbtn {
-        clip-path: inset(0px 0px 3px 0px); /* חותך 3px מלמטה */
+        clip-path: inset(0px 0px 3px 0px);
     }
 }
-
-/* מיכל ה-Dropdown */
 .dropdown {
     position: relative;
     display: inline-block;
 }
-
-/* תוכן התפריט הנפתח */
 .dropdown-content {
     display: none;
     position: absolute;
     background-color: #f9f9f9;
     min-width: 160px;
-    max-width: 250px; /* מגבלת רוחב למניעת חיתוך */
+    max-width: 250px;
     box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
     z-index: 1000;
-    white-space: nowrap; /* מונע שבירת טקסט */
+    white-space: nowrap;
     left: 50%;
     transform: translateX(-50%);
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s ease, visibility 0.2s ease;
 }
-
-/* הצגת התפריט כאשר העכבר מעל או כאשר מופעל 'focus-within' */
 .dropdown:hover .dropdown-content,
 .dropdown:focus-within .dropdown-content {
     display: block;
     opacity: 1;
     visibility: visible;
 }
-
-/* טיפול במקרה שהתפריט חורג מצד שמאל */
 .dropdown-content.adjust-left {
     left: auto;
     right: 0;
     transform: none;
 }
-
-/* טיפול במקרה שהתפריט חורג מצד ימין */
 .dropdown-content.adjust-right {
     left: 0;
     right: auto;
     transform: none;
 }
-
-/* הפעלת תפריט כאשר מחלקת 'show' מתווספת */
 .dropdown-content.show {
     display: block;
     opacity: 1;
     visibility: visible;
 }
-
-/* עיצוב הקישורים בתוך ה-Dropdown */
 .dropdown-content a {
     color: var(--text-color);
     padding: 12px 16px;
@@ -273,69 +212,21 @@ header {
     display: block;
     transition: background-color var(--transition-speed);
 }
-
 .dropdown-content a:hover {
     background-color: var(--secondary-color);
 }
-
-/* קו אפור שמפריד בין כפתורים שונים בתפריטים למעלה */
 .dropdown-divider {
     border: none;
-    border-top: 1px solid #ccc; /* קו דק ואפור */
-    margin: 8px 0; /* מרווחים מעל ומתחת לקו */
+    border-top: 1px solid #ccc;
+    margin: 8px 0;
 }
-
-/* טיפול במקרה שהתפריט קרוב לשמאל המסך */
-.dropdown-content.adjust-left {
-    left: auto;
-    right: 0;
-    transform: none;
-}
-
-/* טיפול במקרה שהתפריט קרוב לימין המסך */
-.dropdown-content.adjust-right {
-    left: 0;
-    right: auto;
-    transform: none;
-}
-
-/* התנהגות התפריט בדסקטופ */
-@media (min-width: 769px) {
-    .dropdown:hover .dropdown-content {
-        display: block;
-        opacity: 1;
-        visibility: visible;
-    }
-}
-
-/* התנהגות התפריט במובייל */
-@media (max-width: 768px) {
-    .dropdown-content {
-        right: 0;
-        left: auto;
-        max-height: none;
-        transform: none;
-        opacity: 1;
-    }
-
-    .dropdown:hover .dropdown-content {
-        display: block;
-        opacity: 1;
-        visibility: visible;
-        max-height: none;
-        transform: none;
-    }
-}
-/* תפריט שוק הקופונים - הזזה ימינה */
 .dropdown:nth-of-type(2) .dropdown-content {
-    right: -20px; /* מזיז את התפריט 30px ימינה */
-    left: auto; /* מבטל את left */
-    transform: none; /* מבטל שינויים אחרים */
+    right: -20px;
+    left: auto;
+    transform: none;
 }
 
-/* ===================================================
-   5. Animations
-   =================================================== */
+/* # Animations */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -346,7 +237,6 @@ header {
         transform: translateY(0);
     }
 }
-
 @keyframes slideIn {
     from {
         opacity: 0;
@@ -357,7 +247,6 @@ header {
         transform: translateX(0);
     }
 }
-
 @keyframes slideInFromLeft {
     from {
         opacity: 0;
@@ -369,10 +258,7 @@ header {
     }
 }
 
-/* ===================================================
-   6. Button Styles
-   =================================================== */
-/* Primary Buttons */
+/* # Button Styles */
 .submit-button {
     padding: 15px;
     background-color: var(--primary-color);
@@ -382,20 +268,15 @@ header {
     cursor: pointer;
     font-size: 1.1em;
     transition: background-color var(--transition-speed);
-    width: 100%; /* Full width button */
+    width: 100%;
 }
-
 .submit-button:hover {
     background-color: var(--secondary-color);
 }
-
 .submit-button:active {
     transform: scale(0.98);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
-
-
-/* Secondary Buttons */
 .secondary-button {
     display: flex;
     align-items: center;
@@ -412,22 +293,17 @@ header {
     font-size: 0.9em;
     min-width: 120px;
 }
-
 .secondary-button:hover {
     background-color: #e67e22;
 }
-
 .secondary-button .fa {
     font-size: 1.2em;
 }
-
 .secondary-button:active {
     transform: scale(0.98);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
-
 .action-button {
-    /* הסגנונות הקיימים שלך לכפתור */
     background-color: var(--primary-color);
     color: var(--white);
     border: none;
@@ -438,59 +314,44 @@ header {
     font-size: 1em;
     transition: all 0.3s ease;
     box-shadow: 0 4px 8px rgba(46, 134, 193, 0.2);
-    text-decoration: none; /* הסרת קו תחתון */
+    text-decoration: none;
 }
-
-/* הוספת מרווח עליון לכפתור בתוך כרטיס הקופון */
 .coupon-card .action-button {
     margin-top: 10px;
 }
-
-/* אפקטים נוספים לכפתור */
 .action-button:hover {
     background-color: #1A5A8D;
     box-shadow: 0 6px 12px rgba(46, 134, 193, 0.3);
 }
-
 .action-button:active {
     transform: scale(0.98);
     box-shadow: 0 2px 4px rgba(46, 134, 193, 0.3);
 }
-
-
 .action-button.danger {
     background-color: var(--danger-color);
 }
-
 .action-button.danger:hover {
     background-color: darkred;
 }
-
 .action-button.secondary {
     background-color: #bdc3c7;
     color: #2c3e50;
 }
-
 .action-button.secondary:hover {
     background-color: #95a5a6;
 }
 
-/* ===================================================
-   7. Forms Styles
-   =================================================== */
-/* General Form Styles */
+/* # Form Styles */
 form {
     display: flex;
     flex-direction: column;
 }
-
 label {
     margin: 10px 0 5px 0;
     font-weight: bold;
     color: var(--text-color);
-    text-align: right; /* Align labels to the right */
+    text-align: right;
 }
-
 .input-field, textarea {
     width: 100%;
     padding: 10px;
@@ -498,52 +359,40 @@ label {
     border-radius: 5px;
     font-size: 1em;
     transition: border-color var(--transition-speed);
-    direction: ltr; /* Input direction left-to-right */
+    direction: ltr;
 }
-
 .input-field:focus, textarea:focus {
     border-color: var(--primary-color);
     outline: none;
 }
-
 .form-group {
     margin-bottom: 20px;
 }
-
 .required {
     color: var(--danger-color);
 }
-
 .error-message {
     color: red;
     font-size: 0.9em;
     margin-top: 5px;
     display: block;
 }
-
-/* Container for Input Field and Button */
 .input-with-button {
     display: flex;
     align-items: center;
     position: relative;
 }
-
-/* Password Input Field */
 .input-with-button .input-field {
     flex: 1;
 }
-
-/* Show Password Button */
 .show-password-button {
-    margin-right: 10px; /* Space between button and input field */
+    margin-right: 10px;
     cursor: pointer;
     background: none;
     border: none;
     padding: 0;
     font-size: 16px;
 }
-
-/* Password Strength Meter */
 #password-strength {
     width: 100%;
     background-color: var(--light-gray);
@@ -552,59 +401,49 @@ label {
     overflow: hidden;
     margin-top: 5px;
 }
-
 #password-strength-bar {
     height: 100%;
     width: 0%;
     background-color: var(--danger-color);
     transition: width 0.3s;
 }
-
 #strength-message {
     margin-top: 5px;
     font-size: 0.9em;
     color: var(--text-color);
     text-align: right;
 }
-
-/* Specific Forms */
 .add-coupon,
 .sell-coupon,
 .edit-coupon,
 .auth-form,
 .request-coupon {
-    max-width: 400px; /* Maximum width 400px */
+    max-width: 400px;
     margin: 40px auto;
     background-color: var(--white);
-    padding: 30px 50px; /* Increased side padding */
+    padding: 30px 50px;
     border-radius: 10px;
     border: 1px solid var(--light-gray);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     position: relative;
 }
-
 .auth-form h2,
 .add-coupon h2,
 .sell-coupon h2,
-.edit-coupon h2,
+-edit-coupon h2,
 .request-coupon h2 {
     text-align: center;
     color: var(--primary-color);
     margin-bottom: 20px;
 }
-
-/* Spacing between buttons and form in Add Coupon pages */
 .add-coupons-buttons {
     display: flex;
     justify-content: center;
     gap: 10px;
-    margin-bottom: 40px; /* Increased bottom margin to 40px */
+    margin-bottom: 40px;
 }
 
-/* ===================================================
-   8. Image Styles
-   =================================================== */
-/* Default Coupon and Company Logo Styles */
+/* # Image Styles */
 .company-logo,
 .coupon-logo,
 .logo,
@@ -616,7 +455,6 @@ label {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: transform var(--transition-speed), box-shadow var(--transition-speed);
 }
-
 .company-logo:hover,
 .coupon-logo:hover,
 .logo:hover,
@@ -624,8 +462,6 @@ label {
     transform: scale(1.05);
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
-
-/* Responsive Adjustments */
 @media (max-width: 768px) {
     .company-logo,
     .coupon-logo,
@@ -635,7 +471,6 @@ label {
         height: 80px;
     }
 }
-
 @media (max-width: 500px) {
     .company-logo,
     .coupon-logo,
@@ -646,96 +481,76 @@ label {
     }
 }
 h3 {
-    margin-bottom: 0px; /* הקטנת המרווח מתחת ל-<h3> */
+    margin-bottom: 0px;
 }
-
 .sale-message {
-    margin-top: 5px; /* הקטנת המרווח מעל ה-.sale-message */
+    margin-top: 5px;
 }
 
-/* ===================================================
-   9. Card Styles
-   =================================================== */
-
-/* Hero Section */
-/* זה המסך בעמוד הראשי בו כתוב ״איזה כיף לראות אותך! בוא נראה כמה הוצאת״ */
+/* # Card Styles */
 .hero {
     text-align: center;
-    padding: 20px 15px; /* היה 30px, עכשיו יותר קומפקטי */
+    padding: 20px 15px;
     background-color: var(--white);
-    margin: 15px auto; /* היה 20px, עכשיו מצמצם רווחים */
+    margin: 15px auto;
     margin-top: 10px;
-    border-radius: 10px; /* מעגל לי את התיבה */
+    border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     width: 55%;
     max-width: 750px;
-    line-height: 1.2; /* היה 1, קצת יותר מאוזן */
+    line-height: 1.2;
 }
-
 .hero h2 {
-    margin-top: 0px; /* או אפילו 0px אם רוצים ממש להצמיד */
-    font-size: 2.2em; /* היה 2.5em, הקטנתי קצת */
+    margin-top: 0px;
+    font-size: 2.2em;
     color: var(--primary-color);
 }
-
 .hero p {
     font-size: 1.1em;
     color: var(--text-color);
-    margin-bottom: 0px; /* הוספתי טיפה ריווח */
+    margin-bottom: 0px;
 }
-
-/* Total Value and Savings Sections */
 .total-value, .total-savings {
     background-color: var(--white);
-    padding: 20px 0px; /* היה 30px, הקטנתי כדי למנוע מרווח מוגזם */
-    margin: 25px auto; /* היה 30px, מצמצם */
+    padding: 20px 0px;
+    margin: 25px auto;
     border-radius: 10px;
     border: 1px solid var(--light-gray);
-    width: 350px; /* היה 400px, עכשיו קצת קטן יותר */
+    width: 350px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
-
 .total-value p, .total-savings p {
-    font-size: 1em; /* היה 1.1em, התאמה למראה עדין יותר */
+    font-size: 1em;
     color: var(--text-color);
-    margin-bottom: 10px; /* ניתן להגדיל את הערך */
-    text-align: center; /* מיישר את הטקסט למרכז */
+    margin-bottom: 10px;
+    text-align: center;
 }
-
-/* עיצוב מחדש של תיבת הסכום */
 .total-value h1, .total-savings h1 {
-    font-size: 3em; /* היה 3.5em, עכשיו יותר מאוזן */
-    margin: 0 auto; /* מבטיח יישור מרכזי */
+    font-size: 3em;
+    margin: 0 auto;
     color: var(--success-color);
-    text-align: center; /* מוודא שמיושר בדיוק לאמצע */
+    text-align: center;
     display: flex;
-    justify-content: center; /* מוודא שגם אם האלמנט היה רחב מדי, הכל יהיה ממורכז */
-    align-items: center; /* למקרה של גובה משתנה */
-    margin-bottom: 0.3em; /* הוספת מרווח תחתון של 1em */
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0.3em;
 }
-
-
 .total-savings-line {
     text-align: center;
-    font-size: 1.1em; /* היה 1.2em */
+    font-size: 1.1em;
     color: var(--text-color);
-    margin-top: 15px; /* היה 20px, הקטנתי */
+    margin-top: 15px;
 }
-
-/* Coupon Container */
 .coupon-container {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 15px; /* היה 20px, מצמצם ריווח */
+    gap: 15px;
 }
-
-/* Coupon Card */
 .coupon-card {
-    flex: 1 1 calc(22% - 15px); /* היה 20%, עכשיו יותר גמיש */
-    max-width: calc(22% - 15px);
+    flex: 1 1 calc(22% - 15px);
     box-sizing: border-box;
-    padding: 12px 18px; /* היה 15px 20px */
+    padding: 12px 18px;
     border: 1px solid var(--light-gray);
     border-radius: 8px;
     background-color: var(--white);
@@ -746,89 +561,56 @@ h3 {
     flex-direction: column;
     align-items: center;
 }
-
-.coupon-card:hover {
-    transform: translateY(-2px); /* היה -3px */
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08); /* הקטנתי קצת */
-}
-
-.coupon-card p {
-    margin: 8px 0; /* היה 10px */
-    color: black;
-}
-
-.coupon-card .company-name {
-    font-weight: bold;
-}
-
-/* Specific style for the index page */
-
-
-/* Specific style for the תיבה להזנת שימוש אוטומטי לקופון במסך הראשי */
 .usage-form-wrapper {
-    max-width: 750px; /* היה 500px */
-    margin: 35px auto; /* היה 40px */
-    padding: 18px; /* היה 20px */
+    max-width: 750px;
+    margin: 35px auto;
+    padding: 18px;
     background-color: var(--white);
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); /* היה 0.1 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     text-align: center;
 }
-
 .usage-form-wrapper h2 {
-    font-size: 1.4em; /* היה 1.5em */
+    font-size: 1.4em;
     color: var(--primary-color);
-    margin-bottom: 12px; /* היה 15px */
+    margin-bottom: 12px;
 }
-
 .usage-form-wrapper form {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
-
 .usage-form-wrapper label {
-    font-size: 1em; /* היה 1.1em */
+    font-size: 1em;
     font-weight: bold;
-    margin-bottom: 8px; /* היה 10px */
+    margin-bottom: 8px;
     text-align: center;
 }
-
 .input-field {
     width: 100%;
-    padding: 9px; /* היה 10px */
+    padding: 9px;
     border: 1px solid var(--light-gray);
     border-radius: 5px;
-    font-size: 0.95em; /* היה 1em */
+    font-size: 0.95em;
     text-align: right;
 }
-
 .submit-button {
     background-color: var(--accent-color);
     color: var(--white);
     border: none;
-    padding: 9px 18px; /* היה 10px 20px */
-    margin-top: 12px; /* היה 15px */
+    padding: 9px 18px;
+    margin-top: 12px;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 0.95em; /* היה 1em */
+    font-size: 0.95em;
     font-weight: bold;
     transition: background-color var(--transition-speed);
 }
-
 .submit-button:hover {
     background-color: #e67e22;
 }
 
-/* כפתור שליחה במסך הראשי */
-.usage-form-wrapper .submit-button {
-    width: auto;
-    min-width: 150px;
-}
-
-/* ===================================================
-   10. Notification Styles
-   =================================================== */
+/* # Notification Styles */
 #notification-area {
     position: fixed;
     left: 10px;
@@ -836,7 +618,6 @@ h3 {
     width: 300px;
     z-index: 1000;
 }
-
 .notification {
     background-color: #ffffff;
     border: 1px solid var(--light-gray);
@@ -847,13 +628,11 @@ h3 {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     position: relative;
 }
-
 .notification p {
     margin: 0;
     font-size: 1em;
     color: var(--text-color);
 }
-
 .notification a {
     display: inline-block;
     margin-top: 10px;
@@ -861,11 +640,9 @@ h3 {
     text-decoration: none;
     font-weight: bold;
 }
-
 .notification a:hover {
     text-decoration: underline;
 }
-
 .notification .close-button {
     position: absolute;
     top: 10px;
@@ -876,12 +653,9 @@ h3 {
     cursor: pointer;
     color: var(--danger-color);
 }
-
 .notification .close-button:hover {
     color: darkred;
 }
-
-/* Auto Save Message */
 .auto-save-message {
     position: fixed;
     bottom: 20px;
@@ -894,220 +668,121 @@ h3 {
     transition: opacity 0.5s ease-in-out;
     z-index: 1000;
 }
-
 .auto-save-message.show {
     opacity: 1;
 }
-
 .notification-card {
     display: flex;
     flex-direction: column;
-    align-items: center; /* ממרכז את כל התוכן במרכז הריבוע */
-    justify-content: center; /* מוסיף יישור אנכי */
-    text-align: center; /* יישור מרכזי של הטקסט */
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
-
 .notification-message {
-    margin-bottom: 10px; /* רווח קטן בין ההודעה לכפתור הסגירה */
+    text-align: center;
+    font-size: 1.1em;
+    color: var(--text-color);
 }
-
-.notification-close {
-    position: absolute; /* מיקום קבוע בפינה */
-    top: 10px;
-    right: 10px; /* העברה לימין */
-    font-size: 1.5em;
-    color: var(--danger-color);
-    cursor: pointer;
+.notification-timestamp {
+    font-size: 0.9em;
+    color: var(--gray);
+    margin-top: 5px;
 }
-
 .notification-link {
-    display: inline-block;
-    padding: 8px 12px;
-    background-color: var(--primary-color);
-    color: var(--white) !important;
-    border-radius: 5px;
+    color: var(--primary-color);
     text-decoration: none;
     font-weight: bold;
-    transition: background-color 0.3s ease;
-    font-size: 0.9em;
-    margin: 5px 0 10px 0; /* מרווח עליון קטן יותר ותחתון 10 פיקסלים */
+    margin-top: 10px;
+    display: inline-block;
+    transition: color var(--transition-speed);
 }
-
 .notification-link:hover {
-    background-color: var(--accent-color);
-    color: var(--white) !important;
+    color: var(--accent-color);
+    text-decoration: underline;
 }
-
-/* ===================================================
-   11. Coupon Detail Section
-   =================================================== */
-.coupon-detail {
-    background-color: #fff;
-    padding: 20px;
-    border: 1px solid var(--light-gray);
-    margin: 40px auto; /* מרכז את הקופון */
-    padding-right: 20px;
-    border-radius: 8px;
-    max-width: 800px;
-    text-align: center; /* מיישר את כל התוכן במרכז */
-}
-
-
-
-.coupon-detail h2 {
-    text-align: center;
-    color: var(--primary-color);
-    margin-bottom: 20px;
-}
-
-/* Company Info in Coupon Detail */
-.coupon-detail .company-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-/* Center the buttons within action-buttons */
-.coupon-detail .action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 30px;
-}
-
-/* Specific styles for "update-usage-buttons" to center */
-.coupon-detail .update-usage-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-/* Specific styles for mark-as-used-container */
-.coupon-detail .mark-as-used-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-}
-
-/* Responsive Adjustments for Coupon Detail */
-@media (max-width: 768px) {
-    .coupon-detail .company-logo {
-        width: 40px;  /* גודל קטן יותר במובייל */
-        height: 40px;
-    }
-
-    .coupon-detail .action-button,
-    .coupon-detail .export-button {
-        font-size: 0.8em;
-        padding: 8px 12px;
-    }
-}
-.sale-message {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    margin: 25px auto;
-    padding: 10px;
-    background-color: #e8f4fd; /* רקע כחול בהיר */
-    color: #2E86C1; /* צבע כחול עבור הטקסט */
-    border-radius: 15px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* צל רך */
-    border-left: 8px solid #F5B041; /* קו גבול שמאלי בצבע כתום */
-    max-width: 600px;
-    font-weight: bold; /* הדגשת המלל */
-}
-
-
-.sale-message::before {
+.notification-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
     font-size: 1.5em;
-    margin-bottom: 10px;
+    color: var(--danger-color);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color var(--transition-speed);
+    padding: 0;
+    outline: none;
 }
-
+.notification-close:hover {
+    color: darkred;
+}
 .request-coupon-button {
-    margin-bottom: 20px; /* הוספת רווח מתחת לכפתור */
+    margin-bottom: 20px;
 }
-
 .small-button-style {
     padding: 8px 15px;
     font-size: 0.9em;
-    max-width: fit-content; /* מתאים את הכפתור לגודל התוכן */
+    max-width: fit-content;
     text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
     white-space: nowrap;
     box-shadow: none;
-    margin: 25px auto; /* יוצר רווח מהכפתורים מתחת */
-    gap: 5px; /* יוצר מרווח קטן בין הטקסט לסימן ה-V */
-    border-radius: 8px;
+    margin: 25px auto;
+    gap: 5px;
 }
-
-/* סגנונות לכפתור קטן */
 .action-button.small-button {
     padding: 8px 15px;
     font-size: 0.9em;
     max-width: fit-content;
-    margin: 0 auto; /* מרכז את הכפתור */
+    margin: 0 auto;
     border-radius: 8px;
     background-color: var(--accent-color);
     color: var(--white);
     transition: background-color var(--transition-speed), transform var(--transition-speed), box-shadow var(--transition-speed);
     text-align: center;
 }
-
 .action-button.small-button:hover {
     background-color: #e67e22;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
-
 .action-button.small-button:active {
     transform: scale(0.98);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
-
-/* סגנונות לקטע "Admin Actions" */
 .admin-actions {
     text-align: center;
-    margin-top: 20px; /* הוספת מרווח עליון לקטע */
+    margin-top: 20px;
 }
-
-/* סגנונות לכפתור ב-"Admin Actions" */
 .action-button.small-button.admin-action-button {
-    margin-top: 10px; /* מוריד את הכפתור קצת למטה */
+    margin-top: 10px;
 }
-
-/* כדי שמתי שיש תיאור זה כתוב מימין לשמאל ובמרכז המסך */
 .description-box {
-    text-align: center; /* ממרכז את הטקסט */
-    direction: rtl; /* קובע את הכיוון מימין לשמאל */
-    display: flex; /* שימוש ב-Flexbox */
-    justify-content: center; /* ממרכז את האלמנטים בפנים */
-    align-items: center; /* ממרכז אנכית */
-    flex-direction: column; /* מסדר את התוכן בטור */
-    width: 100%; /* תופס את כל הרוחב */
-    margin: 0 auto; /* מבטיח שהאלמנט עצמו ממורכז */
+    text-align: center;
+    direction: rtl;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 100%;
+    margin: 0 auto;
 }
-.description-box span, 
+.description-box span,
 .description-box p {
     display: block;
     text-align: center !important;
     width: 100%;
 }
 
-/* ===================================================
-   12. Export Buttons
-   =================================================== */
+/* # Export Buttons */
 .export-buttons {
     display: flex;
     gap: 15px;
     justify-content: center;
     margin: 30px 0;
 }
-
 .export-button {
     display: flex;
     align-items: center;
@@ -1123,18 +798,14 @@ h3 {
     transition: background-color var(--transition-speed);
     font-size: 0.9em;
 }
-
 .export-button:hover {
     background-color: #e67e22;
 }
-
 .export-button .fa {
     font-size: 1.2em;
 }
 
-/* ===================================================
-   13. Calendar Section
-   =================================================== */
+/* # Calendar Section */
 .calendar-section {
     background-color: var(--white);
     padding: 30px 20px;
@@ -1142,21 +813,17 @@ h3 {
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
-
 .calendar-section h2 {
     text-align: center;
     margin-bottom: 20px;
     color: var(--primary-color);
 }
-
 #calendar {
     max-width: 900px;
     margin: 0 auto;
 }
 
-/* ===================================================
-   14. Coupon List and Grid
-   =================================================== */
+/* # Coupon List and Grid */
 .coupon-list h2, .add-coupon h2 {
     text-align: center;
     margin: 0 0 20px 0;
@@ -1168,39 +835,30 @@ h3 {
     font-weight: bold;
     color: var(--primary-color);
     margin: 0;
-    margin-top: -20px; /* Small spacing adjustment at the top */
+    margin-top: -20px;
     position: relative;
     display: inline-block;
-    padding-bottom: 10px; /* Space below the title */
+    padding-bottom: 10px;
     text-align: center;
-    margin: 0 auto;
-
-    /* Matching the underline style */
     border-bottom: 4px solid var(--accent-color);
     padding-bottom: 5px;
-    display: inline-block;
-    position: relative;
 }
-
 .coupon-management h2::after {
     content: '';
     position: absolute;
-    width: 60px; /* Width of the line */
-    height: 4px; /* Thickness of the line */
-    background-color: var(--accent-color); /* Color of the line */
+    width: 60px;
+    height: 4px;
+    background-color: var(--accent-color);
     bottom: 0;
-    border-radius: 2px; /* Rounded corners */
+    border-radius: 2px;
     left: 50%;
     transform: translateX(-50%);
-
 }
-
 .coupon-section-title {
     text-align: center;
     color: var(--primary-color);
     margin: 10px 0 10px 0;
 }
-
 .coupon-grid {
     display: flex;
     flex-wrap: wrap;
@@ -1208,48 +866,11 @@ h3 {
     gap: 20px;
 }
 
-/* ===================================================
-   15. Transaction Table Styling
-   =================================================== */
-.transaction-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 40px;
-}
-
-.transaction-table th, .transaction-table td {
-    border: 1px solid var(--light-gray);
-    padding: 10px;
-    text-align: center;
-}
-
-.transaction-table th {
-    background-color: var(--secondary-color);
-    color: var(--text-color);
-}
-
-.transactions p {
-    text-align: center;
-    font-size: 1.1em;
-    color: var(--text-color);
-}
-
-.transactions h2 {
-    text-align: center;
-    margin: 40px 0 20px 0;
-    color: var(--primary-color);
-}
-
-.transactions {
-    text-align: center;
-}
-/* ======== התאמות רספונסיביות למסכים ניידים - לעמוד My Transactions בלבד ======== */
+/* # Responsive Adjustments for My Transactions Page */
 @media only screen and (max-width: 768px) {
-    /* החלת התאמות רק אם האלמנט נמצא בתוך .transactions */
     .transactions .transaction-table thead {
         display: none;
     }
-
     .transactions .transaction-table tr {
         display: block;
         margin-bottom: 15px;
@@ -1257,14 +878,12 @@ h3 {
         padding: 10px;
         background-color: #fff;
     }
-
     .transactions .transaction-table tr {
-        background-color: #fff !important; /* רקע לבן לכל שורה */
+        background-color: #fff !important;
     }
-
     .transactions .transaction-table td {
         width: 100%;
-        min-height: 100px;  /* הגדלת הגובה כדי להכיל יותר תוכן */
+        min-height: 100px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1281,16 +900,12 @@ h3 {
         overflow-wrap: break-word;
         position: relative;
     }
-
-    /* הוספת שם השדה מעל כל תא בצורה ידנית לפי מיקומו בטבלה */
     .transactions .transaction-table td:nth-child(1)::before { content: "חברה: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
     .transactions .transaction-table td:nth-child(2)::before { content: "לוגו: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
     .transactions .transaction-table td:nth-child(3)::before { content: "קונה: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
     .transactions .transaction-table td:nth-child(4)::before { content: "מוכר: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
     .transactions .transaction-table td:nth-child(5)::before { content: "סטטוס: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
     .transactions .transaction-table td:nth-child(6)::before { content: "תאריך: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
-
-    /* התאמת תמונות */
     .transactions .transaction-table td img {
         max-width: 60px;
         max-height: 60px;
@@ -1298,8 +913,6 @@ h3 {
         display: block;
         margin: 10px auto;
     }
-
-    /* התאמת תצוגת רשת לטבלאות שונות */
     .transactions .transaction-table:not(.completed-table) tr,
     .transactions .completed-transactions .transaction-table.completed-table tr {
         display: grid;
@@ -1308,33 +921,25 @@ h3 {
         gap: 8px;
         align-items: stretch;
         width: 100%;
-        justify-items: center; /* ממרכז את כל התאים בתוך הגריד */
+        justify-items: center;
     }
-
-    /* מרווחים אחידים בין התאים ומניעת הדבקת טקסטים */
     .transactions .transaction-table td {
         padding: 16px;
         line-height: 1.6;
     }
-
-    /* יישור עמודת הפעולות למרכז */
     .transactions .transaction-table td:last-child {
         text-align: center;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center; /* מוודא שכל הכפתורים באמצע */
+        justify-content: center;
     }
-
-    /* יישור כל הכפתורים במרכז */
     .transactions .action-button {
         margin: 5px auto;
     }
 }
 
-/* ===================================================
-   16. Flash Messages Styling
-   =================================================== */
+/* # Flash Messages Styling */
 .flash {
     margin: 10px auto;
     padding: 10px;
@@ -1342,150 +947,37 @@ h3 {
     max-width: 800px;
     text-align: center;
 }
-
 .flash.success {
     background-color: #d4edda;
     color: #155724;
 }
-
 .flash.warning {
     background-color: #fff3cd;
     color: #856404;
 }
-
 .flash.danger {
     background-color: #f8d7da;
     color: #721c24;
 }
 
-/* מחלקה חדשה לכפתורים צרים */
+/* # Narrow Button */
 .narrow-button {
-    max-width: 220px; /* הגדלת הרוחב */
-    padding: 12px 20px; /* הגדלת ריפוד פנימי */
-    width: 100%; /* הכפתור יתפרש לרוחב התא */
-    display: flex; /* שימוש ב-flexbox למרכז אופקי */
-    justify-content: center; /* ממרכז את הכפתור בתוך התא */
-    align-items: center; /* ממרכז טקסט אנכית */
-    margin: 0 auto; /* מבטיח שהכפתור עצמו ממורכז */
-}
-
-/* ===================================================
-   17. Tabs Styles
-   =================================================== */
-.tabs {
+    max-width: 220px;
+    padding: 12px 20px;
+    width: 100%;
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
-    gap: 10px;
-}
-
-.tab-button {
-    flex: 1;
-    max-width: 200px;
-    background-color: var(--accent-color);
-    color: var(--white);
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-    font-size: 1em;
-    transition: background-color 0.3s;
-    border-radius: 20px; /* מעגל יותר את הפינות */
-    text-align: center;
-}
-
-
-.tab-button:hover {
-    background-color: #e67e22;
-}
-
-.tab-button.active {
-    background-color: #e67e22;
-}
-
-.tab-content {
-    display: none;
-    padding: 20px;
-    border: 1px solid var(--light-gray);
-    border-radius: 5px; /* מתן רדיוס מלא כדי שלא יחתך */
-    margin-top: -1px; /* גורם לקו העליון להשתלב בצורה רציפה */
-}
-
-
-.tab-content.active {
-    display: block;
-}
-
-/* Coupon Data Table Styling */
-.coupon-data-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-
-.coupon-data-table th, .coupon-data-table td {
-    border: 1px solid var(--light-gray);
-    padding: 12px;
-    text-align: center;
-}
-
-.coupon-data-table th {
-    background-color: var(--secondary-color);
-    color: var(--text-color);
-    font-weight: bold;
-}
-
-.coupon-data-table tbody tr:nth-child(odd) {
-    background-color: #f2f2f2;
-}
-
-.coupon-data-table tbody tr:hover {
-    background-color: #ddd;
-}
-
-/* Centered List Items */
-.coupon-details-list {
-    list-style-type: disc;
-    padding-right: 20px; /* Adjust for RTL */
-    margin: 0;
-}
-
-.centered-list {
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    text-align: left;
+    margin: 0 auto;
 }
 
-.coupon-details-list li {
-    margin-bottom: 10px;
-    font-size: 1.1em;
-    color: var(--text-color);
-}
-
-.coupon-details-list li strong {
-    color: var(--primary-color);
-}
-
-/* Styles for No Data Message */
-.no-data-message {
-    text-align: center;
-    color: var(--gray);
-    font-size: 1.1em;
-    margin-top: 10px;
-}
-
-/* ===================================================
-   18. Notification Page Styles
-   =================================================== */
-/* Container for the Notifications Page */
+/* # Notification Page Styles */
 .notifications-page {
     max-width: var(--max-width);
     margin: 20px auto;
     padding: 10px 20px;
     background-color: var(--background-color);
 }
-
-/* Header Styles */
 .notifications-page h2 {
     text-align: center;
     color: var(--primary-color);
@@ -1494,7 +986,6 @@ h3 {
     margin-top: 10px;
     position: relative;
 }
-
 .notifications-page h2::after {
     content: '';
     display: block;
@@ -1504,132 +995,11 @@ h3 {
     margin: 10px auto 0 auto;
     border-radius: 2px;
 }
-
-/* Notifications List */
 .notifications-list {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
-
-/* Notification Cards */
-.notification-card {
-    background-color: var(--white);
-    border: 1px solid var(--light-gray);
-    padding: 15px 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    position: relative;
-    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    animation: fadeIn 0.5s ease forwards;
-    margin-bottom: 15px;
-    max-width: 600px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-/* Hover effect */
-.notification-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-}
-
-/* Notification Message */
-.notification-message {
-    text-align: center;
-    font-size: 1.1em;
-    color: var(--text-color);
-}
-
-/* Timestamp */
-.notification-timestamp {
-    font-size: 0.9em;
-    color: var(--gray);
-    margin-top: 5px;
-}
-
-/* Details Link */
-.notification-link {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: bold;
-    margin-top: 10px;
-    display: inline-block;
-    transition: color var(--transition-speed);
-}
-
-.notification-link:hover {
-    color: var(--accent-color);
-    text-decoration: underline;
-}
-
-/* Close Button for Notifications */
-.notification-close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 1.5em;
-    color: var(--danger-color);
-    background: none;
-    border: none;
-    cursor: pointer;
-    transition: color var(--transition-speed);
-    padding: 0;
-    outline: none;
-}
-
-.notification-close:hover {
-    color: darkred;
-}
-
-/* התאמות למסכים קטנים */
-@media (max-width: 768px) {
-    .notifications-page {
-        padding: 10px 15px;
-        margin: 10px auto;
-    }
-
-    .notifications-page h2 {
-        font-size: 2em;
-        margin-top: 5px;
-    }
-
-    .notification-card {
-        flex-direction: column;
-        align-items: center;
-        padding: 15px;
-        max-width: 90%;
-        position: relative; /* Ensures positioning doesn't change on small screens */
-    }
-
-    .notification-message {
-        text-align: center;
-    }
-
-    .notification-link {
-        margin-top: 10px;
-    }
-
-    /* Adjusting close button to stay fixed at the top right */
-    .notification-close {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        font-size: 1.5em;
-        margin-top: 0;
-    }
-
-    .delete-all-btn {
-        padding: 8px 16px;
-        font-size: 0.9em;
-        max-width: none;
-    }
-}
-
-/* Delete All Notifications Button */
 .delete-all-btn {
     background-color: var(--danger-color);
     color: var(--white);
@@ -1643,12 +1013,9 @@ h3 {
     display: block;
     max-width: 200px;
 }
-
 .delete-all-btn:hover {
     background-color: darkred;
 }
-
-/* No Notifications Message */
 .no-notifications {
     text-align: center;
     font-size: 1.2em;
@@ -1656,35 +1023,17 @@ h3 {
     margin-top: 20px;
 }
 
-/* Animation for Notification Cards */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-
-/* ===================================================
-   19. Save Indicators
-   =================================================== */
+/* # Save Indicators */
 .save-indicator.success {
     color: green;
     font-size: 1.2em;
 }
-
 .save-indicator.error {
     color: red;
     font-size: 1.2em;
 }
 
-/* ===================================================
-   20. Suggestions Box
-   =================================================== */
+/* # Suggestions Box */
 .suggestions-box {
     position: absolute;
     background-color: var(--white);
@@ -1694,16 +1043,13 @@ h3 {
     width: calc(100% - 20px);
     z-index: 1000;
 }
-
 .suggestion-item {
     padding: 10px;
     cursor: pointer;
 }
-
 .suggestion-item:hover {
     background-color: var(--secondary-color);
 }
-
 .suggested-tag {
     display: inline-block;
     background-color: var(--secondary-color);
@@ -1714,107 +1060,72 @@ h3 {
     cursor: pointer;
 }
 
-/* ===================================================
-   21. Responsive Design
-   =================================================== */
+/* # Responsive Design Adjustments */
 @media (max-width: 768px) {
-    /* Header Adjustments */
     header {
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
         padding: 10px 20px;
     }
-
-    /* Header Left */
     .header-left {
         display: flex;
         align-items: center;
         margin-right: 10px;
     }
-
-    /* Header Center */
     .header-center {
         display: none;
     }
-
-    /* Header Right */
     .header-right {
         display: flex;
         align-items: center;
     }
-
-    /* Navigation */
     .header-right nav {
         display: flex;
         flex-direction: row;
         width: auto;
     }
-
-    /* Coupon Grid Adjustments */
     .coupon-grid {
         flex-direction: column;
         align-items: center;
     }
-
-    /* Export Buttons Adjustments */
     .export-buttons {
         flex-direction: column;
         align-items: center;
     }
-
-    /* Total Value and Savings Adjustments */
     .total-value, .total-savings {
         width: 100%;
     }
-
-    /* Coupon Detail Adjustments */
-    .coupon-detail {
-        width: 90%;
-    }
-
-    /* Add Coupons Buttons Adjustments */
     .add-coupons-buttons {
         flex-direction: column;
         gap: 10px;
     }
-
     .secondary-button {
         width: 100%;
         justify-content: center;
     }
-
-    /* Tabs Adjustments */
     .tabs {
         flex-direction: column;
         align-items: center;
         gap: 5px;
     }
-
     .tab-button {
         width: 100%;
         max-width: none;
         border-radius: 5px;
     }
-
-    /* Profile Card Padding on Mobile */
     .profile-card {
         padding: 20px;
     }
-
-    /* Header Right Dropdown Adjustments */
     .header-right nav .dropdown {
         margin-left: 0;
         width: auto;
     }
-
     .hero {
         width: 90%;
         max-width: none;
         margin: 20px auto;
     }
-
-    /* Adjusting the forms */
     .add-coupon,
     .sell-coupon,
     .request-coupon {
@@ -1823,13 +1134,11 @@ h3 {
         margin: 20px auto;
         padding: 20px;
     }
-
     .add-coupon form,
     .sell-coupon form,
     .request-coupon form {
         width: 100%;
     }
-
     .add-coupon form input,
     .add-coupon form textarea,
     .add-coupon form select,
@@ -1842,33 +1151,22 @@ h3 {
         width: 100%;
         box-sizing: border-box;
     }
-
-    /* Show Password Button Position */
     .show-password-button {
         right: 10px;
         top: 35px;
     }
-
-    /* ===================================================
-       Responsive Adjustments for Inactive Coupons Table
-    =================================================== */
-    /* Hiding columns in the table */
     .coupon-data-table th:nth-child(3),
     .coupon-data-table td:nth-child(3),
     .coupon-data-table th:nth-child(5),
     .coupon-data-table td:nth-child(5) {
         display: none;
     }
-
-    /* Adjusting Logo Sizes */
     .company-logo,
     .coupon-logo,
     .logo {
         width: 40px;
         height: auto;
     }
-
-    /* Adjusting text styles and spacing in the table */
     .coupon-data-table th,
     .coupon-data-table td {
         font-size: 0.9em;
@@ -1876,47 +1174,21 @@ h3 {
     }
 }
 
-/* ===================================================
-   22. Miscellaneous Styles
-   =================================================== */
-#close-all-notifications {
-    background-color: var(--danger-color);
-    color: var(--white);
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-bottom: 10px;
-    width: 100%;
-    font-size: 1em;
-}
-
-#close-all-notifications:hover {
-    background-color: darkred;
-}
-
-
-
-/* ===================================================
-   24. Centered Action Buttons
-   =================================================== */
+/* # Centered Action Buttons */
 .action-buttons {
     display: flex;
     justify-content: center;
-    align-items: center; /* מרכז את האלמנטים אנכית */
+    align-items: center;
     gap: 15px;
     margin-top: 30px;
-    flex-wrap: nowrap; /* מונע שבירת שורות */
+    flex-wrap: nowrap;
 }
-
 .action-buttons .action-button {
     min-width: 120px;
     text-align: center;
 }
 
-/* ===================================================
-   25. Confirm Delete Section Styles
-   =================================================== */
+/* # Confirm Delete Section */
 .confirm-delete {
     display: flex;
     justify-content: center;
@@ -1924,7 +1196,6 @@ h3 {
     height: 80vh;
     background-color: rgba(0, 0, 0, 0.05);
 }
-
 .content-wrapper {
     background-color: #ffffff;
     border: 1px solid #dcdcdc;
@@ -1935,70 +1206,57 @@ h3 {
     max-width: 500px;
     width: 90%;
 }
-
 .confirm-delete h2 {
     font-size: 28px;
     color: #333333;
     margin-bottom: 20px;
     font-weight: 700;
 }
-
 .confirm-delete p {
     font-size: 18px;
     color: #555555;
     margin-bottom: 30px;
 }
 
-/* ===================================================
-   26. Confirm Buttons Styles
-   =================================================== */
+/* # Confirm Buttons Styles */
 .confirm-buttons {
     display: flex;
     justify-content: center;
     gap: 20px;
 }
-
 @media (max-width: 600px) {
     .content-wrapper {
         padding: 30px 40px;
     }
-
     .confirm-delete h2 {
         font-size: 24px;
     }
-
     .confirm-delete p {
         font-size: 16px;
     }
-
     .action-button {
         padding: 10px 20px;
         font-size: 14px;
     }
 }
 
-/* ===================================================
-   27. Delete Coupons Page Styles
-   =================================================== */
+/* # Delete Coupons Page Styles */
 .delete-coupons {
     padding: 20px;
     max-width: 1000px;
     margin: 0 auto;
 }
-
 .delete-coupons h2 {
     text-align: center;
     margin-bottom: 20px;
     color: var(--primary-color);
 }
-
 .select-buttons {
     display: flex;
     justify-content: center;
     gap: 10px;
     margin-bottom: 20px;
 }
-
 .select-button {
     padding: 8px 12px;
     background-color: var(--accent-color);
@@ -2009,36 +1267,29 @@ h3 {
     font-weight: bold;
     transition: background-color var(--transition-speed);
 }
-
 .select-button:hover {
     background-color: #e67e22;
 }
-
 .coupon-table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 20px;
 }
-
 .coupon-table th, .coupon-table td {
     border: 1px solid var(--light-gray);
     padding: 10px;
     text-align: center;
 }
-
 .coupon-table th {
     background-color: var(--secondary-color);
     color: var(--text-color);
 }
-
 .coupon-table tbody tr:nth-child(even) {
     background-color: #f9f9f9;
 }
-
 .coupon-table tbody tr:hover {
     background-color: #f1f1f1;
 }
-
 .delete-button {
     display: block;
     width: 200px;
@@ -2053,20 +1304,15 @@ h3 {
     font-size: 1em;
     transition: background-color var(--transition-speed);
 }
-
 .delete-button:hover {
     background-color: #c0392b;
 }
-
-/* Center Toggle Button */
 .toggle-button-container {
     display: flex;
     justify-content: center;
     width: 100%;
     margin-bottom: 10px;
 }
-
-/* Toggle Inactive Coupons Button */
 #toggle-inactive-coupons {
     display: flex;
     align-items: center;
@@ -2081,19 +1327,15 @@ h3 {
     transition: background-color var(--transition-speed);
     font-size: 0.9em;
 }
-
 #toggle-inactive-coupons:hover {
     background-color: #1A5A8D;
 }
 
-/* ===================================================
-   28. Template Button Download in Upload Coupons
-   =================================================== */
+/* # Template Button Download in Upload Coupons */
 .download-template-button {
     text-align: center;
     margin-bottom: 25px;
 }
-
 .primary-button {
     display: inline-flex;
     align-items: center;
@@ -2108,29 +1350,23 @@ h3 {
     transition: background-color var(--transition-speed);
     font-size: 0.9em;
 }
-
 .primary-button:hover {
     background-color: #2980b9;
 }
-
 .primary-button .fa {
     font-size: 1.2em;
 }
-
 @media (max-width: 768px) {
     .download-template-button {
         margin-bottom: 15px;
     }
-
     .primary-button {
         width: 100%;
         justify-content: center;
     }
 }
 
-/* ===================================================
-   29. About Page Styles
-   =================================================== */
+/* # About Page Styles */
 .about-section {
     max-width: 900px;
     margin: 0 auto;
@@ -2141,14 +1377,12 @@ h3 {
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-
 .about-section h2 {
     color: var(--primary-color);
     margin-bottom: 20px;
     font-size: 2.5em;
     position: relative;
 }
-
 .about-section h3 {
     color: var(--secondary-color);
     margin-top: 40px;
@@ -2159,30 +1393,25 @@ h3 {
     padding-bottom: 5px;
     transition: color 0.3s ease;
 }
-
 .about-section h3:hover {
     color: var(--accent-color);
 }
-
 .about-section p {
     margin-bottom: 20px;
     line-height: 1.6;
     font-size: 1.1em;
     transition: color 0.3s ease;
 }
-
 .about-section p a {
     color: var(--accent-color);
     text-decoration: none;
     font-weight: bold;
     transition: color 0.3s ease;
 }
-
 .about-section p a:hover {
     color: var(--primary-color);
     text-decoration: underline;
 }
-
 .about-section ul {
     list-style-type: disc;
     padding-right: 20px;
@@ -2191,7 +1420,6 @@ h3 {
     flex-direction: column;
     gap: 10px;
 }
-
 .about-section li {
     margin-bottom: 10px;
     line-height: 1.4;
@@ -2199,7 +1427,6 @@ h3 {
     position: relative;
     padding-right: 10px;
 }
-
 .about-section li::before {
     content: '•';
     position: absolute;
@@ -2207,7 +1434,6 @@ h3 {
     color: var(--primary-color);
     font-size: 1.2em;
 }
-
 .qa-section {
     margin-top: 30px;
     display: grid;
@@ -2215,7 +1441,6 @@ h3 {
     gap: 20px;
     animation: slideIn 1s ease-in-out;
 }
-
 .qa-section .question {
     background-color: var(--light-gray);
     padding: 20px;
@@ -2223,12 +1448,10 @@ h3 {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-
 .qa-section .question:hover {
     transform: translateY(-5px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
-
 .qa-section h4 {
     color: var(--primary-color);
     margin-top: 0px;
@@ -2236,119 +1459,45 @@ h3 {
     font-size: 1.4em;
     position: relative;
 }
-
 .qa-section p {
     margin: 0;
     line-height: 1.5;
     font-size: 1em;
     color: var(--text-color);
 }
-
 .qa-section a {
     color: var(--accent-color);
     text-decoration: none;
     font-weight: bold;
     transition: color 0.3s ease;
 }
-
 .qa-section a:hover {
     color: var(--primary-color);
     text-decoration: underline;
 }
-
 @media (max-width: 768px) {
     .about-section {
         padding: 20px 10px;
     }
-
     .about-section h2 {
         font-size: 2em;
     }
-
     .about-section h3 {
         font-size: 1.5em;
     }
-
     .qa-section {
         grid-template-columns: 1fr;
     }
-
     .export-buttons {
         flex-direction: column;
         gap: 10px;
     }
-
     .coupon-card {
         width: 100% !important;
     }
 }
-/* ודא שכל האלמנטים מתיישרים למרכז */
-.about-section, .about-section h2, .about-section h3, .about-section p,
-.about-section ul, .about-section li, .qa-section, .qa-section .question,
-.qa-section .question h4, .qa-section .question p {
-    text-align: center !important;
-}
 
-/* מרכוז הרשימה */
-.about-section ul {
-    list-style-type: none; /* מסיר בולטים */
-    padding: 0;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* מוודא שכל פריט ברשימה ממורכז */
-.about-section li {
-    text-align: center;
-    width: 100%;
-    display: block;
-}
-
-/* הסרת נקודות מהרשימה */
-.about-section li::before {
-    content: none !important;
-}
-
-/* שאלות ותשובות - שתי עמודות בשורה במסכים גדולים */
-.qa-section {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 2 עמודות */
-    gap: 20px; /* מרווחים בין הבלוקים */
-    align-items: stretch; /* מוודא שכל האלמנטים יתארכו לאותו הגובה */
-}
-
-/* שאלות ותשובות - בלוק אחד בשורה במסכים קטנים */
-@media (max-width: 768px) {
-    .qa-section {
-        grid-template-columns: 1fr; /* עמודה אחת בלבד */
-    }
-}
-
-/* עיצוב אחיד לבלוקים */
-.qa-section .question {
-    background-color: var(--light-gray);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center; /* מוודא שהתוכן בפנים מיושר למרכז */
-}
-
-/* אפקט ריחוף */
-.qa-section .question:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* ===================================================
-   30. Buy Slots Section Styles
-=================================================== */
-
+/* # Buy Slots Section Styles */
 .buy-slots {
     display: flex;
     justify-content: center;
@@ -2357,9 +1506,8 @@ h3 {
     padding: 40px 20px;
     background-color: var(--background-color);
 }
-
 .buy-slots-container {
-    padding-top: 10px; /* הקטנת הרווח מלמעלה */
+    padding-top: 10px;
     background-color: var(--white);
     border-radius: 12px;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
@@ -2372,17 +1520,15 @@ h3 {
     flex-direction: column;
     align-items: center;
 }
-
 .buy-slots-title {
     font-size: 2.8em;
     color: var(--primary-color);
-    margin-top: 0; /* הסרת מרווח נוסף מעל הכותרת */
+    margin-top: 0;
     margin-bottom: 20px;
     position: relative;
     display: inline-block;
     padding-bottom: 10px;
 }
-
 .buy-slots-title::after {
     content: '';
     position: absolute;
@@ -2394,13 +1540,11 @@ h3 {
     transform: translateX(-50%);
     border-radius: 2px;
 }
-
 .slots-available {
     font-size: 1.3em;
     color: var(--text-color);
     margin-bottom: 30px;
 }
-
 .slot-card {
     background-color: #f9f9f9;
     border: 1px solid var(--light-gray);
@@ -2409,22 +1553,19 @@ h3 {
     margin: 0 auto;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
-
 .slot-description {
     font-size: 1.2em;
     color: var(--text-color);
-    margin-bottom: 10px; /* רווח קטן יותר מתחת לטקסט */
+    margin-bottom: 10px;
 }
-
 .action-buttons {
     display: flex;
     justify-content: center;
     gap: 20px;
     flex-wrap: wrap;
 }
-
 .buy-slots-button {
-    background-color: var(--primary-color); /* צבע כחול אחיד */
+    background-color: var(--primary-color);
     padding: 15px 25px;
     border: none;
     border-radius: 8px;
@@ -2435,108 +1576,86 @@ h3 {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     width: auto;
     max-width: 200px;
-    background-image: none; /* הסרת גרדיאנט */
+    background-image: none;
 }
-
 .buy-slots-button:hover {
-    background-color: #1A5A8D; /* גוון כחול כהה יותר במעבר עכבר */
+    background-color: #1A5A8D;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
-
-/* Responsive adjustments for Buy Slots Page */
 @media (max-width: 1200px) {
     .buy-slots-container {
         max-width: 700px;
         padding: 45px 35px;
     }
-
     .buy-slots-title {
         font-size: 2.6em;
     }
-
     .slots-available {
         font-size: 1.25em;
     }
-
     .buy-slots-button {
         max-width: 220px;
     }
 }
-
 @media (max-width: 992px) {
     .buy-slots-container {
         max-width: 600px;
         padding: 40px 30px;
     }
-
     .buy-slots-title {
         font-size: 2.4em;
     }
-
     .slots-available {
         font-size: 1.2em;
     }
-
     .buy-slots-button {
         max-width: 200px;
     }
 }
-
 @media (max-width: 768px) {
     .buy-slots-container {
         max-width: 500px;
         padding: 35px 25px;
     }
-
     .buy-slots-title {
         font-size: 2.2em;
     }
-
     .slots-available {
         font-size: 1.15em;
     }
-
     .buy-slots-button {
         max-width: 180px;
         padding: 12px 20px;
         font-size: 0.95em;
     }
 }
-
 @media (max-width: 576px) {
     .buy-slots-container {
         max-width: 450px;
         padding: 30px 20px;
     }
-
     .buy-slots-title {
         font-size: 2em;
     }
-
     .slots-available {
         font-size: 1.1em;
     }
-
     .buy-slots-button {
         max-width: 160px;
     }
 }
-
 @media (max-width: 480px) {
     .buy-slots-container {
         max-width: 100%;
         padding: 25px 15px;
     }
-
     .buy-slots-title {
         font-size: 1.8em;
     }
-
     .slots-available {
         font-size: 1em;
     }
-
     .buy-slots-button {
         padding: 12px 20px;
         font-size: 0.95em;
@@ -2544,9 +1663,7 @@ h3 {
     }
 }
 
-/* ===================================================
-   31. Request Coupon Style
-   =================================================== */
+/* # Request Coupon Style */
 .request-coupon {
     max-width: 600px;
     margin: 0 auto;
@@ -2555,33 +1672,27 @@ h3 {
     border: 1px solid var(--light-gray);
     border-radius: 8px;
 }
-
 .request-coupon h2 {
     text-align: center;
     color: var(--primary-color);
     margin-bottom: 20px;
 }
-
 .request-coupon form {
     max-width: 100%;
     margin: 0 auto;
 }
-
 .request-coupon .form-group {
     margin-bottom: 15px;
 }
-
 .request-coupon .form-group label {
     display: block;
     margin-bottom: 5px;
     color: var(--text-color);
 }
-
 .request-coupon .form-group .error-message {
     color: red;
     font-size: 0.9em;
 }
-
 .request-coupon .input-field {
     width: 100%;
     padding: 8px;
@@ -2589,7 +1700,6 @@ h3 {
     border-radius: 4px;
     box-sizing: border-box;
 }
-
 .request-coupon .submit-button {
     width: 100%;
     padding: 10px;
@@ -2601,55 +1711,44 @@ h3 {
     font-size: 1em;
     transition: background-color var(--transition-speed);
 }
-
 .request-coupon .submit-button:hover {
     background-color: #2980b9;
 }
-/* ===================================================
-   32. Marketplace Page Styles
-   (הקטע הבא - הטמעה של עיצובי ה-CSS מהתבנית המקורית)
-   =================================================== */
 
-/* עיצוב קופונים כללי */
+/* # Marketplace Page Styles */
 .marketplace {
     padding: 20px;
     max-width: 1200px;
     margin: 0 auto;
 }
-
 .marketplace-header h2 {
     text-align: center;
     color: var(--primary-color);
 }
-
 .slots-container {
     text-align: center;
     margin-bottom: 20px;
 }
-
 .slots-available {
     font-size: 1.2em;
 }
-
-/* Pending Transactions Box Styling */
 .pending-transactions-box {
     background-color: #f9f9cc;
     border: 1px solid #e9e9aa;
-    padding: 4px 8px; /* הקטנת הריווח הפנימי */
-    border-radius: 5px; /* שמירה על עיגול פינות קטן */
+    padding: 4px 8px;
+    border-radius: 5px;
     text-align: center;
     margin-bottom: 10px;
     font-weight: bold;
     color: #555;
-    font-size: 1em; /* שמירה על גודל הטקסט המקורי */
-    max-width: 500px; /* הגבלת רוחב התיבה פחות רחבה */
-    width: 90%; /* רוחב גמיש */
-    margin: 0 auto 15px auto; /* שמירה על מרכזיות */
-    height: auto; /* התאמה לגובה התוכן */
-    line-height: 1.4; /* שמירה על ריווח טקסט תקין */
-    position: relative; /* נדרש כדי למקם את הכפתור בפינה */
+    font-size: 1em;
+    max-width: 500px;
+    width: 90%;
+    margin: 0 auto 15px auto;
+    height: auto;
+    line-height: 1.4;
+    position: relative;
 }
-
 .close-btn {
     position: absolute;
     top: 5px;
@@ -2662,63 +1761,34 @@ h3 {
     padding: 0;
     font-weight: bold;
 }
-
 .close-btn:hover {
     color: #c0392b;
 }
-
-/* מכולת הקופונים */
-.coupon-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 15px;
-    margin-bottom: 30px;
-}
-
-.coupon-card {
-    background-color: #fff;
-    border: 1px solid #eaeaea;
-    border-radius: 10px;
-    width: 250px;
-    padding: 15px;
-    text-align: center;
-    transition: box-shadow 0.2s;
-}
-
-.coupon-card:hover {
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
+/* Duplicate .coupon-container and .coupon-card selectors are omitted (first occurrences kept) */
 .company-logo {
     max-width: 80px;
     max-height: 80px;
     margin-bottom: 10px;
 }
-
 .company-name {
     font-weight: bold;
     margin-bottom: 5px;
 }
-
 .coupon-name {
     font-size: 1.1em;
     font-weight: bold;
     color: var(--primary-color);
     margin: 5px 0;
 }
-
 .your-coupon {
     color: #ff6600;
     font-weight: bold;
 }
-
-/* טופס רכישה/הצעה */
+/* # Buy/Sell Forms */
 .buy-form,
 .offer-form {
     margin-top: 10px;
 }
-
 .action-button {
     display: inline-block;
     padding: 8px 12px;
@@ -2731,19 +1801,15 @@ h3 {
     border: none;
     cursor: pointer;
 }
-
 .action-button:hover {
     background-color: var(--accent-color);
 }
-
 .action-button.danger {
     background-color: #e74c3c;
 }
-
 .action-button.danger:hover {
     background-color: #c0392b;
 }
-
 .no-coupons,
 .no-requests {
     text-align: center;
@@ -2751,187 +1817,95 @@ h3 {
     margin: 20px 0;
     font-style: italic;
 }
-
 .coupon-section {
     margin-top: 40px;
 }
 
-
-/* Responsive Styles */
-@media (max-width: 600px) {
-    .pending-transactions-box {
-        font-size: 0.9em;
-        padding: 3px 6px;
-        max-width: 90%; /* התאמה למסכים קטנים */
-    }
-
-    .close-btn {
-        font-size: 1em;
-        top: 3px;
-        right: 8px;
-    }
-
-    .coupon-card {
-        width: 100%;
-        max-width: 300px;
-    }
-
-    .company-logo {
-        max-width: 60px;
-        max-height: 60px;
-    }
-
-    .coupon-name {
-        font-size: 1em;
-    }
-
-    .action-button {
-        font-size: 0.8em;
-        padding: 6px 10px;
-    }
-}
-
-/* ===================================================
-   33. Coupons Page Styles
-   =================================================== */
-
-/* Coupon Container */
-.coupon-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-}
-
-/* Coupon Card */
-.coupon-card {
-    box-sizing: border-box;
-    padding: 15px 20px;
-    border: 1px solid var(--light-gray);
-    border-radius: 8px;
-    background-color: var(--white);
-    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
-    color: inherit;
-    text-decoration: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.coupon-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
+/* # Coupons Page Styles */
+/* Duplicate selectors (.coupon-container, .coupon-card) are omitted (first occurrences kept) */
 .coupon-card p {
     margin: 10px 0;
     color: black;
 }
-
 .coupon-card .company-name {
     font-weight: bold;
 }
-
-/* Responsive Coupon Card Layout */
-
-/* למסכים עם רוחב עד 1200px: 4 קופונים בשורה */
+/* Responsive coupon card layout */
 @media (max-width: 1200px) {
     .coupon-card {
-        flex: 0 0 calc(25% - 20px); /* 4 כרטיסים בשורה */
+        flex: 0 0 calc(25% - 20px);
         max-width: calc(25% - 20px);
     }
 }
-
-/* למסכים עם רוחב עד 992px: 3 קופונים בשורה */
 @media (max-width: 992px) {
     .coupon-card {
-        flex: 0 0 calc(33.333% - 20px); /* 3 כרטיסים בשורה */
+        flex: 0 0 calc(33.333% - 20px);
         max-width: calc(33.333% - 20px);
     }
 }
-
-/* למסכים עם רוחב עד 768px: 2 קופונים בשורה */
 @media (max-width: 768px) {
     .coupon-card {
-        flex: 0 0 calc(50% - 20px); /* 2 כרטיסים בשורה */
+        flex: 0 0 calc(50% - 20px);
         max-width: calc(50% - 20px);
     }
-
-    /* הסתרת עמודות בטבלה */
     .coupon-data-table th:nth-child(3),
     .coupon-data-table td:nth-child(3),
     .coupon-data-table th:nth-child(6),
     .coupon-data-table td:nth-child(6) {
         display: none;
     }
-
-    /* התאמת גודל הלוגואים */
     .company-logo,
     .coupon-logo,
     .logo {
         width: 40px;
         height: auto;
     }
-
-    /* התאמת גודל הטקסט וה-padding בתאי הטבלה */
     .coupon-data-table th,
     .coupon-data-table td {
         font-size: 0.9em;
         padding: 8px;
     }
 }
-
-/* למסכים עם רוחב עד 500px: 2 קופונים בשורה */
 @media (max-width: 500px) {
     .coupon-card {
-        flex: 0 0 calc(50% - 20px); /* 2 כרטיסים בשורה */
+        flex: 0 0 calc(50% - 20px);
         max-width: calc(50% - 20px);
     }
-
-    /* התאמות נוספות במידת הצורך */
 }
-
-/* מרכז את הטקסט של כותרת הסקשן */
 .section-header {
     display: flex;
     justify-content: center;
     align-items: center;
     width: 100%;
-    margin: 0 auto; /* מרכז את הסקשן */
-    padding: 20px 0; /* מוסיף רווח סביב הכותרת */
+    margin: 0 auto;
+    padding: 20px 0;
 }
-
 .section-header h2 {
     text-align: center;
-    font-size: 2em; /* מתאים את גודל הגופן לפי הצורך */
-    margin: 0; /* מסיר כל רווח ברירת מחדל מ-<h2> */
-    position: relative; /* נדרש למיקום ::after */
-    border-bottom: none; /* ביטול ה-border-bottom */
+    font-size: 2em;
+    margin: 0;
+    position: relative;
+    border-bottom: none;
 }
-
 .coupon-management h2::after {
     content: '';
     position: absolute;
-    width: 60px; /* רוחב הקו */
-    height: 4px; /* עובי הקו */
-    background-color: var(--accent-color); /* צבע הקו */
+    width: 60px;
+    height: 4px;
+    background-color: var(--accent-color);
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    border-radius: 2px; /* עיגול פינות הקו */
+    border-radius: 2px;
 }
 
-/* ===================================================
-    34. Your Coupon and Request Styles
-=================================================== */
-
-/* סגנון לריבוע "זהו הקופון שלך שמוצע למכירה" */
+/* # Your Coupon and Request Styles */
 .your-coupon {
-    background-color: #d4f7d4; /* צבע רקע ירוק בהיר */
-    color: #2b8a2b; /* צבע טקסט ירוק כהה */
+    background-color: #d4f7d4;
+    color: #2b8a2b;
     padding: 12px 20px;
     border-radius: 10px;
-    border: 2px solid #58a858; /* קו גבול ירוק כהה */
+    border: 2px solid #58a858;
     font-weight: bold;
     font-size: 1em;
     text-align: center;
@@ -2942,17 +1916,14 @@ h3 {
     gap: 8px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-
 .your-coupon::before {
-    content: '✔️'; /* אייקון סימן ביקורת */
+    content: '✔️';
     font-size: 1.2em;
 }
-
 .your-coupon:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
 }
-
 .your-request {
     background-color: #ffe6b3;
     color: #b87333;
@@ -2962,190 +1933,25 @@ h3 {
     font-weight: bold;
     font-size: 1em;
     text-align: center;
-    margin-top: 0; /* הסרת רווח עליון נוסף */
+    margin-top: 0;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
     display: flex;
     align-items: center;
     gap: 8px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    flex-shrink: 1; /* מאפשר לכיווץ */
-    max-width: 200px; /* הגבלת רוחב */
+    flex-shrink: 1;
+    max-width: 200px;
 }
-
-
 .your-request::before {
-    content: 'ℹ️'; /* אייקון מידע */
+    content: 'ℹ️';
     font-size: 1.2em;
 }
-
 .your-request:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* ===================================================
-   35. Coupon Detail Page Styles
-   =================================================== */
-
-.coupon-detail {
-    background-color: #fff;
-    padding: 20px;
-    border: 1px solid var(--light-gray);
-    margin: 40px auto; /* מרכז את הקופון */
-    padding-right: 20px;
-    border-radius: 8px;
-    max-width: 800px;
-    text-align: center; /* מיישר את כל התוכן במרכז */
-}
-
-.coupon-detail h2 {
-    text-align: center;
-    color: var(--primary-color);
-    margin-bottom: 20px;
-}
-
-/* Company Info in Coupon Detail */
-.coupon-detail .company-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-/* Center the buttons within action-buttons */
-.coupon-detail .action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 30px;
-}
-
-/* Specific styles for "update-usage-buttons" to center */
-.coupon-detail .update-usage-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-/* Specific styles for mark-as-used-container */
-.coupon-detail .mark-as-used-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-}
-
-/* Responsive Adjustments for Coupon Detail */
-@media (max-width: 768px) {
-    .coupon-detail .company-logo {
-        width: 40px;  /* גודל קטן יותר במובייל */
-        height: 40px;
-    }
-
-    .coupon-detail .action-button,
-    .coupon-detail .export-button {
-        font-size: 0.8em;
-        padding: 8px 12px;
-    }
-}
-
-/* מכאן מתחילות תיבות המידע */
-.info-box {
-    position: relative; /* מאפשר להשתמש ב-before ו-after */
-    background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    padding: 20px 25px;
-    margin: 15px auto;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 66.67%;
-    overflow: hidden; /* מבטיח שהקו העליון יראה בצורה תקינה */
-}
-
-/* שמירה על border שלם מבלי להיחתך */
-.info-box::before,
-.info-box::after {
-    content: "";
-    position: absolute;
-    height: 1px;
-    width: calc(100% - 30px); /* מתאים לגבולות התיבה */
-    background-color: #e0e0e0;
-    left: 15px; /* יישור עם ה-padding */
-}
-
-.info-box::before {
-    top: -1px; /* מיקום ה-before בקצה העליון */
-}
-
-.info-box::after {
-    bottom: -1px; /* מיקום ה-after בקצה התחתון */
-}
-
-/* אפקט hover */
-.info-box:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.info-title {
-    font-weight: bold;
-    color: var(--primary-color);
-    flex: 1;
-}
-
-.info-value {
-    color: var(--text-color);
-    flex: 2;
-    text-align: left;
-}
-
-.usage-history-title {
-    text-align: center;
-    margin-top: 30px;
-    font-weight: bold;
-}
-
-/* אנכית כפתורי פעולה - לא תמיד בשימוש */
-.action-buttons.vertical-buttons {
-    flex-direction: column; /* משנה את סידור האלמנטים לעמודה */
-    align-items: center; /* מרכז את האלמנטים אופקית */
-    gap: 10px;
-}
-
-/* --------------------------------------------------
-   תוספת לטיפול בטופס "עדכון שימוש" כדי לכווץ את
-   שדה הטקסט והכפתור, ולמרכזם.
-   -------------------------------------------------- */
-.input-field.small-input {
-    width: 100%; /* או ערך ספציפי אם התיבה השנייה מוגדרת ברוחב קבוע */
-    max-width: 500px; /* הגבל את הרוחב המרבי, אם יש צורך */
-    padding: 10px; /* ודא שה-padding תואם לתיבה השנייה */
-    box-sizing: border-box; /* כולל padding ו-border בתוך הרוחב הכולל */
-    margin: 0 auto; /* מרכז את התיבה */
-    display: block; /* מבטיח שהתיבה תתנהג כבלוק */
-}
-
-
-.coupon-detail .form-container .submit-button.small-button {
-    width: auto !important;      /* מבטל את ה-width:100% */
-    display: inline-block;
-    margin: 0 auto;              /* מרכז את הכפתור */
-    font-size: 0.85em !important;/* מוודא גודל קטן */
-    padding: 8px 38px !important;/* כיווץ ה־padding */
-    /* אפשר להוסיף עוד התאמות כאן לפי הצורך */
-}
-/* -------------------------------------------------- */
-
-
-
-
-/* ===================================================
-   36. Approve Transaction Page Styles
-   =================================================== */
-
+/* # Approve Transaction Page Styles */
 .approve-transaction {
     max-width: 600px;
     margin: 40px auto;
@@ -3156,7 +1962,6 @@ h3 {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     text-align: center;
 }
-
 .approve-transaction h2 {
     text-align: center;
     color: var(--primary-color);
@@ -3167,37 +1972,31 @@ h3 {
     padding-bottom: 10px;
     border-bottom: 4px solid var(--accent-color);
 }
-
 .approve-transaction p {
     color: var(--text-color);
     margin-bottom: 15px;
     font-size: 1.1em;
 }
-
 .transaction-form {
     margin-top: 20px;
 }
-
 .transaction-form .form-group {
     margin-bottom: 20px;
 }
-
 .transaction-form .form-group label {
-    display: inline-block; /* מבטיח שהטקסט והכוכבית יהיו באותה שורה */
+    display: inline-block;
     margin-bottom: 5px;
     font-weight: bold;
     color: var(--text-color);
-    text-align: right; /* מיישר את הטקסט לימין */
+    text-align: right;
 }
-
 .transaction-form .required {
     color: var(--danger-color);
     font-weight: bold;
-    margin-left: 0.2em; /* מוסיף רווח קטן בין הטקסט לכוכבית */
-    display: inline; /* הכוכבית נשארת באותה השורה */
-    vertical-align: middle; /* מיישר אנכית את הכוכבית עם הטקסט */
+    margin-left: 0.2em;
+    display: inline;
+    vertical-align: middle;
 }
-
 .transaction-form .input-field {
     width: 100%;
     padding: 8px;
@@ -3206,12 +2005,10 @@ h3 {
     box-sizing: border-box;
     transition: border-color var(--transition-speed);
 }
-
 .transaction-form .input-field:focus {
     border-color: var(--primary-color);
     outline: none;
 }
-
 .transaction-form .error-message {
     color: red;
     font-size: 0.9em;
@@ -3219,7 +2016,6 @@ h3 {
     display: block;
     text-align: right;
 }
-
 .transaction-form .submit-button {
     width: 100%;
     padding: 12px 0;
@@ -3232,107 +2028,87 @@ h3 {
     font-weight: bold;
     transition: background-color var(--transition-speed);
 }
-
 .transaction-form .submit-button:hover {
     background-color: #2980b9;
 }
-
 @media (max-width: 600px) {
     .approve-transaction {
         padding: 20px 20px;
     }
-
     .approve-transaction h2 {
         font-size: 1.6em;
     }
-
     .transaction-form .submit-button {
         font-size: 0.9em;
     }
 }
 .input-field::placeholder {
-    text-align: center; /* יישור placeholder לימין */
-    direction: rtl; /* קביעת כיוון כתיבה לימין */
+    text-align: center;
+    direction: rtl;
 }
 .input-field_centered {
-    text-align: center; /* מיישר את הטקסט לימין */
-    direction: rtl; /* קובע כיוון כתיבה לימין */
+    text-align: center;
+    direction: rtl;
 }
 
-/* ===================================================
-   37. Add Coupon Page Styles
-   =================================================== */
-
-/* Title styling */
+/* # Add Coupon Page Styles */
 .add-coupon h2 {
     text-align: center;
     color: var(--primary-color);
     margin-bottom: 20px;
 }
-
-/* Secondary buttons styling */
 .add-coupons-buttons {
     display: flex;
     justify-content: center;
     gap: 10px;
     margin-bottom: 20px;
 }
-
 .secondary-button {
     display: flex;
-    align-items: center; /* ממרכז את התוכן אנכית */
-    justify-content: center; /* ממרכז את התוכן אופקית */
-    gap: 8px; /* רווח בין האייקון לטקסט */
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     padding: 12px 16px;
-    background-color: var(--accent-color); /* צבע הכתום */
+    background-color: var(--accent-color);
     color: var(--white);
     text-decoration: none;
     border-radius: 5px;
     cursor: pointer;
     font-weight: bold;
     transition: background-color var(--transition-speed), transform var(--transition-speed);
-    font-size: 1em; /* גודל טקסט */
-    text-align: center; /* מיישר טקסט במרכז */
+    font-size: 1em;
+    text-align: center;
 }
-
 .secondary-button i {
-    font-size: 1.2em; /* גודל האייקון */
+    font-size: 1.2em;
 }
-
 .secondary-button:hover {
-    background-color: #e67e22; /* צבע כהה יותר במעבר עכבר */
-    transform: translateY(-2px); /* אפקט קטן של עלייה */
+    background-color: #e67e22;
+    transform: translateY(-2px);
 }
-
 .secondary-button:active {
-    transform: scale(0.98); /* אפקט לחיצה */
+    transform: scale(0.98);
 }
-
-/* Form styling */
 .add-coupon form {
     max-width: 600px;
     margin: 0 auto;
 }
-
 .form-group {
     margin-bottom: 15px;
 }
-
 .form-group label,
 .form-label {
-    display: flex;          /* יישור הצ'קבוקס והטקסט לאותה שורה */
-    align-items: center;    /* ממרכז אנכית את הטקסט והצ'קבוקס */
-    gap: 8px;               /* מרווח קטן בין הצ'קבוקס לטקסט */
-    cursor: pointer;        /* סמן עכבר על הצ'קבוקס והטקסט */
-    direction: rtl;         /* שמירת כיוון מימין לשמאל */
-    text-align: right;      /* מיישר את הטקסט לימין */
-    white-space: nowrap;    /* מונע ירידת טקסט לשורה חדשה */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    direction: rtl;
+    text-align: right;
+    white-space: nowrap;
 }
-
 .form-group .required {
     color: red;
 }
-
 .input-field {
     width: 100%;
     padding: 8px;
@@ -3340,13 +2116,10 @@ h3 {
     border-radius: 4px;
     box-sizing: border-box;
 }
-
 .input-field:focus {
     border-color: var(--primary-color);
     outline: none;
 }
-
-/* Submit button styling */
 .submit-button {
     width: 100%;
     padding: 10px;
@@ -3359,35 +2132,29 @@ h3 {
     font-weight: bold;
     transition: background-color var(--transition-speed), transform var(--transition-speed);
 }
-
 .submit-button:hover {
     background-color: #2980b9;
-    transform: translateY(-2px); /* אפקט קטן של עלייה */
+    transform: translateY(-2px);
 }
-
 .submit-button:active {
-    transform: scale(0.98); /* אפקט לחיצה */
+    transform: scale(0.98);
 }
-
-/* Manual entry button styling */
 .manual-entry {
     text-align: center;
     margin-top: 20px;
 }
-
 .manual-entry p {
     margin-bottom: 10px;
     color: var(--text-color);
     font-weight: bold;
 }
-
 .manual-entry a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px; /* רווח בין הטקסט לאייקון */
+    gap: 8px;
     padding: 10px 20px;
-    background-color: var(--accent-color); /* צבע כתום */
+    background-color: var(--accent-color);
     color: var(--white);
     text-decoration: none;
     border-radius: 5px;
@@ -3395,103 +2162,77 @@ h3 {
     font-size: 1em;
     transition: background-color var(--transition-speed), transform var(--transition-speed);
 }
-
 .manual-entry a i {
-    font-size: 1.2em; /* גודל האייקון */
+    font-size: 1.2em;
 }
-
 .manual-entry a:hover {
-    background-color: #e67e22; /* צבע כהה יותר במעבר עכבר */
-    transform: translateY(-2px); /* אפקט קטן של עלייה */
+    background-color: #e67e22;
+    transform: translateY(-2px);
 }
-
 .manual-entry a:active {
-    transform: scale(0.98); /* אפקט לחיצה */
+    transform: scale(0.98);
 }
-
-/* Error messages styling */
 .error {
     color: red;
     font-size: 0.9em;
     margin-top: 5px;
 }
-
 .flash-messages {
     max-width: 600px;
     margin: 20px auto;
 }
-
 .flash {
     padding: 10px;
     border-radius: 5px;
     margin-bottom: 10px;
     font-weight: bold;
 }
-
 .flash.success {
     background-color: #d4edda;
     color: #155724;
 }
-
 .flash.danger {
     background-color: #f8d7da;
     color: #721c24;
 }
-
 .flash.warning {
     background-color: #fff3cd;
     color: #856404;
 }
-
-/* Mobile button adjustments */
 @media (max-width: 768px) {
     .add-coupons-buttons {
         flex-direction: column;
         gap: 10px;
     }
-
     .secondary-button {
         width: 100%;
         justify-content: center;
     }
 }
-
-/* "Other" fields styling */
 #other_tag_group, #other_company_group {
     margin-top: -10px;
 }
-
-/* צמצום הרווחים במסכים קטנים */
 @media (max-width: 768px) {
     .form-group label,
     .form-label {
-        gap: 5px;             /* הפחתת מרווח בין הצ'קבוקס לטקסט */
-        font-size: 0.9em;     /* הקטנת הטקסט מעט במסכים קטנים */
+        gap: 5px;
+        font-size: 0.9em;
     }
-
     .form-group {
-        margin-bottom: 10px;  /* הפחתת מרווח בין קבוצות טופס */
+        margin-bottom: 10px;
     }
 }
-
-/* צ'קבוקס ויישור */
 .form-group input[type="checkbox"] {
-    width: auto;            /* צ'קבוקס בגודל טבעי */
-    height: auto;           /* שמירת פרופורציות טבעיות */
-    margin: 0;              /* ביטול רווחים חיצוניים */
-    flex-shrink: 0;         /* מונע צמצום הצ'קבוקס */
+    width: auto;
+    height: auto;
+    margin: 0;
+    flex-shrink: 0;
 }
-
-/* מניעת דחיסת טקסט בצד שמאל */
 .form-group {
-    text-align: right;       /* יישור כללי לימין */
+    text-align: right;
 }
 
-/* ===================================================
-   38. Centered Profile Section Styles
-   =================================================== */
-
-/* כלל למרכז את כל הפרופיל */
+/* # Centered Profile Section Styles */
 .profile-detail {
     display: flex;
     flex-direction: column;
@@ -3504,8 +2245,6 @@ h3 {
     border-radius: 10px;
     background-color: var(--white);
 }
-
-/* עבור תמונת הפרופיל */
 .profile-image img {
     display: block;
     margin: 0 auto;
@@ -3515,13 +2254,6 @@ h3 {
     object-fit: cover;
     border: 4px solid var(--primary-color);
 }
-/* הוספה ספציפית לעמוד זה */
-.profile-detail .profile-image img {
-    border: 1px solid #dcdcdc; /* שינוי עובי הקו ל-1px ושימוש בצבע אפור */
-    border-radius: 10px; /* שימור הפינות המעוגלות */
-}
-
-/* כפתורי הטאבים */
 .tabs {
     display: flex;
     justify-content: center;
@@ -3530,11 +2262,9 @@ h3 {
     margin: 20px auto;
     text-align: center;
 }
-
-/* כפתורי טאבים פעילים */
 .tab-button {
     flex: 1;
-    max-width: 300px; /* הרחבת הריבועים */
+    max-width: 300px;
     background-color: var(--accent-color);
     color: var(--white);
     border: none;
@@ -3545,39 +2275,18 @@ h3 {
     border-radius: 20px;
     text-align: center;
 }
-
 .tab-button:hover {
     background-color: #e67e22;
 }
-
 .tab-button.active {
     background-color: #e67e22;
 }
-
-/* תכני הטאבים */
-.tab-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 20px;
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* כותרות */
 h2 {
     text-align: center;
     margin-bottom: 20px;
-    font-size: 1.5em; /* חזרה לגודל המקורי */
+    font-size: 1.5em;
     color: var(--primary-color);
 }
-
-/* יישור הטקסטים */
 .text-center {
     text-align: center;
     margin: 0 auto;
@@ -3585,151 +2294,35 @@ h2 {
 @media (max-width: 768px) {
     .email-box {
         display: flex;
-        flex-direction: column; /* מסדר את הפריטים אחד מתחת לשני */
-        align-items: center; /* ממרכז את התוכן */
-        text-align: center; /* מוודא שהתיבה ממורכזת */
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
         width: 80%;
         max-width: 350px;
         margin: 0 auto;
     }
-
     .email-box .info-title {
         width: 100%;
-        text-align: center; /* הכותרת נשארת ממורכזת */
+        text-align: center;
         font-weight: bold;
         margin-bottom: 5px;
     }
-
     .email-box .info-value.email-input-container {
         width: 100%;
         display: flex;
-        justify-content: center; /* ממורכז אופקית */
+        justify-content: center;
     }
-
     .email-box .email-field {
-        text-align: center; /* ממרכז את הטקסט בתוך שדה האימייל */
+        text-align: center;
         width: 100%;
-        max-width: 250px; /* מקטין קצת את השדה */
+        max-width: 250px;
         box-sizing: border-box;
         padding: 10px;
         font-size: 1em;
     }
 }
 
-/* ===================================================
-   38. Centered Profile Section + Animations
-   =================================================== */
-
-/* אנימציית fadeIn – אם כבר קיימת לך הגדרה ל-fadeIn למעלה, אין צורך בשכפול */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* מחלקת fadeIn כללית לשימוש באלמנטים שונים שרוצים להנפיש בכניסה */
+/* # Centered Profile Section + Animations */
 .fadeIn {
     animation: fadeIn 0.5s ease-out;
-}
-
-/* כלל למרכז את כל הפרופיל */
-.profile-detail {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 20px;
-    border-radius: 10px;
-    background-color: var(--white);
-
-    /* מוסיפים אנימציית כניסה לדף הפרופיל (אם רוצים) */
-    animation: fadeIn 0.5s ease-out;
-}
-
-/* עבור תמונת הפרופיל */
-.profile-image img {
-    display: block;
-    margin: 0 auto;
-    width: 120px;
-    height: 120px;
-    border-radius: 10px;
-    object-fit: cover;
-    border: 4px solid var(--primary-color);
-}
-
-/* כפתורי הטאבים */
-.tabs {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    margin: 20px auto;
-    text-align: center;
-}
-
-/* כפתורי טאבים פעילים */
-.tab-button {
-    flex: 1;
-    max-width: 300px; /* הרחבת הריבועים */
-    background-color: var(--accent-color);
-    color: var(--white);
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-    font-size: 1em;
-    transition: background-color 0.3s;
-    border-radius: 20px;
-    text-align: center;
-}
-
-.tab-button:hover {
-    background-color: #e67e22;
-}
-
-.tab-button.active {
-    background-color: #e67e22;
-    font-weight: bold; /* מבליט את הטאב הנבחר */
-}
-
-/* תוכן הטאבים – מעבר "fade" חלק בין טאבים */
-.tab-content {
-    opacity: 0;               /* מוסתרת כברירת מחדל */
-    pointer-events: auto;     /* שלא יוכלו ללחוץ על תוכן מוסתר */
-    transform: translateY(20px);
-    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-    display: none;            /* כברירת מחדל מוסתר */
-    padding: 20px;
-    border: 1px solid var(--light-gray);
-    border-radius: 5px; /* מתן רדיוס לפינות */
-    margin-top: -1px;   /* כדי שהקו העליון יתיישר יפה עם כפתורי הטאבים */
-    text-align: center; /* יישור מרכזי */
-}
-
-.tab-content.active {
-    display: block;           /* מציגה את הטאב שבחרו */
-    opacity: 1;               /* מעריכה לאט לאט */
-    pointer-events: auto;
-    transform: translateY(0); /* מחזירה למקום */
-}
-
-/* התאמות נוספות לכותרות */
-h2 {
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 1.5em; /* חזרה לגודל המקורי */
-    color: var(--primary-color);
-}
-
-/* יישור טקסטים כללי */
-.text-center {
-    text-align: center;
-    margin: 0 auto;
 }

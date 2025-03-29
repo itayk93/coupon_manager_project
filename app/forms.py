@@ -35,6 +35,10 @@ class CouponForm(FlaskForm):
         'שם חברה חדשה',
         validators=[Optional(), Length(max=255)]
     )
+    source = StringField(
+        'מאיפה קיבלת את הקופון',
+        validators=[Optional(), Length(max=255)]
+    )
     tag_id = SelectField(
         'תגית',
         choices=[],  # הבחירות ימולאו בנתיב
@@ -101,6 +105,7 @@ class CouponForm(FlaskForm):
                    message="יש להזין תאריך בפורמט MM/YY (לדוגמה: 12/29).")
         ]
     )
+
 
     submit_coupon = SubmitField('הוספת קופון')  # כפתור להוספת קופון
 
