@@ -39,6 +39,11 @@ class CouponForm(FlaskForm):
         'מאיפה קיבלת את הקופון',
         validators=[Optional(), Length(max=255)]
     )
+    # NEW: BuyMe Coupon URL field – will capture the URL for BuyMe coupon
+    buyme_coupon_url = StringField(
+        'הכתובת של הקופון מBuyMe',
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)]
+    )
     tag_id = SelectField(
         'תגית',
         choices=[],  # הבחירות ימולאו בנתיב

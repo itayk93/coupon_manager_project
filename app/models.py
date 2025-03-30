@@ -169,6 +169,7 @@ class Coupon(db.Model):
     company = db.Column(db.String(100), nullable=False)
     expiration = db.Column(db.Date, nullable=True)  # תאריך תוקף
     source = db.Column(db.String(255), nullable=True)  # שדה חדש עבור מקור הקופון
+    buyme_coupon_url = db.Column(EncryptedString(255), nullable=True)     # >>> NEW FIELD: BuyMe Coupon URL <<<
     date_added = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     used_value = db.Column(db.Float, default=0.0, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='פעיל')

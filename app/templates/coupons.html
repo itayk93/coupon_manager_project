@@ -230,4 +230,245 @@
         });
     });
 </script>
+<style>
+    /* 1. עיצוב כותרת העמוד והסקשן הראשי */
+    .coupon-management h2 {
+        font-size: 2.5em;
+        font-weight: bold;
+        color: var(--primary-color);
+        margin: 0;
+        margin-top: -20px; /* Small spacing adjustment at the top */
+        position: relative;
+        display: inline-block;
+        /* Space below the title – הערה: הערך האחרון שתקף */
+        padding-bottom: 5px;
+        text-align: center;
+        /* Matching the underline style */
+        border-bottom: 4px solid var(--accent-color);
+    }
+    
+    .coupon-management h2::after {
+        content: '';
+        position: absolute;
+        width: 60px;
+        height: 4px;
+        background-color: var(--accent-color);
+        bottom: 0;
+        border-radius: 2px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .section-header h2::after {
+      display: none;
+    }
+    
+    /* 2. כותרות קטגוריות וקופונים */
+    .coupon-section-title {
+        text-align: center;
+        color: var(--primary-color);
+        margin: 10px 0;
+    }
+    
+    /* 3. מכולת הקופונים (הכרטיסים) */
+    .coupon-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+    }
+    
+    .coupon-card {
+        box-sizing: border-box;
+        padding: 15px 20px;
+        border: 1px solid var(--light-gray);
+        border-radius: 8px;
+        background-color: var(--white);
+        transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+        color: inherit;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .coupon-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .coupon-card p {
+        margin: 10px 0;
+        color: black;
+    }
+    
+    .coupon-card .company-name {
+        font-weight: bold;
+    }
+    
+    /* 4. תמונות הלוגו בתוך הכרטיסים */
+    .company-logo,
+    .coupon-logo,
+    .logo,
+    .coupon-image {
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+    }
+    
+    .company-logo:hover,
+    .coupon-logo:hover,
+    .logo:hover,
+    .coupon-image:hover {
+        transform: scale(1.05);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* 5. הודעת “אין קופונים” */
+    .no-data-message {
+        text-align: center;
+        color: var(--gray);
+        font-size: 1.1em;
+        margin-top: 10px;
+    }
+    
+    /* 6. כפתור "הצג/הסתר קופונים לא פעילים" וטבלת הקופונים */
+    .toggle-button-container {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    #toggle-inactive-coupons {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--primary-color);
+        color: var(--white);
+        border: none;
+        padding: 10px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color var(--transition-speed);
+        font-size: 0.9em;
+    }
+    
+    #toggle-inactive-coupons:hover {
+        background-color: #1A5A8D;
+    }
+    
+    .coupon-data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    
+    .coupon-data-table th,
+    .coupon-data-table td {
+        border: 1px solid var(--light-gray);
+        padding: 12px;
+        text-align: center;
+    }
+    
+    .coupon-data-table th {
+        background-color: var(--secondary-color);
+        color: var(--text-color);
+        font-weight: bold;
+    }
+    
+    .coupon-data-table tbody tr:nth-child(odd) {
+        background-color: #f2f2f2;
+    }
+    
+    .coupon-data-table tbody tr:hover {
+        background-color: #ddd;
+    }
+    
+    /* 7. כפתורי פעולה (ייצוא ל-Excel, PDF, עדכון קופונים למחיקה וכו') */
+    .action-buttons {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 15px;
+        margin-top: 30px;
+        flex-wrap: nowrap;
+    }
+    
+    .export-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        background-color: var(--accent-color);
+        color: var(--white);
+        text-align: center;
+        text-decoration: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color var(--transition-speed);
+        font-size: 0.9em;
+    }
+    
+    .export-button:hover {
+        background-color: #e67e22;
+    }
+    
+    .export-button .fa {
+        font-size: 1.2em;
+    }
+    
+    /* 8. התאמות רספונסיביות לעיצוב כרטיסי הקופון */
+    @media (max-width: 1200px) {
+        .coupon-card {
+            flex: 0 0 calc(25% - 20px);
+            max-width: calc(25% - 20px);
+        }
+    }
+    
+    @media (max-width: 992px) {
+        .coupon-card {
+            flex: 0 0 calc(33.333% - 20px);
+            max-width: calc(33.333% - 20px);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .coupon-card {
+            flex: 0 0 calc(50% - 20px);
+            max-width: calc(50% - 20px);
+        }
+        .coupon-data-table th:nth-child(3),
+        .coupon-data-table td:nth-child(3),
+        .coupon-data-table th:nth-child(6),
+        .coupon-data-table td:nth-child(6) {
+            display: none;
+        }
+        .company-logo,
+        .coupon-logo,
+        .logo {
+            width: 40px;
+            height: auto;
+        }
+        .coupon-data-table th,
+        .coupon-data-table td {
+            font-size: 0.9em;
+            padding: 8px;
+        }
+    }
+    
+    @media (max-width: 500px) {
+        .coupon-card {
+            flex: 0 0 calc(50% - 20px);
+            max-width: calc(50% - 20px);
+        }
+    }
+</style>
+    
+    
 {% endblock %}

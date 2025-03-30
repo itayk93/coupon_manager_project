@@ -24,7 +24,7 @@
         </div>
     </div>
 
-    <!-- הצגת הודעות flash -->
+    <!-- Display flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-messages">
@@ -49,12 +49,12 @@
                 {% endfor %}
             </div>
             <div class="form-group" style="position: relative;">
-                <!-- טקסט תומך במסכים קטנים -->
+                <!-- Mobile supporting text -->
                 <div class="slots-info-mobile center-text">
                     יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
                 </div>
                 
-                <!-- עטיפה משותפת ל" הבא " ול-❔ -->
+                <!-- Wrapper for "Next" button and tooltip -->
                 <div class="mobile-buttons-container">
                     {{ sms_form.submit_sms(class="submit-button") }}
                     <div class="tooltip-container">
@@ -66,7 +66,7 @@
                     </div>
                 </div>                
                             
-                <!-- Tooltip לדסקטופ (מופיע במעבר עכבר) -->
+                <!-- Desktop tooltip (appears on hover) -->
                 <div class="tooltip">
                     יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
                 </div>
@@ -116,6 +116,12 @@
             {% endfor %}
         </div>
 
+        <!-- BuyMe Coupon Link Field -->
+        <div class="form-group" id="buyme_coupon_link_group" style="display: none;">
+            <label for="buyme_coupon_link">כתובת URL של הקופון ל-BuyMe</label>
+            {{ coupon_form.buyme_coupon_url(class="input-field", id="buyme_coupon_link") }}
+        </div>
+
 <!--
         Tags Field
         <div class="form-group">
@@ -133,7 +139,6 @@
             {% endfor %}
         </div>
 -->
-
 
         <!-- Code Field -->
         <div class="form-group">
@@ -206,7 +211,7 @@
             </label>
         </div>
 
-        <!-- שדות הכרטיס, מוסתרים כברירת מחדל -->
+        <!-- Card fields, hidden by default -->
         <div id="card_fields_container" style="display: none;">
             <!-- CVV Field -->
             <div class="form-group">
@@ -228,7 +233,7 @@
             </div>
         </div>
 
-        <!-- One-Time Use Checkbox (כולל tooltip) -->
+        <!-- One-Time Use Checkbox (with tooltip) -->
         <div class="form-group tooltip-checkbox-container" style="position: relative;">
             <button type="button" class="tooltip-button-mobile" id="tooltipOneTimeButtonMobile" aria-label="מידע נוסף">❔</button>
             {{ coupon_form.is_one_time() }}
@@ -269,7 +274,7 @@
     </form>
     <!-- Back to automatic entry button -->
     <div class="manual-entry center-text">
-        <p>חזרה למסך הזנת קופון באופן אוטומטי:</p>
+        <p>חזרה למסך הזנת קופון באופן אוטומטית:</p>
         <a href="{{ url_for('coupons.add_coupon') }}" class="secondary-button">
             <i class="fa fa-arrow-left" aria-hidden="true"></i> חזור להזנת קופון אוטומטית
         </a>
@@ -295,7 +300,7 @@
         margin-bottom: 5px;
     }
     
-    /* עיצוב ייחודי למסכים קטנים */
+    /* Mobile-specific styles */
     @media (max-width: 768px) {
         .slots-info-mobile {
             display: block;
@@ -307,19 +312,19 @@
             text-align: center;
         }
     
-        /* יצירת רשת עם 2 עמודות לכפתורים העליונים */
+        /* Create a grid with 2 columns for top buttons */
         .add-coupons-buttons {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* שתי עמודות שוות בגודל */
-            gap: 10px; /* רווח בין הכפתורים */
+            grid-template-columns: 1fr 1fr; /* Two equally sized columns */
+            gap: 10px; /* Space between buttons */
             align-items: center;
             justify-content: center;
             width: 100%;
         }
     
-        /* התאמת עיצוב הכפתורים */
+        /* Adjust button styling */
         .button-row {
-            display: contents; /* שומר על רשת הגריד */
+            display: contents; /* Preserve grid layout */
         }
     
         .button-row a {
@@ -329,35 +334,35 @@
             padding: 15px;
             font-size: 16px;
             text-align: center;
-            min-height: 50px; /* גובה אחיד */
+            min-height: 50px; /* Uniform height */
             width: 100%;
         }
     
-        /* הכפתור הרחב לא יתפרס על כל הרוחב */
+        /* Wide button doesn't span the entire width */
         .button-row.full-width {
-            grid-column: span 2; /* תופס את כל הרוחב של הרשת */
+            grid-column: span 2; /* Takes up the entire width of the grid */
             display: flex;
             justify-content: center;
             width: 100%;
         }
     
         .wide-button {
-            width: 100%; /* עכשיו הרוחב שלו כמו הכפתורים למעלה */
+            width: 100%; /* Now its width matches the buttons above */
             max-width: 100%;
         }
         .tooltip {
-            /* מאפשר להראות את הטקסט אבל לא לתפוס את הקליקים/מגע */
+            /* Allows seeing the text but not capturing clicks/touch */
             pointer-events: none;
         }
 
         .tooltip .close-tooltip {
-            /* רק לכפתור הסגירה נאפשר קליקים */
+            /* Only allow clicks on the close button */
             pointer-events: auto; 
         }
 
     }
     
-    /* עיצוב בדסקטופ (ללא שינוי) */
+    /* Desktop styles (unchanged) */
     @media (min-width: 769px) {
         .add-coupons-buttons {
             display: flex;
@@ -390,7 +395,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-    // === ניהול שדה תגיות נוספות אם "אחר" נבחר ===
+    // === Handle Additional Tag Field if "other" is selected ===
     const tagSelect = document.getElementById('tag_select');
     const otherTagGroup = document.getElementById('other_tag_group');
     const otherTagInput = document.getElementById('other_tag');
@@ -408,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
         tagSelect.addEventListener('change', toggleOtherTagField);
     }
 
-    // === ניהול שדה חברה נוספת אם "אחר" נבחר ===
+    // === Handle Additional Company Field if "other" is selected ===
     const companySelect = document.getElementById('company_select');
     const otherCompanyGroup = document.getElementById('other_company_group');
     const otherCompanyInput = document.getElementById('other_company');
@@ -426,7 +431,27 @@ document.addEventListener('DOMContentLoaded', function() {
         companySelect.addEventListener('change', toggleOtherCompanyField);
     }
 
-    // === ניהול שדה מטרת הקופון אם חד-פעמי ===
+    // === Handle BuyMe Coupon Link Field ===
+    const buymeCouponLinkGroup = document.getElementById('buyme_coupon_link_group');
+    function toggleBuymeCouponLinkField() {
+        // Assuming the BuyMe company id is "54"
+        if (companySelect && companySelect.value === '54') {
+            buymeCouponLinkGroup.style.display = 'block';
+        } else {
+            buymeCouponLinkGroup.style.display = 'none';
+            const buymeCouponLinkInput = document.getElementById('buyme_coupon_link');
+            if (buymeCouponLinkInput) {
+                buymeCouponLinkInput.value = '';
+            }
+        }
+    }
+    if (companySelect) {
+        companySelect.addEventListener('change', toggleBuymeCouponLinkField);
+        // Initial trigger on page load
+        toggleBuymeCouponLinkField();
+    }
+
+    // === Handle Coupon Purpose Field if One-Time is checked ===
     const checkbox = document.getElementById('is_one_time');
     const purposeGroup = document.getElementById('purpose_group');
     const purposeInput = document.getElementById('purpose');
@@ -446,19 +471,19 @@ document.addEventListener('DOMContentLoaded', function() {
         checkbox.addEventListener('change', togglePurposeField);
     }
 
-    // === ניהול תצוגת שדות הכרטיס (CVV + תוקף) ושמירת המצב ===
+    // === Handle Card Fields Display and Local Storage ===
     const includeCardInfoCheckbox = document.getElementById('include_card_info');
     const cardFieldsContainer = document.getElementById('card_fields_container');
 
     function toggleCardFields() {
         if (includeCardInfoCheckbox.checked) {
             cardFieldsContainer.style.display = 'block';
-            localStorage.setItem('include_card_info_checked', 'true'); // שמירה במטמון
+            localStorage.setItem('include_card_info_checked', 'true'); // Save state in localStorage
         } else {
             cardFieldsContainer.style.display = 'none';
-            localStorage.removeItem('include_card_info_checked'); // הסרה מהמטמון
+            localStorage.removeItem('include_card_info_checked'); // Remove from localStorage
 
-            // אופציונלי: ניקוי השדות בעת ביטול הסימון
+            // Optionally: clear the fields when unchecked
             const cardExpInput = document.getElementById('card_exp');
             const cvvInput = document.getElementById('cvv');
             if (cardExpInput) cardExpInput.value = '';
@@ -467,20 +492,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (includeCardInfoCheckbox && cardFieldsContainer) {
-        // בדיקה אם יש מצב שמור ב-localStorage
+        // Check if state is saved in localStorage
         if (localStorage.getItem('include_card_info_checked')) {
             includeCardInfoCheckbox.checked = true;
         }
 
         includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
-        toggleCardFields(); // הפעלה ראשונית
+        toggleCardFields(); // Initial trigger
     }
 
-    // === עיצוב אוטומטי לשדה MM/YY ===
+    // === Automatic formatting for MM/YY field ===
     const cardExpInput = document.getElementById('card_exp');
     if (cardExpInput) {
         cardExpInput.addEventListener('input', function(event) {
-            let value = event.target.value.replace(/\D/g, ''); // רק מספרים
+            let value = event.target.value.replace(/\D/g, ''); // Only digits
             if (value.length > 2) {
                 value = value.substring(0, 2) + '/' + value.substring(2, 4);
             }
@@ -488,7 +513,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // === ניהול חישובי מחיר והנחה ===
+    // === Handle Price and Discount Calculations ===
     const desiredValueInput = document.getElementById('desired_value');
     const couponCostInput = document.getElementById('coupon_cost');
     const discountPercentageInput = document.getElementById('discount_percentage_input');
@@ -505,8 +530,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const value = toFloat(desiredValueInput.value);
         const discount = toFloat(discountPercentageInput.value);
 
+        // Special case: If cost is exactly 0 and value is positive, set discount to 100%
+        if (cost === 0 && value > 0) {
+            discountPercentageInput.value = "100.00";
+            submitButton.disabled = false;
+            validationMessage.style.display = 'none';
+            return;
+        }
+
         let filledCount = 0;
-        if (cost !== null && cost > 0) filledCount++;
+        if (cost !== null && cost >= 0) filledCount++;
         if (value !== null && value > 0) filledCount++;
         if (discount !== null && discount > 0 && discount <= 100) filledCount++;
 
@@ -520,20 +553,40 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (filledCount === 2) {
-            if (cost > 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
-                desiredValueInput.value = (cost / (1 - discount / 100)).toFixed(2);
-            } else if (cost > 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
-                discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
-            } else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost <= 0)) {
+            if (cost >= 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
+                // When cost and discount are provided, calculate value
+                if (discount === 100) {
+                    // Handle division by zero case when discount is 100%
+                    desiredValueInput.value = cost > 0 ? (cost * 100).toFixed(2) : "0.00";
+                } else {
+                    desiredValueInput.value = (cost / (1 - discount / 100)).toFixed(2);
+                }
+            } else if (cost >= 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
+                // When cost and value are provided, calculate discount
+                if (cost === 0) {
+                    discountPercentageInput.value = "100.00";
+                } else {
+                    discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+                }
+            } else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost < 0)) {
+                // When value and discount are provided, calculate cost
                 couponCostInput.value = (value * (1 - discount / 100)).toFixed(2);
             }
         } else if (filledCount === 3) {
             if (changedField === 'cost' && discount > 0 && discount <= 100 && value > 0) {
-                discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
-            } else if (changedField === 'value' && cost > 0 && discount > 0 && discount <= 100) {
-                discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
-            } else if (changedField === 'discount' && cost > 0 && value > 0) {
-                discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+                if (cost === 0) {
+                    discountPercentageInput.value = "100.00";
+                } else {
+                    discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+                }
+            } else if (changedField === 'value' && cost >= 0 && discount > 0 && discount <= 100) {
+                discountPercentageInput.value = cost === 0 ? "100.00" : ((1 - cost / value) * 100).toFixed(2);
+            } else if (changedField === 'discount' && cost >= 0 && value > 0) {
+                if (discount === 100) {
+                    couponCostInput.value = "0.00";
+                } else {
+                    discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+                }
             }
         }
     }
@@ -552,41 +605,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // ===========================
-    // בדיקת תאריך תפוגה לפני שליחת הטופס
+    // Check expiration date before form submission
     // ===========================
-    const form = document.querySelector('form'); // הטופס המרכזי בעמוד, ודא שזה אכן הטופס הנכון
+    const form = document.querySelector('form'); // Main form
     const expirationInput = document.getElementById('expiration');
 
     if (form && expirationInput) {
         form.addEventListener('submit', function(e) {
-            // ניקוי הודעת השגיאה הקיימת (אם יש לך כזאת), לדוגמה:
-            // const validationMessage = document.getElementById('validation_message');
-            // if(validationMessage) validationMessage.style.display = 'none';
-
             const expValue = expirationInput.value.trim();
             if (!expValue) {
-                // אם לא הוזן תאריך בכלל, אין מה לבדוק
+                // No date entered, nothing to check
                 return;
             }
 
-            // בהנחה שהפורמט הוא YYYY-MM-DD:
+            // Assuming format is YYYY-MM-DD:
             const parts = expValue.split('-');
             if (parts.length === 3) {
                 const year = parseInt(parts[0]);
-                const month = parseInt(parts[1]) - 1; // כי החודשים ב-JS הם 0-11
+                const month = parseInt(parts[1]) - 1; // Months in JS are 0-11
                 const day = parseInt(parts[2]);
                 const selectedDate = new Date(year, month, day);
 
-                // מכינים "היום" (בלי שעות)
+                // Prepare today's date (without time)
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
 
-                // בדיקה אם הקופון פג או פג היום
+                // Check if the coupon is expired or expires today
                 if (selectedDate <= today) {
-                    // הצגת חלון אישור למשתמש
                     const confirmMsg = "תאריך התפוגה הוא היום או לפני היום. האם ברצונך להמשיך?";
                     if (!confirm(confirmMsg)) {
-                        e.preventDefault(); // המשתמש לחץ Cancel – ביטול השליחה
+                        e.preventDefault(); // User canceled, prevent submission
                     }
                 }
             }

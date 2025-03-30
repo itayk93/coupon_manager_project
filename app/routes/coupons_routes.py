@@ -916,8 +916,11 @@ def add_coupon():
                         user_id=current_user.id,
                         is_one_time=is_one_time,
                         purpose=purpose,
-                        source=source  # הוספתי את השדה החדש
+                        source=source  # שדה המקור
                     )
+
+                    # Assign the BuyMe Coupon URL from the form (it will be encrypted upon saving)
+                    new_coupon.buyme_coupon_url = coupon_form.buyme_coupon_url.data.strip() if coupon_form.buyme_coupon_url.data else None
 
                     chosen_company_name = company.name
                     #current_app.logger.info(f"[DEBUG] Manual flow => chosen_company_name = '{chosen_company_name}'")

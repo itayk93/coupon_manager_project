@@ -119,6 +119,7 @@
                                 </div>
                             </div>
 
+
                             {% if is_owner and coupon.status == 'פעיל' %}
                                 <div class="mark-as-used-container">
                                     <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
@@ -196,7 +197,7 @@
                                 </div>
                             </div>
                             {% endif %}
-                        
+
                             <div class="info-box">
                                 <div class="info-icon"><i class="fas fa-percentage"></i></div>
                                 <div class="info-content">
@@ -219,6 +220,18 @@
                                 <div class="info-content">
                                     <span class="info-title">תאריך הזנה:</span>
                                     <span class="info-value">{{ coupon.date_added | to_israel_time }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if coupon.buyme_coupon_url %}
+                            <div class="info-box">
+                                <div class="info-icon"><i class="fas fa-external-link-alt"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">קישור BuyMe:</span>
+                                    <a href="{{ coupon.buyme_coupon_url }}" target="_blank" class="primary-button">
+                                        עבור ל-BuyMe
+                                    </a>
                                 </div>
                             </div>
                         {% endif %}
@@ -350,7 +363,7 @@
                     <p>אין תנועות להצגה.</p>
                 </div>
             {% endif %}
-        </div>        
+        </div>
         <div class="action-buttons secondary-row">
             <a href="{{ url_for('coupons.update_coupon_usage_route', id=coupon.id) }}" class="action-button update-button">
                 <i class="fas fa-sync-alt"></i> עדכון שימוש בקופון
@@ -361,7 +374,6 @@
         </div>
 
         <div class="action-buttons primary-row">
-
             <form action="{{ url_for('coupons.delete_coupon', id=coupon.id) }}" method="post" class="inline-form">
                 {{ delete_form.hidden_tag() }}
                 <button type="submit"
@@ -375,7 +387,19 @@
             </a>
         </div>
 
-        
+        {% if current_user.is_admin and show_multipass_button %}
+        <div class="admin-actions">
+            <form action="{{ url_for('coupons.update_coupon_transactions') }}" method="POST" class="admin-actions-form">
+                <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
+                <input type="hidden" name="coupon_code" value="{{ coupon.coupon_code }}">
+                <input id="csrf_token" name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                {{ update_form.submit(class="action-button small-button") }}
+            </form>
+        </div>
+        {% endif %}
+
+
+
     </div>
 </section>
 {% endblock %}
@@ -477,11 +501,11 @@
             const totalValue = {{ coupon.value }};
             const usedValue = {{ coupon.used_value }};
             const remainingValue = totalValue - usedValue;
-            
+
             // Calculate percentages for display
             const usedPercentage = Math.round((usedValue / totalValue) * 100) || 0;
             const remainingPercentage = 100 - usedPercentage;
-            
+
             // Better color palette - more accessible and visually pleasing
             const chartColors = {
                 used: {
@@ -495,7 +519,7 @@
                     border: 'rgba(46, 204, 113, 0.2)'
                 }
             };
-            
+
             // Create center text plugin for better information visibility
             const centerTextPlugin = {
                 id: 'centerText',
@@ -503,29 +527,29 @@
                     const width = chart.width;
                     const height = chart.height;
                     const ctx = chart.ctx;
-                    
+
                     ctx.restore();
                     ctx.font = 'bold 16px Rubik, Assistant, sans-serif';
                     ctx.textBaseline = 'middle';
                     ctx.textAlign = 'center';
-                    
+
                     const centerX = width / 2;
                     const centerY = height / 2;
-                    
+
                     // Draw total amount
                     ctx.fillStyle = '#2c3e50';
                     ctx.font = 'bold 18px Rubik, Assistant, sans-serif';
                     ctx.fillText(`${totalValue.toFixed(2)} ₪`, centerX, centerY - 10);
-                    
+
                     // Draw label
                     ctx.font = '14px Rubik, Assistant, sans-serif';
                     ctx.fillStyle = '#7f8c8d';
                     ctx.fillText('סה״כ', centerX, centerY + 15);
-                    
+
                     ctx.save();
                 }
             };
-            
+
             const chart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -603,7 +627,7 @@
                 },
                 plugins: [centerTextPlugin]
             });
-            
+
         }
         {% endif %}
 
@@ -1067,7 +1091,7 @@
 /* Chart Enhancements */
 .value-chart-container {
     position: relative;
-    max-width: 300px; 
+    max-width: 300px;
     height: 300px;
     margin: 0 auto 20px;
     padding: 10px;
