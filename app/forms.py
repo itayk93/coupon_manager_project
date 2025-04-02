@@ -183,7 +183,16 @@ class BulkCouponForm(FlaskForm):
         validators=[Optional(), Length(max=255)]
     )
 
-    # Relevant for specific coupons
+    # שדות חדשים:
+    source = StringField(
+        'מאיפה קיבלת את הקופון',
+        validators=[Optional(), Length(max=255)]
+    )
+    buyme_coupon_url = StringField(
+        'הכתובת של הקופון מBuyMe',
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)]
+    )
+
     cvv = StringField(
         'CVV',
         validators=[
@@ -199,6 +208,7 @@ class BulkCouponForm(FlaskForm):
                    message="יש להזין תאריך כרטיס בפורמט MM/YY.")
         ]
     )
+    submit = SubmitField('הוספת קופונים')
 
 
 class AddCouponsBulkForm(FlaskForm):
@@ -815,3 +825,27 @@ class ApproveCoffeeTransactionForm(FlaskForm):
         Regexp(r'^0\d{2}-\d{7}$', message="יש להזין מספר טלפון בפורמט 0xx-xxxxxxx")
     ])
     submit = SubmitField("אשר עסקה")
+
+# הוסף את הטפסים הבאים לקובץ forms.py שלך
+
+class EditTagForm(FlaskForm):
+    """טופס לעריכת שם תגית"""
+    name = StringField(
+        'שם חדש לתגית',
+        validators=[
+            DataRequired(message="חובה למלא שם תגית."),
+            Length(max=50, message="שם התגית לא יכול להיות ארוך מ-50 תווים.")
+        ]
+    )
+    submit = SubmitField('עדכן')
+
+
+class TransferCouponsForm(FlaskForm):
+    """טופס להעברת קופונים מתגית אחת לאחרת"""
+    source_tag_id = HiddenField('מזהה תגית מקור', validators=[DataRequired()])
+    target_tag_id = SelectField(
+        'העבר קופונים לתגית',
+        coerce=int,
+        validators=[DataRequired(message="חובה לבחור תגית יעד.")]
+    )
+    submit = SubmitField('העבר קופונים')

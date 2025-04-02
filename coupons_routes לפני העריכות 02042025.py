@@ -619,7 +619,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 from app.models import Company  # Adjust the import according to your project structure
 
-
 @coupons_bp.route('/submit_buyme_coupon_urls', methods=['POST'])
 @login_required
 def submit_buyme_coupon_urls():
@@ -679,9 +678,7 @@ def submit_buyme_coupon_urls():
                     "coupon_code": coupon_code,
                     "validity": validity_formatted,
                     "value": coupon_value,
-                    "cost": "0",
-                    # Add discount_percentage with default value
-                    "discount_percentage": "0"
+                    "cost": "0"
                 })
 
             except Exception as e:
@@ -692,7 +689,6 @@ def submit_buyme_coupon_urls():
                     "validity": "",
                     "value": "",
                     "cost": "0",
-                    "discount_percentage": "0",
                     "error": str(e)
                 })
 
@@ -713,65 +709,20 @@ def submit_buyme_coupon_urls():
     # Clear existing form entries
     form.coupons.entries = []
 
-    # Add coupons to the form with ALL required fields
+    # Add coupons to the form
     for coupon in coupons:
-        # Calculate discount percentage if not available but we have value and cost
-        if not coupon.get("discount_percentage") and coupon.get("value") and coupon.get("cost"):
-            try:
-                value = float(coupon["value"])
-                cost = float(coupon["cost"])
-                if value > 0:  # Avoid division by zero
-                    discount_percentage = ((value - cost) / value) * 100
-                    coupon["discount_percentage"] = str(round(discount_percentage, 2))
-                else:
-                    coupon["discount_percentage"] = "0"
-            except (ValueError, TypeError):
-                coupon["discount_percentage"] = "0"
-
-        # Make sure code is not empty (critical field)
-        if not coupon["coupon_code"]:
-            print(f"[⚠] Warning: Empty coupon code for URL {coupon['url']}. Setting placeholder.")
-            coupon["coupon_code"] = "BUYME-" + coupon["url"].split("/")[-1][:8]
-
-        # Make sure we have numeric values for value and cost
-        try:
-            float(coupon["value"])
-        except (ValueError, TypeError):
-            coupon["value"] = "0"
-
-        try:
-            float(coupon["cost"])
-        except (ValueError, TypeError):
-            coupon["cost"] = "0"
-
-        # Append entry with all necessary fields to satisfy validation
         form.coupons.append_entry({
             "code": coupon["coupon_code"],
             "expiration": coupon["validity"],
             "buyme_coupon_url": coupon["url"],
-            "company_id": buyme_company_id,  # Make sure this is set for all coupons
+            "company_id": buyme_company_id,
             "value": coupon["value"],
-            "cost": coupon["cost"],
-            "discount_percentage": coupon["discount_percentage"],
-            # Add other fields that might be required by your form validation
-            "is_one_time": False,
-            "purpose": "",
-            "source": ""
+            "cost": coupon["cost"]
         })
 
-    # Add debug information
-    for idx, entry in enumerate(form.coupons.entries):
-        print(f"Coupon #{idx + 1} form data:")
-        for field_name, field in entry.form._fields.items():
-            print(f"  {field_name}: {field.data}")
-
     companies = Company.query.all()  # Fetch all companies
-    tags = Tag.query.all()  # Add tags if your form needs them
 
-    # Add debugging for what we're returning to the template
-    print(f"Returning form with {len(form.coupons.entries)} coupon entries")
-
-    return render_template('add_coupons.html', form=form, coupons=coupons, companies=companies, tags=tags)
+    return render_template('add_coupons.html', form=form, coupons=coupons, companies=companies)
 
 def get_most_common_tag_for_company(company_name):
     results = db.session.query(Tag, func.count(Tag.id).label('tag_count')) \

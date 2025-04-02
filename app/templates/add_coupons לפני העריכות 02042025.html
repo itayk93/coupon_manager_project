@@ -1,0 +1,796 @@
+{% extends 'base.html' %}
+
+{% block title %}
+הוספת קופונים מרובים
+{% endblock %}
+
+{% block content %}
+<section class="add-coupon">
+    <h2>הוספת קופונים מרובים</h2>
+
+    <div class="add-coupons-buttons">
+        <div class="button-row">
+            <a href="{{ url_for('coupons.add_coupon') }}" class="secondary-button">
+                <i class="fa fa-plus-circle" aria-hidden="true"></i> הוספת קופון יחיד
+            </a>
+            <a href="{{ url_for('coupons.upload_coupons') }}" class="secondary-button">
+                <i class="fa fa-upload" aria-hidden="true"></i> העלאת קובץ קופונים
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" id="coupons-form">
+        {{ form.hidden_tag() }}
+
+        <div id="coupons-container">
+            {# אם קיים משתנה coupons (שהוחזר מהשרת לאחר שליפת ה-URL) – נאתחל משתנה coupon_data לכל קופון #}
+            {% for coupon_form in form.coupons %}
+            {% set coupon_data = coupons[loop.index0] if coupons|length > loop.index0 else None %}
+            <fieldset class="coupon-fieldset" data-index="{{ loop.index0 }}">
+                <legend>קופון {{ loop.index }}</legend>
+
+                <div class="coupon-actions">
+                    <button type="button" class="duplicate-coupon-button">
+                        <i class="fa fa-clone"></i> שכפול קופון
+                    </button>
+                    <button type="button" class="remove-coupon-button">
+                        <i class="fa fa-trash"></i> הסרת קופון
+                    </button>
+                </div>
+                {% if current_user.is_admin %}
+                <!-- כפתור להזנת URL של קופונים (רק אם המשתמש הוא אדמין) – מופיע מתחת לשדה ה-BuyMe -->
+                <div class="form-group">
+                    <button type="button" class="open-modal-button buyme-link-button">
+                        <i class="fa fa-link"></i> הזנת קופונים של-BuyMe
+                    </button>
+                </div>
+                {% endif %}
+                
+                <div class="form-group">
+                    <label for="coupons-{{ loop.index0 }}-company_id">
+                        שם החברה:<span class="required">*</span>
+                    </label>
+                    <select id="coupons-{{ loop.index0 }}-company_id"
+                            name="coupons-{{ loop.index0 }}-company_id"
+                            class="input-field company-select"
+                            required>
+                        <option value="" disabled {% if not coupon_form.company_id.data %}selected{% endif %}>בחר</option>
+                        {% for company in companies %}
+                            <option value="{{ company.id }}"
+                              {% if coupon_form.company_id.data == company.id|string %}selected{% endif %}>
+                                {{ company.name }}
+                            </option>
+                        {% endfor %}
+                        <option value="other" {% if coupon_form.company_id.data == 'other' %}selected{% endif %}>אחר</option>
+                    </select>
+                    {% for error in coupon_form.company_id.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                {# שדה URL של BuyMe – אם יש נתונים מה-URL, נאתחל את השדה עם coupon_data.url #}
+                <div class="form-group" id="buyme_coupon_link_group_{{ loop.index0 }}" style="display: none;">
+                    <label for="coupons-{{ loop.index0 }}-buyme_coupon_url">כתובת URL של הקופון ל-BuyMe</label>
+                    <input type="url" id="coupons-{{ loop.index0 }}-buyme_coupon_url" 
+                           name="coupons-{{ loop.index0 }}-buyme_coupon_url" 
+                           class="input-field" value="{{ coupon_data.url if coupon_data else '' }}">
+                </div>
+
+
+
+                <div class="form-group other-company-group"
+                     id="other_company_group_{{ loop.index0 }}"
+                     {% if coupon_form.company_id.data != 'other' %}style="display: none;"{% endif %}>
+                    <label for="coupons-{{ loop.index0 }}-other_company">שם חברה חדשה:</label>
+                    <input type="text"
+                           id="coupons-{{ loop.index0 }}-other_company"
+                           name="coupons-{{ loop.index0 }}-other_company"
+                           class="input-field"
+                           value="{{ coupon_form.other_company.data }}">
+                    {% for error in coupon_form.other_company.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    {{ coupon_form.code.label }}
+                    {# אם קיימים נתוני קופון מה-URL – אתחול שדה הקוד בהתאם #}
+                    {{ coupon_form.code(class="input-field", value=coupon_data.coupon_code if coupon_data else coupon_form.code.data) }}
+                    {% for error in coupon_form.code.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    {{ coupon_form.value.label }}
+                    {{ coupon_form.value(class="input-field") }}
+                    {% for error in coupon_form.value.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    {{ coupon_form.cost.label }}
+                    {{ coupon_form.cost(class="input-field") }}
+                    {% for error in coupon_form.cost.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    {{ coupon_form.expiration.label }}
+                    {# אתחול תאריך תפוגה אם קיימים נתונים מה-URL #}
+                    {{ coupon_form.expiration(class="input-field", type="date", value=coupon_data.validity if coupon_data else coupon_form.expiration.data) }}
+                    {% for error in coupon_form.expiration.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- שדה "מאיפה קיבלת את הקופון" -->
+                <div class="form-group">
+                    <label for="coupons-{{ loop.index0 }}-source">מאיפה קיבלת את הקופון:</label>
+                    <input type="text" id="coupons-{{ loop.index0 }}-source" name="coupons-{{ loop.index0 }}-source" class="input-field">
+                </div>
+
+                <div class="form-group checkbox-inline">
+                    <label for="coupons-__INDEX__-include_card_info">
+                        <input type="checkbox" id="coupons-__INDEX__-include_card_info" name="coupons-__INDEX__-include_card_info">
+                        האם להכניס תוקף כרטיס ו-CVV?
+                    </label>
+                </div>
+
+                <div id="card_fields_container___INDEX__" style="display: none;">
+                    <div class="form-group">
+                        <label for="coupons-__INDEX__-cvv">CVV</label>
+                        <input type="text" id="coupons-__INDEX__-cvv" name="coupons-__INDEX__-cvv" class="input-field" maxlength="3">
+                    </div>
+                    <div class="form-group">
+                        <label for="coupons-__INDEX__-card_exp">תוקף כרטיס</label>
+                        <input type="text" id="coupons-__INDEX__-card_exp" name="coupons-__INDEX__-card_exp" class="input-field" maxlength="5" placeholder="MM/YY">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        {{ coupon_form.is_one_time() }}
+                        קוד לשימוש חד פעמי
+                    </label>
+                    {% for error in coupon_form.is_one_time.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group purpose-field"
+                     id="purpose_group_{{ loop.index0 }}"
+                     {% if not coupon_form.is_one_time.data %}style="display: none;"{% endif %}>
+                    {{ coupon_form.purpose.label }}
+                    {{ coupon_form.purpose(class="input-field") }}
+                    {% for error in coupon_form.purpose.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            {% endfor %}
+        </div>
+
+        <div class="button-row" style="margin-top: 20px;">
+            <button type="button" class="add-coupon-button secondary-button">
+                <i class="fa fa-plus-circle"></i> הוספת קופון נוסף
+            </button>
+        </div>
+
+        <div class="form-group" style="margin-top: 20px; text-align: center;">
+            <button type="submit" class="submit-button">הוספת הקופונים לארנק</button>
+        </div>
+    </form>
+</section>
+
+{% if current_user.is_admin %}
+<!-- מודאל להזנת URL של קופונים (יופיע רק אם המשתמש הוא אדמין) -->
+<div id="urlModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>הזן URL של הקופונים ל-BuyMe</h3>
+        <p>הזן את ה-URL של הקופונים (אם יש יותר מאחד, יש ללחוץ ENTER אחרי כל URL חדש):</p>
+        <textarea id="coupon-urls" class="input-field" rows="10" placeholder="הזן URL של קופונים כאן..."></textarea>
+        <div style="margin-top: 20px; text-align: center;">
+            <button id="submitUrls" class="submit-button">שלח קישורים</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+ 
+<template id="coupon-template">
+    <fieldset class="coupon-fieldset" data-index="__INDEX__">
+        <legend>קופון</legend>
+
+        <div class="coupon-actions">
+            <button type="button" class="duplicate-coupon-button">
+                <i class="fa fa-clone"></i> שכפל קופון
+            </button>
+            <button type="button" class="remove-coupon-button">
+                <i class="fa fa-trash"></i> הסר קופון
+            </button>
+        </div>
+
+        <div class="form-group">
+            <label for="coupons-__INDEX__-company_id">
+                שם החברה:<span class="required">*</span>
+            </label>
+            <select id="coupons-__INDEX__-company_id"
+                    name="coupons-__INDEX__-company_id"
+                    class="input-field company-select"
+                    required>
+                <option value="" disabled selected>בחר</option>
+                {% for company in companies %}
+                    <option value="{{ company.id }}">{{ company.name }}</option>
+                {% endfor %}
+                <option value="other">אחר</option>
+            </select>
+        </div>
+
+        <div class="form-group other-company-group"
+             id="other_company_group___INDEX__"
+             style="display: none;">
+            <label for="coupons-__INDEX__-other_company">שם חברה חדשה:</label>
+            <input type="text"
+                   id="coupons-__INDEX__-other_company"
+                   name="coupons-__INDEX__-other_company"
+                   class="input-field">
+        </div>
+
+        <!-- שדה "מאיפה קיבלת את הקופון" -->
+        <div class="form-group">
+            <label for="coupons-__INDEX__-source">מאיפה קיבלת את הקופון:</label>
+            <input type="text" id="coupons-__INDEX__-source" name="coupons-__INDEX__-source" class="input-field">
+        </div>
+
+        <div class="form-group">
+            <label for="coupons-__INDEX__-code">
+                קוד קופון:<span class="required">*</span>
+            </label>
+            <input type="text"
+                   id="coupons-__INDEX__-code"
+                   name="coupons-__INDEX__-code"
+                   class="input-field"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label for="coupons-__INDEX__-value">ערך הקופון:<span class="required">*</span></label>
+            <input type="number"
+                   step="0.01"
+                   id="coupons-__INDEX__-value"
+                   name="coupons-__INDEX__-value"
+                   class="input-field"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label for="coupons-__INDEX__-cost">עלות הקופון:<span class="required">*</span></label>
+            <input type="number"
+                   step="0.01"
+                   id="coupons-__INDEX__-cost"
+                   name="coupons-__INDEX__-cost"
+                   class="input-field"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label for="coupons-__INDEX__-expiration">תאריך תפוגה:</label>
+            <input type="date"
+                   id="coupons-__INDEX__-expiration"
+                   name="coupons-__INDEX__-expiration"
+                   class="input-field">
+        </div>
+
+        <div class="form-group">
+            <input type="checkbox"
+                   id="coupons-__INDEX__-is_one_time"
+                   name="coupons-__INDEX__-is_one_time">
+            <label for="coupons-__INDEX__-is_one_time">קוד לשימוש חד פעמי</label>
+        </div>
+
+        <div class="form-group purpose-field"
+             id="purpose_group___INDEX__"
+             style="display: none;">
+            <label for="coupons-__INDEX__-purpose">מטרת הקופון:</label>
+            <input type="text"
+                   id="coupons-__INDEX__-purpose"
+                   name="coupons-__INDEX__-purpose"
+                   class="input-field">
+        </div>
+    </fieldset>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.center-text {
+    text-align: center;
+}
+.flash-messages {
+    margin-bottom: 20px;
+}
+.flash {
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 3px;
+}
+.flash.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.flash.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+.add-coupons-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.button-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+.button-row.full-width {
+    width: 100%;
+}
+.wide-button {
+    flex-grow: 1;
+    text-align: center;
+    display: block;
+    width: 100%;
+    max-width: 320px;
+}
+.add-coupon-button {
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+.coupon-fieldset {
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 5px;
+}
+.coupon-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+.required {
+    color: red;
+}
+.input-field {
+    width: 100%;
+    padding: 6px;
+    box-sizing: border-box;
+    margin-top: 5px;
+}
+.error {
+    color: red;
+    font-size: 0.9em;
+    margin-top: 3px;
+}
+.submit-button {
+    background-color: #2c7be5;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.submit-button:hover {
+    background-color: #1a5cb8;
+}
+
+/* מודאל */
+.modal {
+    display: none; /* נסתר כברירת מחדל */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding-top: 60px;
+}
+
+/* תוכן המודאל */
+.modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 5px;
+    position: relative;
+}
+
+/* כפתור סגירת המודאל */
+.close-modal {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 25px;
+    cursor: pointer;
+}
+
+.close-modal:hover,
+.close-modal:focus {
+    color: black;
+    text-decoration: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let index = {{ form.coupons|length }};
+
+    function initializeCouponFieldset(fieldset, idx) {
+        fieldset.dataset.index = idx;
+
+        const includeCardInfoCheckbox = fieldset.querySelector(
+            'input[type="checkbox"][name="coupons-' + idx + '-include_card_info"]'
+        );
+        const cardFieldsContainer = fieldset.querySelector(
+            '#card_fields_container_' + idx
+        );
+
+        function toggleCardFields() {
+            if (!includeCardInfoCheckbox || !cardFieldsContainer) return;
+            if (includeCardInfoCheckbox.checked) {
+                cardFieldsContainer.style.display = 'block';
+            } else {
+                cardFieldsContainer.style.display = 'none';
+                cardFieldsContainer.querySelectorAll('input').forEach(input => {
+                    input.value = '';
+                });
+            }
+        }
+
+        if (includeCardInfoCheckbox && cardFieldsContainer) {
+            includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
+            toggleCardFields();
+        }
+
+        const companySelect = fieldset.querySelector('.company-select');
+        const otherCompanyGroup = fieldset.querySelector('.other-company-group');
+
+        function toggleOtherCompanyField() {
+            if (companySelect.value === 'other') {
+                otherCompanyGroup.style.display = 'block';
+            } else {
+                otherCompanyGroup.style.display = 'none';
+                const input = otherCompanyGroup.querySelector('input');
+                if (input) input.value = '';
+            }
+        }
+        toggleOtherCompanyField();
+        companySelect.addEventListener('change', toggleOtherCompanyField);
+
+        // Add the new "BuyMe URL" field toggle
+        const buymeCouponLinkGroup = fieldset.querySelector('#buyme_coupon_link_group_' + idx);
+
+        function toggleBuymeCouponLinkField() {
+            if (!buymeCouponLinkGroup) return;
+            if (companySelect.value === '54') {  // assuming 54 is the ID for BuyMe
+                buymeCouponLinkGroup.style.display = 'block';
+            } else {
+                buymeCouponLinkGroup.style.display = 'none';
+                const buymeCouponLinkInput = buymeCouponLinkGroup.querySelector('input');
+                if (buymeCouponLinkInput) {
+                    buymeCouponLinkInput.value = '';
+                }
+            }
+        }
+        companySelect.addEventListener('change', toggleBuymeCouponLinkField);
+        toggleBuymeCouponLinkField();
+
+        const isOneTimeCheckbox = fieldset.querySelector('input[type="checkbox"][name$="-is_one_time"]');
+        const purposeGroup = fieldset.querySelector('.purpose-field');
+
+        function togglePurposeField() {
+            if (isOneTimeCheckbox.checked) {
+                purposeGroup.style.display = 'block';
+            } else {
+                purposeGroup.style.display = 'none';
+                const input = purposeGroup.querySelector('input');
+                if (input) input.value = '';
+            }
+        }
+        togglePurposeField();
+        isOneTimeCheckbox.addEventListener('change', togglePurposeField);
+
+        const removeButton = fieldset.querySelector('.remove-coupon-button');
+        if (removeButton) {
+            removeButton.addEventListener('click', function() {
+                fieldset.remove();
+                updateLegends();
+            });
+        }
+
+        const duplicateButton = fieldset.querySelector('.duplicate-coupon-button');
+        if (duplicateButton) {
+            duplicateButton.addEventListener('click', function() {
+                duplicateCoupon(fieldset);
+            });
+        }
+    }
+
+    function updateLegends() {
+        const fieldsets = document.querySelectorAll('.coupon-fieldset');
+        fieldsets.forEach(function(fieldset, idx) {
+            fieldset.dataset.index = idx;
+            updateFieldsetIndex(fieldset, idx);
+        });
+        index = fieldsets.length;
+    }
+
+    function updateFieldsetIndex(fieldset, newIndex) {
+        const oldIndex = fieldset.dataset.index || '__INDEX__';
+        const regex = new RegExp('(coupons-)(?:' + oldIndex + '|__INDEX__)(-)', 'g');
+
+        fieldset.querySelectorAll('[name], [id], [for]').forEach(element => {
+            if (element.name) {
+                element.name = element.name.replace(regex, '$1' + newIndex + '$2');
+                element.name = element.name.replace('___INDEX__', newIndex);
+            }
+            if (element.id) {
+                element.id = element.id.replace(regex, '$1' + newIndex + '$2');
+                element.id = element.id.replace('___INDEX__', newIndex);
+                element.id = element.id.replace('__INDEX__', newIndex);
+            }
+            if (element.htmlFor) {
+                element.htmlFor = element.htmlFor.replace(regex, '$1' + newIndex + '$2');
+                element.htmlFor = element.htmlFor.replace('___INDEX__', newIndex);
+                element.htmlFor = element.htmlFor.replace('__INDEX__', newIndex);
+            }
+        });
+
+        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"]').forEach(element => {
+            element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
+            element.id = element.id.replace('__INDEX__', newIndex);
+            element.id = element.id.replace('___INDEX__', newIndex);
+        });
+
+        fieldset.querySelectorAll('[id^="card_fields_container_"]').forEach(element => {
+            element.id = element.id.replace('___INDEX__', newIndex);
+            element.id = element.id.replace('__INDEX__', newIndex);
+        });
+
+        const legend = fieldset.querySelector('legend');
+        if (legend) {
+            legend.textContent = 'קופון ' + (newIndex + 1);
+        }
+    }
+
+    function duplicateCoupon(fieldset) {
+        const container = document.getElementById('coupons-container');
+        const clonedFieldset = fieldset.cloneNode(true);
+        updateFieldsetIndex(clonedFieldset, index);
+
+        const originalInputs = fieldset.querySelectorAll('input, select, textarea');
+        const clonedInputs = clonedFieldset.querySelectorAll('input, select, textarea');
+        clonedInputs.forEach((input, i) => {
+            if (input.type === 'checkbox') {
+                input.checked = originalInputs[i].checked;
+            } else {
+                input.value = originalInputs[i].value;
+            }
+        });
+
+        initializeCouponFieldset(clonedFieldset, index);
+        container.appendChild(clonedFieldset);
+        index++;
+        updateLegends();
+    }
+
+    function addCoupon() {
+        const container = document.getElementById('coupons-container');
+        const template = document.getElementById('coupon-template').content.cloneNode(true);
+        const newFieldset = template.querySelector('.coupon-fieldset');
+
+        updateFieldsetIndex(newFieldset, index);
+        initializeCouponFieldset(newFieldset, index);
+        container.appendChild(newFieldset);
+        index++;
+        updateLegends();
+    }
+
+    const existingFieldsets = document.querySelectorAll('.coupon-fieldset');
+    existingFieldsets.forEach(function(fieldset, idx) {
+        initializeCouponFieldset(fieldset, idx);
+    });
+
+    // Add coupon button
+    const addCouponButton = document.querySelector('.add-coupon-button');
+    addCouponButton.addEventListener('click', function(event) {
+        event.preventDefault();
+        addCoupon();
+    });
+
+    // Attach event listeners to all open-modal buttons (admin-only)
+    const openModalButtons = document.querySelectorAll('.open-modal-button');
+    const modal = document.getElementById('urlModal');
+    const closeModalButton = document.querySelector('.close-modal');
+    const submitButton = document.getElementById('submitUrls');
+    const urlTextArea = document.getElementById('coupon-urls');
+
+    openModalButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            modal.style.display = 'block';
+        });
+    });
+
+    if (closeModalButton) {
+        closeModalButton.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    if (submitButton) {
+        submitButton.addEventListener('click', function() {
+            // אסוף את ה-URLים מהטקסט אריאה
+            const urls = urlTextArea.value.split('\n').map(url => url.trim()).filter(url => url !== "");
+            if (urls.length > 0) {
+                console.log("URLs שנשלחו: ", urls);
+                // כאן ניתן לשלוח את הנתונים לשרת באמצעות fetch אם נדרש.
+                modal.style.display = 'none';
+                urlTextArea.value = '';
+            } else {
+                alert("אנא הזן לפחות URL אחד.");
+            }
+        });
+    }
+
+    // Check expiration date before form submission
+    const couponsForm = document.getElementById('coupons-form');
+    if (couponsForm) {
+        couponsForm.addEventListener('submit', function(e) {
+            const fieldsets = document.querySelectorAll('.coupon-fieldset');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            let expiredCoupons = [];
+
+            fieldsets.forEach((fieldset, idx) => {
+                const expirationInput = fieldset.querySelector('input[type="date"][name^="coupons-"][name$="-expiration"]');
+                if (expirationInput && expirationInput.value) {
+                    const parts = expirationInput.value.split('-');
+                    if (parts.length === 3) {
+                        const year = parseInt(parts[0]);
+                        const month = parseInt(parts[1]) - 1;
+                        const day = parseInt(parts[2]);
+                        const selectedDate = new Date(year, month, day);
+                        if (selectedDate <= today) {
+                            const formattedDate = String(day).padStart(2, '0') + '/' + String(month + 1).padStart(2, '0') + '/' + year;
+                            const companySelect = fieldset.querySelector('.company-select');
+                            const companyName = companySelect ? companySelect.options[companySelect.selectedIndex].text : 'Unknown';
+                            const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+                            const couponCode = codeInput ? codeInput.value : 'Unknown';
+                            const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                            const couponValue = valueInput ? valueInput.value : 'Unknown';
+                            expiredCoupons.push(
+                                "📌 Coupon #" + (idx+1) + ":\n" +
+                                "- 🏢 Company: " + companyName + "\n" +
+                                "- 🔢 Coupon Code: " + couponCode + "\n" +
+                                "- 💰 Value: " + couponValue + "\n" +
+                                "- ⏳ Expiration: " + formattedDate
+                            );
+                        }
+                    }
+                }
+            });
+
+            if (expiredCoupons.length > 0) {
+                const confirmMsg = 
+                    "⚠️ Attention! The following coupons have an expiration date that is either today or has passed:\n\n" +
+                    expiredCoupons.join("\n\n") +
+                    "\n\n❓ Do you still want to continue?";
+                if (!confirm(confirmMsg)) {
+                    e.preventDefault();
+                }
+            }
+        });
+    }
+});
+document.getElementById('submitUrls').addEventListener('click', async function () {
+    const textarea = document.getElementById('coupon-urls');
+    const rawText = textarea.value.trim();
+
+    if (!rawText) {
+        alert("לא הוזנו קישורים.");
+        return;
+    }
+
+    const urls = rawText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+    // קבלת ה־CSRF Token מה־<meta>
+    const csrfTokenElement = document.querySelector('meta[name="csrf-token"]');
+    if (!csrfTokenElement) {
+        alert("CSRF token לא נמצא בעמוד.");
+        return;
+    }
+    const csrfToken = csrfTokenElement.getAttribute('content');
+
+    try {
+        const response = await fetch('/submit_buyme_coupon_urls', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ urls: urls })
+        });
+
+        const contentType = response.headers.get("Content-Type");
+
+        if (response.ok) {
+            // HTML Response (כנראה מחזיר את add_coupons.html)
+            if (contentType && contentType.includes("text/html")) {
+                const html = await response.text();
+                document.open();
+                document.write(html);
+                document.close();
+            } else {
+                // JSON Success (לא צפוי במקרה שלך, אבל טוב שיהיה)
+                const data = await response.json();
+                console.log("הצלחה:", data);
+            }
+        } else {
+            // ניסיון לפענח שגיאה
+            let errorText;
+            if (contentType && contentType.includes("application/json")) {
+                const err = await response.json();
+                errorText = err.message || "שגיאה לא ידועה.";
+            } else {
+                errorText = await response.text();
+            }
+
+            alert("שגיאה מהשרת:\n" + errorText);
+        }
+    } catch (error) {
+        console.error("שגיאה כללית:", error);
+        alert("שגיאה כללית בעת שליחת הקישורים.");
+    }
+});
+
+</script>
+{% endblock %}

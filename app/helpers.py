@@ -598,34 +598,28 @@ def set_debug_mode(mode):
 
 
 def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html"):
+    # Helper function to print debug messages when DEBUG_MODE is enabled
     def debug_print(message):
-        """
-        Print debug message only if DEBUG_MODE is True.
-
-        Args:
-            message (str): Debug message to print
-        """
         if DEBUG_MODE:
             print(f"[DEBUG] {message}")
 
     """
-    Runs Selenium to access Multipass, Max, or BuyMe website (based on coupon.auto_download_details),
-    downloads relevant information and converts it to a DataFrame.
-    Then checks what already exists in the DB's coupon_transaction table and compares,
-    with the aim of adding only new transactions and adjusting coupon status accordingly.
-
-    Returns DataFrame with only new transactions, or None if no new transactions or if an error occurred.
+    This function uses Selenium to access a website (Multipass, Max, or BuyMe) based on the coupon.auto_download_details value.
+    It downloads the relevant information, converts it into a DataFrame, compares it with existing records in the database,
+    adds only new transactions, and updates the coupon's status accordingly.
+    Returns a DataFrame containing new transactions or None if there are no new transactions or an error occurs.
     """
     debug_print(f"Starting coupon data retrieval for coupon: {coupon.code}")
 
+    # Ensure that the save directory exists
     os.makedirs(save_directory, exist_ok=True)
 
     coupon_number = coupon.code
-    coupon_kind = coupon.auto_download_details  # "Multipass" / "Max" / "BuyMe" (or others)
+    coupon_kind = coupon.auto_download_details  # Expected values: "Multipass", "Max", "BuyMe", etc.
     card_exp = coupon.card_exp
     cvv = coupon.cvv
 
-    # Set basic Selenium options
+    # Configure basic Selenium Chrome options
     debug_print("Configuring Chrome options")
     chrome_options = Options()
     chrome_options.add_argument("--disable-gpu")
@@ -634,19 +628,17 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_argument("--disable-images")  # Prevent image loading
-    chrome_options.add_argument("--disable-extensions")  # Prevent unnecessary extensions
+    chrome_options.add_argument("--disable-extensions")  # Disable unnecessary extensions
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
 
-    # If it's Max, add Headless mode
+    # For the "Max" coupon type, block images
     if coupon_kind == "Max":
-        chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # Block images in browser
+        chrome_options.add_argument("--blink-settings=imagesEnabled=false")
 
-    df = None  # Will store the DataFrame
+    df = None  # DataFrame to hold the scraped data
 
-    # ----------------------------------------------------------------------
-    # Handling Multipass scenario
-    # ----------------------------------------------------------------------
+    # -------------------- Handling Multipass Scenario --------------------
     if coupon_kind == "Multipass":
         driver = None
         try:
@@ -656,7 +648,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             wait = WebDriverWait(driver, 30)
             time.sleep(5)
 
-            debug_print("Locating card number field")
+            debug_print("Locating card number input field")
             card_number_field = driver.find_element(By.XPATH, "//input[@id='newcardid']")
             card_number_field.clear()
 
@@ -670,24 +662,21 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 EC.presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'recaptcha')]"))
             )
             driver.switch_to.frame(recaptcha_iframe)
-
             checkbox = wait.until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, ".recaptcha-checkbox-border"))
             )
             checkbox.click()
             debug_print("reCAPTCHA checkbox clicked")
-
             driver.switch_to.default_content()
 
             check_balance_button = wait.until(
                 EC.element_to_be_clickable((By.ID, "submit"))
             )
-
             if check_balance_button.is_enabled():
                 debug_print("Clicking submit button")
                 check_balance_button.click()
             else:
-                debug_print("Submit button is disabled. CAPTCHA not solved properly?")
+                debug_print("Submit button is disabled. CAPTCHA may not be solved properly.")
                 driver.quit()
                 return None
 
@@ -698,7 +687,6 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"coupon_{coupon_number}_{timestamp}.html"
             file_path = os.path.join(save_directory, filename)
-
             debug_print(f"Saving page HTML to {file_path}")
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(page_html)
@@ -712,20 +700,16 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             if driver:
                 driver.quit()
 
-        # Attempt to read table from saved HTML
         try:
-            debug_print("Reading tables from HTML")
+            debug_print("Reading tables from saved HTML")
             dfs = pd.read_html(file_path)
             os.remove(file_path)
-
             if not dfs:
                 debug_print("No tables found in HTML (Multipass)")
                 return None
 
             df = dfs[0]
-
-            # Rename columns
-            debug_print("Renaming columns")
+            debug_print("Renaming columns for Multipass data")
             df = df.rename(columns={
                 'שם בית עסק': 'location',
                 'סכום טעינת תקציב': 'recharge_amount',
@@ -733,15 +717,12 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 'תאריך': 'transaction_date',
                 'מספר אסמכתא': 'reference_number',
             })
-
-            # Handle missing columns
-            debug_print("Handling missing columns")
+            debug_print("Handling missing numeric columns")
             if 'recharge_amount' not in df.columns:
                 df['recharge_amount'] = 0.0
             if 'usage_amount' not in df.columns:
                 df['usage_amount'] = 0.0
 
-            # Convert transaction date
             debug_print("Converting transaction date")
             df['transaction_date'] = pd.to_datetime(
                 df['transaction_date'],
@@ -749,8 +730,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 errors='coerce'
             )
 
-            # Convert numeric columns
-            debug_print("Converting numeric columns")
+            debug_print("Converting numeric columns to proper format")
             numeric_columns = ['recharge_amount', 'usage_amount']
             for col in numeric_columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
@@ -760,24 +740,19 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             traceback.print_exc()
             return None
 
-    # ----------------------------------------------------------------------
-    # Handling Max scenario
-    # ----------------------------------------------------------------------
+    # -------------------- Handling Max Scenario --------------------
     elif coupon_kind == "Max":
         try:
-            # Use 'with' so Selenium closes automatically
             debug_print("Initializing Selenium for Max")
             with webdriver.Chrome(options=chrome_options) as driver:
                 wait = WebDriverWait(driver, 30)
                 driver.get("https://www.max.co.il/gift-card-transactions/main")
 
                 def safe_find(by, value, timeout=10):
-                    # Try to find an element with a waiting timeout
                     debug_print(f"Searching for element: {by}={value}")
                     return WebDriverWait(driver, timeout).until(EC.visibility_of_element_located((by, value)))
 
-                # Enter card details
-                debug_print("Entering card details")
+                debug_print("Entering card details for Max")
                 card_number_field = safe_find(By.ID, "giftCardNumber")
                 card_number_field.clear()
                 card_number_field.send_keys(coupon_number)
@@ -790,37 +765,25 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 cvv_field.clear()
                 cvv_field.send_keys(cvv)
 
-                # Click continue
-                debug_print("Clicking continue button")
+                debug_print("Clicking continue button for Max")
                 continue_button = wait.until(EC.element_to_be_clickable((By.ID, "continue")))
                 continue_button.click()
 
                 time.sleep(7)
-
-                # Find and extract table
-                debug_print("Locating transaction table")
+                debug_print("Locating transaction table for Max")
                 table = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "mat-table")))
 
                 headers = [header.text.strip() for header in table.find_elements(By.TAG_NAME, "th")]
-                debug_print(f"Table headers: {headers}")
                 rows = []
-
-                # Extract table rows (skip header row)
                 all_rows = table.find_elements(By.TAG_NAME, "tr")
                 for row in all_rows[1:]:
                     cells = [cell.text.strip() for cell in row.find_elements(By.TAG_NAME, "td")]
                     if cells:
                         rows.append(cells)
 
-                debug_print(f"Number of rows extracted: {len(rows)}")
-                debug_print(f"Extracted rows: {rows}")
-
+                debug_print(f"Extracted {len(rows)} rows from Max table")
                 df = pd.DataFrame(rows, columns=headers)
-                debug_print("DataFrame from scraped table:")
-                debug_print(df.head().to_string())
-
-                # Data cleaning and refinement
-                debug_print("Cleaning and refining data")
+                debug_print("Cleaning Max data")
                 if "שולם בתאריך" in df.columns:
                     df["שולם בתאריך"] = pd.to_datetime(df["שולם בתאריך"], format="%d.%m.%Y", errors='coerce')
                 else:
@@ -848,11 +811,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 else:
                     df["יתרה"] = 0.0
 
-                debug_print("DataFrame after cleaning:")
-                debug_print(df.head().to_string())
-
-                # Rename columns
-                debug_print("Renaming columns")
+                debug_print("Renaming columns for Max data")
                 col_map = {
                     "שולם בתאריך": "transaction_date",
                     "שם בית העסק": "location",
@@ -865,8 +824,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     if k in df.columns:
                         df.rename(columns={k: v}, inplace=True)
 
-                # Create usage and recharge amount columns
-                debug_print("Creating usage and recharge amount columns")
+                debug_print("Creating usage_amount and recharge_amount columns for Max data")
                 df["usage_amount"] = df.apply(
                     lambda x: x["amount"] if ("action" in df.columns and "עסקה" in x["action"]) else 0.0,
                     axis=1
@@ -876,60 +834,47 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     axis=1
                 )
 
-                # Add reference number column
-                debug_print("Adding reference number column")
+                debug_print("Adding reference number column for Max data")
                 df["reference_number"] = df.index.map(lambda i: f"max_ref_{int(time.time())}_{i}")
 
-                # Remove unnecessary columns
-                debug_print("Removing unnecessary columns")
+                debug_print("Dropping unnecessary columns for Max data")
                 for col_to_drop in ["action", "notes"]:
                     if col_to_drop in df.columns:
                         df.drop(columns=[col_to_drop], inplace=True)
-
-                debug_print("Final DataFrame before export:")
-                debug_print(df.head().to_string())
-
-                # Export the DataFrame to CSV for debugging purposes
-                export_directory = "automatic_coupon_update/export_csv"
-                os.makedirs(export_directory, exist_ok=True)
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                export_file = os.path.join(export_directory, f"coupon_{coupon_number}_{timestamp}_max.csv")
-                df.to_csv(export_file, index=False, encoding="utf-8-sig")
-                debug_print(f"Exported scraped data to {export_file}")
 
         except Exception as e:
             debug_print(f"An error occurred during Selenium operations (Max): {e}")
             traceback.print_exc()
             return None
 
-    # ----------------------------------------------------------------------
-    # Handling BuyMe scenario
-    # ----------------------------------------------------------------------
+    # -------------------- Handling BuyMe Scenario --------------------
     elif coupon_kind.lower() == "buyme":
         try:
             debug_print("Initializing Selenium for BuyMe")
-            # Ensure webdriver_manager is installed
+            # Import webdriver_manager to manage the Chrome driver
             from webdriver_manager.chrome import ChromeDriverManager
-            # Specific settings for BuyMe
-            # Headless mode can be added if required (e.g., chrome_options.add_argument("--headless"))
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
 
-            # Assume that BuyMe coupon stores the URL in coupon.code (if not, adjust accordingly)
-            url = coupon_number if coupon_number.startswith("http") else "https://buyme.co.il/giftcard/76v3l74ci7l0q?utm_source=email&utm_medium=email&utm_campaign=giftcard_receive"
-            debug_print(f"Opening URL: {url}")
+            # Instead of a hardcoded URL, use the value from the coupon's buyme_coupon_url column
+            if hasattr(coupon, 'buyme_coupon_url') and coupon.buyme_coupon_url:
+                url = coupon.buyme_coupon_url
+            else:
+                url = coupon_number if coupon_number.startswith("http") else "https://buyme.co.il/giftcard/76v3l74ci7l0q?utm_source=email&utm_medium=email&utm_campaign=giftcard_receive"
+
+            debug_print(f"Opening URL for BuyMe: {url}")
             driver.get(url)
             time.sleep(6)
 
-            # Save HTML before clicking – load details (coupon code, expiration date, load amount)
+            # Save the HTML before clicking to load details (coupon code, expiration date, load amount)
             before_click_file = os.path.join(save_directory, f"buyme_before_{coupon_number}.html")
             with open(before_click_file, "w", encoding="utf-8") as f:
                 f.write(driver.page_source)
             debug_print(f"Saved before-click HTML to {before_click_file}")
 
-            # Click the "Where did I redeem" button to get usage details
+            # Click the "Where did I redeem" button to load usage details
             try:
                 where_used_button = driver.find_element(By.XPATH, "//button[contains(text(), 'איפה מימשתי')]")
                 driver.execute_script("arguments[0].click();", where_used_button)
@@ -940,19 +885,18 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 driver.quit()
                 return None
 
-            # Save HTML after clicking – usage details
+            # Save the HTML after clicking (usage details)
             after_click_file = os.path.join(save_directory, f"buyme_after_{coupon_number}.html")
             with open(after_click_file, "w", encoding="utf-8") as f:
                 f.write(driver.page_source)
             debug_print(f"Saved after-click HTML to {after_click_file}")
-
             driver.quit()
 
-            # --- Extract load details (before clicking) ---
+            # Extract load details from the before-click HTML
             with open(before_click_file, "r", encoding="utf-8") as f:
                 before_html = f.read()
 
-            # Extract coupon code (example, may not be used in the table)
+            # Extract coupon code (if available)
             coupon_match = re.search(r'קוד שובר:\s*([\d\s\-]+)', before_html)
             coupon_code_extracted = coupon_match.group(1).strip() if coupon_match else ""
 
@@ -969,7 +913,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             else:
                 validity_formatted = ""
 
-            # Set load date as 5 years before expiration date (including hours)
+            # Calculate load date as 5 years before expiration date
             if validity:
                 try:
                     load_date = (validity_date - pd.DateOffset(years=5)).strftime("%Y-%m-%d %H:%M:%S")
@@ -979,27 +923,23 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             else:
                 load_date = ""
 
-            # Extract load amount – based on the '₪' symbol (can include decimals)
+            # Extract load amount based on the '₪' symbol
             load_amount_match = re.search(r'<div class="voucher-card__content__amount">₪<span>(\d+(?:\.\d+)?)</span></div>', before_html)
             load_amount_str = load_amount_match.group(1).strip() if load_amount_match else ""
             load_amount = float(load_amount_str) if load_amount_str else 0.0
 
-            # Extract load business name
+            # Extract business name from before-click HTML
             load_business_match = re.search(r'<div class="voucher-card__content__title string-to-html-element">(.*?)</div>', before_html)
             load_business = load_business_match.group(1).strip() if load_business_match else ""
 
-            # --- Extract usage details (after clicking) ---
+            # Extract usage details from the after-click HTML
             with open(after_click_file, "r", encoding="utf-8") as f:
                 after_html = f.read()
 
-            # Extract usage dates – format dd.mm.yy, HH:MM
             redeemed_dates = re.findall(r'<p class="redeem-history-item__info__date">([\d\.,:\s]+)</p>', after_html)
-            # Extract business names for usage
             redeemed_places = re.findall(r'<p class="redeem-history-item__info__title">(.*?)</p>', after_html)
-            # Extract usage amounts (including decimals)
             usage_amounts = re.findall(r'<p class="redeem-history-item__info__amount">₪\s*(\d+(?:\.\d+)?)</p>', after_html)
 
-            # Build list of transactions with columns: transaction_date, location, recharge_amount, usage_amount
             transactions = []
             for date_str, place, amount_str in zip(redeemed_dates, redeemed_places, usage_amounts):
                 try:
@@ -1016,7 +956,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     "usage_amount": usage_amt
                 })
 
-            # Add load transaction row – recharge_amount is the load amount, usage_amount is 0
+            # Add a load transaction row (recharge_amount is the load amount)
             if load_date and load_business:
                 transactions.append({
                     "transaction_date": load_date,
@@ -1025,47 +965,32 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     "usage_amount": 0.0
                 })
 
-            # Convert list to a DataFrame with the desired column order
+            # Convert the transactions list to a DataFrame with defined column order
             df = pd.DataFrame(transactions, columns=["transaction_date", "location", "recharge_amount", "usage_amount"])
-
-            # ------------------------------------------------------------------
-            # Adding additional columns for consistency with the Max branch
-            # ------------------------------------------------------------------
-            # Calculate 'amount': for recharge rows, amount is negative recharge_amount; for usage rows, amount equals usage_amount.
+            # Add additional columns for consistency with the Max branch
             df["amount"] = df.apply(lambda row: -row["recharge_amount"] if row["recharge_amount"] > 0 else row["usage_amount"], axis=1)
-            # Set 'balance' column to 0.0 as a placeholder (since BuyMe does not provide this info)
             df["balance"] = 0.0
-            # Create 'reference_number' column similar to the Max branch
             df["reference_number"] = df.index.map(lambda i: f"max_ref_{int(time.time())}_{i}")
 
-            # Delete temporary files
+            # Delete temporary HTML files
             if os.path.exists(before_click_file):
                 os.remove(before_click_file)
             if os.path.exists(after_click_file):
                 os.remove(after_click_file)
-            df.to_excel("df.xlsx", index=False)
-            debug_print(f"BuyMe extraction completed for coupon {coupon_number}")
-            # Do not return here so that the common DB update stage can process df
+
         except Exception as e:
-            debug_print(f"Error in BuyMe extraction: {e}")
+            debug_print(f"An error occurred during Selenium operations (BuyMe): {e}")
+            traceback.print_exc()
             return None
 
+    # -------------------- Unsupported Coupon Type --------------------
     else:
-        # If there's another scenario that is neither Multipass, Max, nor BuyMe
         debug_print(f"Unsupported coupon kind: {coupon_kind}")
         return None
 
-    # At this point, we should have a df ready
-    if df is None or df.empty:
-        debug_print("No data frame (df) was created or df is empty.")
-        return None
-
-    # ----------------------------------------------------------------------
-    # Common stage - check data against DB and update
-    # ----------------------------------------------------------------------
+    # -------------------- Common Stage: Database Comparison and Update --------------------
     try:
-        # Retrieve existing data from DB (reference_number only)
-        debug_print("Retrieving existing data from database")
+        debug_print("Retrieving existing transactions from the database")
         existing_data = pd.read_sql_query(
             """
             SELECT reference_number
@@ -1076,19 +1001,15 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             params={"coupon_id": coupon.id}
         )
 
-        # Check if number of rows in DB is different from new rows
-        # If so (in case there are > 0 rows in DB) - delete and re-insert
-        debug_print("Checking existing database entries")
+        debug_print("Checking if database entries differ from scraped data")
         if len(existing_data) != len(df):
             if len(existing_data) > 0:
-                debug_print("Different number of entries, deleting existing entries")
+                debug_print("Existing entries differ in number, deleting current records")
                 db.session.execute(
                     text("DELETE FROM coupon_transaction WHERE coupon_id = :coupon_id"),
                     {"coupon_id": coupon.id}
                 )
                 db.session.commit()
-
-                # Update after deletion
                 existing_data = pd.read_sql_query(
                     """
                     SELECT reference_number
@@ -1100,19 +1021,14 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 )
 
         existing_refs = set(existing_data['reference_number'].astype(str))
-
-        # Convert reference_number to string for correct comparison
         df['reference_number'] = df['reference_number'].astype(str)
-
-        # Filter out existing records
         df_new = df[~df['reference_number'].isin(existing_refs)]
 
         if df_new.empty:
             debug_print("No new transactions to add (all references already exist in DB).")
             return None
 
-        # Add new records to coupon_transaction table
-        debug_print(f"Adding {len(df_new)} new transactions")
+        debug_print(f"Adding {len(df_new)} new transactions to the database")
         for idx, row in df_new.iterrows():
             transaction = CouponTransaction(
                 coupon_id=coupon.id,
@@ -1124,26 +1040,20 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             )
             db.session.add(transaction)
 
-        # Update total actual usage
-        debug_print("Calculating total used value")
-        total_used = db.session.query(func.sum(CouponTransaction.usage_amount)) \
-                         .filter_by(coupon_id=coupon.id).scalar() or 0.0
+        debug_print("Calculating total used value from transactions")
+        total_used = db.session.query(func.sum(CouponTransaction.usage_amount)).filter_by(coupon_id=coupon.id).scalar() or 0.0
         coupon.used_value = float(total_used)
-
-        # Call status update function
         debug_print("Updating coupon status")
         update_coupon_status(coupon)
-
         db.session.commit()
 
         debug_print(f"Transactions for coupon {coupon.code} have been updated in the database.")
-        return df_new  # Return new transactions
+        return df_new
     except Exception as e:
-        debug_print(f"An error occurred during data parsing or database operations: {e}")
+        debug_print(f"An error occurred during database operations: {e}")
         traceback.print_exc()
         db.session.rollback()
         return None
-
 
 
 def convert_coupon_data(file_path):
@@ -1805,6 +1715,9 @@ def update_coupon_status(coupon):
         logger.error(f"Error in update_coupon_status for coupon {coupon.id}: {e}")
 
 
+DEBUG_PRINT = True  # Set to True to enable debug prints, False to disable
+
+
 def process_coupons_excel(file_path, user):
     """
     Processes an Excel file containing coupon data and adds the coupons to the database.
@@ -1826,13 +1739,11 @@ def process_coupons_excel(file_path, user):
     from sqlalchemy.exc import IntegrityError
 
     try:
-        # במקום להשתמש ב-parse_dates=["תאריך תפוגה"] (שעלול להחזיר NaT),
-        # נקרא כטקסט ונמיר ידנית (אם קיים).
-        df = pd.read_excel(file_path, dtype=str)  # קורא את כל העמודות כמחרוזות
-        # אם בכל זאת אתה רוצה לקרוא את חלק מהשדות כמספרים, אפשר אח"כ להמיר אותם.
-        # כאן, לקריאה פשוטה, נשתמש במחרוזות בלבד.
+        # Read the Excel file with dtype as string to avoid NaT or unwanted type issues
+        df = pd.read_excel(file_path, dtype=str)
 
-        existing_tags = {tag.name: tag for tag in Tag.query.all()}  # טעינת תגיות קיימות
+        # Load existing tags from the database (cache them in a dict by name)
+        existing_tags = {tag.name: tag for tag in Tag.query.all()}
         cache_tags = existing_tags.copy()
 
         invalid_coupons = []
@@ -1841,20 +1752,24 @@ def process_coupons_excel(file_path, user):
 
         for index, row in df.iterrows():
             try:
-                # 1. קריאת הנתונים מהשדות (במחרוזת).
+                # Reading the coupon data from the row (as strings)
                 code = str(row.get('קוד קופון', '')).strip()
-                value_str = row.get('ערך מקורי', '')  # מחרוזת
-                cost_str = row.get('עלות', '')  # מחרוזת
+                value_str = row.get('ערך מקורי', '')  # String
+                cost_str = row.get('עלות', '')       # String
                 company_name = str(row.get('חברה', '')).strip()
                 description = row.get('תיאור', '') or ''
                 date_str = row.get('תאריך תפוגה', '') or ''
 
-                # 2. קריאה של שדות בוליאניים/טקסט נוספים (אם יש).
-                one_time_str = row.get('קוד לשימוש חד פעמי', 'False')  # אם לא קיים, ברירת מחדל False
+                # Reading additional fields
+                one_time_str = row.get('קוד לשימוש חד פעמי', 'False')  # Default to 'False' if not present
                 purpose = row.get('מטרת הקופון', '') or ''
                 tags_field = row.get('תגיות', '') or ''
 
-                # 3. בדיקת ערכים חסרים
+                # *** שדות חדשים (החלף למפתחי-העמודה הנכונים כפי שיש לך באקסל, אם השמות שונים) ***
+                source_val = row.get('מאיפה קיבלת את הקופון', '') or ''
+                buyme_url_val = row.get('כתובת URL של הקופון ל-BuyMe', '') or ''
+
+                # Check for missing fields
                 missing_fields = []
                 if not code:
                     missing_fields.append('קוד קופון')
@@ -1871,9 +1786,12 @@ def process_coupons_excel(file_path, user):
                     )
                     continue
 
-                # 4. המרת value ו-cost למספרים (אם לא ניתנים להמרה, תופס ValueError)
+                # Try to convert value and cost to floats
                 try:
-                    value = float(value_str)
+                    # Ensure value_str is stripped if it is a string
+                    if isinstance(value_str, str):
+                        value_str = value_str.strip()
+                    value = float(value_str) if value_str else 0.0
                 except ValueError:
                     invalid_coupons.append(
                         f'שורה {index + 2}: ערך מקורי אינו מספר תקין ({value_str}).'
@@ -1881,26 +1799,22 @@ def process_coupons_excel(file_path, user):
                     continue
 
                 try:
-                    cost = float(cost_str)
+                    # Ensure cost_str is stripped if it is a string
+                    if isinstance(cost_str, str):
+                        cost_str = cost_str.strip()
+                    cost = float(cost_str) if cost_str else 0.0
                 except ValueError:
                     invalid_coupons.append(
                         f'שורה {index + 2}: עלות אינה מספר תקין ({cost_str}).'
                     )
                     continue
 
-                # 5. המרת תאריך תפוגה
-                # === זהו החלק הקריטי לתיקון "strptime() argument 1 must be str, not NaTType" ===
-                # אם date_str ריק => expiration = None
-                # אם לא ריק => ננסה פרסינג בפורמט אחר (כמו %d/%m/%Y או %Y-%m-%d).
+                # Parse expiration date
                 try:
                     if not date_str.strip():
-                        # לא הוזן תאריך, פשוט נגדיר None
                         expiration = None
                     else:
-                        # כן הוזן ערך => ננסה להמיר
-                        # אפשר לנסות קודם %Y-%m-%d, ואם נכשל - %d/%m/%Y, וכו'.
                         expiration = None
-                        # ננסה מערך פורמטים רלוונטיים
                         possible_formats = ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y']
                         for fmt in possible_formats:
                             try:
@@ -1910,8 +1824,6 @@ def process_coupons_excel(file_path, user):
                             except ValueError:
                                 pass
                         if expiration is None:
-                            # לא הצלחנו להמיר => נתייחס כאל אין תאריך
-                            # או אם אתה רוצה לציין בשגיאה => תלוי בך.
                             missing_optional_fields_messages.append(
                                 f'שורה {index + 2}: תאריך תפוגה בפורמט לא תקין (הוזן "{date_str}"). הוגדר כ-None.'
                             )
@@ -1919,51 +1831,42 @@ def process_coupons_excel(file_path, user):
                 except Exception as e:
                     expiration = None
 
-                # 🟡 אם תאריך התפוגה הוא היום או תאריך שחלף - נוסיף אזהרה, אך עדיין נוסיף את הקופון למערכת 🟡
-                if expiration and expiration <= datetime.today().date():
-                    missing_optional_fields_messages.append(
-                        f'שורה {index + 2}: תאריך התפוגה של הקופון הוא היום או תאריך שחלף ({expiration}). '
-                        f'הקופון נכנס למערכת אך מוגדר כ"פג תוקף". '
-                        f'אם ברצונך לשנות את הסטטוס שלו, ניתן לערוך אותו ממסך "קופונים שנוצלו והלא פעילים".'
-                    )
-
-                # 6. המרת one_time_str לבוליאני
+                # Handle one_time as a boolean
                 is_one_time = False
                 if isinstance(one_time_str, bool):
                     is_one_time = one_time_str
                 else:
-                    # ננסה לראות אם זה "True"/"False" או "1"/"0"
                     lower_str = one_time_str.lower().strip()
                     if lower_str in ['true', '1', 'כן']:
                         is_one_time = True
                     else:
                         is_one_time = False
 
-                # 7. טיפול בחברה: אם לא קיימת, ניצור
-                from app.models import Company
+                # Handle the company: create it if it doesn't exist
                 company = Company.query.filter_by(name=company_name).first()
                 if not company:
                     company = Company(name=company_name, image_path="default_logo.png")
                     db.session.add(company)
 
-                # 8. מציאת / יצירת תגית אוטומטית (כמו שעשינו בעבר)
-                from app.models import Tag, coupon_tags, Coupon
-                most_common_tag = db.session.query(Tag) \
-                    .join(coupon_tags, Tag.id == coupon_tags.c.tag_id) \
-                    .join(Coupon, Coupon.id == coupon_tags.c.coupon_id) \
-                    .filter(func.lower(Coupon.company) == func.lower(company_name)) \
-                    .group_by(Tag.id) \
-                    .order_by(func.count(Tag.id).desc()) \
+                # Handle tags: find the most common tag or create a new one
+                most_common_tag = (
+                    db.session.query(Tag)
+                    .join(coupon_tags, Tag.id == coupon_tags.c.tag_id)
+                    .join(Coupon, Coupon.id == coupon_tags.c.coupon_id)
+                    .filter(func.lower(Coupon.company) == func.lower(company_name))
+                    .group_by(Tag.id)
+                    .order_by(func.count(Tag.id).desc())
                     .first()
+                )
+
                 if not most_common_tag:
-                    # אם לא נמצאה תגית, ניצור אחת עם שם גנרי
                     tag_name_for_company = f"Tag for {company_name}"
                     most_common_tag = Tag(name=tag_name_for_company, count=1)
                     db.session.add(most_common_tag)
                 else:
                     most_common_tag.count += 1
 
-                # 9. יצירת הקופון ושמירתו
+                # Create the coupon and add it to the session
                 new_coupon = Coupon(
                     code=code,
                     value=value,
@@ -1972,11 +1875,12 @@ def process_coupons_excel(file_path, user):
                     description=str(description),
                     expiration=expiration,
                     user_id=user.id,
-                    status='פעיל',  # ברירת מחדל
+                    status='פעיל',  # Default status
                     is_one_time=is_one_time,
-                    purpose=purpose
+                    purpose=purpose,
+                    source=source_val,                # הערך החדש
+                    buyme_coupon_url=buyme_url_val    # הערך החדש
                 )
-                # מוסיפים את התגית
                 new_coupon.tags.append(most_common_tag)
                 db.session.add(new_coupon)
                 new_coupons.append(new_coupon)
@@ -1984,21 +1888,29 @@ def process_coupons_excel(file_path, user):
             except Exception as e:
                 invalid_coupons.append(f'שורה {index + 2}: {str(e)}')
 
-        # שמירת כל הנתונים למסד
+        # Commit all changes to the database
         db.session.commit()
 
-        # מחיקת הקובץ לאחר עיבוד
+        # Remove the processed file
         os.remove(file_path)
 
-        # Flash Messages
+        # Flash messages
         if new_coupons:
             flash(f"הקופונים הבאים נטענו בהצלחה: {[coupon.code for coupon in new_coupons]}", "success")
 
         if invalid_coupons:
-            flash(f"טעינת הקופונים נכשלה עבור השורות הבאות:<br>{'<br>'.join(invalid_coupons)}", "danger")
+            flash(
+                "טעינת הקופונים נכשלה עבור השורות הבאות:<br>"
+                + "<br>".join(invalid_coupons),
+                "danger"
+            )
 
         if missing_optional_fields_messages:
-            flash(f"הערות בנוגע לשדות אופציונליים:<br>{'<br>'.join(missing_optional_fields_messages)}", "warning")
+            flash(
+                "הערות בנוגע לשדות אופציונליים:<br>"
+                + "<br>".join(missing_optional_fields_messages),
+                "warning"
+            )
 
         return invalid_coupons, missing_optional_fields_messages, new_coupons
 

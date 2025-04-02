@@ -1,88 +1,1545 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="admin-tags">
-    <h2 class="page-title">ניהול תגיות (Admin)</h2>
+<section class="tm-admin-tags">
+    <h2 class="tm-page-title">ניהול תגיות (Admin)</h2>
 
-    <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'manage-tags')">הוספת תגית</button>
-        <button class="tab-button" onclick="openTab(event, 'tags-list')">רשימת תגיות</button>
+    <div class="tm-tabs-container">
+        <div class="tm-tabs">
+            <button class="tm-tab-button tm-active" data-tab="manage-tags">
+                <i class="fas fa-plus-circle"></i> הוספת תגית
+            </button>
+            <button class="tm-tab-button" data-tab="tags-list">
+                <i class="fas fa-tags"></i> רשימת תגיות
+                <span class="tm-tag-count-badge">{{ tags|length }}</span>
+            </button>
+        </div>
+        <div class="tm-tabs-slider">
+            <div class="tm-tabs-slider-indicator"></div>
+        </div>
     </div>
 
-    <div id="manage-tags" class="tab-content active">
-        <h3 class="section-title">הוספת תגית חדשה</h3>
-        <div class="form-container">
-            <form method="POST">
-                {{ form.hidden_tag() }}
-                <div class="form-group">
-                    {{ form.name.label(class="form-label") }}
-                    {{ form.name(class="input-field", placeholder="הקלד שם תגית...") }}
-                    {% for error in form.name.errors %}
-                        <div class="error-message">{{ error }}</div>
-                    {% endfor %}
+    <div id="manage-tags" class="tm-tab-content tm-active">
+        <div class="tm-content-card">
+            <h3 class="tm-section-title">
+                <i class="fas fa-plus"></i> הוספת תגית חדשה
+            </h3>
+            <div class="tm-form-container">
+                <form method="POST" class="tm-animated-form">
+                    {{ form.hidden_tag() }}
+                    <div class="tm-form-group">
+                        {{ form.name.label(class="tm-form-label") }}
+                        <div class="tm-input-with-icon">
+                            <i class="fas fa-tag tm-input-icon"></i>
+                            {{ form.name(class="tm-input-field", placeholder="הקלד שם תגית...", autocomplete="off") }}
+                        </div>
+                        {% for error in form.name.errors %}
+                            <div class="tm-error-message">
+                                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="tm-form-actions">
+                        {{ form.submit(class="tm-action-button tm-pulse-button") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="tags-list" class="tm-tab-content">
+        <div class="tm-content-card">
+            <h3 class="tm-section-title">
+                <i class="fas fa-list"></i> רשימת תגיות קיימות
+            </h3>
+            <div class="tm-search-container">
+                <div class="tm-input-with-icon">
+                    <i class="fas fa-search tm-input-icon"></i>
+                    <input type="text" id="tagSearchInput" class="tm-input-field" placeholder="חיפוש תגיות...">
                 </div>
-                <div class="form-actions">
-                    {{ form.submit(class="action-button") }}
+            </div>
+            <div class="tm-table-responsive">
+                <table class="tm-tag-management-table">
+                    <thead>
+                        <tr>
+                            <th class="tm-sortable" data-sort="id">
+                                <span>מזהה</span>
+                                <i class="fas fa-sort"></i>
+                            </th>
+                            <th class="tm-sortable" data-sort="name">
+                                <span>שם תגית</span>
+                                <i class="fas fa-sort"></i>
+                            </th>
+                            <th class="tm-sortable" data-sort="count">
+                                <span>ספירת שימוש</span>
+                                <i class="fas fa-sort"></i>
+                            </th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tagsTableBody">
+                    {% for tag in tags %}
+                        <tr data-tag-id="{{ tag.id }}" class="tm-table-row-fade">
+                            <td>{{ tag.id }}</td>
+                            <td>{{ tag.name }}</td>
+                            <td>
+                                <div class="tm-count-badge" data-count="{{ tag.count }}">
+                                    {{ tag.count }}
+                                </div>
+                            </td>
+                            <td class="tm-actions-column">
+                                <div class="tm-action-buttons">
+                                    <!-- עריכה -->
+                                    <button type="button" class="tm-action-button tm-edit-button tm-tooltip"
+                                            onclick="openEditModal({{ tag.id }}, '{{ tag.name }}')">
+                                        <i class="fas fa-edit"></i>
+                                        <span class="tm-tooltip-text">עריכת שם תגית</span>
+                                    </button>
+
+                                    <!-- העברת קופונים -->
+                                    {% if tag.count > 0 %}
+                                    <button type="button" class="tm-action-button tm-transfer-button tm-tooltip"
+                                            onclick="openTransferModal({{ tag.id }}, '{{ tag.name }}')">
+                                        <i class="fas fa-exchange-alt"></i>
+                                        <span class="tm-tooltip-text">העברת קופונים</span>
+                                    </button>
+                                    {% else %}
+                                    <button type="button" class="tm-action-button tm-transfer-button tm-tooltip tm-disabled">
+                                        <i class="fas fa-exchange-alt"></i>
+                                        <span class="tm-tooltip-text">אין קופונים להעברה</span>
+                                    </button>
+                                    {% endif %}
+
+                                    <!-- מחיקה -->
+                                    <form method="POST" action="{{ url_for('admin_tags_bp.delete_tag', tag_id=tag.id) }}"
+                                          onsubmit="return confirmDelete(event, '{{ tag.name }}');"
+                                          style="display: inline;">
+                                        {{ delete_form.hidden_tag() }}
+                                        <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                                        <button type="submit" class="tm-action-button tm-delete-button tm-tooltip">
+                                            <i class="fas fa-trash-alt"></i>
+                                            <span class="tm-tooltip-text">מחיקת תגית</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <div id="noTagsMessage" class="tm-no-data-message" style="display: none;">
+                    <i class="fas fa-search"></i>
+                    <p>לא נמצאו תגיות התואמות לחיפוש</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal Container -->
+<div class="tm-modal-backdrop" id="modalBackdrop"></div>
+
+<!-- מודל לעריכת שם תגית -->
+<div id="editTagModal" class="tm-modal">
+    <div class="tm-modal-content">
+        <div class="tm-modal-header">
+            <h3>
+                <i class="fas fa-edit"></i> עריכת שם תגית
+            </h3>
+            <button class="tm-close-button" onclick="closeEditModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="tm-modal-body">
+            <form id="editTagForm" method="POST" action="" class="tm-animated-form">
+                {{ edit_form.hidden_tag() }}
+                <div class="tm-form-group">
+                    {{ edit_form.name.label(class="tm-form-label") }}
+                    <div class="tm-input-with-icon">
+                        <i class="fas fa-tag tm-input-icon"></i>
+                        {{ edit_form.name(class="tm-input-field", autocomplete="off") }}
+                    </div>
+                </div>
+                <div class="tm-form-actions">
+                    {{ edit_form.submit(class="tm-action-button") }}
+                    <button type="button" class="tm-action-button tm-secondary" onclick="closeEditModal()">
+                        <i class="fas fa-times"></i> ביטול
+                    </button>
                 </div>
             </form>
         </div>
     </div>
+</div>
 
-    <div id="tags-list" class="tab-content">
-        <h3 class="section-title">רשימת תגיות קיימות</h3>
-        <div class="table-responsive">
-            <table class="table tag-management-table">
-                <thead>
-                    <tr>
-                        <th>מזהה</th>
-                        <th>שם תגית</th>
-                        <th>ספירת שימוש</th>
-                        <th>פעולות</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for tag in tags %}
-                    <tr>
-                        <td>{{ tag.id }}</td>
-                        <td>{{ tag.name }}</td>
-                        <td>{{ tag.count }}</td>
-                        <td>
-                            <form method="POST" action="{{ url_for('admin_tags_bp.delete_tag', tag_id=tag.id) }}" onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את התגית הזו?');">
-                                {{ delete_form.hidden_tag() }}
-                                <input type="hidden" name="tag_id" value="{{ tag.id }}">
-                                {{ delete_form.submit(class="action-button danger small-button") }}
-                            </form>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+<!-- מודל להעברת קופונים -->
+<div id="transferModal" class="tm-modal">
+    <div class="tm-modal-content">
+        <div class="tm-modal-header">
+            <h3>
+                <i class="fas fa-exchange-alt"></i> העברת קופונים לתגית אחרת
+            </h3>
+            <button class="tm-close-button" onclick="closeTransferModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="tm-modal-body">
+            <p id="transferDescription" class="tm-transfer-description"></p>
+            <form id="transferForm" method="POST" action="" class="tm-animated-form">
+                {{ transfer_form.hidden_tag() }}
+                {{ transfer_form.source_tag_id }}
+                <div class="tm-form-group">
+                    {{ transfer_form.target_tag_id.label(class="tm-form-label") }}
+                    <div class="tm-select-wrapper">
+                        <i class="fas fa-tag tm-input-icon"></i>
+                        {{ transfer_form.target_tag_id(class="tm-select-field") }}
+                        <i class="fas fa-chevron-down tm-select-arrow"></i>
+                    </div>
+                </div>
+                <div class="tm-form-actions">
+                    {{ transfer_form.submit(class="tm-action-button") }}
+                    <button type="button" class="tm-action-button tm-secondary" onclick="closeTransferModal()">
+                        <i class="fas fa-times"></i> ביטול
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
-</section>
+</div>
+
+<!-- מודל לאישור מחיקה -->
+<div id="deleteConfirmModal" class="tm-modal">
+    <div class="tm-modal-content">
+        <div class="tm-modal-header">
+            <h3>
+                <i class="fas fa-exclamation-triangle"></i> אישור מחיקה
+            </h3>
+            <button class="tm-close-button" onclick="closeDeleteConfirmModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="tm-modal-body">
+            <p id="deleteConfirmMessage" class="tm-confirm-message"></p>
+            <div class="tm-form-actions tm-centered">
+                <button id="confirmDeleteButton" class="tm-action-button tm-danger">
+                    <i class="fas fa-trash-alt"></i> כן, מחק
+                </button>
+                <button class="tm-action-button tm-secondary" onclick="closeDeleteConfirmModal()">
+                    <i class="fas fa-times"></i> ביטול
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Container -->
+<div class="tm-notification-container"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function openTab(evt, tabName) {
-        var tabContents = document.getElementsByClassName("tab-content");
-        for (var i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
+    // ====== Tab Management ======
+    document.addEventListener("DOMContentLoaded", function() {
+        // Initialize tabs
+        initTabs();
+
+        // Initialize table sorting
+        initTableSorting();
+
+        // Initialize search functionality
+        initSearch();
+
+        // Initialize count badge coloring
+        initCountBadges();
+
+        // Fade in table rows with delay
+        animateTableRows();
+
+        // Add form animations
+        initFormAnimations();
+
+        // Add notifications system
+        initNotifications();
+    });
+
+    function initTabs() {
+        const tabButtons = document.querySelectorAll('.tm-tab-button');
+        const slider = document.querySelector('.tm-tabs-slider-indicator');
+        const activeTab = document.querySelector('.tm-tab-button.tm-active');
+
+        // Position the slider under the active tab on load
+        if (activeTab) {
+            updateSliderPosition(activeTab);
         }
-        var tabButtons = document.getElementsByClassName("tab-button");
-        for (var i = 0; i < tabButtons.length; i++) {
-            tabButtons[i].classList.remove("active");
-        }
-        document.getElementById(tabName).classList.add("active");
-        evt.currentTarget.classList.add("active");
+
+        // Add click events to tab buttons
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                // Remove active class from all tabs
+                tabButtons.forEach(btn => btn.classList.remove('tm-active'));
+
+                // Add active class to clicked tab
+                this.classList.add('tm-active');
+
+                // Update the slider position
+                updateSliderPosition(this);
+
+                // Show the corresponding tab content
+                const tabName = this.getAttribute('data-tab');
+                const tabContents = document.querySelectorAll('.tm-tab-content');
+
+                tabContents.forEach(content => {
+                    content.classList.remove('tm-active');
+                });
+
+                document.getElementById(tabName).classList.add('tm-active');
+            });
+        });
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
-        var defaultTab = document.querySelector(".tab-button.active");
-        if (defaultTab) {
-            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
-            document.getElementById(tabName).classList.add("active");
+    function updateSliderPosition(activeTab) {
+        const slider = document.querySelector('.tm-tabs-slider-indicator');
+
+        // Position the slider under the active tab with a smooth animation
+        slider.style.width = `${activeTab.offsetWidth}px`;
+        slider.style.right = `${activeTab.offsetLeft}px`; // שינוי מ-left ל-right לתמיכה ב-RTL
+    }
+
+    // ====== Table Functions ======
+    function initTableSorting() {
+        const sortableHeaders = document.querySelectorAll('.tm-sortable');
+
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const sortField = this.getAttribute('data-sort');
+                const sortDirection = this.classList.contains('tm-asc') ? 'tm-desc' : 'tm-asc';
+
+                // Remove sort classes from all headers
+                sortableHeaders.forEach(h => {
+                    h.classList.remove('tm-asc', 'tm-desc');
+                    h.querySelector('i.fas').className = 'fas fa-sort';
+                });
+
+                // Add sort class to current header
+                this.classList.add(sortDirection);
+                this.querySelector('i.fas').className = `fas fa-sort-${sortDirection === 'tm-asc' ? 'up' : 'down'}`;
+
+                // Sort the table
+                sortTable(sortField, sortDirection);
+            });
+        });
+    }
+
+    function sortTable(field, direction) {
+        const tableBody = document.getElementById('tagsTableBody');
+        const rows = Array.from(tableBody.querySelectorAll('tr'));
+
+        // Sort rows
+        rows.sort((a, b) => {
+            let aValue, bValue;
+
+            if (field === 'id' || field === 'count') {
+                // Numeric sort
+                aValue = parseInt(a.cells[field === 'id' ? 0 : 2].textContent.trim());
+                bValue = parseInt(b.cells[field === 'id' ? 0 : 2].textContent.trim());
+            } else {
+                // Text sort
+                aValue = a.cells[1].textContent.trim();
+                bValue = b.cells[1].textContent.trim();
+            }
+
+            return direction === 'tm-asc' ?
+                   (aValue > bValue ? 1 : -1) :
+                   (aValue < bValue ? 1 : -1);
+        });
+
+        // Remove existing rows
+        while (tableBody.firstChild) {
+            tableBody.removeChild(tableBody.firstChild);
+        }
+
+        // Add sorted rows
+        rows.forEach(row => {
+            tableBody.appendChild(row);
+        });
+
+        // Re-apply animation
+        animateTableRows();
+    }
+
+    function initSearch() {
+        const searchInput = document.getElementById('tagSearchInput');
+
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#tagsTableBody tr');
+            let visibleRows = 0;
+
+            rows.forEach(row => {
+                const tagName = row.cells[1].textContent.toLowerCase();
+                const tagId = row.cells[0].textContent;
+
+                if (tagName.includes(searchTerm) || tagId.includes(searchTerm)) {
+                    row.style.display = '';
+                    visibleRows++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Show or hide the "no results" message
+            document.getElementById('noTagsMessage').style.display =
+                visibleRows === 0 ? 'flex' : 'none';
+        });
+    }
+
+    function initCountBadges() {
+        const countBadges = document.querySelectorAll('.tm-count-badge');
+
+        countBadges.forEach(badge => {
+            const count = parseInt(badge.getAttribute('data-count'));
+
+            if (count === 0) {
+                badge.classList.add('tm-empty');
+            } else if (count < 5) {
+                badge.classList.add('tm-low');
+            } else if (count < 10) {
+                badge.classList.add('tm-medium');
+            } else {
+                badge.classList.add('tm-high');
+            }
+        });
+    }
+
+    function animateTableRows() {
+        const rows = document.querySelectorAll('#tagsTableBody tr');
+
+        rows.forEach((row, index) => {
+            // Reset animation
+            row.style.opacity = 0;
+
+            // Apply animation with delay based on index
+            setTimeout(() => {
+                row.style.opacity = 1;
+            }, 50 * index);
+        });
+    }
+
+    // ====== Modal Functions ======
+    function openEditModal(tagId, tagName) {
+        document.getElementById("editTagForm").action = "/admin/tags/edit/" + tagId;
+        document.getElementById("editTagForm").querySelector("input[name='name']").value = tagName;
+
+        document.getElementById("editTagModal").classList.add('tm-active');
+        document.getElementById("modalBackdrop").classList.add('tm-active');
+
+        // Add animation class
+        setTimeout(() => {
+            document.getElementById("editTagModal").classList.add('tm-visible');
+        }, 10);
+    }
+
+    function closeEditModal() {
+        const modal = document.getElementById("editTagModal");
+        modal.classList.remove('tm-visible');
+
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+            modal.classList.remove('tm-active');
+            document.getElementById("modalBackdrop").classList.remove('tm-active');
+        }, 300);
+    }
+
+    function openTransferModal(tagId, tagName) {
+        document.getElementById("transferForm").action = "/admin/tags/transfer/" + tagId;
+        document.getElementById("transferForm").querySelector("input[name='source_tag_id']").value = tagId;
+
+        // Filter out the current tag from the dropdown
+        const dropdown = document.getElementById("transferForm").querySelector("select[name='target_tag_id']");
+        for (let i = 0; i < dropdown.options.length; i++) {
+            if (dropdown.options[i].value == tagId) {
+                dropdown.options[i].disabled = true;
+            } else {
+                dropdown.options[i].disabled = false;
+            }
+        }
+
+        document.getElementById("transferDescription").innerHTML =
+            `<i class="fas fa-info-circle"></i> העברת כל הקופונים מהתגית '<strong>${tagName}</strong>' לתגית אחרת`;
+
+        document.getElementById("transferModal").classList.add('tm-active');
+        document.getElementById("modalBackdrop").classList.add('tm-active');
+
+        // Add animation class
+        setTimeout(() => {
+            document.getElementById("transferModal").classList.add('tm-visible');
+        }, 10);
+    }
+
+    function closeTransferModal() {
+        const modal = document.getElementById("transferModal");
+        modal.classList.remove('tm-visible');
+
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+            modal.classList.remove('tm-active');
+            document.getElementById("modalBackdrop").classList.remove('tm-active');
+        }, 300);
+    }
+
+    function confirmDelete(event, tagName) {
+        event.preventDefault();
+        const form = event.target;
+
+        // Setup delete confirmation modal
+        document.getElementById("deleteConfirmMessage").innerHTML =
+            `האם אתה בטוח שברצונך למחוק את התגית '<strong>${tagName}</strong>'?<br>
+            <small class="tm-warning-text">פעולה זו אינה ניתנת לביטול.</small>`;
+
+        // Set up the confirm button to submit the form
+        document.getElementById("confirmDeleteButton").onclick = function() {
+            form.submit();
+        };
+
+        // Show the modal
+        document.getElementById("deleteConfirmModal").classList.add('tm-active');
+        document.getElementById("modalBackdrop").classList.add('tm-active');
+
+        setTimeout(() => {
+            document.getElementById("deleteConfirmModal").classList.add('tm-visible');
+        }, 10);
+
+        return false;
+    }
+
+    function closeDeleteConfirmModal() {
+        const modal = document.getElementById("deleteConfirmModal");
+        modal.classList.remove('tm-visible');
+
+        setTimeout(() => {
+            modal.classList.remove('tm-active');
+            document.getElementById("modalBackdrop").classList.remove('tm-active');
+        }, 300);
+    }
+
+    // Additional Functions
+    function initFormAnimations() {
+        // Add focus effects for inputs
+        const inputs = document.querySelectorAll('.tm-input-field, .tm-select-field');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('tm-focused');
+            });
+
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('tm-focused');
+            });
+        });
+
+        // Animate form submission
+        const forms = document.querySelectorAll('form.tm-animated-form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(event) {
+                // Prevent immediate submission
+                if (!this.classList.contains('tm-submitted')) {
+                    event.preventDefault();
+                    this.classList.add('tm-submitted');
+
+                    // Create a loading animation
+                    const submitBtn = this.querySelector('input[type="submit"], button[type="submit"]');
+                    const originalText = submitBtn.value || submitBtn.textContent;
+                    const loadingSpinner = document.createElement('span');
+                    loadingSpinner.className = 'tm-loading-spinner';
+
+                    if (submitBtn.tagName === 'INPUT') {
+                        submitBtn.value = 'מעבד...';
+                    } else {
+                        submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> מעבד...';
+                    }
+
+                    // Submit the form after a short delay
+                    setTimeout(() => {
+                        this.submit();
+                    }, 500);
+                }
+            });
+        });
+    }
+
+    function initNotifications() {
+        // Create notification container if it doesn't exist
+        if (!document.querySelector('.tm-notification-container')) {
+            const notificationContainer = document.createElement('div');
+            notificationContainer.className = 'tm-notification-container';
+            document.body.appendChild(notificationContainer);
+        }
+
+        // Check for flash messages and display as notifications
+        const flashMessages = [
+            // Example flash messages for testing, remove in production
+            // { type: 'success', message: 'תגית נוצרה בהצלחה!' },
+            // { type: 'warning', message: 'שם תגית כבר קיים.' },
+            // { type: 'danger', message: 'שגיאה בשמירת התגית.' }
+        ];
+
+        // Display any existing flash messages
+        flashMessages.forEach(message => {
+            showNotification(message.type, message.message);
+        });
+    }
+
+    function showNotification(type, message, title = '') {
+        const container = document.querySelector('.tm-notification-container');
+
+        // Set default titles based on type
+        if (!title) {
+            switch (type) {
+                case 'success':
+                    title = 'הצלחה!';
+                    break;
+                case 'warning':
+                    title = 'אזהרה';
+                    break;
+                case 'danger':
+                    title = 'שגיאה';
+                    break;
+                case 'info':
+                    title = 'הודעה';
+                    break;
+            }
+        }
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `tm-notification tm-notification-${type}`;
+
+        // Set icon based on type
+        let icon;
+        switch (type) {
+            case 'success':
+                icon = 'check-circle';
+                break;
+            case 'warning':
+                icon = 'exclamation-triangle';
+                break;
+            case 'danger':
+                icon = 'times-circle';
+                break;
+            case 'info':
+                icon = 'info-circle';
+                break;
+        }
+
+        notification.innerHTML = `
+            <div class="tm-notification-icon">
+                <i class="fas fa-${icon}"></i>
+            </div>
+            <div class="tm-notification-content">
+                <div class="tm-notification-title">${title}</div>
+                <div class="tm-notification-message">${message}</div>
+            </div>
+            <button class="tm-notification-close">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="tm-notification-progress">
+                <div class="tm-notification-progress-bar"></div>
+            </div>
+        `;
+
+        // Add to container
+        container.appendChild(notification);
+
+        // Show notification with animation
+        setTimeout(() => {
+            notification.classList.add('tm-show');
+        }, 10);
+
+        // Add click listener to close button
+        notification.querySelector('.tm-notification-close').addEventListener('click', () => {
+            closeNotification(notification);
+        });
+
+        // Auto close after 5 seconds
+        setTimeout(() => {
+            closeNotification(notification);
+        }, 5000);
+    }
+
+    function closeNotification(notification) {
+        notification.classList.remove('tm-show');
+
+        // Remove from DOM after animation completes
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.parentElement.removeChild(notification);
+            }
+        }, 500);
+    }
+
+    // Close modals when clicking outside of them
+    document.getElementById("modalBackdrop").addEventListener("click", function() {
+        closeEditModal();
+        closeTransferModal();
+        closeDeleteConfirmModal();
+    });
+
+    // Add keyboard support for modals (Escape key)
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeEditModal();
+            closeTransferModal();
+            closeDeleteConfirmModal();
         }
     });
 </script>
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* Font Awesome import if not already included in base.html */
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+
+    /* ====== RTL Direction Setup ====== */
+    .tm-admin-tags {
+        direction: rtl;
+        text-align: right;
+        font-family: 'Rubik', Arial, sans-serif;
+    }
+
+    /* ====== Main Layout ====== */
+    .tm-admin-tags {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .tm-page-title {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+        color: #333;
+        text-align: center;
+        position: relative;
+        padding-bottom: 0.5rem;
+    }
+
+    .tm-page-title:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100px;
+        height: 3px;
+        background: linear-gradient(to right, #6b7af7, #4b59f7);
+        border-radius: 3px;
+    }
+
+    .tm-content-card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+        padding: 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .tm-content-card:hover {
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.12);
+    }
+
+    .tm-section-title {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        color: #444;
+        display: flex;
+        align-items: center;
+    }
+
+    .tm-section-title i {
+        margin-left: 0.5rem;
+        color: #4b59f7;
+    }
+
+    /* ====== Tabs ====== */
+    .tm-tabs-container {
+        margin-bottom: 2rem;
+        position: relative;
+    }
+
+    .tm-tabs {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .tm-tab-button {
+        padding: 0.8rem 1.5rem;
+        background: none;
+        border: none;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        display: flex;
+        align-items: center;
+        border-radius: 30px;
+    }
+
+    .tm-tab-button i {
+        margin-left: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .tm-tag-count-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(75, 89, 247, 0.1);
+        color: #4b59f7;
+        border-radius: 50px;
+        min-width: 20px;
+        height: 20px;
+        font-size: 0.75rem;
+        padding: 0 6px;
+        margin-right: 8px;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+
+    .tm-tab-button:hover .tm-tag-count-badge {
+        background-color: rgba(75, 89, 247, 0.2);
+    }
+
+    .tm-tab-button.tm-active .tm-tag-count-badge {
+        background-color: #4b59f7;
+        color: white;
+    }
+
+    .tm-tab-button:hover {
+        color: #4b59f7;
+        background-color: rgba(75, 89, 247, 0.05);
+    }
+
+    .tm-tab-button.tm-active {
+        color: #4b59f7;
+    }
+
+    .tm-tabs-slider {
+        position: relative;
+        height: 3px;
+        margin-top: 5px;
+    }
+
+    .tm-tabs-slider-indicator {
+        position: absolute;
+        height: 3px;
+        background: linear-gradient(to right, #6b7af7, #4b59f7);
+        transition: all 0.3s ease;
+        border-radius: 3px;
+    }
+
+    .tm-tab-content {
+        display: none;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.3s ease;
+    }
+
+    .tm-tab-content.tm-active {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* ====== Forms ====== */
+    .tm-form-container {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .tm-animated-form .tm-form-group {
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+
+    .tm-form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #555;
+        font-size: 1rem;
+    }
+
+    .tm-input-with-icon, .tm-select-wrapper {
+        position: relative;
+        transition: all 0.3s;
+    }
+
+    .tm-input-with-icon.tm-focused, .tm-select-wrapper.tm-focused {
+        transform: translateY(-2px);
+    }
+
+    .tm-input-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #aaa;
+        transition: all 0.3s;
+    }
+
+    .tm-select-arrow {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #aaa;
+        transition: all 0.3s;
+        pointer-events: none;
+    }
+
+    .tm-input-field, .tm-select-field {
+        width: 100%;
+        padding: 0.8rem 2.5rem 0.8rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        text-align: right;
+    }
+
+    .tm-input-field:focus, .tm-select-field:focus {
+        border-color: #4b59f7;
+        box-shadow: 0 0 0 3px rgba(75, 89, 247, 0.15);
+    }
+
+    .tm-input-field:focus + .tm-input-icon {
+        color: #4b59f7;
+    }
+
+    .tm-error-message {
+        color: #dc3545;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .tm-error-message i {
+        margin-left: 0.4rem;
+    }
+
+    .tm-form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .tm-action-button {
+        padding: 0.7rem 1.5rem;
+        background-color: #4b59f7;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tm-action-button i {
+        margin-left: 0.5rem;
+    }
+
+    .tm-action-button:hover {
+        background-color: #3a47d5;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(75, 89, 247, 0.3);
+    }
+
+    .tm-action-button:active {
+        transform: translateY(0);
+    }
+
+    .tm-action-button.tm-secondary {
+        background-color: #6c757d;
+    }
+
+    .tm-action-button.tm-secondary:hover {
+        background-color: #5a6268;
+        box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+    }
+
+    .tm-action-button.tm-danger {
+        background-color: #dc3545;
+    }
+
+    .tm-action-button.tm-danger:hover {
+        background-color: #c82333;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .tm-pulse-button {
+        animation: tm-pulse 2s infinite;
+    }
+
+    @keyframes tm-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(75, 89, 247, 0.6);
+        }
+        70% {
+            box-shadow: 0 0 0 8px rgba(75, 89, 247, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(75, 89, 247, 0);
+        }
+    }
+
+    /* ====== Search ====== */
+    .tm-search-container {
+        margin-bottom: 1.5rem;
+        max-width: 400px;
+    }
+
+    /* ====== Table ====== */
+    .tm-table-responsive {
+        overflow-x: auto;
+    }
+
+    .tm-tag-management-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .tm-tag-management-table th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        padding: 0.8rem;
+        font-weight: 600;
+        text-align: right;
+        color: #495057;
+    }
+
+    .tm-tag-management-table th.tm-sortable {
+        cursor: pointer;
+        position: relative;
+        user-select: none;
+    }
+
+    .tm-tag-management-table th.tm-sortable:hover {
+        background-color: #e9ecef;
+    }
+
+    .tm-tag-management-table th.tm-sortable span {
+        display: inline-block;
+        margin-left: 0.5rem;
+    }
+
+    .tm-tag-management-table th.tm-sortable i {
+        margin-right: 0.5rem;
+        color: #aaa;
+    }
+
+    .tm-tag-management-table th.tm-asc i, .tm-tag-management-table th.tm-desc i {
+        color: #4b59f7;
+    }
+
+    .tm-tag-management-table td {
+        padding: 0.8rem;
+        border-bottom: 1px solid #dee2e6;
+        transition: all 0.3s;
+        text-align: right;
+    }
+
+    .tm-tag-management-table tr:hover td {
+        background-color: #f8f9fa;
+    }
+
+    .tm-tag-management-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .tm-table-row-fade {
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    .tm-count-badge {
+        display: inline-block;
+        padding: 0.25rem 0.6rem;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-align: center;
+        min-width: 30px;
+    }
+
+    .tm-count-badge.tm-empty {
+        background-color: #f8f9fa;
+        color: #adb5bd;
+    }
+
+    .tm-count-badge.tm-low {
+        background-color: #ffe5e5;
+        color: #dc3545;
+    }
+
+    .tm-count-badge.tm-medium {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .tm-count-badge.tm-high {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .tm-actions-column {
+        white-space: nowrap;
+    }
+
+    .tm-action-buttons {
+        display: flex;
+        gap: 5px;
+    }
+
+    .tm-edit-button {
+        background-color: #17a2b8;
+    }
+
+    .tm-edit-button:hover {
+        background-color: #138496;
+        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+    }
+
+    .tm-transfer-button {
+        background-color: #fd7e14;
+    }
+
+    .tm-transfer-button:hover {
+        background-color: #e36c09;
+        box-shadow: 0 4px 12px rgba(253, 126, 20, 0.3);
+    }
+
+    .tm-delete-button {
+        background-color: #dc3545;
+    }
+
+    .tm-delete-button:hover {
+        background-color: #c82333;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .tm-action-button.tm-disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .tm-tooltip {
+        position: relative;
+        padding: 0.5rem;
+        min-width: 40px;
+    }
+
+    .tm-tooltip-text {
+        visibility: hidden;
+        background-color: #333;
+        color: white;
+        text-align: center;
+        border-radius: 4px;
+        padding: 6px 8px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: max-content;
+        font-size: 0.8rem;
+        transition: opacity 0.3s;
+        opacity: 0;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .tm-tooltip-text::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #333 transparent transparent transparent;
+    }
+
+    .tm-tooltip:hover .tm-tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .tm-no-data-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        color: #6c757d;
+        text-align: center;
+    }
+
+    .tm-no-data-message i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        opacity: 0.6;
+    }
+
+    /* ====== Modals ====== */
+    .tm-modal-backdrop {
+        display: none;
+        position: fixed;
+        z-index: 998;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0);
+        transition: background-color 0.3s ease;
+    }
+
+    .tm-modal-backdrop.tm-active {
+        display: block;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .tm-modal {
+        display: none;
+        position: fixed;
+        z-index: 999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .tm-modal.tm-active {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .tm-modal.tm-visible {
+        opacity: 1;
+    }
+
+    .tm-modal-content {
+        background-color: #fff;
+        margin: auto;
+        width: 90%;
+        max-width: 500px;
+        border-radius: 8px;
+        box-shadow: 0 5px 30px rgba(0, 0, 0, 0.15);
+        transform: translateY(20px);
+        transition: transform 0.3s ease;
+        overflow: hidden;
+        direction: rtl;
+        text-align: right;
+    }
+
+    .tm-modal.tm-visible .tm-modal-content {
+        transform: translateY(0);
+    }
+
+    .tm-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.2rem 1.5rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .tm-modal-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: #333;
+        display: flex;
+        align-items: center;
+    }
+
+    .tm-modal-header h3 i {
+        margin-left: 0.5rem;
+        color: #4b59f7;
+    }
+
+    .tm-close-button {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        color: #aaa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        transition: all 0.2s;
+        margin-right: auto;
+        margin-left: 0;
+    }
+
+    .tm-close-button:hover {
+        background-color: #e9ecef;
+        color: #333;
+    }
+
+    .tm-modal-body {
+        padding: 1.5rem;
+    }
+
+    .tm-transfer-description, .tm-confirm-message {
+        margin-bottom: 1.5rem;
+        padding: 0.8rem;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        border-right: 3px solid #4b59f7;
+        color: #555;
+    }
+
+    .tm-transfer-description i, .tm-confirm-message i {
+        color: #4b59f7;
+        margin-left: 0.5rem;
+    }
+
+    .tm-warning-text {
+        color: #dc3545;
+        display: block;
+        margin-top: 0.5rem;
+    }
+
+    .tm-centered {
+        justify-content: center;
+    }
+
+    /* ====== Notification System ====== */
+    .tm-notification-container {
+        position: fixed;
+        top: 20px;
+        right: 20px; /* שינוי צד התצוגה */
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 350px;
+    }
+
+    .tm-notification {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        transform: translateX(120%); /* שינוי כיוון התזוזה */
+        opacity: 0;
+        transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        direction: rtl;
+        text-align: right;
+    }
+
+    .tm-notification.tm-show {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .tm-notification-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 15px;
+        margin-right: 0;
+        flex-shrink: 0;
+    }
+
+    .tm-notification-success .tm-notification-icon {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .tm-notification-warning .tm-notification-icon {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .tm-notification-danger .tm-notification-icon {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .tm-notification-info .tm-notification-icon {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .tm-notification-content {
+        flex-grow: 1;
+    }
+
+    .tm-notification-title {
+        font-weight: 600;
+        margin-bottom: 3px;
+        font-size: 0.95rem;
+    }
+
+    .tm-notification-message {
+        color: #666;
+        font-size: 0.85rem;
+    }
+
+    .tm-notification-close {
+        color: #aaa;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        margin-left: 5px;
+        margin-right: 0;
+        transition: all 0.2s;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tm-notification-close:hover {
+        background-color: #f1f1f1;
+        color: #333;
+    }
+
+    .tm-notification-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        width: 100%;
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .tm-notification-progress-bar {
+        height: 100%;
+        width: 100%;
+        transform-origin: right; /* שינוי כיוון ההתקדמות */
+        animation: tm-progress-rtl 5s linear;
+    }
+
+    .tm-notification-success .tm-notification-progress-bar {
+        background-color: #28a745;
+    }
+
+    .tm-notification-warning .tm-notification-progress-bar {
+        background-color: #ffc107;
+    }
+
+    .tm-notification-danger .tm-notification-progress-bar {
+        background-color: #dc3545;
+    }
+
+    .tm-notification-info .tm-notification-progress-bar {
+        background-color: #17a2b8;
+    }
+
+    @keyframes tm-progress-rtl {
+        from {
+            transform: scaleX(1);
+        }
+        to {
+            transform: scaleX(0);
+        }
+    }
+
+    /* ====== Responsive Styles ====== */
+    @media (max-width: 768px) {
+        .tm-modal-content {
+            width: 95%;
+            margin: 20px auto;
+        }
+
+        .tm-tab-button {
+            padding: 0.7rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .tm-action-buttons {
+            flex-wrap: wrap;
+        }
+
+        .tm-tag-management-table th,
+        .tm-tag-management-table td {
+            padding: 0.6rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .tm-admin-tags {
+            padding: 1rem 0.5rem;
+        }
+
+        .tm-content-card {
+            padding: 1.5rem 1rem;
+        }
+
+        .tm-page-title {
+            font-size: 1.75rem;
+        }
+
+        .tm-section-title {
+            font-size: 1.25rem;
+        }
+
+        .tm-form-actions {
+            flex-direction: column;
+        }
+
+        .tm-form-actions button {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    /* ====== Animations ====== */
+    @keyframes tm-fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes tm-slideIn {
+        from {
+            transform: translateX(-20px); /* שינוי כיוון האנימציה */
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
 {% endblock %}

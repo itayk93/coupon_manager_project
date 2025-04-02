@@ -1,0 +1,903 @@
+{% extends 'base.html' %}
+
+{% block title %}
+הוספת קופונים מרובים
+{% endblock %}
+
+{% block content %}
+<section class="add-coupon-container">
+    <div class="page-header">
+        <h1>הוספת קופונים מרובים</h1>
+        <p class="subtitle">הוסף קופונים מרובים בצורה מהירה ופשוטה</p>
+    </div>
+
+    <div class="action-buttons">
+        <a href="{{ url_for('coupons.add_coupon') }}" class="action-button">
+            <i class="fa fa-plus-circle" aria-hidden="true"></i>
+            <span>הוספת קופון יחיד</span>
+        </a>
+        <a href="{{ url_for('coupons.upload_coupons') }}" class="action-button">
+            <i class="fa fa-upload" aria-hidden="true"></i>
+            <span>העלאת קובץ קופונים</span>
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">
+                <div class="flash-icon">
+                    {% if category == 'success' %}
+                        <i class="fa fa-check-circle"></i>
+                    {% elif category == 'error' %}
+                        <i class="fa fa-exclamation-circle"></i>
+                    {% else %}
+                        <i class="fa fa-info-circle"></i>
+                    {% endif %}
+                </div>
+                <div class="flash-message">{{ message }}</div>
+                <button class="close-flash" aria-label="סגור הודעה"><i class="fa fa-times"></i></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" id="coupons-form" class="coupons-form">
+        {{ form.hidden_tag() }}
+
+        <div id="coupons-container" class="coupons-container">
+            {% for coupon_form in form.coupons %}
+            <div class="coupon-card" data-index="{{ loop.index0 }}">
+                <div class="coupon-header">
+                    <h3>קופון {{ loop.index }}</h3>
+                    <div class="coupon-actions">
+                        <button type="button" class="icon-button duplicate-coupon-button" title="שכפול קופון">
+                            <i class="fa fa-clone"></i>
+                        </button>
+                        <button type="button" class="icon-button remove-coupon-button" title="הסרת קופון">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                        <button type="button" class="icon-button toggle-coupon-button" title="הרחב/כווץ קופון">
+                            <i class="fa fa-chevron-up"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="coupon-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="coupons-{{ loop.index0 }}-company_id">
+                                שם החברה:<span class="required">*</span>
+                            </label>
+                            <select id="coupons-{{ loop.index0 }}-company_id"
+                                    name="coupons-{{ loop.index0 }}-company_id"
+                                    class="input-field company-select"
+                                    required>
+                                <option value="" disabled {% if not coupon_form.company_id.data %}selected{% endif %}>בחר</option>
+                                {% for company in companies %}
+                                    <option value="{{ company.id }}"
+                                      {% if coupon_form.company_id.data == company.id|string %}selected{% endif %}>
+                                        {{ company.name }}
+                                    </option>
+                                {% endfor %}
+                                <option value="other" {% if coupon_form.company_id.data == 'other' %}selected{% endif %}>אחר</option>
+                            </select>
+                            {% for error in coupon_form.company_id.errors %}
+                                <span class="error"><i class="fa fa-exclamation-triangle"></i> {{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- שדה BuyMe URL (מציג רק כאשר נבחר BuyMe) -->
+                    <div class="form-group" id="buyme_coupon_link_group_{{ loop.index0 }}" style="display: none;">
+                        <label for="coupons-{{ loop.index0 }}-buyme_coupon_url">כתובת URL של הקופון ל-BuyMe</label>
+                        <div class="input-with-icon">
+                            <i class="fa fa-link"></i>
+                            <input type="url" id="coupons-{{ loop.index0 }}-buyme_coupon_url" name="coupons-{{ loop.index0 }}-buyme_coupon_url" class="input-field">
+                        </div>
+                    </div>
+
+                    <div class="form-group other-company-group"
+                         id="other_company_group_{{ loop.index0 }}"
+                         {% if coupon_form.company_id.data != 'other' %}style="display: none;"{% endif %}>
+                        <label for="coupons-{{ loop.index0 }}-other_company">שם חברה חדשה:</label>
+                        <div class="input-with-icon">
+                            <i class="fa fa-building"></i>
+                            <input type="text"
+                                id="coupons-{{ loop.index0 }}-other_company"
+                                name="coupons-{{ loop.index0 }}-other_company"
+                                class="input-field"
+                                value="{{ coupon_form.other_company.data }}">
+                        </div>
+                        {% for error in coupon_form.other_company.errors %}
+                            <span class="error"><i class="fa fa-exclamation-triangle"></i> {{ error }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="coupons-{{ loop.index0 }}-code">קוד קופון:<span class="required">*</span></label>
+                            <div class="input-with-icon">
+                                <i class="fa fa-key"></i>
+                                {{ coupon_form.code(class="input-field", placeholder="הזן קוד קופון") }}
+                            </div>
+                            {% for error in coupon_form.code.errors %}
+                                <span class="error"><i class="fa fa-exclamation-triangle"></i> {{ error }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="coupons-{{ loop.index0 }}-value">ערך הקופון:<span class="required">*</span></label>
+                            <div class="input-with-icon">
+                                <i class="fa fa-shekel"></i>
+                                {{ coupon_form.value(class="input-field", placeholder="0.00") }}
+                            </div>
+                            {% for error in coupon_form.value.errors %}
+                                <span class="error"><i class="fa fa-exclamation-triangle"></i> {{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="coupons-{{ loop.index0 }}-cost">עלות הקופון:<span class="required">*</span></label>
+                            <div class="input-with-icon">
+                                <i class="fa fa-shekel"></i>
+                                {{ coupon_form.cost(class="input-field", placeholder="0.00") }}
+                            </div>
+                            {% for error in coupon_form.cost.errors %}
+                                <span class="error"><i class="fa fa-exclamation-triangle"></i> {{ error }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="coupons-{{ loop.index0 }}-expiration">תאריך תפוגה:</label>
+                            <div class="input-with-icon">
+                                <i class="fa fa-calendar"></i>
+                                {{ coupon_form.expiration(class="input-field datepicker", type="date") }}
+                            </div>
+                            {% for error in coupon_form.expiration.errors %}
+                                <span class="error"><i class="fa fa-exclamation-triangle"></i> {{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="coupons-{{ loop.index0 }}-source">מאיפה קיבלת את הקופון:</label>
+                            <div class="input-with-icon">
+                                <i class="fa fa-question-circle"></i>
+                                <input type="text" id="coupons-{{ loop.index0 }}-source" name="coupons-{{ loop.index0 }}-source" class="input-field" placeholder="לדוגמה: קנייה, מתנה, פרסום">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="toggle-section">
+                        <div class="toggle-header">
+                            <div class="form-group checkbox-switch">
+                                <label class="switch-label" for="coupons-{{ loop.index0 }}-include_card_info">
+                                    <input type="checkbox" id="coupons-{{ loop.index0 }}-include_card_info" name="coupons-{{ loop.index0 }}-include_card_info" class="switch-input">
+                                    <span class="switch"></span>
+                                    <span class="switch-text">פרטי כרטיס אשראי</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="card_fields_container_{{ loop.index0 }}" class="toggle-content" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="coupons-{{ loop.index0 }}-cvv">CVV</label>
+                                    <div class="input-with-icon">
+                                        <i class="fa fa-lock"></i>
+                                        <input type="text" id="coupons-{{ loop.index0 }}-cvv" name="coupons-{{ loop.index0 }}-cvv" class="input-field" maxlength="3" placeholder="123">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="coupons-{{ loop.index0 }}-card_exp">תוקף כרטיס</label>
+                                    <div class="input-with-icon">
+                                        <i class="fa fa-calendar-check-o"></i>
+                                        <input type="text" id="coupons-{{ loop.index0 }}-card_exp" name="coupons-{{ loop.index0 }}-card_exp" class="input-field" maxlength="5" placeholder="MM/YY">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="toggle-section">
+                        <div class="toggle-header">
+                            <div class="form-group checkbox-switch">
+                                <label class="switch-label" for="coupons-{{ loop.index0 }}-is_one_time">
+                                    <input type="checkbox" id="coupons-{{ loop.index0 }}-is_one_time" name="coupons-{{ loop.index0 }}-is_one_time" class="switch-input" {% if coupon_form.is_one_time.data %}checked{% endif %}>
+                                    <span class="switch"></span>
+                                    <span class="switch-text">קוד לשימוש חד פעמי</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group purpose-field toggle-content"
+                             id="purpose_group_{{ loop.index0 }}"
+                             {% if not coupon_form.is_one_time.data %}style="display: none;"{% endif %}>
+                            <label for="coupons-{{ loop.index0 }}-purpose">מטרת הקופון:</label>
+                            <div class="input-with-icon">
+                                <i class="fa fa-bullseye"></i>
+                                {{ coupon_form.purpose(class="input-field", placeholder="לדוגמה: מתנת יום הולדת") }}
+                            </div>
+                            {% for error in coupon_form.purpose.errors %}
+                                <span class="error"><i class="fa fa-exclamation-triangle"></i> {{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <button type="button" class="add-coupon-button">
+                <i class="fa fa-plus-circle"></i> הוספת קופון נוסף
+            </button>
+            <button type="submit" class="submit-button">
+                <i class="fa fa-save"></i> הוספת הקופונים לארנק
+            </button>
+        </div>
+    </form>
+</section>
+
+<template id="coupon-template">
+    <div class="coupon-card" data-index="__INDEX__">
+        <div class="coupon-header">
+            <h3>קופון חדש</h3>
+            <div class="coupon-actions">
+                <button type="button" class="icon-button duplicate-coupon-button" title="שכפול קופון">
+                    <i class="fa fa-clone"></i>
+                </button>
+                <button type="button" class="icon-button remove-coupon-button" title="הסרת קופון">
+                    <i class="fa fa-trash"></i>
+                </button>
+                <button type="button" class="icon-button toggle-coupon-button" title="הרחב/כווץ קופון">
+                    <i class="fa fa-chevron-up"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="coupon-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="coupons-__INDEX__-company_id">
+                        שם החברה:<span class="required">*</span>
+                    </label>
+                    <select id="coupons-__INDEX__-company_id"
+                            name="coupons-__INDEX__-company_id"
+                            class="input-field company-select"
+                            required>
+                        <option value="" disabled selected>בחר</option>
+                        {% for company in companies %}
+                            <option value="{{ company.id }}">{{ company.name }}</option>
+                        {% endfor %}
+                        <option value="other">אחר</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- שדה BuyMe URL (מציג רק כאשר נבחר BuyMe) -->
+            <div class="form-group" id="buyme_coupon_link_group___INDEX__" style="display: none;">
+                <label for="coupons-__INDEX__-buyme_coupon_url">כתובת URL של הקופון ל-BuyMe</label>
+                <div class="input-with-icon">
+                    <i class="fa fa-link"></i>
+                    <input type="url" id="coupons-__INDEX__-buyme_coupon_url" name="coupons-__INDEX__-buyme_coupon_url" class="input-field">
+                </div>
+            </div>
+
+            <div class="form-group other-company-group"
+                 id="other_company_group___INDEX__"
+                 style="display: none;">
+                <label for="coupons-__INDEX__-other_company">שם חברה חדשה:</label>
+                <div class="input-with-icon">
+                    <i class="fa fa-building"></i>
+                    <input type="text"
+                           id="coupons-__INDEX__-other_company"
+                           name="coupons-__INDEX__-other_company"
+                           class="input-field">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="coupons-__INDEX__-code">קוד קופון:<span class="required">*</span></label>
+                    <div class="input-with-icon">
+                        <i class="fa fa-key"></i>
+                        <input type="text"
+                               id="coupons-__INDEX__-code"
+                               name="coupons-__INDEX__-code"
+                               class="input-field"
+                               placeholder="הזן קוד קופון"
+                               required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="coupons-__INDEX__-value">ערך הקופון:<span class="required">*</span></label>
+                    <div class="input-with-icon">
+                        <i class="fa fa-shekel"></i>
+                        <input type="number"
+                               step="0.01"
+                               id="coupons-__INDEX__-value"
+                               name="coupons-__INDEX__-value"
+                               class="input-field"
+                               placeholder="0.00"
+                               required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="coupons-__INDEX__-cost">עלות הקופון:<span class="required">*</span></label>
+                    <div class="input-with-icon">
+                        <i class="fa fa-shekel"></i>
+                        <input type="number"
+                               step="0.01"
+                               id="coupons-__INDEX__-cost"
+                               name="coupons-__INDEX__-cost"
+                               class="input-field"
+                               placeholder="0.00"
+                               required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="coupons-__INDEX__-expiration">תאריך תפוגה:</label>
+                    <div class="input-with-icon">
+                        <i class="fa fa-calendar"></i>
+                        <input type="date"
+                               id="coupons-__INDEX__-expiration"
+                               name="coupons-__INDEX__-expiration"
+                               class="input-field datepicker">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="coupons-__INDEX__-source">מאיפה קיבלת את הקופון:</label>
+                    <div class="input-with-icon">
+                        <i class="fa fa-question-circle"></i>
+                        <input type="text" id="coupons-__INDEX__-source" name="coupons-__INDEX__-source" class="input-field" placeholder="לדוגמה: קנייה, מתנה, פרסום">
+                    </div>
+                </div>
+            </div>
+
+            <div class="toggle-section">
+                <div class="toggle-header">
+                    <div class="form-group checkbox-switch">
+                        <label class="switch-label" for="coupons-__INDEX__-include_card_info">
+                            <input type="checkbox" id="coupons-__INDEX__-include_card_info" name="coupons-__INDEX__-include_card_info" class="switch-input">
+                            <span class="switch"></span>
+                            <span class="switch-text">פרטי כרטיס אשראי</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="card_fields_container___INDEX__" class="toggle-content" style="display: none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="coupons-__INDEX__-cvv">CVV</label>
+                            <div class="input-with-icon">
+                                <i class="fa fa-lock"></i>
+                                <input type="text" id="coupons-__INDEX__-cvv" name="coupons-__INDEX__-cvv" class="input-field" maxlength="3" placeholder="123">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="coupons-__INDEX__-card_exp">תוקף כרטיס</label>
+                            <div class="input-with-icon">
+                                <i class="fa fa-calendar-check-o"></i>
+                                <input type="text" id="coupons-__INDEX__-card_exp" name="coupons-__INDEX__-card_exp" class="input-field" maxlength="5" placeholder="MM/YY">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toggle-section">
+                <div class="toggle-header">
+                    <div class="form-group checkbox-switch">
+                        <label class="switch-label" for="coupons-__INDEX__-is_one_time">
+                            <input type="checkbox" id="coupons-__INDEX__-is_one_time" name="coupons-__INDEX__-is_one_time" class="switch-input">
+                            <span class="switch"></span>
+                            <span class="switch-text">קוד לשימוש חד פעמי</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group purpose-field toggle-content"
+                     id="purpose_group___INDEX__"
+                     style="display: none;">
+                    <label for="coupons-__INDEX__-purpose">מטרת הקופון:</label>
+                    <div class="input-with-icon">
+                        <i class="fa fa-bullseye"></i>
+                        <input type="text"
+                               id="coupons-__INDEX__-purpose"
+                               name="coupons-__INDEX__-purpose"
+                               class="input-field"
+                               placeholder="לדוגמה: מתנת יום הולדת">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* ===== General Styles ===== */
+:root {
+    --primary-color: #4361ee;
+    --primary-hover: #3a56d4;
+    --secondary-color: #3f37c9;
+    --success-color: #4caf50;
+    --danger-color: #f44336;
+    --warning-color: #ff9800;
+    --info-color: #2196f3;
+    --text-color: #333;
+    --light-text: #666;
+    --border-color: #e0e0e0;
+    --light-bg: #f9f9f9;
+    --card-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    --transition: all 0.3s ease;
+    --border-radius: 8px;
+}
+
+/* RTL specific styles */
+body {
+    direction: rtl;
+    text-align: right;
+}
+
+/* ===== Page Layout ===== */
+.add-coupon-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.page-header h1 {
+    color: var(--primary-color);
+    font-size: 2.2rem;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    color: var(--light-text);
+    font-size: 1.1rem;
+}
+
+/* ===== Action Buttons ===== */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: var(--light-bg);
+    color: var(--primary-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 10px 20px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.action-button:hover {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.action-button i {
+    font-size: 1.1rem;
+}
+
+/* ===== Flash Messages ===== */
+.flash-messages {
+    margin-bottom: 25px;
+}
+
+.flash {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-radius: var(--border-radius);
+    margin-bottom: 10px;
+    position: relative;
+    animation: fadeIn 0.5s ease;
+}
+
+.flash-icon {
+    margin-left: 15px;
+    font-size: 1.2rem;
+}
+
+.flash.success {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: var(--success-color);
+    border-right: 4px solid var(--success-color);
+}
+
+.flash.error {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--danger-color);
+    border-right: 4px solid var(--danger-color);
+}
+
+.close-flash {
+    margin-right: auto;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.close-flash:hover {
+    opacity: 1;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Coupon Form ===== */
+.coupons-form {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    padding: 20px;
+}
+
+.coupons-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* ===== Coupon Card ===== */
+.coupon-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background-color: white;
+    transition: var(--transition);
+}
+
+.coupon-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.coupon-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 12px 15px;
+}
+
+.coupon-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.coupon-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.icon-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.remove-coupon-button:hover {
+    background-color: var(--danger-color);
+}
+
+.coupon-body {
+    padding: 20px;
+}
+
+/* ===== Form Elements ===== */
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-row .form-group {
+    flex: 1;
+    min-width: 250px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.required {
+    color: var(--danger-color);
+    margin-right: 3px;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+    transition: var(--transition);
+}
+
+.input-field:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+}
+
+/* Input with Icons */
+.input-with-icon {
+    position: relative;
+}
+
+.input-with-icon i {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--light-text);
+}
+
+.input-with-icon input,
+.input-with-icon select {
+    padding-left: 35px;
+}
+
+/* Toggle Switch */
+.checkbox-switch {
+    margin: 10px 0;
+}
+
+.switch-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.switch-input {
+    display: none;
+}
+
+.switch {
+    position: relative;
+    width: 40px;
+    height: 20px;
+    background-color: #ccc;
+    border-radius: 20px;
+    margin-left: 10px;
+    transition: var(--transition);
+}
+
+.switch:before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: white;
+    top: 2px;
+    left: 2px;
+    transition: var(--transition);
+}
+
+.switch-input:checked + .switch {
+    background-color: var(--primary-color);
+}
+
+.switch-input:checked + .switch:before {
+    transform: translateX(20px);
+}
+
+/* Toggle Sections */
+.toggle-section {
+    margin-top: 15px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 15px;
+}
+
+.toggle-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const couponContainer = document.getElementById('coupons-container');
+  const couponTemplate = document.getElementById('coupon-template').innerHTML;
+  const addCouponButton = document.querySelector('.add-coupon-button');
+
+  // פונקציה לעדכון אינדקסים בכל קופון
+  function updateCouponIndices() {
+    const coupons = document.querySelectorAll('.coupon-card');
+    coupons.forEach((coupon, index) => {
+      coupon.setAttribute('data-index', index);
+      coupon.querySelector('.coupon-header h3').innerText = "קופון " + (index + 1);
+      // עדכון ה- id וה-name של כל שדה בתוך הקופון
+      coupon.querySelectorAll('[id^="coupons-"]').forEach(el => {
+         const newId = el.id.replace(/coupons-\d+-/, "coupons-" + index + "-");
+         el.id = newId;
+         if (el.name) {
+             el.name = el.name.replace(/coupons-\d+-/, "coupons-" + index + "-");
+         }
+      });
+      // עדכון מזהים עבור אלמנטים של קבוצות
+      const buymeGroup = coupon.querySelector('[id^="buyme_coupon_link_group_"]');
+      if (buymeGroup) {
+         buymeGroup.id = "buyme_coupon_link_group_" + index;
+      }
+      const otherCompanyGroup = coupon.querySelector('[id^="other_company_group_"]');
+      if (otherCompanyGroup) {
+         otherCompanyGroup.id = "other_company_group_" + index;
+      }
+      const cardFieldsContainer = coupon.querySelector('[id^="card_fields_container_"]');
+      if (cardFieldsContainer) {
+         cardFieldsContainer.id = "card_fields_container_" + index;
+      }
+      const purposeGroup = coupon.querySelector('[id^="purpose_group_"]');
+      if (purposeGroup) {
+         purposeGroup.id = "purpose_group_" + index;
+      }
+    });
+  }
+
+  // הוספת מאזינים לאירועים בתוך כל קופון
+  function addEventListeners(couponCard) {
+    const duplicateBtn = couponCard.querySelector('.duplicate-coupon-button');
+    const removeBtn = couponCard.querySelector('.remove-coupon-button');
+    const toggleBtn = couponCard.querySelector('.toggle-coupon-button');
+
+    duplicateBtn.addEventListener('click', function() {
+      const clone = couponCard.cloneNode(true);
+      couponContainer.appendChild(clone);
+      updateCouponIndices();
+      addEventListeners(clone);
+    });
+
+    removeBtn.addEventListener('click', function() {
+      if(document.querySelectorAll('.coupon-card').length > 1) {
+        couponCard.remove();
+        updateCouponIndices();
+      } else {
+        alert("יש לפחות קופון אחד בטופס.");
+      }
+    });
+
+    toggleBtn.addEventListener('click', function() {
+      const body = couponCard.querySelector('.coupon-body');
+      if(body.style.display === 'none' || body.style.display === '') {
+        body.style.display = 'block';
+        toggleBtn.querySelector('i').classList.remove('fa-chevron-down');
+        toggleBtn.querySelector('i').classList.add('fa-chevron-up');
+      } else {
+        body.style.display = 'none';
+        toggleBtn.querySelector('i').classList.remove('fa-chevron-up');
+        toggleBtn.querySelector('i').classList.add('fa-chevron-down');
+      }
+    });
+
+    // מאזין לשינוי בבחירת החברה להצגת שדות "אחר" או "BuyMe"
+    const companySelect = couponCard.querySelector('.company-select');
+    companySelect.addEventListener('change', function() {
+      const selected = this.value;
+      const otherGroup = couponCard.querySelector('[id^="other_company_group_"]');
+      const buymeGroup = couponCard.querySelector('[id^="buyme_coupon_link_group_"]');
+      if(selected === 'other') {
+        otherGroup.style.display = 'block';
+      } else {
+        otherGroup.style.display = 'none';
+      }
+      // דוגמה: במידה ונבחרת חברה עם ערך "buyme" – ניתן לשנות לפי הצורך
+      if(selected === 'buyme') {
+        buymeGroup.style.display = 'block';
+      } else {
+        buymeGroup.style.display = 'none';
+      }
+    });
+
+    // מאזין לשינוי במתג פרטי כרטיס אשראי
+    const cardInfoCheckbox = couponCard.querySelector('[id^="coupons-"][id$="-include_card_info"]');
+    if(cardInfoCheckbox) {
+      cardInfoCheckbox.addEventListener('change', function() {
+        const index = couponCard.getAttribute('data-index');
+        const cardFields = couponCard.querySelector('#card_fields_container_' + index);
+        cardFields.style.display = this.checked ? 'block' : 'none';
+      });
+    }
+
+    // מאזין לשינוי במתג קוד לשימוש חד פעמי
+    const oneTimeCheckbox = couponCard.querySelector('[id^="coupons-"][id$="-is_one_time"]');
+    if(oneTimeCheckbox) {
+      oneTimeCheckbox.addEventListener('change', function() {
+        const index = couponCard.getAttribute('data-index');
+        const purposeGroup = couponCard.querySelector('#purpose_group_' + index);
+        purposeGroup.style.display = this.checked ? 'block' : 'none';
+      });
+    }
+  }
+
+  // אתחול מאזינים לקופונים קיימים
+  document.querySelectorAll('.coupon-card').forEach(function(card) {
+    addEventListeners(card);
+  });
+
+  // לחיצה על כפתור הוספת קופון חדש
+  addCouponButton.addEventListener('click', function(e) {
+    e.preventDefault();
+    const currentIndex = document.querySelectorAll('.coupon-card').length;
+    const newCouponHtml = couponTemplate.replace(/__INDEX__/g, currentIndex);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = newCouponHtml;
+    const newCouponCard = tempDiv.firstElementChild;
+    couponContainer.appendChild(newCouponCard);
+    updateCouponIndices();
+    addEventListeners(newCouponCard);
+  });
+
+  // טיפול בכפתורי סגירה להודעות (flash)
+  document.querySelectorAll('.close-flash').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      this.parentElement.style.display = 'none';
+    });
+  });
+});
+</script>
+{% endblock %}

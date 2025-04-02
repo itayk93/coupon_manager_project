@@ -33,7 +33,11 @@
         {{ form.hidden_tag() }}
 
         <div id="coupons-container">
+            {# If coupons variable exists (returned from server after URL extraction), initialize coupon_data for each coupon #}
             {% for coupon_form in form.coupons %}
+            {% set coupon_data = coupons[loop.index0] if coupons|length > loop.index0 else None %}
+            {# Only render this fieldset if coupon_data exists or it's the first entry #}
+            {% if coupon_data or loop.index0 < 1 %}
             <fieldset class="coupon-fieldset" data-index="{{ loop.index0 }}">
                 <legend>קופון {{ loop.index }}</legend>
 
@@ -45,7 +49,15 @@
                         <i class="fa fa-trash"></i> הסרת קופון
                     </button>
                 </div>
-
+                {% if current_user.is_admin %}
+                <!-- Button for entering BuyMe URLs (only if user is admin) - appears below the BuyMe field -->
+                <div class="form-group">
+                    <button type="button" class="open-modal-button buyme-link-button">
+                        <i class="fa fa-link"></i> הזנת קופונים של-BuyMe
+                    </button>
+                </div>
+                {% endif %}
+                
                 <div class="form-group">
                     <label for="coupons-{{ loop.index0 }}-company_id">
                         שם החברה:<span class="required">*</span>
@@ -68,6 +80,14 @@
                     {% endfor %}
                 </div>
 
+                {# BuyMe URL field - if there's data from the URL, initialize the field with coupon_data.url #}
+                <div class="form-group" id="buyme_coupon_link_group_{{ loop.index0 }}" style="display: none;">
+                    <label for="coupons-{{ loop.index0 }}-buyme_coupon_url">כתובת URL של הקופון ל-BuyMe</label>
+                    <input type="url" id="coupons-{{ loop.index0 }}-buyme_coupon_url" 
+                           name="coupons-{{ loop.index0 }}-buyme_coupon_url" 
+                           class="input-field" value="{{ coupon_data.url if coupon_data else '' }}">
+                </div>
+
                 <div class="form-group other-company-group"
                      id="other_company_group_{{ loop.index0 }}"
                      {% if coupon_form.company_id.data != 'other' %}style="display: none;"{% endif %}>
@@ -84,7 +104,8 @@
 
                 <div class="form-group">
                     {{ coupon_form.code.label }}
-                    {{ coupon_form.code(class="input-field") }}
+                    {# If coupon data exists from URL - initialize code field accordingly #}
+                    {{ coupon_form.code(class="input-field", value=coupon_data.coupon_code if coupon_data else coupon_form.code.data) }}
                     {% for error in coupon_form.code.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
@@ -92,7 +113,8 @@
 
                 <div class="form-group">
                     {{ coupon_form.value.label }}
-                    {{ coupon_form.value(class="input-field") }}
+                    {# Initialize value if data exists from URL #}
+                    {{ coupon_form.value(class="input-field", value=coupon_data.value if coupon_data else coupon_form.value.data) }}
                     {% for error in coupon_form.value.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
@@ -100,35 +122,57 @@
 
                 <div class="form-group">
                     {{ coupon_form.cost.label }}
-                    {{ coupon_form.cost(class="input-field") }}
+                    {# Initialize cost if data exists from URL #}
+                    {{ coupon_form.cost(class="input-field", value=coupon_data.cost if coupon_data else coupon_form.cost.data) }}
                     {% for error in coupon_form.cost.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
                 </div>
 
+                <!-- Add discount_percentage field to satisfy validation -->
+                <div class="form-group" style="display: none;">
+                    <label for="coupons-{{ loop.index0 }}-discount_percentage">אחוז הנחה:</label>
+                    <input type="number" 
+                           id="coupons-{{ loop.index0 }}-discount_percentage" 
+                           name="coupons-{{ loop.index0 }}-discount_percentage"
+                           class="input-field" 
+                           value="{{ coupon_data.discount_percentage if coupon_data and coupon_data.discount_percentage else '0' }}">
+                </div>
+
                 <div class="form-group">
                     {{ coupon_form.expiration.label }}
-                    {{ coupon_form.expiration(class="input-field", type="date") }}
+                    {# Initialize expiration date if data exists from URL #}
+                    {{ coupon_form.expiration(class="input-field", type="date", value=coupon_data.validity if coupon_data else coupon_form.expiration.data) }}
                     {% for error in coupon_form.expiration.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
                 </div>
 
+                <!-- Source field ("Where did you get the coupon from") -->
+                <div class="form-group">
+                    <label for="coupons-{{ loop.index0 }}-source">מאיפה קיבלת את הקופון:</label>
+                    <input type="text" 
+                           id="coupons-{{ loop.index0 }}-source" 
+                           name="coupons-{{ loop.index0 }}-source" 
+                           class="input-field"
+                           value="{{ '' if coupon_data else '' }}">
+                </div>
+
                 <div class="form-group checkbox-inline">
-                    <label for="coupons-__INDEX__-include_card_info">
-                        <input type="checkbox" id="coupons-__INDEX__-include_card_info" name="coupons-__INDEX__-include_card_info">
+                    <label for="coupons-{{ loop.index0 }}-include_card_info">
+                        <input type="checkbox" id="coupons-{{ loop.index0 }}-include_card_info" name="coupons-{{ loop.index0 }}-include_card_info">
                         האם להכניס תוקף כרטיס ו-CVV?
                     </label>
                 </div>
 
-                <div id="card_fields_container___INDEX__" style="display: none;">
+                <div id="card_fields_container_{{ loop.index0 }}" style="display: none;">
                     <div class="form-group">
-                        <label for="coupons-__INDEX__-cvv">CVV</label>
-                        <input type="text" id="coupons-__INDEX__-cvv" name="coupons-__INDEX__-cvv" class="input-field" maxlength="3">
+                        <label for="coupons-{{ loop.index0 }}-cvv">CVV</label>
+                        <input type="text" id="coupons-{{ loop.index0 }}-cvv" name="coupons-{{ loop.index0 }}-cvv" class="input-field" maxlength="3">
                     </div>
                     <div class="form-group">
-                        <label for="coupons-__INDEX__-card_exp">תוקף כרטיס</label>
-                        <input type="text" id="coupons-__INDEX__-card_exp" name="coupons-__INDEX__-card_exp" class="input-field" maxlength="5" placeholder="MM/YY">
+                        <label for="coupons-{{ loop.index0 }}-card_exp">תוקף כרטיס</label>
+                        <input type="text" id="coupons-{{ loop.index0 }}-card_exp" name="coupons-{{ loop.index0 }}-card_exp" class="input-field" maxlength="5" placeholder="MM/YY">
                     </div>
                 </div>
 
@@ -152,6 +196,7 @@
                     {% endfor %}
                 </div>
             </fieldset>
+            {% endif %}
             {% endfor %}
         </div>
 
@@ -167,6 +212,21 @@
     </form>
 </section>
 
+{% if current_user.is_admin %}
+<!-- Modal for entering coupon URLs (appears only if user is admin) -->
+<div id="urlModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>הזן URL של הקופונים ל-BuyMe</h3>
+        <p>הזן את ה-URL של הקופונים (אם יש יותר מאחד, יש ללחוץ ENTER אחרי כל URL חדש):</p>
+        <textarea id="coupon-urls" class="input-field" rows="10" placeholder="הזן URL של קופונים כאן..."></textarea>
+        <div style="margin-top: 20px; text-align: center;">
+            <button id="submitUrls" class="submit-button">שלח קישורים</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+ 
 <template id="coupon-template">
     <fieldset class="coupon-fieldset" data-index="__INDEX__">
         <legend>קופון</legend>
@@ -206,6 +266,12 @@
                    class="input-field">
         </div>
 
+        <!-- Source field ("Where did you get the coupon from") -->
+        <div class="form-group">
+            <label for="coupons-__INDEX__-source">מאיפה קיבלת את הקופון:</label>
+            <input type="text" id="coupons-__INDEX__-source" name="coupons-__INDEX__-source" class="input-field">
+        </div>
+
         <div class="form-group">
             <label for="coupons-__INDEX__-code">
                 קוד קופון:<span class="required">*</span>
@@ -235,6 +301,17 @@
                    name="coupons-__INDEX__-cost"
                    class="input-field"
                    required>
+        </div>
+
+        <!-- Hidden discount_percentage field to satisfy validation -->
+        <div class="form-group" style="display: none;">
+            <label for="coupons-__INDEX__-discount_percentage">אחוז הנחה:</label>
+            <input type="number"
+                   step="0.01"
+                   id="coupons-__INDEX__-discount_percentage"
+                   name="coupons-__INDEX__-discount_percentage"
+                   class="input-field"
+                   value="0">
         </div>
 
         <div class="form-group">
@@ -356,233 +433,721 @@
 .submit-button:hover {
     background-color: #1a5cb8;
 }
+
+/* Modal styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding-top: 60px;
+}
+
+/* Modal content */
+.modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 5px;
+    position: relative;
+}
+
+/* Close button */
+.close-modal {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 25px;
+    cursor: pointer;
+}
+
+.close-modal:hover,
+.close-modal:focus {
+    color: black;
+    text-decoration: none;
+}
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    let index = {{ form.coupons|length }};
-
-    function initializeCouponFieldset(fieldset, idx) {
-        fieldset.dataset.index = idx;
-
-        const includeCardInfoCheckbox = fieldset.querySelector(
-            `input[type="checkbox"][name="coupons-${idx}-include_card_info"]`
-        );
-        const cardFieldsContainer = fieldset.querySelector(
-            `#card_fields_container_${idx}`
-        );
-
-        function toggleCardFields() {
-            if (!includeCardInfoCheckbox || !cardFieldsContainer) return;
-            if (includeCardInfoCheckbox.checked) {
-                cardFieldsContainer.style.display = 'block';
-            } else {
-                cardFieldsContainer.style.display = 'none';
-                cardFieldsContainer.querySelectorAll('input').forEach(input => {
-                    input.value = '';
+    document.addEventListener('DOMContentLoaded', function() {
+        let index = {{ form.coupons|length }};
+    
+        function initializeCouponFieldset(fieldset, idx) {
+            fieldset.dataset.index = idx;
+    
+            const includeCardInfoCheckbox = fieldset.querySelector(
+                'input[type="checkbox"][name="coupons-' + idx + '-include_card_info"]'
+            );
+            const cardFieldsContainer = fieldset.querySelector(
+                '#card_fields_container_' + idx
+            );
+    
+            function toggleCardFields() {
+                if (!includeCardInfoCheckbox || !cardFieldsContainer) return;
+                if (includeCardInfoCheckbox.checked) {
+                    cardFieldsContainer.style.display = 'block';
+                } else {
+                    cardFieldsContainer.style.display = 'none';
+                    cardFieldsContainer.querySelectorAll('input').forEach(input => {
+                        input.value = '';
+                    });
+                }
+            }
+    
+            if (includeCardInfoCheckbox && cardFieldsContainer) {
+                includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
+                toggleCardFields();
+            }
+    
+            const companySelect = fieldset.querySelector('.company-select');
+            const otherCompanyGroup = fieldset.querySelector('.other-company-group');
+    
+            function toggleOtherCompanyField() {
+                if (companySelect.value === 'other') {
+                    otherCompanyGroup.style.display = 'block';
+                } else {
+                    otherCompanyGroup.style.display = 'none';
+                    const input = otherCompanyGroup.querySelector('input');
+                    if (input) input.value = '';
+                }
+            }
+            toggleOtherCompanyField();
+            companySelect.addEventListener('change', toggleOtherCompanyField);
+    
+            // Add the new "BuyMe URL" field toggle
+            const buymeCouponLinkGroup = fieldset.querySelector('#buyme_coupon_link_group_' + idx);
+    
+            function toggleBuymeCouponLinkField() {
+                if (!buymeCouponLinkGroup) return;
+                if (companySelect.value === '54') {  // assuming 54 is the ID for BuyMe
+                    buymeCouponLinkGroup.style.display = 'block';
+                } else {
+                    buymeCouponLinkGroup.style.display = 'none';
+                    const buymeCouponLinkInput = buymeCouponLinkGroup.querySelector('input');
+                    if (buymeCouponLinkInput) {
+                        buymeCouponLinkInput.value = '';
+                    }
+                }
+            }
+            companySelect.addEventListener('change', toggleBuymeCouponLinkField);
+            toggleBuymeCouponLinkField();
+    
+            const isOneTimeCheckbox = fieldset.querySelector('input[type="checkbox"][name$="-is_one_time"]');
+            const purposeGroup = fieldset.querySelector('.purpose-field');
+    
+            function togglePurposeField() {
+                if (isOneTimeCheckbox.checked) {
+                    purposeGroup.style.display = 'block';
+                } else {
+                    purposeGroup.style.display = 'none';
+                    const input = purposeGroup.querySelector('input');
+                    if (input) input.value = '';
+                }
+            }
+            togglePurposeField();
+            isOneTimeCheckbox.addEventListener('change', togglePurposeField);
+    
+            const removeButton = fieldset.querySelector('.remove-coupon-button');
+            if (removeButton) {
+                removeButton.addEventListener('click', function() {
+                    fieldset.remove();
+                    updateLegends();
+                });
+            }
+    
+            const duplicateButton = fieldset.querySelector('.duplicate-coupon-button');
+            if (duplicateButton) {
+                duplicateButton.addEventListener('click', function() {
+                    duplicateCoupon(fieldset);
                 });
             }
         }
-
-        if (includeCardInfoCheckbox && cardFieldsContainer) {
-            includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
-            toggleCardFields();
-        }
-
-        const companySelect = fieldset.querySelector('.company-select');
-        const otherCompanyGroup = fieldset.querySelector('.other-company-group');
-
-        function toggleOtherCompanyField() {
-            if (companySelect.value === 'other') {
-                otherCompanyGroup.style.display = 'block';
-            } else {
-                otherCompanyGroup.style.display = 'none';
-                const input = otherCompanyGroup.querySelector('input');
-                if (input) input.value = '';
-            }
-        }
-        toggleOtherCompanyField();
-        companySelect.addEventListener('change', toggleOtherCompanyField);
-
-        const isOneTimeCheckbox = fieldset.querySelector('input[type="checkbox"][name$="-is_one_time"]');
-        const purposeGroup = fieldset.querySelector('.purpose-field');
-
-        function togglePurposeField() {
-            if (isOneTimeCheckbox.checked) {
-                purposeGroup.style.display = 'block';
-            } else {
-                purposeGroup.style.display = 'none';
-                const input = purposeGroup.querySelector('input');
-                if (input) input.value = '';
-            }
-        }
-        togglePurposeField();
-        isOneTimeCheckbox.addEventListener('change', togglePurposeField);
-
-        const removeButton = fieldset.querySelector('.remove-coupon-button');
-        if (removeButton) {
-            removeButton.addEventListener('click', function() {
-                fieldset.remove();
-                updateLegends();
+    
+        function updateLegends() {
+            const fieldsets = document.querySelectorAll('.coupon-fieldset');
+            fieldsets.forEach(function(fieldset, idx) {
+                fieldset.dataset.index = idx;
+                updateFieldsetIndex(fieldset, idx);
             });
+            index = fieldsets.length;
         }
-
-        const duplicateButton = fieldset.querySelector('.duplicate-coupon-button');
-        if (duplicateButton) {
-            duplicateButton.addEventListener('click', function() {
-                duplicateCoupon(fieldset);
+    
+        function updateFieldsetIndex(fieldset, newIndex) {
+            const oldIndex = fieldset.dataset.index || '__INDEX__';
+            const regex = new RegExp('(coupons-)(?:' + oldIndex + '|__INDEX__)(-)', 'g');
+    
+            fieldset.querySelectorAll('[name], [id], [for]').forEach(element => {
+                if (element.name) {
+                    element.name = element.name.replace(regex, '$1' + newIndex + '$2');
+                    element.name = element.name.replace('___INDEX__', newIndex);
+                }
+                if (element.id) {
+                    element.id = element.id.replace(regex, '$1' + newIndex + '$2');
+                    element.id = element.id.replace('___INDEX__', newIndex);
+                    element.id = element.id.replace('__INDEX__', newIndex);
+                }
+                if (element.htmlFor) {
+                    element.htmlFor = element.htmlFor.replace(regex, '$1' + newIndex + '$2');
+                    element.htmlFor = element.htmlFor.replace('___INDEX__', newIndex);
+                    element.htmlFor = element.htmlFor.replace('__INDEX__', newIndex);
+                }
             });
-        }
-    }
-
-    function updateLegends() {
-        const fieldsets = document.querySelectorAll('.coupon-fieldset');
-        fieldsets.forEach(function(fieldset, idx) {
-            fieldset.dataset.index = idx;
-            updateFieldsetIndex(fieldset, idx);
-        });
-        index = fieldsets.length;
-    }
-
-    function updateFieldsetIndex(fieldset, newIndex) {
-        const oldIndex = fieldset.dataset.index || '__INDEX__';
-        const regex = new RegExp(`(coupons-)(?:${oldIndex}|__INDEX__)(-)`, 'g');
-
-        fieldset.querySelectorAll('[name], [id], [for]').forEach(element => {
-            if (element.name) {
-                element.name = element.name.replace(regex, `$1${newIndex}$2`);
-                element.name = element.name.replace('___INDEX__', newIndex);
-            }
-            if (element.id) {
-                element.id = element.id.replace(regex, `$1${newIndex}$2`);
+    
+            fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"]').forEach(element => {
+                element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
+                element.id = element.id.replace('__INDEX__', newIndex);
+                element.id = element.id.replace('___INDEX__', newIndex);
+            });
+    
+            fieldset.querySelectorAll('[id^="card_fields_container_"]').forEach(element => {
                 element.id = element.id.replace('___INDEX__', newIndex);
                 element.id = element.id.replace('__INDEX__', newIndex);
+            });
+    
+            fieldset.querySelectorAll('[id^="buyme_coupon_link_group_"]').forEach(element => {
+                element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
+                element.id = element.id.replace('__INDEX__', newIndex);
+            });
+    
+            const legend = fieldset.querySelector('legend');
+            if (legend) {
+                legend.textContent = 'קופון ' + (newIndex + 1);
             }
-            if (element.htmlFor) {
-                element.htmlFor = element.htmlFor.replace(regex, `$1${newIndex}$2`);
-                element.htmlFor = element.htmlFor.replace('___INDEX__', newIndex);
-                element.htmlFor = element.htmlFor.replace('__INDEX__', newIndex);
-            }
-        });
-
-        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"]').forEach(element => {
-            element.id = element.id.replace(`_${oldIndex}`, `_${newIndex}`);
-            element.id = element.id.replace(`__INDEX__`, newIndex);
-            element.id = element.id.replace(`___INDEX__`, newIndex);
-        });
-
-        fieldset.querySelectorAll('[id^="card_fields_container_"]').forEach(element => {
-            element.id = element.id.replace('___INDEX__', newIndex);
-            element.id = element.id.replace('__INDEX__', newIndex);
-        });
-
-        const legend = fieldset.querySelector('legend');
-        if (legend) {
-            legend.textContent = 'קופון ' + (newIndex + 1);
         }
-    }
-
-    function duplicateCoupon(fieldset) {
-        const container = document.getElementById('coupons-container');
-        const clonedFieldset = fieldset.cloneNode(true);
-        updateFieldsetIndex(clonedFieldset, index);
-
-        const originalInputs = fieldset.querySelectorAll('input, select, textarea');
-        const clonedInputs = clonedFieldset.querySelectorAll('input, select, textarea');
-        clonedInputs.forEach((input, i) => {
-            if (input.type === 'checkbox') {
-                input.checked = originalInputs[i].checked;
-            } else {
-                input.value = originalInputs[i].value;
+    
+        function duplicateCoupon(fieldset) {
+            const container = document.getElementById('coupons-container');
+            const clonedFieldset = fieldset.cloneNode(true);
+            updateFieldsetIndex(clonedFieldset, index);
+    
+            const originalInputs = fieldset.querySelectorAll('input, select, textarea');
+            const clonedInputs = clonedFieldset.querySelectorAll('input, select, textarea');
+            clonedInputs.forEach((input, i) => {
+                if (input.type === 'checkbox') {
+                    input.checked = originalInputs[i].checked;
+                } else {
+                    input.value = originalInputs[i].value;
+                }
+            });
+    
+            initializeCouponFieldset(clonedFieldset, index);
+            container.appendChild(clonedFieldset);
+            index++;
+            updateLegends();
+        }
+    
+        function addCoupon() {
+            const container = document.getElementById('coupons-container');
+            const template = document.getElementById('coupon-template').content.cloneNode(true);
+            const newFieldset = template.querySelector('.coupon-fieldset');
+    
+            updateFieldsetIndex(newFieldset, index);
+            initializeCouponFieldset(newFieldset, index);
+            container.appendChild(newFieldset);
+            index++;
+            updateLegends();
+        }
+    
+        // Direct fix for potential empty fieldsets at the beginning
+        function cleanEmptyFieldsets() {
+            const container = document.getElementById('coupons-container');
+            if (!container) return;
+            
+            const fieldsets = container.querySelectorAll('.coupon-fieldset');
+            let emptyIndices = [];
+            
+            // Identify empty fieldsets
+            fieldsets.forEach((fieldset, idx) => {
+                const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+                const codeValue = codeInput ? codeInput.value.trim() : '';
+                
+                const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                const valueValue = valueInput ? valueInput.value.trim() : '';
+                
+                // If the fieldset is effectively empty
+                if (codeValue === '' && valueValue === '') {
+                    emptyIndices.push(idx);
+                }
+            });
+            
+            // Remove empty fieldsets (starting from the end to not mess up indices)
+            for (let i = emptyIndices.length - 1; i >= 0; i--) {
+                fieldsets[emptyIndices[i]].remove();
+            }
+            
+            // If we removed any fieldsets, update the indices
+            if (emptyIndices.length > 0) {
+                updateLegends();
+                console.log(`Removed ${emptyIndices.length} empty fieldsets and updated indices`);
+            }
+        }
+        
+        // Run cleaning immediately and after a short delay to catch any dynamic issues
+        cleanEmptyFieldsets();
+        setTimeout(cleanEmptyFieldsets, 500);
+    
+        const existingFieldsets = document.querySelectorAll('.coupon-fieldset');
+        existingFieldsets.forEach(function(fieldset, idx) {
+            initializeCouponFieldset(fieldset, idx);
+        });
+    
+        // Add coupon button
+        const addCouponButton = document.querySelector('.add-coupon-button');
+        addCouponButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            addCoupon();
+        });
+    
+        // Attach event listeners to all open-modal buttons (admin-only)
+        const openModalButtons = document.querySelectorAll('.open-modal-button');
+        const modal = document.getElementById('urlModal');
+        const closeModalButton = document.querySelector('.close-modal');
+        const urlTextArea = document.getElementById('coupon-urls');
+    
+        openModalButtons.forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                modal.style.display = 'block';
+            });
+        });
+    
+        if (closeModalButton) {
+            closeModalButton.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+        }
+    
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
             }
         });
-
-        initializeCouponFieldset(clonedFieldset, index);
-        container.appendChild(clonedFieldset);
-        index++;
-        updateLegends();
-    }
-
-    function addCoupon() {
-        const container = document.getElementById('coupons-container');
-        const template = document.getElementById('coupon-template').content.cloneNode(true);
-        const newFieldset = template.querySelector('.coupon-fieldset');
-
-        updateFieldsetIndex(newFieldset, index);
-        initializeCouponFieldset(newFieldset, index);
-        container.appendChild(newFieldset);
-        index++;
-        updateLegends();
-    }
-
-    const existingFieldsets = document.querySelectorAll('.coupon-fieldset');
-    existingFieldsets.forEach(function(fieldset, idx) {
-        initializeCouponFieldset(fieldset, idx);
-    });
-
-    // כפתור הוספת קופון
-    const addCouponButton = document.querySelector('.add-coupon-button');
-    addCouponButton.addEventListener('click', addCoupon);
-
-    // ======================================
-    // בדיקת תאריך תפוגה לפני שליחת הטופס
-    // ======================================
-    const couponsForm = document.getElementById('coupons-form');
-    if (couponsForm) {
-        couponsForm.addEventListener('submit', function(e) {
-            const fieldsets = document.querySelectorAll('.coupon-fieldset');
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            let expiredCoupons = [];
-
-            fieldsets.forEach((fieldset, idx) => {
-                const expirationInput = fieldset.querySelector('input[type="date"][name^="coupons-"][name$="-expiration"]');
-                if (expirationInput && expirationInput.value) {
-                    const parts = expirationInput.value.split('-'); // YYYY-MM-DD
-                    if (parts.length === 3) {
-                        const year = parseInt(parts[0]);
-                        const month = parseInt(parts[1]) - 1;
-                        const day = parseInt(parts[2]);
-                        const selectedDate = new Date(year, month, day);
-
-                        if (selectedDate <= today) {
-                            // עיצוב תאריך לפורמט DD/MM/YYYY
-                            const formattedDate = `${String(day).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
-
-                            // משיכת פרטי הקופון
-                            const companySelect = fieldset.querySelector('.company-select');
-                            const companyName = companySelect ? companySelect.options[companySelect.selectedIndex].text : 'לא ידוע';
-
-                            const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
-                            const couponCode = codeInput ? codeInput.value : 'לא ידוע';
-
-                            const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                            const couponValue = valueInput ? valueInput.value : 'לא ידוע';
-
-                            expiredCoupons.push(
-                                `📌 קופון #${idx+1}:\n` +
-                                `- 🏢 חברה: ${companyName}\n` +
-                                `- 🔢 קוד קופון: ${couponCode}\n` +
-                                `- 💰 ערך: ${couponValue}\n` +
-                                `- ⏳ תוקף: ${formattedDate}`
-                            );
+    
+        // Check expiration date and all required fields before form submission
+        const couponsForm = document.getElementById('coupons-form');
+        if (couponsForm) {
+            couponsForm.addEventListener('submit', function(e) {
+                // Clean any empty fieldsets first
+                cleanEmptyFieldsets();
+                
+                // Check if there are any fieldsets left
+                const fieldsets = document.querySelectorAll('.coupon-fieldset');
+                if (fieldsets.length === 0) {
+                    e.preventDefault();
+                    alert('אין קופונים להוספה. אנא הוסף לפחות קופון אחד.');
+                    return;
+                }
+                
+                // Now check if all required fields are populated
+                let hasErrors = false;
+                
+                fieldsets.forEach((fieldset, idx) => {
+                    const companySelect = fieldset.querySelector('select[name^="coupons-"][name$="-company_id"]');
+                    const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+                    const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                    const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
+                    
+                    // Check required fields
+                    if (!companySelect || !companySelect.value || companySelect.value === "") {
+                        console.error(`Coupon #${idx+1}: Missing company selection`);
+                        hasErrors = true;
+                    }
+                    
+                    if (!codeInput || !codeInput.value.trim()) {
+                        console.error(`Coupon #${idx+1}: Missing coupon code`);
+                        hasErrors = true;
+                    }
+                    
+                    // Check that at least value and cost are filled
+                    const hasValue = valueInput && valueInput.value && valueInput.value.trim() !== "";
+                    const hasCost = costInput && costInput.value && costInput.value.trim() !== "";
+                    
+                    if (!hasValue || !hasCost) {
+                        console.error(`Coupon #${idx+1}: Need both value and cost fields`);
+                        hasErrors = true;
+                    }
+                });
+                
+                if (hasErrors) {
+                    e.preventDefault();
+                    alert('חלק מהשדות הנדרשים חסרים. אנא ודא שכל הקופונים מכילים: חברה, קוד קופון, ערך קופון ועלות.');
+                    return;
+                }
+    
+                // Check for expired coupons
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+    
+                let expiredCoupons = [];
+    
+                fieldsets.forEach((fieldset, idx) => {
+                    const expirationInput = fieldset.querySelector('input[type="date"][name^="coupons-"][name$="-expiration"]');
+                    if (expirationInput && expirationInput.value) {
+                        const parts = expirationInput.value.split('-');
+                        if (parts.length === 3) {
+                            const year = parseInt(parts[0]);
+                            const month = parseInt(parts[1]) - 1;
+                            const day = parseInt(parts[2]);
+                            const selectedDate = new Date(year, month, day);
+                            if (selectedDate <= today) {
+                                const formattedDate = String(day).padStart(2, '0') + '/' + String(month + 1).padStart(2, '0') + '/' + year;
+                                const companySelect = fieldset.querySelector('.company-select');
+                                const companyName = companySelect ? companySelect.options[companySelect.selectedIndex].text : 'Unknown';
+                                const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+                                const couponCode = codeInput ? codeInput.value : 'Unknown';
+                                const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                                const couponValue = valueInput ? valueInput.value : 'Unknown';
+                                expiredCoupons.push(
+                                    "📌 Coupon #" + (idx+1) + ":\n" +
+                                    "- 🏢 Company: " + companyName + "\n" +
+                                    "- 🔢 Coupon Code: " + couponCode + "\n" +
+                                    "- 💰 Value: " + couponValue + "\n" +
+                                    "- ⏳ Expiration: " + formattedDate
+                                );
+                            }
                         }
+                    }
+                });
+    
+                if (expiredCoupons.length > 0) {
+                    const confirmMsg = 
+                        "⚠️ Attention! The following coupons have an expiration date that is either today or has passed:\n\n" +
+                        expiredCoupons.join("\n\n") +
+                        "\n\n❓ Do you still want to continue?";
+                    if (!confirm(confirmMsg)) {
+                        e.preventDefault();
                     }
                 }
             });
-
-            if (expiredCoupons.length > 0) {
-                const confirmMsg = 
-                    "⚠️ שים לב! הקופונים הבאים מכילים תאריך תפוגה שעבר או היום:\n\n" +
-                    expiredCoupons.join("\n\n") +
-                    "\n\n❓ האם להמשיך בכל זאת?";
-                if (!confirm(confirmMsg)) {
-                    e.preventDefault(); // המשתמש לחץ על ביטול
+        }
+    });
+    
+    document.getElementById('submitUrls').addEventListener('click', async function () {
+        const textarea = document.getElementById('coupon-urls');
+        const rawText = textarea.value.trim();
+    
+        if (!rawText) {
+            alert("לא הוזנו קישורים.");
+            return;
+        }
+    
+        const urls = rawText
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+    
+        // Get CSRF Token from <meta>
+        const csrfTokenElement = document.querySelector('meta[name="csrf-token"]');
+        if (!csrfTokenElement) {
+            alert("CSRF token לא נמצא בעמוד.");
+            return;
+        }
+        const csrfToken = csrfTokenElement.getAttribute('content');
+        
+        // Show loading indicator
+        const submitButton = document.getElementById('submitUrls');
+        const originalText = submitButton.textContent;
+        submitButton.textContent = "מעבד קופונים...";
+        submitButton.disabled = true;
+        
+        const modal = document.getElementById('urlModal');
+    
+        try {
+            const response = await fetch('/submit_buyme_coupon_urls', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ urls: urls })
+            });
+    
+            const contentType = response.headers.get("Content-Type");
+    
+            // Handle HTML response (which contains the form)
+            if (response.ok && contentType && contentType.includes("text/html")) {
+                // First, we'll close the modal and clear the textarea
+                modal.style.display = 'none';
+                textarea.value = '';
+                
+                // Get the HTML response
+                const html = await response.text();
+                
+                // Create a temporary container to parse the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                
+                // We'll modify the DOM to remove any empty fieldsets before displaying
+                const formInResponse = tempDiv.querySelector('#coupons-form');
+                if (formInResponse) {
+                    // Find all fieldsets
+                    const fieldsets = formInResponse.querySelectorAll('.coupon-fieldset');
+                    
+                    // Identify empty fieldsets
+                    let emptyIndices = [];
+                    fieldsets.forEach((fieldset, idx) => {
+                        const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+                        const codeValue = codeInput ? codeInput.value : '';
+                        
+                        const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                        const valueValue = valueInput ? valueInput.value : '';
+                        
+                        // Check if this fieldset is effectively empty
+                        if (!codeValue || !valueValue) {
+                            emptyIndices.push(idx);
+                        }
+                    });
+                    
+                    // Remove empty fieldsets (starting from the end to not affect indices)
+                    for (let i = emptyIndices.length - 1; i >= 0; i--) {
+                        const index = emptyIndices[i];
+                        if (fieldsets[index]) {
+                            fieldsets[index].remove();
+                        }
+                    }
+                    
+                    // Update the indices of the remaining fieldsets
+                    const remainingFieldsets = formInResponse.querySelectorAll('.coupon-fieldset');
+                    remainingFieldsets.forEach((fieldset, idx) => {
+                        // Set the data-index attribute
+                        fieldset.dataset.index = idx;
+                        
+                        // Update all the input, label, and id references
+                        fieldset.querySelectorAll('[name^="coupons-"], [id^="coupons-"], [for^="coupons-"]').forEach(el => {
+                            // Match the pattern like coupons-X-field
+                            const pattern = /^(coupons-)\d+(-.*)/;
+                            
+                            if (el.name) {
+                                el.name = el.name.replace(pattern, `$1${idx}$2`);
+                            }
+                            if (el.id) {
+                                el.id = el.id.replace(pattern, `$1${idx}$2`);
+                            }
+                            if (el.htmlFor) {
+                                el.htmlFor = el.htmlFor.replace(pattern, `$1${idx}$2`);
+                            }
+                        });
+                        
+                        // Update other specific elements that have indices
+                        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
+                            const baseId = el.id.split('_')[0] + '_' + el.id.split('_')[1] + '_';
+                            el.id = baseId + idx;
+                        });
+                        
+                        // Update the legend text
+                        const legend = fieldset.querySelector('legend');
+                        if (legend) {
+                            legend.textContent = `קופון ${idx + 1}`;
+                        }
+                    });
+                    
+                    // Log the cleaning result
+                    if (emptyIndices.length > 0) {
+                        console.log(`Removed ${emptyIndices.length} empty fieldsets from response HTML`);
+                    }
+                    
+                    // Update the form's HTML with our cleaned version
+                    const formContainer = document.getElementById('coupons-form').parentNode;
+                    formContainer.innerHTML = formInResponse.outerHTML;
+                    
+                    // Now we need to re-initialize our event listeners on the new HTML
+                    document.dispatchEvent(new Event('DOMContentLoaded'));
+                } else {
+                    // If we couldn't find the form, just render the response as is
+                    document.open();
+                    document.write(html);
+                    document.close();
                 }
+            } else if (response.ok && contentType && contentType.includes("application/json")) {
+                const data = await response.json();
+                modal.style.display = 'none';
+                textarea.value = '';
+                
+                if (data.added_coupons && data.added_coupons.length > 0) {
+                    let successMsg = `נוספו בהצלחה ${data.added_coupons.length} קופונים!`;
+                    
+                    if (data.failed_coupons && data.failed_coupons.length > 0) {
+                        successMsg += `\n(${data.failed_coupons.length} קופונים נכשלו בהוספה)`;
+                    }
+                    
+                    alert(successMsg);
+                    // Redirect to show coupons page
+                    window.location.href = '/show_coupons';
+                } else if (data.failed_coupons && data.failed_coupons.length > 0) {
+                    alert(`לא נוספו קופונים. ${data.failed_coupons.length} קופונים נכשלו בהוספה.`);
+                    console.error("Failed coupons:", data.failed_coupons);
+                } else {
+                    alert("לא נוספו קופונים. נא לבדוק את הקישורים ולנסות שוב.");
+                }
+            } else {
+                // Handle error response
+                let errorMsg = "שגיאה בעיבוד הקופונים.";
+                if (contentType && contentType.includes("application/json")) {
+                    const errorData = await response.json();
+                    errorMsg = errorData.message || errorMsg;
+                } else if (contentType && contentType.includes("text/html")) {
+                    errorMsg = "שגיאת שרת. נא לבדוק את הלוגים.";
+                }
+                alert(errorMsg);
             }
-        });
-    }
-});
+        } catch (error) {
+            console.error("Error:", error);
+            alert("שגיאה בעיבוד הקישורים: " + error.message);
+        } finally {
+            // Restore button
+            submitButton.textContent = originalText;
+            submitButton.disabled = false;
+        }
+    });
+    
+    // Fix for BuyMe coupon import validation issues
+    document.addEventListener('DOMContentLoaded', function() {
+        const fixBuymeCouponResponse = () => {
+            const container = document.getElementById('coupons-container');
+            if (!container) return;
+            
+            // Step 1: Find and remove any empty fieldsets at the beginning
+            const fieldsets = container.querySelectorAll('.coupon-fieldset');
+            let emptyFieldsetsRemoved = false;
+            
+            fieldsets.forEach((fieldset, idx) => {
+                const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+                const codeValue = codeInput ? codeInput.value.trim() : '';
+                
+                // If this is an empty fieldset (only has company ID set) - remove it
+                if (!codeValue) {
+                    fieldset.remove();
+                    emptyFieldsetsRemoved = true;
+                    console.log(`Removed empty fieldset at index ${idx}`);
+                }
+            });
+            
+            // Step 2: If we removed fieldsets, update all indices
+            if (emptyFieldsetsRemoved) {
+                const remainingFieldsets = container.querySelectorAll('.coupon-fieldset');
+                remainingFieldsets.forEach((fieldset, newIdx) => {
+                    // Update data-index
+                    fieldset.dataset.index = newIdx;
+                    
+                    // Update all name, id, and for attributes
+                    fieldset.querySelectorAll('[name^="coupons-"], [id^="coupons-"], [for^="coupons-"]').forEach(el => {
+                        const pattern = /^(coupons-)\d+(-.*)/;
+                        
+                        if (el.name) {
+                            el.name = el.name.replace(pattern, `$1${newIdx}$2`);
+                        }
+                        if (el.id) {
+                            el.id = el.id.replace(pattern, `$1${newIdx}$2`);
+                        }
+                        if (el.htmlFor) {
+                            el.htmlFor = el.htmlFor.replace(pattern, `$1${newIdx}$2`);
+                        }
+                    });
+                    
+                    // Update special IDs (containers, etc.)
+                    fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
+                        const parts = el.id.split('_');
+                        if (parts.length >= 3) {
+                            // Rebuild ID with new index
+                            const baseId = parts.slice(0, -1).join('_');
+                            el.id = `${baseId}_${newIdx}`;
+                        }
+                    });
+                    
+                    // Update legend text
+                    const legend = fieldset.querySelector('legend');
+                    if (legend) {
+                        legend.textContent = `קופון ${newIdx + 1}`;
+                    }
+                    
+                    // Special handling for BuyMe coupons - automatically set discount_percentage to 100 if cost is 0
+                    const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                    const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
+                    const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
+                    
+                    if (valueInput && costInput && discountInput) {
+                        const value = parseFloat(valueInput.value) || 0;
+                        const cost = parseFloat(costInput.value) || 0;
+                        
+                        // If we have a value but cost is 0, set discount to 100%
+                        if (value > 0 && cost === 0) {
+                            discountInput.value = "100";
+                            console.log(`Set discount to 100% for fieldset ${newIdx} (value: ${value}, cost: ${cost})`);
+                        }
+                        // Otherwise calculate proper discount
+                        else if (value > 0 && cost > 0) {
+                            const discount = ((value - cost) / value) * 100;
+                            discountInput.value = discount.toFixed(2);
+                            console.log(`Calculated discount ${discount.toFixed(2)}% for fieldset ${newIdx}`);
+                        }
+                    }
+                });
+                
+                console.log(`Fixed indices for ${remainingFieldsets.length} fieldsets`);
+            }
+        };
+        
+        // Run the fix when the page loads, and again after a short delay
+        fixBuymeCouponResponse();
+        setTimeout(fixBuymeCouponResponse, 500);
+        
+        // Modify the form submission to also validate and fix discount percentages
+        const originalSubmitUrls = document.getElementById('submitUrls');
+        if (originalSubmitUrls) {
+            const originalClick = originalSubmitUrls.onclick;
+            originalSubmitUrls.onclick = null;
+            
+            originalSubmitUrls.addEventListener('click', async function(event) {
+                // Call the original handler
+                if (originalClick) {
+                    await originalClick.call(this, event);
+                }
+                
+                // Apply our fix after a small delay to ensure the DOM has been updated
+                setTimeout(fixBuymeCouponResponse, 1000);
+            });
+        }
+        
+        // Also add pre-submission validation to ensure discount percentages are properly set
+        const couponsForm = document.getElementById('coupons-form');
+        if (couponsForm) {
+            couponsForm.addEventListener('submit', function(e) {
+                const fieldsets = document.querySelectorAll('.coupon-fieldset');
+                
+                fieldsets.forEach((fieldset, idx) => {
+                    const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                    const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
+                    const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
+                    
+                    if (valueInput && costInput && discountInput) {
+                        const value = parseFloat(valueInput.value) || 0;
+                        const cost = parseFloat(costInput.value) || 0;
+                        
+                        // If value exists and cost is 0, set discount to 100%
+                        if (value > 0 && cost === 0) {
+                            discountInput.value = "100";
+                        }
+                        // Otherwise calculate proper discount
+                        else if (value > 0 && cost > 0) {
+                            const discount = ((value - cost) / value) * 100;
+                            discountInput.value = discount.toFixed(2);
+                        }
+                    }
+                });
+            }, true); // Use capturing phase to run before other handlers
+        }
+    });
 </script>
+    
+    
+
 {% endblock %}

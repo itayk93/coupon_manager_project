@@ -45,6 +45,7 @@
                     <option value="">בחר ערך</option>
                     <option value="Max" {% if coupon.auto_download_details == "Max" %}selected{% endif %}>Max</option>
                     <option value="Multipass" {% if coupon.auto_download_details == "Multipass" %}selected{% endif %}>Multipass</option>
+                    <option value="BuyMe" {% if coupon.auto_download_details == "BuyMe" %}selected{% endif %}>BuyMe</option>
                   </select>
                   <button type="submit" name="update_auto" class="btn btn-sm btn-secondary">עדכן הורדה</button>
                 </form>
