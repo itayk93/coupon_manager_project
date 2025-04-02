@@ -34,3 +34,4 @@ Flask==3.0.3
 Werkzeug==3.0.4
 Flask-SQLAlchemy==3.1.1
 flask-dance==7.1.0
+webdriver-manager
