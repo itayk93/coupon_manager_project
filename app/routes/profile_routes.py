@@ -134,7 +134,8 @@ def get_ip_address():
 @profile_bp.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
-    from sqlalchemy import cast, Date
+    from sqlalchemy import cast, Date, func
+    import json
     """
     עמוד הפרופיל / הבית שמציג:
     - ברכה (greeting)
@@ -308,7 +309,6 @@ def index():
     # מציגים התראה רק אם יש קופונים רלוונטיים והמשתמש לא דחה את ההתראה היום
     show_expiring_alert = len(expiring_coupons) > 0 and not dismissed_today
 
-
     # --------------------------------------------------------------------------------
     # 5. שליפת כל החברות (למפת לוגו, אם רלוונטי)
     # --------------------------------------------------------------------------------
@@ -321,7 +321,116 @@ def index():
             company_logo_mapping[company_name] = 'images/default.png'
 
     # --------------------------------------------------------------------------------
-    # 6. החזרת ה-Template 'index.html'
+    # 6. סטטיסטיקות מדויקות לפי חברה עבור התרשימים
+    # --------------------------------------------------------------------------------
+    # ארגון נתונים לפי חברה
+    companies_stats = {}
+    for coupon in all_non_one_time_coupons:
+        company = coupon.company
+        if company not in companies_stats:
+            companies_stats[company] = {
+                'total_value': 0,
+                'used_value': 0,
+                'remaining_value': 0, 
+                'savings': 0,
+                'count': 0
+            }
+        
+        companies_stats[company]['total_value'] += coupon.value
+        companies_stats[company]['used_value'] += coupon.used_value
+        companies_stats[company]['remaining_value'] += (coupon.value - coupon.used_value)
+        companies_stats[company]['savings'] += max(0, coupon.value - coupon.cost)
+        companies_stats[company]['count'] += 1
+
+    # מיון החברות לפי סכום החיסכון
+    sorted_companies = sorted(
+        companies_stats.items(), 
+        key=lambda x: x[1]['savings'], 
+        reverse=True
+    )
+
+    # נתונים לסדרת זמן (שימוש בקופונים לפי חודש)
+    timeline_data = {}
+    
+    # הנחה: יש לך מודל CouponUsage. אם לא, השתמש בהיסטוריית העדכונים מהלוג
+    try:
+        # ניסיון לשליפת היסטוריית השימוש מטבלת CouponUsage
+        usage_records = CouponUsage.query.filter(
+            CouponUsage.coupon_id.in_([c.id for c in all_non_one_time_coupons]),
+            CouponUsage.user_id == current_user.id
+        ).all()
+        
+        for record in usage_records:
+            usage_month = record.date_used.strftime('%Y-%m')
+            if usage_month not in timeline_data:
+                timeline_data[usage_month] = 0
+            timeline_data[usage_month] += record.amount
+            
+    except (NameError, AttributeError):
+        # אם אין טבלת CouponUsage, ניצור נתונים זמניים לפי היום של כל עדכון
+        # זה לא מדויק אבל יספק לפחות תצוגה בסיסית
+        
+        # ניסיון לשימוש בתאריך העדכון האחרון של הקופון
+        for coupon in all_non_one_time_coupons:
+            if hasattr(coupon, 'last_updated') and coupon.last_updated and coupon.used_value > 0:
+                usage_month = coupon.last_updated.strftime('%Y-%m')
+                if usage_month not in timeline_data:
+                    timeline_data[usage_month] = 0
+                timeline_data[usage_month] += coupon.used_value
+            elif hasattr(coupon, 'date_added') and coupon.date_added and coupon.used_value > 0:
+                usage_month = coupon.date_added.strftime('%Y-%m')
+                if usage_month not in timeline_data:
+                    timeline_data[usage_month] = 0
+                timeline_data[usage_month] += coupon.used_value
+    
+    # מיון התאריכים בסדר כרונולוגי
+    sorted_timeline = sorted(timeline_data.items())
+    
+    # המרת חודשים למילים
+    month_names = {
+        '01': 'ינואר', '02': 'פברואר', '03': 'מרץ', '04': 'אפריל',
+        '05': 'מאי', '06': 'יוני', '07': 'יולי', '08': 'אוגוסט',
+        '09': 'ספטמבר', '10': 'אוקטובר', '11': 'נובמבר', '12': 'דצמבר'
+    }
+    
+    # המרה לפורמט JSON עבור JavaScript
+    sorted_company_data = [
+        {
+            'company': company, 
+            'savings': stats['savings'],
+            'used_value': stats['used_value'],
+            'total_value': stats['total_value'],
+            'remaining_value': stats['remaining_value'],
+            'coupons_count': stats['count'],
+            'active_coupons': sum(1 for coupon in active_coupons if coupon.company == company),
+            'usage_percentage': (stats['used_value'] / stats['total_value'] * 100) if stats['total_value'] > 0 else 0
+        } 
+        for company, stats in sorted_companies
+    ]
+
+    # שינוי פורמט התאריכים לפורמט קריא יותר
+    timeline_data_formatted = []
+    
+    for month_year, value in sorted_timeline:
+        year, month = month_year.split('-')
+        month_name = month_names.get(month, month)
+        timeline_data_formatted.append({
+            'month': f"{month_name} {year}",
+            'value': value
+        })
+
+    # חישוב מדדים נוספים לסטטיסטיקות הכלליות
+    total_coupons_count = len(all_non_one_time_coupons)
+    total_companies_count = len(companies_stats)
+    
+    # חישוב אחוז ניצול ממוצע
+    average_usage_percentage = 0
+    if total_coupons_value > 0:
+        total_used_value = sum(coupon.used_value for coupon in all_non_one_time_coupons)
+        average_usage_percentage = (total_used_value / total_coupons_value) * 100
+
+    # --------------------------------------------------------------------------------
+    # 7. החזרת ה-Template 'index.html'
     # --------------------------------------------------------------------------------
     # המרה של expiration מ-String ל-Date (אם הוא לא None)
     for coupon in expiring_coupons:
@@ -338,6 +447,7 @@ def index():
     if latest_message:
         if (current_user.dismissed_message_id is None) or (current_user.dismissed_message_id < latest_message.id):
             show_admin_message = True
+            
     return render_template(
         'index.html',
         profile_form=profile_form,
@@ -364,10 +474,16 @@ def index():
         current_date=date.today(),
         timedelta=timedelta,
 
+        # משתנים חדשים לסטטיסטיקות
+        companies_stats=json.dumps(sorted_company_data),
+        timeline_data=json.dumps(timeline_data_formatted),
+        total_coupons_count=total_coupons_count,
+        total_companies_count=total_companies_count,
+        average_usage_percentage=average_usage_percentage,
+
         show_admin_message=show_admin_message,
-        admin_message=latest_message if show_admin_message else None)
-
-
+        admin_message=latest_message if show_admin_message else None
+    )
 
 @profile_bp.route('/dismiss_expiring_alert', methods=['GET'])
 @login_required
