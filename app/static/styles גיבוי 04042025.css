@@ -1,0 +1,2328 @@
+/* # Global Imports and Variables */
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap');
+
+:root {
+    /* CSS Variables for Consistency */
+    --primary-color: #2E86C1; /* Calm Blue */
+    --secondary-color: #A9CCE3; /* Light Blue */
+    --accent-color: #F5B041; /* Light Orange for emphasis */
+    --background-color: #f9f9f9;
+    --text-color: #2C3E50;
+    --white: #ffffff;
+    --light-gray: #e0e0e0;
+    --gray: #bdc3c7;
+    --success-color: #27AE60;
+    --success-text: #ffffff;
+    --danger-color: #C0392B;
+    --danger-text: #ffffff;
+    --warning-color: #F39C12;
+    --warning-text: #ffffff;
+    --font-family: 'Rubik', Arial, sans-serif;
+    --transition-speed: 0.3s;
+    --max-width: 1200px;
+}
+
+/* # Reset and Base Styles */
+html {
+    box-sizing: border-box;
+}
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-family);
+    direction: rtl;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    padding-bottom: 50px; /* Bottom padding for the page */
+}
+a {
+    text-decoration: none !important;
+}
+a:hover {
+    text-decoration: none !important;
+}
+
+/* # Header Styles */
+header {
+    display: grid;
+    grid-template-columns: auto 1fr auto; /* three columns: left, center, right */
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--primary-color);
+    color: var(--white);
+    padding: 0 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    top: 0;
+    z-index: 1000;
+    height: 50px;
+}
+.header-center .header-logo {
+    transform: translateX(-20px);
+}
+.header-left, .header-right {
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
+}
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.header-center img {
+    max-height: 40px;
+    width: auto;
+    margin-right: 20px;
+}
+.header-left a {
+    color: var(--white);
+    text-decoration: none;
+    margin-right: 10px;
+    font-weight: bold;
+    transition: color var(--transition-speed);
+    font-size: 16px;
+}
+.header-left a:hover {
+    color: var(--secondary-color);
+}
+.header-left a:not(.home-icon) i {
+    font-size: 1.8em;
+    color: var(--white);
+    margin-left: 8px;
+}
+.header-left a.home-icon i.fa-home {
+    font-size: 1.5em;
+    margin-left: 3px;
+}
+.header-left span {
+    font-size: 14px;
+    margin-right: 8px;
+}
+.header-right nav .dropdown {
+    position: relative;
+    margin-left: 0;
+}
+.nav-icon {
+    color: var(--white);
+    font-size: 1.3em;
+    text-decoration: none;
+    transition: color var(--transition-speed);
+}
+.nav-icon:hover {
+    color: var(--secondary-color);
+}
+.hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+}
+.hamburger div {
+    width: 25px;
+    height: 3px;
+    background-color: var(--white);
+    margin: 4px 0;
+    transition: 0.4s;
+}
+.hamburger.active .bar1 {
+    transform: rotate(-45deg) translate(-5px, 6px);
+}
+.hamburger.active .bar2 {
+    opacity: 0;
+}
+.hamburger.active .bar3 {
+    transform: rotate(45deg) translate(-5px, -6px);
+}
+
+/* # Dropdown Menu Styles */
+.dropbtn {
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    cursor: pointer;
+    font-size: 1.5em;
+    padding: 5px 10px;
+    transition: background-color var(--transition-speed);
+    position: relative;
+}
+.dropbtn:hover {
+    background-color: var(--secondary-color);
+}
+.dropbtn::after {
+    content: '\25BC';
+    margin-left: 5px;
+    font-size: 0.6em;
+}
+@media (max-width: 500px) {
+    .dropbtn::after {
+        content: none;
+    }
+    .dropbtn {
+        clip-path: inset(0px 0px 3px 0px);
+    }
+}
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    max-width: 250px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+    z-index: 1000;
+    white-space: nowrap;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.dropdown:hover .dropdown-content,
+.dropdown:focus-within .dropdown-content {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+}
+.dropdown-content.adjust-left {
+    left: auto;
+    right: 0;
+    transform: none;
+}
+.dropdown-content.adjust-right {
+    left: 0;
+    right: auto;
+    transform: none;
+}
+.dropdown-content.show {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+}
+.dropdown-content a {
+    color: var(--text-color);
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    transition: background-color var(--transition-speed);
+}
+.dropdown-content a:hover {
+    background-color: var(--secondary-color);
+}
+.dropdown-divider {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 8px 0;
+}
+.dropdown:nth-of-type(2) .dropdown-content {
+    right: -20px;
+    left: auto;
+    transform: none;
+}
+
+/* # Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+@keyframes slideInFromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* # Button Styles */
+.submit-button {
+    padding: 15px;
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1em;
+    transition: background-color var(--transition-speed);
+    width: 100%;
+}
+.submit-button:hover {
+    background-color: var(--secondary-color);
+}
+.submit-button:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.secondary-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: var(--accent-color);
+    color: var(--white);
+    text-decoration: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color var(--transition-speed);
+    font-size: 0.9em;
+    min-width: 120px;
+}
+.secondary-button:hover {
+    background-color: #e67e22;
+}
+.secondary-button .fa {
+    font-size: 1.2em;
+}
+.secondary-button:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.action-button {
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(46, 134, 193, 0.2);
+    text-decoration: none;
+}
+.coupon-card .action-button {
+    margin-top: 10px;
+}
+.action-button:hover {
+    background-color: #1A5A8D;
+    box-shadow: 0 6px 12px rgba(46, 134, 193, 0.3);
+}
+.action-button:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 4px rgba(46, 134, 193, 0.3);
+}
+.action-button.danger {
+    background-color: var(--danger-color);
+}
+.action-button.danger:hover {
+    background-color: darkred;
+}
+.action-button.secondary {
+    background-color: #bdc3c7;
+    color: #2c3e50;
+}
+.action-button.secondary:hover {
+    background-color: #95a5a6;
+}
+
+/* # Form Styles */
+form {
+    display: flex;
+    flex-direction: column;
+}
+label {
+    margin: 10px 0 5px 0;
+    font-weight: bold;
+    color: var(--text-color);
+    text-align: right;
+}
+.input-field, textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--light-gray);
+    border-radius: 5px;
+    font-size: 1em;
+    transition: border-color var(--transition-speed);
+    direction: ltr;
+}
+.input-field:focus, textarea:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+.form-group {
+    margin-bottom: 20px;
+}
+.required {
+    color: var(--danger-color);
+}
+.error-message {
+    color: red;
+    font-size: 0.9em;
+    margin-top: 5px;
+    display: block;
+}
+.input-with-button {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+.input-with-button .input-field {
+    flex: 1;
+}
+.show-password-button {
+    margin-right: 10px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 16px;
+}
+#password-strength {
+    width: 100%;
+    background-color: var(--light-gray);
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 5px;
+}
+#password-strength-bar {
+    height: 100%;
+    width: 0%;
+    background-color: var(--danger-color);
+    transition: width 0.3s;
+}
+#strength-message {
+    margin-top: 5px;
+    font-size: 0.9em;
+    color: var(--text-color);
+    text-align: right;
+}
+.add-coupon,
+.sell-coupon,
+.edit-coupon,
+.auth-form,
+.request-coupon {
+    max-width: 400px;
+    margin: 40px auto;
+    background-color: var(--white);
+    padding: 30px 50px;
+    border-radius: 10px;
+    border: 1px solid var(--light-gray);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+.auth-form h2,
+.add-coupon h2,
+.sell-coupon h2,
+-edit-coupon h2,
+.request-coupon h2 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+.add-coupons-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 40px;
+}
+
+/* # Image Styles */
+.company-logo,
+.coupon-logo,
+.logo,
+.coupon-image {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+.company-logo:hover,
+.coupon-logo:hover,
+.logo:hover,
+.coupon-image:hover {
+    transform: scale(1.05);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+@media (max-width: 768px) {
+    .company-logo,
+    .coupon-logo,
+    .logo,
+    .coupon-image {
+        width: 80px;
+        height: 80px;
+    }
+}
+@media (max-width: 500px) {
+    .company-logo,
+    .coupon-logo,
+    .logo,
+    .coupon-image {
+        width: 60px;
+        height: 60px;
+    }
+}
+h3 {
+    margin-bottom: 0px;
+}
+.sale-message {
+    margin-top: 5px;
+}
+
+/* # Card Styles */
+.hero {
+    text-align: center;
+    padding: 20px 15px;
+    background-color: var(--white);
+    margin: 15px auto;
+    margin-top: 10px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    width: 55%;
+    max-width: 750px;
+    line-height: 1.2;
+}
+.hero h2 {
+    margin-top: 0px;
+    font-size: 2.2em;
+    color: var(--primary-color);
+}
+.hero p {
+    font-size: 1.1em;
+    color: var(--text-color);
+    margin-bottom: 0px;
+}
+.total-value, .total-savings {
+    background-color: var(--white);
+    padding: 20px 0px;
+    margin: 25px auto;
+    border-radius: 10px;
+    border: 1px solid var(--light-gray);
+    width: 350px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.total-value p, .total-savings p {
+    font-size: 1em;
+    color: var(--text-color);
+    margin-bottom: 10px;
+    text-align: center;
+}
+.total-value h1, .total-savings h1 {
+    font-size: 3em;
+    margin: 0 auto;
+    color: var(--success-color);
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0.3em;
+}
+.total-savings-line {
+    text-align: center;
+    font-size: 1.1em;
+    color: var(--text-color);
+    margin-top: 15px;
+}
+.coupon-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
+.coupon-card {
+    flex: 1 1 calc(22% - 15px);
+    box-sizing: border-box;
+    padding: 12px 18px;
+    border: 1px solid var(--light-gray);
+    border-radius: 8px;
+    background-color: var(--white);
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+    color: inherit;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.usage-form-wrapper {
+    max-width: 750px;
+    margin: 35px auto;
+    padding: 18px;
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+.usage-form-wrapper h2 {
+    font-size: 1.4em;
+    color: var(--primary-color);
+    margin-bottom: 12px;
+}
+.usage-form-wrapper form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.usage-form-wrapper label {
+    font-size: 1em;
+    font-weight: bold;
+    margin-bottom: 8px;
+    text-align: center;
+}
+.input-field {
+    width: 100%;
+    padding: 9px;
+    border: 1px solid var(--light-gray);
+    border-radius: 5px;
+    font-size: 0.95em;
+    text-align: right;
+}
+.submit-button {
+    background-color: var(--accent-color);
+    color: var(--white);
+    border: none;
+    padding: 9px 18px;
+    margin-top: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: bold;
+    transition: background-color var(--transition-speed);
+}
+.submit-button:hover {
+    background-color: #e67e22;
+}
+
+/* # Notification Styles */
+#notification-area {
+    position: fixed;
+    left: 10px;
+    top: 50px;
+    width: 300px;
+    z-index: 1000;
+}
+.notification {
+    background-color: #ffffff;
+    border: 1px solid var(--light-gray);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    animation: slideInFromLeft 0.5s ease-out;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+.notification p {
+    margin: 0;
+    font-size: 1em;
+    color: var(--text-color);
+}
+.notification a {
+    display: inline-block;
+    margin-top: 10px;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: bold;
+}
+.notification a:hover {
+    text-decoration: underline;
+}
+.notification .close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: var(--danger-color);
+}
+.notification .close-button:hover {
+    color: darkred;
+}
+.auto-save-message {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--success-color);
+    color: var(--success-text);
+    padding: 10px 20px;
+    border-radius: 5px;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    z-index: 1000;
+}
+.auto-save-message.show {
+    opacity: 1;
+}
+.notification-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+.notification-message {
+    text-align: center;
+    font-size: 1.1em;
+    color: var(--text-color);
+}
+.notification-timestamp {
+    font-size: 0.9em;
+    color: var(--gray);
+    margin-top: 5px;
+}
+.notification-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: bold;
+    margin-top: 10px;
+    display: inline-block;
+    transition: color var(--transition-speed);
+}
+.notification-link:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+.notification-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.5em;
+    color: var(--danger-color);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color var(--transition-speed);
+    padding: 0;
+    outline: none;
+}
+.notification-close:hover {
+    color: darkred;
+}
+.request-coupon-button {
+    margin-bottom: 20px;
+}
+.small-button-style {
+    padding: 8px 15px;
+    font-size: 0.9em;
+    max-width: fit-content;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    box-shadow: none;
+    margin: 25px auto;
+    gap: 5px;
+}
+.action-button.small-button {
+    padding: 8px 15px;
+    font-size: 0.9em;
+    max-width: fit-content;
+    margin: 0 auto;
+    border-radius: 8px;
+    background-color: var(--accent-color);
+    color: var(--white);
+    transition: background-color var(--transition-speed), transform var(--transition-speed), box-shadow var(--transition-speed);
+    text-align: center;
+}
+.action-button.small-button:hover {
+    background-color: #e67e22;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+.action-button.small-button:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.admin-actions {
+    text-align: center;
+    margin-top: 20px;
+}
+.action-button.small-button.admin-action-button {
+    margin-top: 10px;
+}
+.description-box {
+    text-align: center;
+    direction: rtl;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 100%;
+    margin: 0 auto;
+}
+.description-box span,
+.description-box p {
+    display: block;
+    text-align: center !important;
+    width: 100%;
+}
+
+/* # Export Buttons */
+.export-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin: 30px 0;
+}
+.export-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background-color: var(--accent-color);
+    color: var(--white);
+    text-align: center;
+    text-decoration: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color var(--transition-speed);
+    font-size: 0.9em;
+}
+.export-button:hover {
+    background-color: #e67e22;
+}
+.export-button .fa {
+    font-size: 1.2em;
+}
+
+/* # Calendar Section */
+.calendar-section {
+    background-color: var(--white);
+    padding: 30px 20px;
+    margin: 40px 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.calendar-section h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+}
+#calendar {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* # Coupon List and Grid */
+.coupon-list h2, .add-coupon h2 {
+    text-align: center;
+    margin: 0 0 20px 0;
+    padding-top: 10px;
+    color: var(--primary-color);
+}
+.coupon-management h2 {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 0;
+    margin-top: -20px;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 10px;
+    text-align: center;
+    border-bottom: 4px solid var(--accent-color);
+    padding-bottom: 5px;
+}
+.coupon-management h2::after {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 4px;
+    background-color: var(--accent-color);
+    bottom: 0;
+    border-radius: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.coupon-section-title {
+    text-align: center;
+    color: var(--primary-color);
+    margin: 10px 0 10px 0;
+}
+.coupon-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+}
+
+/* # Responsive Adjustments for My Transactions Page */
+@media only screen and (max-width: 768px) {
+    .transactions .transaction-table thead {
+        display: none;
+    }
+    .transactions .transaction-table tr {
+        display: block;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        padding: 10px;
+        background-color: #fff;
+    }
+    .transactions .transaction-table tr {
+        background-color: #fff !important;
+    }
+    .transactions .transaction-table td {
+        width: 100%;
+        min-height: 100px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 16px;
+        box-sizing: border-box;
+        border-bottom: 1px solid #ddd;
+        background-color: #fff;
+        font-size: 16px;
+        font-weight: 500;
+        word-wrap: break-word;
+        white-space: normal;
+        overflow-wrap: break-word;
+        position: relative;
+    }
+    .transactions .transaction-table td:nth-child(1)::before { content: "חברה: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(2)::before { content: "לוגו: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(3)::before { content: "קונה: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(4)::before { content: "מוכר: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(5)::before { content: "סטטוס: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td:nth-child(6)::before { content: "תאריך: "; font-weight: bold; color: #555; display: block; margin-bottom: 8px; text-align: center; }
+    .transactions .transaction-table td img {
+        max-width: 60px;
+        max-height: 60px;
+        border-radius: 5px;
+        display: block;
+        margin: 10px auto;
+    }
+    .transactions .transaction-table:not(.completed-table) tr,
+    .transactions .completed-transactions .transaction-table.completed-table tr {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: auto auto auto;
+        gap: 8px;
+        align-items: stretch;
+        width: 100%;
+        justify-items: center;
+    }
+    .transactions .transaction-table td {
+        padding: 16px;
+        line-height: 1.6;
+    }
+    .transactions .transaction-table td:last-child {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .transactions .action-button {
+        margin: 5px auto;
+    }
+}
+
+/* # Flash Messages Styling */
+.flash {
+    margin: 10px auto;
+    padding: 10px;
+    border-radius: 5px;
+    max-width: 800px;
+    text-align: center;
+}
+.flash.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+.flash.warning {
+    background-color: #fff3cd;
+    color: #856404;
+}
+.flash.danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* # Narrow Button */
+.narrow-button {
+    max-width: 220px;
+    padding: 12px 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+}
+
+/* # Notification Page Styles */
+.notifications-page {
+    max-width: var(--max-width);
+    margin: 20px auto;
+    padding: 10px 20px;
+    background-color: var(--background-color);
+}
+.notifications-page h2 {
+    text-align: center;
+    color: var(--primary-color);
+    font-size: 2.5em;
+    margin-bottom: 30px;
+    margin-top: 10px;
+    position: relative;
+}
+.notifications-page h2::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 4px;
+    background-color: var(--accent-color);
+    margin: 10px auto 0 auto;
+    border-radius: 2px;
+}
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.delete-all-btn {
+    background-color: var(--danger-color);
+    color: var(--white);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color var(--transition-speed);
+    margin: 0 auto 30px auto;
+    display: block;
+    max-width: 200px;
+}
+.delete-all-btn:hover {
+    background-color: darkred;
+}
+.no-notifications {
+    text-align: center;
+    font-size: 1.2em;
+    color: var(--gray);
+    margin-top: 20px;
+}
+
+/* # Save Indicators */
+.save-indicator.success {
+    color: green;
+    font-size: 1.2em;
+}
+.save-indicator.error {
+    color: red;
+    font-size: 1.2em;
+}
+
+/* # Suggestions Box */
+.suggestions-box {
+    position: absolute;
+    background-color: var(--white);
+    border: 1px solid var(--light-gray);
+    max-height: 150px;
+    overflow-y: auto;
+    width: calc(100% - 20px);
+    z-index: 1000;
+}
+.suggestion-item {
+    padding: 10px;
+    cursor: pointer;
+}
+.suggestion-item:hover {
+    background-color: var(--secondary-color);
+}
+.suggested-tag {
+    display: inline-block;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    padding: 5px 10px;
+    margin: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* # Responsive Design Adjustments */
+@media (max-width: 768px) {
+    header {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 20px;
+    }
+    .header-left {
+        display: flex;
+        align-items: center;
+        margin-right: 10px;
+    }
+    .header-center {
+        display: none;
+    }
+    .header-right {
+        display: flex;
+        align-items: center;
+    }
+    .header-right nav {
+        display: flex;
+        flex-direction: row;
+        width: auto;
+    }
+    .coupon-grid {
+        flex-direction: column;
+        align-items: center;
+    }
+    .export-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    .total-value, .total-savings {
+        width: 100%;
+    }
+    .add-coupons-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .secondary-button {
+        width: 100%;
+        justify-content: center;
+    }
+    .tabs {
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+    }
+    .tab-button {
+        width: 100%;
+        max-width: none;
+        border-radius: 5px;
+    }
+    .profile-card {
+        padding: 20px;
+    }
+    .header-right nav .dropdown {
+        margin-left: 0;
+        width: auto;
+    }
+    .hero {
+        width: 90%;
+        max-width: none;
+        margin: 20px auto;
+    }
+    .add-coupon,
+    .sell-coupon,
+    .request-coupon {
+        width: 90%;
+        max-width: none;
+        margin: 20px auto;
+        padding: 20px;
+    }
+    .add-coupon form,
+    .sell-coupon form,
+    .request-coupon form {
+        width: 100%;
+    }
+    .add-coupon form input,
+    .add-coupon form textarea,
+    .add-coupon form select,
+    .sell-coupon form input,
+    .sell-coupon form textarea,
+    .sell-coupon form select,
+    .request-coupon form input,
+    .request-coupon form textarea,
+    .request-coupon form select {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .show-password-button {
+        right: 10px;
+        top: 35px;
+    }
+    .coupon-data-table th:nth-child(3),
+    .coupon-data-table td:nth-child(3),
+    .coupon-data-table th:nth-child(5),
+    .coupon-data-table td:nth-child(5) {
+        display: none;
+    }
+    .company-logo,
+    .coupon-logo,
+    .logo {
+        width: 40px;
+        height: auto;
+    }
+    .coupon-data-table th,
+    .coupon-data-table td {
+        font-size: 0.9em;
+        padding: 8px;
+    }
+}
+
+/* # Centered Action Buttons */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 30px;
+    flex-wrap: nowrap;
+}
+.action-buttons .action-button {
+    min-width: 120px;
+    text-align: center;
+}
+
+/* # Confirm Delete Section */
+.confirm-delete {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80vh;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+.content-wrapper {
+    background-color: #ffffff;
+    border: 1px solid #dcdcdc;
+    border-radius: 10px;
+    padding: 40px 60px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+}
+.confirm-delete h2 {
+    font-size: 28px;
+    color: #333333;
+    margin-bottom: 20px;
+    font-weight: 700;
+}
+.confirm-delete p {
+    font-size: 18px;
+    color: #555555;
+    margin-bottom: 30px;
+}
+
+/* # Confirm Buttons Styles */
+.confirm-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+@media (max-width: 600px) {
+    .content-wrapper {
+        padding: 30px 40px;
+    }
+    .confirm-delete h2 {
+        font-size: 24px;
+    }
+    .confirm-delete p {
+        font-size: 16px;
+    }
+    .action-button {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+}
+
+/* # Delete Coupons Page Styles */
+.delete-coupons {
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+.delete-coupons h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+}
+.select-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.select-button {
+    padding: 8px 12px;
+    background-color: var(--accent-color);
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color var(--transition-speed);
+}
+.select-button:hover {
+    background-color: #e67e22;
+}
+.coupon-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+.coupon-table th, .coupon-table td {
+    border: 1px solid var(--light-gray);
+    padding: 10px;
+    text-align: center;
+}
+.coupon-table th {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+}
+.coupon-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.coupon-table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+.delete-button {
+    display: block;
+    width: 200px;
+    margin: 0 auto;
+    padding: 12px 0;
+    background-color: var(--danger-color);
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1em;
+    transition: background-color var(--transition-speed);
+}
+.delete-button:hover {
+    background-color: #c0392b;
+}
+.toggle-button-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 10px;
+}
+#toggle-inactive-coupons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: 10px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color var(--transition-speed);
+    font-size: 0.9em;
+}
+#toggle-inactive-coupons:hover {
+    background-color: #1A5A8D;
+}
+
+/* # Template Button Download in Upload Coupons */
+.download-template-button {
+    text-align: center;
+    margin-bottom: 25px;
+}
+.primary-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background-color: var(--primary-color);
+    color: var(--white);
+    text-decoration: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color var(--transition-speed);
+    font-size: 0.9em;
+}
+.primary-button:hover {
+    background-color: #2980b9;
+}
+.primary-button .fa {
+    font-size: 1.2em;
+}
+@media (max-width: 768px) {
+    .download-template-button {
+        margin-bottom: 15px;
+    }
+    .primary-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* # About Page Styles */
+.about-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    text-align: right;
+    animation: fadeIn 1s ease-in-out;
+    background: linear-gradient(135deg, #f0f4f8 25%, #d9e2ec 100%);
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.about-section h2 {
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    font-size: 2.5em;
+    position: relative;
+}
+.about-section h3 {
+    color: var(--secondary-color);
+    margin-top: 40px;
+    margin-bottom: 15px;
+    font-size: 1.8em;
+    border-bottom: 2px solid var(--accent-color);
+    display: inline-block;
+    padding-bottom: 5px;
+    transition: color 0.3s ease;
+}
+.about-section h3:hover {
+    color: var(--accent-color);
+}
+.about-section p {
+    margin-bottom: 20px;
+    line-height: 1.6;
+    font-size: 1.1em;
+    transition: color 0.3s ease;
+}
+.about-section p a {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+.about-section p a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+.about-section ul {
+    list-style-type: disc;
+    padding-right: 20px;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.about-section li {
+    margin-bottom: 10px;
+    line-height: 1.4;
+    font-size: 1.1em;
+    position: relative;
+    padding-right: 10px;
+}
+.about-section li::before {
+    content: '•';
+    position: absolute;
+    right: 0;
+    color: var(--primary-color);
+    font-size: 1.2em;
+}
+.qa-section {
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    animation: slideIn 1s ease-in-out;
+}
+.qa-section .question {
+    background-color: var(--light-gray);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.qa-section .question:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.qa-section h4 {
+    color: var(--primary-color);
+    margin-top: 0px;
+    margin-bottom: 10px;
+    font-size: 1.4em;
+    position: relative;
+}
+.qa-section p {
+    margin: 0;
+    line-height: 1.5;
+    font-size: 1em;
+    color: var(--text-color);
+}
+.qa-section a {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+.qa-section a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+@media (max-width: 768px) {
+    .about-section {
+        padding: 20px 10px;
+    }
+    .about-section h2 {
+        font-size: 2em;
+    }
+    .about-section h3 {
+        font-size: 1.5em;
+    }
+    .qa-section {
+        grid-template-columns: 1fr;
+    }
+    .export-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .coupon-card {
+        width: 100% !important;
+    }
+}
+
+/* # Buy Slots Section Styles */
+.buy-slots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    padding: 40px 20px;
+    background-color: var(--background-color);
+}
+.buy-slots-container {
+    padding-top: 10px;
+    background-color: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    padding: 50px 40px;
+    max-width: 800px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.buy-slots-title {
+    font-size: 2.8em;
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 20px;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 10px;
+}
+.buy-slots-title::after {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 4px;
+    background-color: var(--accent-color);
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 2px;
+}
+.slots-available {
+    font-size: 1.3em;
+    color: var(--text-color);
+    margin-bottom: 30px;
+}
+.slot-card {
+    background-color: #f9f9f9;
+    border: 1px solid var(--light-gray);
+    border-radius: 10px;
+    padding: 30px 20px;
+    margin: 0 auto;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+.slot-description {
+    font-size: 1.2em;
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.buy-slots-button {
+    background-color: var(--primary-color);
+    padding: 15px 25px;
+    border: none;
+    border-radius: 8px;
+    color: var(--white);
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color var(--transition-speed), transform var(--transition-speed), box-shadow var(--transition-speed);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: auto;
+    max-width: 200px;
+    background-image: none;
+}
+.buy-slots-button:hover {
+    background-color: #1A5A8D;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+@media (max-width: 1200px) {
+    .buy-slots-container {
+        max-width: 700px;
+        padding: 45px 35px;
+    }
+    .buy-slots-title {
+        font-size: 2.6em;
+    }
+    .slots-available {
+        font-size: 1.25em;
+    }
+    .buy-slots-button {
+        max-width: 220px;
+    }
+}
+@media (max-width: 992px) {
+    .buy-slots-container {
+        max-width: 600px;
+        padding: 40px 30px;
+    }
+    .buy-slots-title {
+        font-size: 2.4em;
+    }
+    .slots-available {
+        font-size: 1.2em;
+    }
+    .buy-slots-button {
+        max-width: 200px;
+    }
+}
+@media (max-width: 768px) {
+    .buy-slots-container {
+        max-width: 500px;
+        padding: 35px 25px;
+    }
+    .buy-slots-title {
+        font-size: 2.2em;
+    }
+    .slots-available {
+        font-size: 1.15em;
+    }
+    .buy-slots-button {
+        max-width: 180px;
+        padding: 12px 20px;
+        font-size: 0.95em;
+    }
+}
+@media (max-width: 576px) {
+    .buy-slots-container {
+        max-width: 450px;
+        padding: 30px 20px;
+    }
+    .buy-slots-title {
+        font-size: 2em;
+    }
+    .slots-available {
+        font-size: 1.1em;
+    }
+    .buy-slots-button {
+        max-width: 160px;
+    }
+}
+@media (max-width: 480px) {
+    .buy-slots-container {
+        max-width: 100%;
+        padding: 25px 15px;
+    }
+    .buy-slots-title {
+        font-size: 1.8em;
+    }
+    .slots-available {
+        font-size: 1em;
+    }
+    .buy-slots-button {
+        padding: 12px 20px;
+        font-size: 0.95em;
+        max-width: 100%;
+    }
+}
+
+/* # Request Coupon Style */
+.request-coupon {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: var(--white);
+    border: 1px solid var(--light-gray);
+    border-radius: 8px;
+}
+.request-coupon h2 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+.request-coupon form {
+    max-width: 100%;
+    margin: 0 auto;
+}
+.request-coupon .form-group {
+    margin-bottom: 15px;
+}
+.request-coupon .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+.request-coupon .form-group .error-message {
+    color: red;
+    font-size: 0.9em;
+}
+.request-coupon .input-field {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+.request-coupon .submit-button {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color var(--transition-speed);
+}
+.request-coupon .submit-button:hover {
+    background-color: #2980b9;
+}
+
+/* # Marketplace Page Styles */
+.marketplace {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.marketplace-header h2 {
+    text-align: center;
+    color: var(--primary-color);
+}
+.slots-container {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.slots-available {
+    font-size: 1.2em;
+}
+.pending-transactions-box {
+    background-color: #f9f9cc;
+    border: 1px solid #e9e9aa;
+    padding: 4px 8px;
+    border-radius: 5px;
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #555;
+    font-size: 1em;
+    max-width: 500px;
+    width: 90%;
+    margin: 0 auto 15px auto;
+    height: auto;
+    line-height: 1.4;
+    position: relative;
+}
+.close-btn {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 0;
+    font-weight: bold;
+}
+.close-btn:hover {
+    color: #c0392b;
+}
+/* Duplicate .coupon-container and .coupon-card selectors are omitted (first occurrences kept) */
+.company-logo {
+    max-width: 80px;
+    max-height: 80px;
+    margin-bottom: 10px;
+}
+.company-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.coupon-name {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 5px 0;
+}
+.your-coupon {
+    color: #ff6600;
+    font-weight: bold;
+}
+/* # Buy/Sell Forms */
+.buy-form,
+.offer-form {
+    margin-top: 10px;
+}
+.action-button {
+    display: inline-block;
+    padding: 8px 12px;
+    background-color: var(--primary-color);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    margin: 2px;
+    font-size: 0.9em;
+    border: none;
+    cursor: pointer;
+}
+.action-button:hover {
+    background-color: var(--accent-color);
+}
+.action-button.danger {
+    background-color: #e74c3c;
+}
+.action-button.danger:hover {
+    background-color: #c0392b;
+}
+.no-coupons,
+.no-requests {
+    text-align: center;
+    color: #888;
+    margin: 20px 0;
+    font-style: italic;
+}
+.coupon-section {
+    margin-top: 40px;
+}
+
+/* # Coupons Page Styles */
+/* Duplicate selectors (.coupon-container, .coupon-card) are omitted (first occurrences kept) */
+.coupon-card p {
+    margin: 10px 0;
+    color: black;
+}
+.coupon-card .company-name {
+    font-weight: bold;
+}
+/* Responsive coupon card layout */
+@media (max-width: 1200px) {
+    .coupon-card {
+        flex: 0 0 calc(25% - 20px);
+        max-width: calc(25% - 20px);
+    }
+}
+@media (max-width: 992px) {
+    .coupon-card {
+        flex: 0 0 calc(33.333% - 20px);
+        max-width: calc(33.333% - 20px);
+    }
+}
+@media (max-width: 768px) {
+    .coupon-card {
+        flex: 0 0 calc(50% - 20px);
+        max-width: calc(50% - 20px);
+    }
+    .coupon-data-table th:nth-child(3),
+    .coupon-data-table td:nth-child(3),
+    .coupon-data-table th:nth-child(6),
+    .coupon-data-table td:nth-child(6) {
+        display: none;
+    }
+    .company-logo,
+    .coupon-logo,
+    .logo {
+        width: 40px;
+        height: auto;
+    }
+    .coupon-data-table th,
+    .coupon-data-table td {
+        font-size: 0.9em;
+        padding: 8px;
+    }
+}
+@media (max-width: 500px) {
+    .coupon-card {
+        flex: 0 0 calc(50% - 20px);
+        max-width: calc(50% - 20px);
+    }
+}
+.section-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px 0;
+}
+.section-header h2 {
+    text-align: center;
+    font-size: 2em;
+    margin: 0;
+    position: relative;
+    border-bottom: none;
+}
+.coupon-management h2::after {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 4px;
+    background-color: var(--accent-color);
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 2px;
+}
+
+/* # Your Coupon and Request Styles */
+.your-coupon {
+    background-color: #d4f7d4;
+    color: #2b8a2b;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 2px solid #58a858;
+    font-weight: bold;
+    font-size: 1em;
+    text-align: center;
+    margin-top: 12px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.your-coupon::before {
+    content: '✔️';
+    font-size: 1.2em;
+}
+.your-coupon:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+.your-request {
+    background-color: #ffe6b3;
+    color: #b87333;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 2px solid #c97e2b;
+    font-weight: bold;
+    font-size: 1em;
+    text-align: center;
+    margin-top: 0;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    flex-shrink: 1;
+    max-width: 200px;
+}
+.your-request::before {
+    content: 'ℹ️';
+    font-size: 1.2em;
+}
+.your-request:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* # Approve Transaction Page Styles */
+.approve-transaction {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 30px 50px;
+    background-color: var(--white);
+    border: 1px solid var(--light-gray);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    text-align: center;
+}
+.approve-transaction h2 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    font-size: 1.8em;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 10px;
+    border-bottom: 4px solid var(--accent-color);
+}
+.approve-transaction p {
+    color: var(--text-color);
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+.transaction-form {
+    margin-top: 20px;
+}
+.transaction-form .form-group {
+    margin-bottom: 20px;
+}
+.transaction-form .form-group label {
+    display: inline-block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--text-color);
+    text-align: right;
+}
+.transaction-form .required {
+    color: var(--danger-color);
+    font-weight: bold;
+    margin-left: 0.2em;
+    display: inline;
+    vertical-align: middle;
+}
+.transaction-form .input-field {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    box-sizing: border-box;
+    transition: border-color var(--transition-speed);
+}
+.transaction-form .input-field:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+.transaction-form .error-message {
+    color: red;
+    font-size: 0.9em;
+    margin-top: 5px;
+    display: block;
+    text-align: right;
+}
+.transaction-form .submit-button {
+    width: 100%;
+    padding: 12px 0;
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    transition: background-color var(--transition-speed);
+}
+.transaction-form .submit-button:hover {
+    background-color: #2980b9;
+}
+@media (max-width: 600px) {
+    .approve-transaction {
+        padding: 20px 20px;
+    }
+    .approve-transaction h2 {
+        font-size: 1.6em;
+    }
+    .transaction-form .submit-button {
+        font-size: 0.9em;
+    }
+}
+.input-field::placeholder {
+    text-align: center;
+    direction: rtl;
+}
+.input-field_centered {
+    text-align: center;
+    direction: rtl;
+}
+
+/* # Add Coupon Page Styles */
+.add-coupon h2 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+.add-coupons-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.secondary-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background-color: var(--accent-color);
+    color: var(--white);
+    text-decoration: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+    font-size: 1em;
+    text-align: center;
+}
+.secondary-button i {
+    font-size: 1.2em;
+}
+.secondary-button:hover {
+    background-color: #e67e22;
+    transform: translateY(-2px);
+}
+.secondary-button:active {
+    transform: scale(0.98);
+}
+.add-coupon form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label,
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    direction: rtl;
+    text-align: right;
+    white-space: nowrap;
+}
+.form-group .required {
+    color: red;
+}
+.input-field {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+.input-field:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+.submit-button {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+}
+.submit-button:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+}
+.submit-button:active {
+    transform: scale(0.98);
+}
+.manual-entry {
+    text-align: center;
+    margin-top: 20px;
+}
+.manual-entry p {
+    margin-bottom: 10px;
+    color: var(--text-color);
+    font-weight: bold;
+}
+.manual-entry a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: var(--accent-color);
+    color: var(--white);
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 1em;
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+}
+.manual-entry a i {
+    font-size: 1.2em;
+}
+.manual-entry a:hover {
+    background-color: #e67e22;
+    transform: translateY(-2px);
+}
+.manual-entry a:active {
+    transform: scale(0.98);
+}
+.error {
+    color: red;
+    font-size: 0.9em;
+    margin-top: 5px;
+}
+.flash-messages {
+    max-width: 600px;
+    margin: 20px auto;
+}
+.flash {
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+.flash.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+.flash.danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.flash.warning {
+    background-color: #fff3cd;
+    color: #856404;
+}
+@media (max-width: 768px) {
+    .add-coupons-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .secondary-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+#other_tag_group, #other_company_group {
+    margin-top: -10px;
+}
+@media (max-width: 768px) {
+    .form-group label,
+    .form-label {
+        gap: 5px;
+        font-size: 0.9em;
+    }
+    .form-group {
+        margin-bottom: 10px;
+    }
+}
+.form-group input[type="checkbox"] {
+    width: auto;
+    height: auto;
+    margin: 0;
+    flex-shrink: 0;
+}
+.form-group {
+    text-align: right;
+}
+
+/* # Centered Profile Section Styles */
+.profile-detail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: var(--white);
+}
+.profile-image img {
+    display: block;
+    margin: 0 auto;
+    width: 120px;
+    height: 120px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 4px solid var(--primary-color);
+}
+.tabs {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 20px auto;
+    text-align: center;
+}
+.tab-button {
+    flex: 1;
+    max-width: 300px;
+    background-color: var(--accent-color);
+    color: var(--white);
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s;
+    border-radius: 20px;
+    text-align: center;
+}
+.tab-button:hover {
+    background-color: #e67e22;
+}
+.tab-button.active {
+    background-color: #e67e22;
+}
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+    color: var(--primary-color);
+}
+.text-center {
+    text-align: center;
+    margin: 0 auto;
+}
+@media (max-width: 768px) {
+    .email-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        width: 80%;
+        max-width: 350px;
+        margin: 0 auto;
+    }
+    .email-box .info-title {
+        width: 100%;
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .email-box .info-value.email-input-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+    .email-box .email-field {
+        text-align: center;
+        width: 100%;
+        max-width: 250px;
+        box-sizing: border-box;
+        padding: 10px;
+        font-size: 1em;
+    }
+}
+
+/* # Centered Profile Section + Animations */
+.fadeIn {
+    animation: fadeIn 0.5s ease-out;
+}

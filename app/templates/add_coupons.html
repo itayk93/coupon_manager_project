@@ -114,7 +114,7 @@
                 <div class="form-group">
                     {{ coupon_form.value.label }}
                     {# Initialize value if data exists from URL #}
-                    {{ coupon_form.value(class="input-field", value=coupon_data.value if coupon_data else coupon_form.value.data) }}
+                    {{ coupon_form.value(class="input-field coupon-value", id="coupons-" ~ loop.index0 ~ "-value", value=coupon_data.value if coupon_data else coupon_form.value.data) }}
                     {% for error in coupon_form.value.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
@@ -123,20 +123,24 @@
                 <div class="form-group">
                     {{ coupon_form.cost.label }}
                     {# Initialize cost if data exists from URL #}
-                    {{ coupon_form.cost(class="input-field", value=coupon_data.cost if coupon_data else coupon_form.cost.data) }}
+                    {{ coupon_form.cost(class="input-field coupon-cost", id="coupons-" ~ loop.index0 ~ "-cost", value=coupon_data.cost if coupon_data else coupon_form.cost.data) }}
                     {% for error in coupon_form.cost.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
                 </div>
 
-                <!-- Add discount_percentage field to satisfy validation -->
-                <div class="form-group" style="display: none;">
+                <!-- Add visible discount_percentage field -->
+                <div class="form-group">
                     <label for="coupons-{{ loop.index0 }}-discount_percentage">אחוז הנחה:</label>
                     <input type="number" 
                            id="coupons-{{ loop.index0 }}-discount_percentage" 
                            name="coupons-{{ loop.index0 }}-discount_percentage"
-                           class="input-field" 
+                           class="input-field coupon-discount" 
+                           min="0" max="100" step="0.01"
                            value="{{ coupon_data.discount_percentage if coupon_data and coupon_data.discount_percentage else '0' }}">
+                    <div class="validation-message error" style="display: none;">
+                        יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה, בערך גדול מ-0.
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -172,15 +176,25 @@
                     </div>
                     <div class="form-group">
                         <label for="coupons-{{ loop.index0 }}-card_exp">תוקף כרטיס</label>
-                        <input type="text" id="coupons-{{ loop.index0 }}-card_exp" name="coupons-{{ loop.index0 }}-card_exp" class="input-field" maxlength="5" placeholder="MM/YY">
+                        <input type="text" id="coupons-{{ loop.index0 }}-card_exp" name="coupons-{{ loop.index0 }}-card_exp" class="input-field card-exp-input" maxlength="5" placeholder="MM/YY">
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group tooltip-checkbox-container" style="position: relative;">
+                    <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף" style="margin-left: 8px;">❔</button>
                     <label>
                         {{ coupon_form.is_one_time() }}
                         קוד לשימוש חד פעמי
                     </label>
+                    <div class="mobile-tooltip">
+                        <span class="close-tooltip" style="position: absolute; top: 5px; right: 10px;">×</span>
+                        <div style="padding-right: 25px;">
+                            קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                        </div>
+                    </div>
+                    <div class="tooltip">
+                        קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                    </div>
                     {% for error in coupon_form.is_one_time.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
@@ -289,7 +303,7 @@
                    step="0.01"
                    id="coupons-__INDEX__-value"
                    name="coupons-__INDEX__-value"
-                   class="input-field"
+                   class="input-field coupon-value"
                    required>
         </div>
 
@@ -299,19 +313,23 @@
                    step="0.01"
                    id="coupons-__INDEX__-cost"
                    name="coupons-__INDEX__-cost"
-                   class="input-field"
+                   class="input-field coupon-cost"
                    required>
         </div>
 
-        <!-- Hidden discount_percentage field to satisfy validation -->
-        <div class="form-group" style="display: none;">
+        <!-- Visible discount_percentage field -->
+        <div class="form-group">
             <label for="coupons-__INDEX__-discount_percentage">אחוז הנחה:</label>
             <input type="number"
                    step="0.01"
                    id="coupons-__INDEX__-discount_percentage"
                    name="coupons-__INDEX__-discount_percentage"
-                   class="input-field"
+                   class="input-field coupon-discount"
+                   min="0" max="100"
                    value="0">
+            <div class="validation-message error" style="display: none;">
+                יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה, בערך גדול מ-0.
+            </div>
         </div>
 
         <div class="form-group">
@@ -322,11 +340,37 @@
                    class="input-field">
         </div>
 
-        <div class="form-group">
+        <div class="form-group checkbox-inline">
+            <label for="coupons-__INDEX__-include_card_info">
+                <input type="checkbox" id="coupons-__INDEX__-include_card_info" name="coupons-__INDEX__-include_card_info">
+                האם להכניס תוקף כרטיס ו-CVV?
+            </label>
+        </div>
+
+        <div id="card_fields_container___INDEX__" style="display: none;">
+            <div class="form-group">
+                <label for="coupons-__INDEX__-cvv">CVV</label>
+                <input type="text" id="coupons-__INDEX__-cvv" name="coupons-__INDEX__-cvv" class="input-field" maxlength="3">
+            </div>
+            <div class="form-group">
+                <label for="coupons-__INDEX__-card_exp">תוקף כרטיס</label>
+                <input type="text" id="coupons-__INDEX__-card_exp" name="coupons-__INDEX__-card_exp" class="input-field card-exp-input" maxlength="5" placeholder="MM/YY">
+            </div>
+        </div>
+
+        <div class="form-group tooltip-checkbox-container" style="position: relative;">
+            <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
             <input type="checkbox"
                    id="coupons-__INDEX__-is_one_time"
                    name="coupons-__INDEX__-is_one_time">
             <label for="coupons-__INDEX__-is_one_time">קוד לשימוש חד פעמי</label>
+            <div class="mobile-tooltip">
+                קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                <span class="close-tooltip">×</span>
+            </div>
+            <div class="tooltip">
+                קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+            </div>
         </div>
 
         <div class="form-group purpose-field"
@@ -434,6 +478,67 @@
     background-color: #1a5cb8;
 }
 
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .slots-info-mobile {
+        display: block;
+    }
+    .no-slots-message {
+        text-align: center;
+    }
+    .manual-entry p {
+        text-align: center;
+    }
+
+    /* Create a grid with 2 columns for top buttons */
+    .add-coupons-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Two equally sized columns */
+        gap: 10px; /* Space between buttons */
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+    }
+
+    /* Adjust button styling */
+    .button-row {
+        display: contents; /* Preserve grid layout */
+    }
+
+    .button-row a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 15px;
+        font-size: 16px;
+        text-align: center;
+        min-height: 50px; /* Uniform height */
+        width: 100%;
+    }
+
+    /* Wide button doesn't span the entire width */
+    .button-row.full-width {
+        grid-column: span 2; /* Takes up the entire width of the grid */
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .wide-button {
+        width: 100%; /* Now its width matches the buttons above */
+        max-width: 100%;
+    }
+    .tooltip {
+        /* Allows seeing the text but not capturing clicks/touch */
+        pointer-events: none;
+    }
+
+    .tooltip .close-tooltip {
+        /* Only allow clicks on the close button */
+        pointer-events: auto; 
+    }
+}
+
 /* Modal styles */
 .modal {
     display: none; /* Hidden by default */
@@ -475,11 +580,183 @@
     color: black;
     text-decoration: none;
 }
+
+/* Tooltip Styles */
+.tooltip-checkbox-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.tooltip-button-mobile {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.tooltip {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    font-size: 14px;
+    max-width: 300px;
+    z-index: 100;
+    top: -5px;
+    left: 30px;
+}
+
+.mobile-tooltip {
+    display: none;
+    position: fixed;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    font-size: 14px;
+    max-width: 90%;
+    width: 300px;
+    z-index: 1001;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.tooltip-button-mobile:hover + .tooltip, 
+.tooltip-button-mobile:focus + .tooltip {
+    display: block;
+}
+
+.close-tooltip {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    font-size: 18px;
+    cursor: pointer;
+}
 </style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         let index = {{ form.coupons|length }};
+    
+        // === Helper function to parse float values safely ===
+        function toFloat(value) {
+            const num = parseFloat(value);
+            return isNaN(num) ? null : num;
+        }
+
+        // === Auto-calculation functionality for discount, cost and value ===
+        function setupCalculations(fieldset) {
+            const idx = fieldset.dataset.index;
+            const valueInput = fieldset.querySelector(`#coupons-${idx}-value`);
+            const costInput = fieldset.querySelector(`#coupons-${idx}-cost`);
+            const discountInput = fieldset.querySelector(`#coupons-${idx}-discount_percentage`);
+            const validationMessage = fieldset.querySelector('.validation-message');
+            
+            if (!valueInput || !costInput || !discountInput) return;
+            
+            function updateFields(changedField) {
+                const value = toFloat(valueInput.value);
+                const cost = toFloat(costInput.value);
+                const discount = toFloat(discountInput.value);
+                
+                // Special case: If cost is exactly 0 and value is positive, set discount to 100%
+                if (cost === 0 && value > 0) {
+                    discountInput.value = "100.00";
+                    if (validationMessage) validationMessage.style.display = 'none';
+                    return;
+                }
+                
+                let filledCount = 0;
+                if (cost !== null && cost >= 0) filledCount++;
+                if (value !== null && value > 0) filledCount++;
+                if (discount !== null && discount > 0 && discount <= 100) filledCount++;
+                
+                if (filledCount < 2) {
+                    if (validationMessage) validationMessage.style.display = 'block';
+                    return;
+                } else {
+                    if (validationMessage) validationMessage.style.display = 'none';
+                }
+                
+                if (filledCount === 2) {
+                    if (cost >= 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
+                        // When cost and discount are provided, calculate value
+                        if (discount === 100) {
+                            // Handle division by zero case when discount is 100%
+                            valueInput.value = cost > 0 ? (cost * 100).toFixed(2) : "0.00";
+                        } else {
+                            valueInput.value = (cost / (1 - discount / 100)).toFixed(2);
+                        }
+                    } else if (cost >= 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
+                        // When cost and value are provided, calculate discount
+                        if (cost === 0) {
+                            discountInput.value = "100.00";
+                        } else {
+                            discountInput.value = ((1 - cost / value) * 100).toFixed(2);
+                        }
+                    } else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost < 0)) {
+                        // When value and discount are provided, calculate cost
+                        costInput.value = (value * (1 - discount / 100)).toFixed(2);
+                    }
+                } else if (filledCount === 3) {
+                    if (changedField === 'cost' && discount > 0 && discount <= 100 && value > 0) {
+                        if (cost === 0) {
+                            discountInput.value = "100.00";
+                        } else {
+                            discountInput.value = ((1 - cost / value) * 100).toFixed(2);
+                        }
+                    } else if (changedField === 'value' && cost >= 0 && discount > 0 && discount <= 100) {
+                        discountInput.value = cost === 0 ? "100.00" : ((1 - cost / value) * 100).toFixed(2);
+                    } else if (changedField === 'discount' && cost >= 0 && value > 0) {
+                        if (discount === 100) {
+                            costInput.value = "0.00";
+                        } else {
+                            costInput.value = (value * (1 - discount / 100)).toFixed(2);
+                        }
+                    }
+                }
+            }
+            
+            valueInput.addEventListener('change', function() {
+                updateFields('value');
+            });
+            costInput.addEventListener('change', function() {
+                updateFields('cost');
+            });
+            discountInput.addEventListener('change', function() {
+                updateFields('discount');
+            });
+            
+            // Initial calculation
+            updateFields(null);
+        }
+        
+        // === Automatic formatting for MM/YY field ===
+        function setupCardExpFormatting(fieldset) {
+            const cardExpInput = fieldset.querySelector('.card-exp-input');
+            if (cardExpInput) {
+                cardExpInput.addEventListener('input', function(event) {
+                    let value = event.target.value.replace(/\D/g, ''); // Only digits
+                    if (value.length > 2) {
+                        value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                    }
+                    event.target.value = value;
+                });
+            }
+        }
     
         function initializeCouponFieldset(fieldset, idx) {
             fieldset.dataset.index = idx;
@@ -570,6 +847,37 @@
                     duplicateCoupon(fieldset);
                 });
             }
+            
+            // Set up calculations for this fieldset
+            setupCalculations(fieldset);
+            
+            // Set up card expiration formatting
+            setupCardExpFormatting(fieldset);
+            
+            // Set up tooltip functionality
+            setupTooltips(fieldset);
+        }
+        
+        // === Tooltip functionality ===
+        function setupTooltips(fieldset) {
+            const tooltipButtons = fieldset.querySelectorAll('.tooltip-button-mobile');
+            
+            tooltipButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tooltip = this.nextElementSibling.nextElementSibling;
+                    if (tooltip && tooltip.classList.contains('mobile-tooltip')) {
+                        tooltip.style.display = 'block';
+                    }
+                });
+            });
+            
+            const closeButtons = fieldset.querySelectorAll('.close-tooltip');
+            closeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tooltip = this.parentElement;
+                    tooltip.style.display = 'none';
+                });
+            });
         }
     
         function updateLegends() {
@@ -774,6 +1082,22 @@
                     if (!hasValue || !hasCost) {
                         console.error(`Coupon #${idx+1}: Need both value and cost fields`);
                         hasErrors = true;
+                    }
+                    
+                    // Automatically calculate discount percentage if not set
+                    const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
+                    if (hasValue && hasCost && discountInput) {
+                        const value = parseFloat(valueInput.value);
+                        const cost = parseFloat(costInput.value);
+                        
+                        // Calculate discount only if it's not already set
+                        if (!discountInput.value || discountInput.value === "0") {
+                            if (cost === 0) {
+                                discountInput.value = "100.00";
+                            } else {
+                                discountInput.value = ((1 - cost / value) * 100).toFixed(2);
+                            }
+                        }
                     }
                 });
                 

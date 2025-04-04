@@ -188,9 +188,9 @@
                             <div class="usage-progress">
                                 <div class="progress-text">
                                     {% if coupon.value > 0 %}
-                                        שימוש: {{ (coupon.used_value / coupon.value * 100)|round(2) }}%
+                                      שימוש: {{ (coupon.used_value / coupon.value * 100)|round(0)|int }}%
                                     {% else %}
-                                        שימוש: 0.0%
+                                      שימוש: 0%
                                     {% endif %}
                                 </div>
                                 <div class="progress-bar">
@@ -585,11 +585,57 @@
 /* ===== Coupon List and Cards ===== */
 .coupon-container-index {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
     gap: 20px;
     margin-top: 20px;
     justify-content: center;
+    grid-auto-flow: row;
+    grid-template-rows: auto;
 }
+
+/* טיפול בקופון בודד בשורה במסכים גדולים */
+.coupon-card-index-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.coupon-card-index {
+    width: 100%;
+    max-width: 260px; /* רוחב מקסימלי קבוע לכל תיבת קופון */
+}
+
+@media (max-width: 992px) {
+    .coupon-card-index {
+        max-width: 100%; /* רוחב מלא במסכים בינוניים */
+    }
+}
+
+@media (max-width: 600px) {
+    .coupon-container-index {
+      display: grid;
+      /* שימוש ב-minmax עם רוחב מינימלי קטן יותר כדי לאפשר יותר גמישות */
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+      justify-content: center;
+    }
+    
+    /* אם יש רק קופון אחד בשורה האחרונה במסכים קטנים */
+    .coupon-card-index-wrapper:last-child:nth-child(odd) {
+        grid-column-start: 1;
+        grid-column-end: 3;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .coupon-card-index-wrapper:last-child:nth-child(odd) .coupon-card-index {
+        width: 100%;
+        max-width: 200px; /* אותו רוחב כמו קופונים אחרים */
+    }
+}
+
 
 .coupon-card-index-wrapper {
     overflow: visible; /* שינוי מ-hidden ל-visible */
@@ -645,10 +691,31 @@
     gap: 12px;
 }
 
-.coupon-code, .coupon-value, .coupon-purpose, .sale-price {
+.coupon-code, .coupon-value, .sale-price {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+/* סגנון ספציפי עבור coupon-purpose */
+.coupon-purpose {
+    display: flex;
+    flex-direction: column; /* מסדר את האלמנטים בעמודה */
+    align-items: flex-start; /* יישור לימין */
+    gap: 5px; /* מרווח בין התווית לתוכן */
+}
+
+.coupon-purpose .label {
+    font-size: 0.85em;
+    color: #777;
+    margin-bottom: 3px; /* מרווח נוסף מתחת לתווית */
+}
+
+.coupon-purpose .value {
+    width: 100%; /* הערך יתפוס את כל הרוחב */
+    font-weight: 600;
+    color: #333;
+    word-break: break-word; /* מאפשר שבירת מילים */
 }
 
 .label {
@@ -772,9 +839,26 @@
     }
 }
 @media (max-width: 768px) {
+    /* עיצוב מעודכן לכפתורים במסכים קטנים */
     .coupon-actions {
-        flex-direction: column;
+        flex-direction: row; /* שינוי מ-column ל-row */
+        flex-wrap: wrap; /* מאפשר מעבר לשורה חדשה */
         padding: 10px;
+        justify-content: space-between; /* רווח שווה בין הכפתורים */
+        gap: 8px; /* מרווח בין הכפתורים */
+    }
+    
+    /* כל הכפתורים באותו גודל */
+    .coupon-actions .action-button {
+        flex: 0 0 calc(50% - 4px); /* כל כפתור בשורה הראשונה תופס בדיוק חצי מהרוחב פחות המרווח */
+        margin: 0; /* ביטול מרווחים מיותרים */
+        padding: 6px 0;
+    }
+    
+    /* הכפתור השלישי תופס שורה חדשה ומרוכז */
+    .coupon-actions .action-button:last-child {
+        flex: 0 0 calc(50% - 4px); /* בדיוק באותו גודל כמו האחרים */
+        margin: 0 auto; /* מירכוז אופקי */
     }
     .action-button {
         padding: 6px 0;
@@ -848,8 +932,21 @@
   padding: 15px;
 }
 
-/* Make sure charts stack properly on mobile */
-@media (max-width: 767px) {
+.coupon-code {
+      flex-direction: column; /* הפוך לכיוון של עמודה במקום שורה */
+      align-items: flex-start; /* יישור לתחילת השורה */
+  }
+  
+  .coupon-code .label {
+      margin-bottom: 3px; /* מרווח קטן בין התווית לערך */
+  }
+  
+  .coupon-code .value {
+      width: 100%; /* הערך יתפוס את כל הרוחב */
+      word-break: break-word; /* מאפשר שבירת מילים */
+      font-size: 0.9em; /* פונט קצת יותר קטן בניידים */
+  }
+
   .stats-charts {
     display: flex;
     flex-direction: column;
@@ -1237,6 +1334,18 @@
 
 /* For very small devices */
 @media (max-width: 400px) {
+  .coupon-actions {
+        gap: 6px; /* מרווח קטן יותר במסכים קטנים */
+    }
+    
+    .coupon-actions .action-button {
+        flex: 0 0 calc(50% - 3px); /* התאמה למרווח הקטן יותר */
+    }
+    
+    .coupon-actions .action-button:last-child {
+        flex: 0 0 calc(50% - 3px); /* התאמה למרווח הקטן יותר */
+    }
+
   .stats-card {
     padding: 8px 5px;
   }
