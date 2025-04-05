@@ -394,847 +394,254 @@
     
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let index = {{ form.coupons|length }};
-    
-    // === Helper function to parse float values safely ===
+
+    // === Handle Additional Tag Field if "other" is selected ===
+    const tagSelect = document.getElementById('tag_select');
+    const otherTagGroup = document.getElementById('other_tag_group');
+    const otherTagInput = document.getElementById('other_tag');
+
+    function toggleOtherTagField() {
+        if (tagSelect && tagSelect.value === 'other') {
+            otherTagGroup.style.display = 'block';
+        } else {
+            otherTagGroup.style.display = 'none';
+            if (otherTagInput) otherTagInput.value = '';
+        }
+    }
+    if(tagSelect) {
+        toggleOtherTagField();
+        tagSelect.addEventListener('change', toggleOtherTagField);
+    }
+
+    // === Handle Additional Company Field if "other" is selected ===
+    const companySelect = document.getElementById('company_select');
+    const otherCompanyGroup = document.getElementById('other_company_group');
+    const otherCompanyInput = document.getElementById('other_company');
+
+    function toggleOtherCompanyField() {
+        if (companySelect && companySelect.value === 'other') {
+            otherCompanyGroup.style.display = 'block';
+        } else {
+            otherCompanyGroup.style.display = 'none';
+            if (otherCompanyInput) otherCompanyInput.value = '';
+        }
+    }
+    if(companySelect) {
+        toggleOtherCompanyField();
+        companySelect.addEventListener('change', toggleOtherCompanyField);
+    }
+
+    // === Handle BuyMe Coupon Link Field ===
+    const buymeCouponLinkGroup = document.getElementById('buyme_coupon_link_group');
+    function toggleBuymeCouponLinkField() {
+        // Assuming the BuyMe company id is "54"
+        if (companySelect && companySelect.value === '54') {
+            buymeCouponLinkGroup.style.display = 'block';
+        } else {
+            buymeCouponLinkGroup.style.display = 'none';
+            const buymeCouponLinkInput = document.getElementById('buyme_coupon_link');
+            if (buymeCouponLinkInput) {
+                buymeCouponLinkInput.value = '';
+            }
+        }
+    }
+    if (companySelect) {
+        companySelect.addEventListener('change', toggleBuymeCouponLinkField);
+        // Initial trigger on page load
+        toggleBuymeCouponLinkField();
+    }
+
+    // === Handle Coupon Purpose Field if One-Time is checked ===
+    const checkbox = document.getElementById('is_one_time');
+    const purposeGroup = document.getElementById('purpose_group');
+    const purposeInput = document.getElementById('purpose');
+
+    function togglePurposeField() {
+        if (checkbox && checkbox.checked) {
+            purposeGroup.style.display = 'block';
+        } else {
+            purposeGroup.style.display = 'none';
+            if (purposeInput) {
+                purposeInput.value = '';
+            }
+        }
+    }
+    if(checkbox) {
+        togglePurposeField();
+        checkbox.addEventListener('change', togglePurposeField);
+    }
+
+    // === Handle Card Fields Display and Local Storage ===
+    const includeCardInfoCheckbox = document.getElementById('include_card_info');
+    const cardFieldsContainer = document.getElementById('card_fields_container');
+
+    function toggleCardFields() {
+        if (includeCardInfoCheckbox.checked) {
+            cardFieldsContainer.style.display = 'block';
+            localStorage.setItem('include_card_info_checked', 'true'); // Save state in localStorage
+        } else {
+            cardFieldsContainer.style.display = 'none';
+            localStorage.removeItem('include_card_info_checked'); // Remove from localStorage
+
+            // Optionally: clear the fields when unchecked
+            const cardExpInput = document.getElementById('card_exp');
+            const cvvInput = document.getElementById('cvv');
+            if (cardExpInput) cardExpInput.value = '';
+            if (cvvInput) cvvInput.value = '';
+        }
+    }
+
+    if (includeCardInfoCheckbox && cardFieldsContainer) {
+        // Check if state is saved in localStorage
+        if (localStorage.getItem('include_card_info_checked')) {
+            includeCardInfoCheckbox.checked = true;
+        }
+
+        includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
+        toggleCardFields(); // Initial trigger
+    }
+
+    // === Automatic formatting for MM/YY field ===
+    const cardExpInput = document.getElementById('card_exp');
+    if (cardExpInput) {
+        cardExpInput.addEventListener('input', function(event) {
+            let value = event.target.value.replace(/\D/g, ''); // Only digits
+            if (value.length > 2) {
+                value = value.substring(0, 2) + '/' + value.substring(2, 4);
+            }
+            event.target.value = value;
+        });
+    }
+
+    // === Handle Price and Discount Calculations ===
+    const desiredValueInput = document.getElementById('desired_value');
+    const couponCostInput = document.getElementById('coupon_cost');
+    const discountPercentageInput = document.getElementById('discount_percentage_input');
+    const submitButton = document.getElementById('submit_coupon_button');
+    const validationMessage = document.getElementById('validation_message');
+
     function toFloat(value) {
         const num = parseFloat(value);
         return isNaN(num) ? null : num;
     }
 
-    // === Auto-calculation functionality for discount, cost and value ===
-    function setupCalculations(fieldset) {
-        const idx = fieldset.dataset.index;
-        const valueInput = fieldset.querySelector(`#coupons-${idx}-value`);
-        const costInput = fieldset.querySelector(`#coupons-${idx}-cost`);
-        const discountInput = fieldset.querySelector(`#coupons-${idx}-discount_percentage`);
-        const validationMessage = fieldset.querySelector('.validation-message');
-        
-        if (!valueInput || !costInput || !discountInput) return;
-        
-        function updateFields(changedField) {
-            const value = toFloat(valueInput.value);
-            const cost = toFloat(costInput.value);
-            const discount = toFloat(discountInput.value);
-            
-            // Special case: If cost is exactly 0 and value is positive, set discount to 100%
-            if (cost === 0 && value > 0) {
-                discountInput.value = "100.00";
-                if (validationMessage) validationMessage.style.display = 'none';
-                return;
-            }
-            
-            let filledCount = 0;
-            if (cost !== null && cost >= 0) filledCount++;
-            if (value !== null && value > 0) filledCount++;
-            if (discount !== null && discount > 0 && discount <= 100) filledCount++;
-            
-            if (filledCount < 2) {
-                if (validationMessage) validationMessage.style.display = 'block';
-                return;
-            } else {
-                if (validationMessage) validationMessage.style.display = 'none';
-            }
-            
-            if (filledCount === 2) {
-                if (cost >= 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
-                    // When cost and discount are provided, calculate value
-                    if (discount === 100) {
-                        // Handle division by zero case when discount is 100%
-                        valueInput.value = cost > 0 ? (cost * 100).toFixed(2) : "0.00";
-                    } else {
-                        valueInput.value = (cost / (1 - discount / 100)).toFixed(2);
-                    }
-                } else if (cost >= 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
-                    // When cost and value are provided, calculate discount
-                    if (cost === 0) {
-                        discountInput.value = "100.00";
-                    } else {
-                        discountInput.value = ((1 - cost / value) * 100).toFixed(2);
-                    }
-                } else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost < 0)) {
-                    // When value and discount are provided, calculate cost
-                    costInput.value = (value * (1 - discount / 100)).toFixed(2);
+    function updateFields(changedField) {
+        const cost = toFloat(couponCostInput.value);
+        const value = toFloat(desiredValueInput.value);
+        const discount = toFloat(discountPercentageInput.value);
+
+        // Special case: If cost is exactly 0 and value is positive, set discount to 100%
+        if (cost === 0 && value > 0) {
+            discountPercentageInput.value = "100.00";
+            submitButton.disabled = false;
+            validationMessage.style.display = 'none';
+            return;
+        }
+
+        let filledCount = 0;
+        if (cost !== null && cost >= 0) filledCount++;
+        if (value !== null && value > 0) filledCount++;
+        if (discount !== null && discount > 0 && discount <= 100) filledCount++;
+
+        if (filledCount < 2) {
+            submitButton.disabled = true;
+            validationMessage.style.display = 'block';
+            return;
+        } else {
+            submitButton.disabled = false;
+            validationMessage.style.display = 'none';
+        }
+
+        if (filledCount === 2) {
+            if (cost >= 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
+                // When cost and discount are provided, calculate value
+                if (discount === 100) {
+                    // Handle division by zero case when discount is 100%
+                    desiredValueInput.value = cost > 0 ? (cost * 100).toFixed(2) : "0.00";
+                } else {
+                    desiredValueInput.value = (cost / (1 - discount / 100)).toFixed(2);
                 }
-            } else if (filledCount === 3) {
-                if (changedField === 'cost' && discount > 0 && discount <= 100 && value > 0) {
-                    if (cost === 0) {
-                        discountInput.value = "100.00";
-                    } else {
-                        discountInput.value = ((1 - cost / value) * 100).toFixed(2);
-                    }
-                } else if (changedField === 'value' && cost >= 0 && discount > 0 && discount <= 100) {
-                    discountInput.value = cost === 0 ? "100.00" : ((1 - cost / value) * 100).toFixed(2);
-                } else if (changedField === 'discount' && cost >= 0 && value > 0) {
-                    if (discount === 100) {
-                        costInput.value = "0.00";
-                    } else {
-                        costInput.value = (value * (1 - discount / 100)).toFixed(2);
-                    }
+            } else if (cost >= 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
+                // When cost and value are provided, calculate discount
+                if (cost === 0) {
+                    discountPercentageInput.value = "100.00";
+                } else {
+                    discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+                }
+            } else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost < 0)) {
+                // When value and discount are provided, calculate cost
+                couponCostInput.value = (value * (1 - discount / 100)).toFixed(2);
+            }
+        } else if (filledCount === 3) {
+            if (changedField === 'cost' && discount > 0 && discount <= 100 && value > 0) {
+                if (cost === 0) {
+                    discountPercentageInput.value = "100.00";
+                } else {
+                    discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+                }
+            } else if (changedField === 'value' && cost >= 0 && discount > 0 && discount <= 100) {
+                discountPercentageInput.value = cost === 0 ? "100.00" : ((1 - cost / value) * 100).toFixed(2);
+            } else if (changedField === 'discount' && cost >= 0 && value > 0) {
+                if (discount === 100) {
+                    couponCostInput.value = "0.00";
+                } else {
+                    discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
                 }
             }
         }
-        
-        valueInput.addEventListener('change', function() {
+    }
+
+    if (desiredValueInput && discountPercentageInput && couponCostInput && submitButton) {
+        desiredValueInput.addEventListener('change', function() {
             updateFields('value');
         });
-        costInput.addEventListener('change', function() {
-            updateFields('cost');
-        });
-        discountInput.addEventListener('change', function() {
+        discountPercentageInput.addEventListener('change', function() {
             updateFields('discount');
         });
-        
-        // Initial calculation
+        couponCostInput.addEventListener('change', function() {
+            updateFields('cost');
+        });
         updateFields(null);
     }
     
-    // === Automatic formatting for MM/YY field ===
-    function setupCardExpFormatting(fieldset) {
-        const cardExpInput = fieldset.querySelector('.card-exp-input');
-        if (cardExpInput) {
-            cardExpInput.addEventListener('input', function(event) {
-                let value = event.target.value.replace(/\D/g, ''); // Only digits
-                if (value.length > 2) {
-                    value = value.substring(0, 2) + '/' + value.substring(2, 4);
-                }
-                event.target.value = value;
-            });
-        }
-    }
+    // ===========================
+    // Check expiration date before form submission
+    // ===========================
+    const form = document.querySelector('form'); // Main form
+    const expirationInput = document.getElementById('expiration');
 
-    function initializeCouponFieldset(fieldset, idx) {
-        fieldset.dataset.index = idx;
-
-        // FIX: Set correct selector for card info checkbox and container
-        const includeCardInfoCheckbox = fieldset.querySelector(
-            `#coupons-${idx}-include_card_info`
-        );
-        const cardFieldsContainer = fieldset.querySelector(
-            `#card_fields_container_${idx}`
-        );
-
-        // FIX: Debug logging to check if elements are found
-        console.log(`Fieldset ${idx}:`, {
-            checkbox: includeCardInfoCheckbox,
-            container: cardFieldsContainer
-        });
-
-        function toggleCardFields() {
-            if (!includeCardInfoCheckbox || !cardFieldsContainer) {
-                console.log(`Missing elements for fieldset ${idx}`);
-                return;
-            }
-            
-            console.log(`Toggling card fields for ${idx}. Checked:`, includeCardInfoCheckbox.checked);
-            
-            if (includeCardInfoCheckbox.checked) {
-                cardFieldsContainer.style.display = 'block';
-            } else {
-                cardFieldsContainer.style.display = 'none';
-                cardFieldsContainer.querySelectorAll('input').forEach(input => {
-                    input.value = '';
-                });
-            }
-        }
-
-        if (includeCardInfoCheckbox && cardFieldsContainer) {
-            // FIX: Remove any existing event listeners first to prevent duplicates
-            includeCardInfoCheckbox.removeEventListener('change', toggleCardFields);
-            
-            // FIX: Add event listener with explicit binding
-            includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
-            
-            // FIX: Call immediately to set initial state
-            toggleCardFields();
-        }
-
-        const companySelect = fieldset.querySelector('.company-select');
-        const otherCompanyGroup = fieldset.querySelector('.other-company-group');
-
-        function toggleOtherCompanyField() {
-            if (companySelect.value === 'other') {
-                otherCompanyGroup.style.display = 'block';
-            } else {
-                otherCompanyGroup.style.display = 'none';
-                const input = otherCompanyGroup.querySelector('input');
-                if (input) input.value = '';
-            }
-        }
-        toggleOtherCompanyField();
-        companySelect.addEventListener('change', toggleOtherCompanyField);
-
-        // Add the new "BuyMe URL" field toggle
-        const buymeCouponLinkGroup = fieldset.querySelector(`#buyme_coupon_link_group_${idx}`);
-
-        function toggleBuymeCouponLinkField() {
-            if (!buymeCouponLinkGroup) return;
-            if (companySelect.value === '54') {  // assuming 54 is the ID for BuyMe
-                buymeCouponLinkGroup.style.display = 'block';
-            } else {
-                buymeCouponLinkGroup.style.display = 'none';
-                const buymeCouponLinkInput = buymeCouponLinkGroup.querySelector('input');
-                if (buymeCouponLinkInput) {
-                    buymeCouponLinkInput.value = '';
-                }
-            }
-        }
-        companySelect.addEventListener('change', toggleBuymeCouponLinkField);
-        toggleBuymeCouponLinkField();
-
-        const isOneTimeCheckbox = fieldset.querySelector('input[type="checkbox"][name$="-is_one_time"]');
-        const purposeGroup = fieldset.querySelector('.purpose-field');
-
-        function togglePurposeField() {
-            if (isOneTimeCheckbox.checked) {
-                purposeGroup.style.display = 'block';
-            } else {
-                purposeGroup.style.display = 'none';
-                const input = purposeGroup.querySelector('input');
-                if (input) input.value = '';
-            }
-        }
-        togglePurposeField();
-        isOneTimeCheckbox.addEventListener('change', togglePurposeField);
-
-        const removeButton = fieldset.querySelector('.remove-coupon-button');
-        if (removeButton) {
-            removeButton.addEventListener('click', function() {
-                fieldset.remove();
-                updateLegends();
-            });
-        }
-
-        const duplicateButton = fieldset.querySelector('.duplicate-coupon-button');
-        if (duplicateButton) {
-            duplicateButton.addEventListener('click', function() {
-                duplicateCoupon(fieldset);
-            });
-        }
-        
-        // Set up calculations for this fieldset
-        setupCalculations(fieldset);
-        
-        // Set up card expiration formatting
-        setupCardExpFormatting(fieldset);
-        
-        // Set up tooltip functionality
-        setupTooltips(fieldset);
-    }
-    
-    // === Tooltip functionality ===
-    function setupTooltips(fieldset) {
-        const tooltipButtons = fieldset.querySelectorAll('.tooltip-button-mobile');
-        
-        tooltipButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const tooltip = this.nextElementSibling.nextElementSibling;
-                if (tooltip && tooltip.classList.contains('mobile-tooltip')) {
-                    tooltip.style.display = 'block';
-                }
-            });
-        });
-        
-        const closeButtons = fieldset.querySelectorAll('.close-tooltip');
-        closeButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const tooltip = this.parentElement;
-                tooltip.style.display = 'none';
-            });
-        });
-    }
-
-    function updateLegends() {
-        const fieldsets = document.querySelectorAll('.coupon-fieldset');
-        fieldsets.forEach(function(fieldset, idx) {
-            fieldset.dataset.index = idx;
-            updateFieldsetIndex(fieldset, idx);
-        });
-        index = fieldsets.length;
-    }
-
-    function updateFieldsetIndex(fieldset, newIndex) {
-        const oldIndex = fieldset.dataset.index || '__INDEX__';
-        const regex = new RegExp('(coupons-)(?:' + oldIndex + '|__INDEX__)(-)', 'g');
-
-        fieldset.querySelectorAll('[name], [id], [for]').forEach(element => {
-            if (element.name) {
-                element.name = element.name.replace(regex, '$1' + newIndex + '$2');
-                element.name = element.name.replace('___INDEX__', newIndex);
-            }
-            if (element.id) {
-                element.id = element.id.replace(regex, '$1' + newIndex + '$2');
-                element.id = element.id.replace('___INDEX__', newIndex);
-                element.id = element.id.replace('__INDEX__', newIndex);
-            }
-            if (element.htmlFor) {
-                element.htmlFor = element.htmlFor.replace(regex, '$1' + newIndex + '$2');
-                element.htmlFor = element.htmlFor.replace('___INDEX__', newIndex);
-                element.htmlFor = element.htmlFor.replace('__INDEX__', newIndex);
-            }
-        });
-
-        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"]').forEach(element => {
-            element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
-            element.id = element.id.replace('__INDEX__', newIndex);
-            element.id = element.id.replace('___INDEX__', newIndex);
-        });
-
-        fieldset.querySelectorAll('[id^="card_fields_container_"]').forEach(element => {
-            element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
-            element.id = element.id.replace('___INDEX__', newIndex);
-            element.id = element.id.replace('__INDEX__', newIndex);
-        });
-
-        fieldset.querySelectorAll('[id^="buyme_coupon_link_group_"]').forEach(element => {
-            element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
-            element.id = element.id.replace('__INDEX__', newIndex);
-        });
-
-        const legend = fieldset.querySelector('legend');
-        if (legend) {
-            legend.textContent = 'קופון ' + (newIndex + 1);
-        }
-    }
-
-    function duplicateCoupon(fieldset) {
-        const container = document.getElementById('coupons-container');
-        const clonedFieldset = fieldset.cloneNode(true);
-        updateFieldsetIndex(clonedFieldset, index);
-
-        const originalInputs = fieldset.querySelectorAll('input, select, textarea');
-        const clonedInputs = clonedFieldset.querySelectorAll('input, select, textarea');
-        clonedInputs.forEach((input, i) => {
-            if (input.type === 'checkbox') {
-                input.checked = originalInputs[i].checked;
-            } else {
-                input.value = originalInputs[i].value;
-            }
-        });
-
-        initializeCouponFieldset(clonedFieldset, index);
-        container.appendChild(clonedFieldset);
-        index++;
-        updateLegends();
-    }
-
-    function addCoupon() {
-        const container = document.getElementById('coupons-container');
-        const template = document.getElementById('coupon-template').content.cloneNode(true);
-        const newFieldset = template.querySelector('.coupon-fieldset');
-
-        updateFieldsetIndex(newFieldset, index);
-        initializeCouponFieldset(newFieldset, index);
-        container.appendChild(newFieldset);
-        index++;
-        updateLegends();
-    }
-
-    // Direct fix for potential empty fieldsets at the beginning
-    function cleanEmptyFieldsets() {
-        const container = document.getElementById('coupons-container');
-        if (!container) return;
-        
-        const fieldsets = container.querySelectorAll('.coupon-fieldset');
-        let emptyIndices = [];
-        
-        // Identify empty fieldsets
-        fieldsets.forEach((fieldset, idx) => {
-            const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
-            const codeValue = codeInput ? codeInput.value.trim() : '';
-            
-            const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-            const valueValue = valueInput ? valueInput.value.trim() : '';
-            
-            // If the fieldset is effectively empty
-            if (codeValue === '' && valueValue === '') {
-                emptyIndices.push(idx);
-            }
-        });
-        
-        // Remove empty fieldsets (starting from the end to not mess up indices)
-        for (let i = emptyIndices.length - 1; i >= 0; i--) {
-            fieldsets[emptyIndices[i]].remove();
-        }
-        
-        // If we removed any fieldsets, update the indices
-        if (emptyIndices.length > 0) {
-            updateLegends();
-            console.log(`Removed ${emptyIndices.length} empty fieldsets and updated indices`);
-        }
-    }
-    
-    // Run cleaning immediately and after a short delay to catch any dynamic issues
-    cleanEmptyFieldsets();
-    setTimeout(cleanEmptyFieldsets, 500);
-
-    const existingFieldsets = document.querySelectorAll('.coupon-fieldset');
-    existingFieldsets.forEach(function(fieldset, idx) {
-        initializeCouponFieldset(fieldset, idx);
-    });
-
-    // Add coupon button
-    const addCouponButton = document.querySelector('.add-coupon-button');
-    addCouponButton.addEventListener('click', function(event) {
-        event.preventDefault();
-        addCoupon();
-    });
-
-    // Attach event listeners to all open-modal buttons (admin-only)
-    const openModalButtons = document.querySelectorAll('.open-modal-button');
-    const modal = document.getElementById('urlModal');
-    const closeModalButton = document.querySelector('.close-modal');
-    const urlTextArea = document.getElementById('coupon-urls');
-
-    openModalButtons.forEach(function(button) {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            modal.style.display = 'block';
-        });
-    });
-
-    if (closeModalButton) {
-        closeModalButton.addEventListener('click', function() {
-            modal.style.display = 'none';
-        });
-    }
-
-    window.addEventListener('click', function(event) {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-
-    // Check expiration date and all required fields before form submission
-    const couponsForm = document.getElementById('coupons-form');
-    if (couponsForm) {
-        couponsForm.addEventListener('submit', function(e) {
-            // Clean any empty fieldsets first
-            cleanEmptyFieldsets();
-            
-            // Check if there are any fieldsets left
-            const fieldsets = document.querySelectorAll('.coupon-fieldset');
-            if (fieldsets.length === 0) {
-                e.preventDefault();
-                alert('אין קופונים להוספה. אנא הוסף לפחות קופון אחד.');
-                return;
-            }
-            
-            // Now check if all required fields are populated
-            let hasErrors = false;
-            
-            fieldsets.forEach((fieldset, idx) => {
-                const companySelect = fieldset.querySelector('select[name^="coupons-"][name$="-company_id"]');
-                const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
-                const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
-                
-                // Check required fields
-                if (!companySelect || !companySelect.value || companySelect.value === "") {
-                    console.error(`Coupon #${idx+1}: Missing company selection`);
-                    hasErrors = true;
-                }
-                
-                if (!codeInput || !codeInput.value.trim()) {
-                    console.error(`Coupon #${idx+1}: Missing coupon code`);
-                    hasErrors = true;
-                }
-                
-                // Check that at least value and cost are filled
-                const hasValue = valueInput && valueInput.value && valueInput.value.trim() !== "";
-                const hasCost = costInput && costInput.value && costInput.value.trim() !== "";
-                
-                if (!hasValue || !hasCost) {
-                    console.error(`Coupon #${idx+1}: Need both value and cost fields`);
-                    hasErrors = true;
-                }
-                
-                // Automatically calculate discount percentage if not set
-                const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
-                if (hasValue && hasCost && discountInput) {
-                    const value = parseFloat(valueInput.value);
-                    const cost = parseFloat(costInput.value);
-                    
-                    // Calculate discount only if it's not already set
-                    if (!discountInput.value || discountInput.value === "0") {
-                        if (cost === 0) {
-                            discountInput.value = "100.00";
-                        } else {
-                            discountInput.value = ((1 - cost / value) * 100).toFixed(2);
-                        }
-                    }
-                }
-            });
-            
-            if (hasErrors) {
-                e.preventDefault();
-                alert('חלק מהשדות הנדרשים חסרים. אנא ודא שכל הקופונים מכילים: חברה, קוד קופון, ערך קופון ועלות.');
+    if (form && expirationInput) {
+        form.addEventListener('submit', function(e) {
+            const expValue = expirationInput.value.trim();
+            if (!expValue) {
+                // No date entered, nothing to check
                 return;
             }
 
-            // Check for expired coupons
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            // Assuming format is YYYY-MM-DD:
+            const parts = expValue.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // Months in JS are 0-11
+                const day = parseInt(parts[2]);
+                const selectedDate = new Date(year, month, day);
 
-            let expiredCoupons = [];
+                // Prepare today's date (without time)
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
 
-            fieldsets.forEach((fieldset, idx) => {
-                const expirationInput = fieldset.querySelector('input[type="date"][name^="coupons-"][name$="-expiration"]');
-                if (expirationInput && expirationInput.value) {
-                    const parts = expirationInput.value.split('-');
-                    if (parts.length === 3) {
-                        const year = parseInt(parts[0]);
-                        const month = parseInt(parts[1]) - 1;
-                        const day = parseInt(parts[2]);
-                        const selectedDate = new Date(year, month, day);
-                        if (selectedDate <= today) {
-                            const formattedDate = String(day).padStart(2, '0') + '/' + String(month + 1).padStart(2, '0') + '/' + year;
-                            const companySelect = fieldset.querySelector('.company-select');
-                            const companyName = companySelect ? companySelect.options[companySelect.selectedIndex].text : 'Unknown';
-                            const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
-                            const couponCode = codeInput ? codeInput.value : 'Unknown';
-                            const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                            const couponValue = valueInput ? valueInput.value : 'Unknown';
-                            expiredCoupons.push(
-                                "📌 Coupon #" + (idx+1) + ":\n" +
-                                "- 🏢 Company: " + companyName + "\n" +
-                                "- 🔢 Coupon Code: " + couponCode + "\n" +
-                                "- 💰 Value: " + couponValue + "\n" +
-                                "- ⏳ Expiration: " + formattedDate
-                            );
-                        }
+                // Check if the coupon is expired or expires today
+                if (selectedDate <= today) {
+                    const confirmMsg = "תאריך התפוגה הוא היום או לפני היום. האם ברצונך להמשיך?";
+                    if (!confirm(confirmMsg)) {
+                        e.preventDefault(); // User canceled, prevent submission
                     }
-                }
-            });
-
-            if (expiredCoupons.length > 0) {
-                const confirmMsg = 
-                    "⚠️ Attention! The following coupons have an expiration date that is either today or has passed:\n\n" +
-                    expiredCoupons.join("\n\n") +
-                    "\n\n❓ Do you still want to continue?";
-                if (!confirm(confirmMsg)) {
-                    e.preventDefault();
                 }
             }
         });
     }
-}
 
-// Fix for BuyMe coupon import validation issues
-document.addEventListener('DOMContentLoaded', function() {
-    const fixBuymeCouponResponse = () => {
-        const container = document.getElementById('coupons-container');
-        if (!container) return;
-        
-        // Step 1: Find and remove any empty fieldsets at the beginning
-        const fieldsets = container.querySelectorAll('.coupon-fieldset');
-        let emptyFieldsetsRemoved = false;
-        
-        fieldsets.forEach((fieldset, idx) => {
-            const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
-            const codeValue = codeInput ? codeInput.value.trim() : '';
-            
-            // If this is an empty fieldset (only has company ID set) - remove it
-            if (!codeValue) {
-                fieldset.remove();
-                emptyFieldsetsRemoved = true;
-                console.log(`Removed empty fieldset at index ${idx}`);
-            }
-        });
-        
-        // Step 2: If we removed fieldsets, update all indices
-        if (emptyFieldsetsRemoved) {
-            const remainingFieldsets = container.querySelectorAll('.coupon-fieldset');
-            remainingFieldsets.forEach((fieldset, newIdx) => {
-                // Update data-index
-                fieldset.dataset.index = newIdx;
-                
-                // Update all name, id, and for attributes
-                fieldset.querySelectorAll('[name^="coupons-"], [id^="coupons-"], [for^="coupons-"]').forEach(el => {
-                    const pattern = /^(coupons-)\d+(-.*)/;
-                    
-                    if (el.name) {
-                        el.name = el.name.replace(pattern, `$1${newIdx}$2`);
-                    }
-                    if (el.id) {
-                        el.id = el.id.replace(pattern, `$1${newIdx}$2`);
-                    }
-                    if (el.htmlFor) {
-                        el.htmlFor = el.htmlFor.replace(pattern, `$1${newIdx}$2`);
-                    }
-                });
-                
-                // Update special IDs (containers, etc.)
-                fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
-                    const parts = el.id.split('_');
-                    if (parts.length >= 3) {
-                        // Rebuild ID with new index
-                        const baseId = parts.slice(0, -1).join('_');
-                        el.id = `${baseId}_${newIdx}`;
-                    }
-                });
-                
-                // Update legend text
-                const legend = fieldset.querySelector('legend');
-                if (legend) {
-                    legend.textContent = `קופון ${newIdx + 1}`;
-                }
-                
-                // Special handling for BuyMe coupons - automatically set discount_percentage to 100 if cost is 0
-                const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
-                const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
-                
-                if (valueInput && costInput && discountInput) {
-                    const value = parseFloat(valueInput.value) || 0;
-                    const cost = parseFloat(costInput.value) || 0;
-                    
-                    // If we have a value but cost is 0, set discount to 100%
-                    if (value > 0 && cost === 0) {
-                        discountInput.value = "100";
-                        console.log(`Set discount to 100% for fieldset ${newIdx} (value: ${value}, cost: ${cost})`);
-                    }
-                    // Otherwise calculate proper discount
-                    else if (value > 0 && cost > 0) {
-                        const discount = ((value - cost) / value) * 100;
-                        discountInput.value = discount.toFixed(2);
-                        console.log(`Calculated discount ${discount.toFixed(2)}% for fieldset ${newIdx}`);
-                    }
-                }
-            });
-            
-            console.log(`Fixed indices for ${remainingFieldsets.length} fieldsets`);
-        }
-    };
-    
-    // Run the fix when the page loads, and again after a short delay
-    fixBuymeCouponResponse();
-    setTimeout(fixBuymeCouponResponse, 500);
-    
-    // Modify the form submission to also validate and fix discount percentages
-    const originalSubmitUrls = document.getElementById('submitUrls');
-    if (originalSubmitUrls) {
-        const originalClick = originalSubmitUrls.onclick;
-        originalSubmitUrls.onclick = null;
-        
-        originalSubmitUrls.addEventListener('click', async function(event) {
-            // Call the original handler
-            if (originalClick) {
-                await originalClick.call(this, event);
-            }
-            
-            // Apply our fix after a small delay to ensure the DOM has been updated
-            setTimeout(fixBuymeCouponResponse, 1000);
-        });
-    }
-    
-    // Also add pre-submission validation to ensure discount percentages are properly set
-    const couponsForm = document.getElementById('coupons-form');
-    if (couponsForm) {
-        couponsForm.addEventListener('submit', function(e) {
-            const fieldsets = document.querySelectorAll('.coupon-fieldset');
-            
-            fieldsets.forEach((fieldset, idx) => {
-                const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
-                const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
-                
-                if (valueInput && costInput && discountInput) {
-                    const value = parseFloat(valueInput.value) || 0;
-                    const cost = parseFloat(costInput.value) || 0;
-                    
-                    // If value exists and cost is 0, set discount to 100%
-                    if (value > 0 && cost === 0) {
-                        discountInput.value = "100";
-                    }
-                    // Otherwise calculate proper discount
-                    else if (value > 0 && cost > 0) {
-                        const discount = ((value - cost) / value) * 100;
-                        discountInput.value = discount.toFixed(2);
-                    }
-                }
-            });
-        }, true); // Use capturing phase to run before other handlers
-    }
-}););
-
-// Handle URL submissions for BuyMe coupons
-document.getElementById('submitUrls')?.addEventListener('click', async function () {
-    const textarea = document.getElementById('coupon-urls');
-    const rawText = textarea.value.trim();
-
-    if (!rawText) {
-        alert("לא הוזנו קישורים.");
-        return;
-    }
-
-    const urls = rawText
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
-
-    // Get CSRF Token from <meta>
-    const csrfTokenElement = document.querySelector('meta[name="csrf-token"]');
-    if (!csrfTokenElement) {
-        alert("CSRF token לא נמצא בעמוד.");
-        return;
-    }
-    const csrfToken = csrfTokenElement.getAttribute('content');
-    
-    // Show loading indicator
-    const submitButton = document.getElementById('submitUrls');
-    const originalText = submitButton.textContent;
-    submitButton.textContent = "מעבד קופונים...";
-    submitButton.disabled = true;
-    
-    const modal = document.getElementById('urlModal');
-
-    try {
-        const response = await fetch('/submit_buyme_coupon_urls', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({ urls: urls })
-        });
-
-        const contentType = response.headers.get("Content-Type");
-
-        // Handle HTML response (which contains the form)
-        if (response.ok && contentType && contentType.includes("text/html")) {
-            // First, we'll close the modal and clear the textarea
-            modal.style.display = 'none';
-            textarea.value = '';
-            
-            // Get the HTML response
-            const html = await response.text();
-            
-            // Create a temporary container to parse the HTML
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html;
-            
-            // We'll modify the DOM to remove any empty fieldsets before displaying
-            const formInResponse = tempDiv.querySelector('#coupons-form');
-            if (formInResponse) {
-                // Find all fieldsets
-                const fieldsets = formInResponse.querySelectorAll('.coupon-fieldset');
-                
-                // Identify empty fieldsets
-                let emptyIndices = [];
-                fieldsets.forEach((fieldset, idx) => {
-                    const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
-                    const codeValue = codeInput ? codeInput.value : '';
-                    
-                    const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                    const valueValue = valueInput ? valueInput.value : '';
-                    
-                    // Check if this fieldset is effectively empty
-                    if (!codeValue || !valueValue) {
-                        emptyIndices.push(idx);
-                    }
-                });
-                
-                // Remove empty fieldsets (starting from the end to not affect indices)
-                for (let i = emptyIndices.length - 1; i >= 0; i--) {
-                    const index = emptyIndices[i];
-                    if (fieldsets[index]) {
-                        fieldsets[index].remove();
-                    }
-                }
-                
-                // Update the indices of the remaining fieldsets
-                const remainingFieldsets = formInResponse.querySelectorAll('.coupon-fieldset');
-                remainingFieldsets.forEach((fieldset, idx) => {
-                    // Set the data-index attribute
-                    fieldset.dataset.index = idx;
-                    
-                    // Update all the input, label, and id references
-                    fieldset.querySelectorAll('[name^="coupons-"], [id^="coupons-"], [for^="coupons-"]').forEach(el => {
-                        // Match the pattern like coupons-X-field
-                        const pattern = /^(coupons-)\d+(-.*)/;
-                        
-                        if (el.name) {
-                            el.name = el.name.replace(pattern, `$1${idx}$2`);
-                        }
-                        if (el.id) {
-                            el.id = el.id.replace(pattern, `$1${idx}$2`);
-                        }
-                        if (el.htmlFor) {
-                            el.htmlFor = el.htmlFor.replace(pattern, `$1${idx}$2`);
-                        }
-                    });
-                    
-                    // Update other specific elements that have indices
-                    fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
-                        const baseId = el.id.split('_')[0] + '_' + el.id.split('_')[1] + '_';
-                        el.id = baseId + idx;
-                    });
-                    
-                    // Update the legend text
-                    const legend = fieldset.querySelector('legend');
-                    if (legend) {
-                        legend.textContent = `קופון ${idx + 1}`;
-                    }
-                });
-                
-                // Log the cleaning result
-                if (emptyIndices.length > 0) {
-                    console.log(`Removed ${emptyIndices.length} empty fieldsets from response HTML`);
-                }
-                
-                // Update the form's HTML with our cleaned version
-                const formContainer = document.getElementById('coupons-form').parentNode;
-                formContainer.innerHTML = formInResponse.outerHTML;
-                
-                // Now we need to re-initialize our event listeners on the new HTML
-                document.dispatchEvent(new Event('DOMContentLoaded'));
-            } else {
-                // If we couldn't find the form, just render the response as is
-                document.open();
-                document.write(html);
-                document.close();
-            }
-        } else if (response.ok && contentType && contentType.includes("application/json")) {
-            const data = await response.json();
-            modal.style.display = 'none';
-            textarea.value = '';
-            
-            if (data.added_coupons && data.added_coupons.length > 0) {
-                let successMsg = `נוספו בהצלחה ${data.added_coupons.length} קופונים!`;
-                
-                if (data.failed_coupons && data.failed_coupons.length > 0) {
-                    successMsg += `\n(${data.failed_coupons.length} קופונים נכשלו בהוספה)`;
-                }
-                
-                alert(successMsg);
-                // Redirect to show coupons page
-                window.location.href = '/show_coupons';
-            } else if (data.failed_coupons && data.failed_coupons.length > 0) {
-                alert(`לא נוספו קופונים. ${data.failed_coupons.length} קופונים נכשלו בהוספה.`);
-                console.error("Failed coupons:", data.failed_coupons);
-            } else {
-                alert("לא נוספו קופונים. נא לבדוק את הקישורים ולנסות שוב.");
-            }
-        } else {
-            // Handle error response
-            let errorMsg = "שגיאה בעיבוד הקופונים.";
-            if (contentType && contentType.includes("application/json")) {
-                const errorData = await response.json();
-                errorMsg = errorData.message || errorMsg;
-            } else if (contentType && contentType.includes("text/html")) {
-                errorMsg = "שגיאת שרת. נא לבדוק את הלוגים.";
-            }
-            alert(errorMsg);
-        }
-    } catch (error) {
-        console.error("Error:", error);
-        alert("שגיאה בעיבוד הקישורים: " + error.message);
-    } finally {
-        // Restore button
-        submitButton.textContent = originalText;
-        submitButton.disabled = false;
-    }
+});
 </script>
 
 {% endblock %}

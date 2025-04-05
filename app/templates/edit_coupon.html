@@ -25,7 +25,6 @@
         {% endif %}
 
         <!-- שדה החברה -->
-        <!-- שדה החברה (סלקט) -->
         <div class="form-group">
             {{ form.company_id.label }}
             {{ form.company_id(class="input-field", id="company_select") }}
@@ -43,6 +42,11 @@
             {% endfor %}
         </div>
 
+        <!-- שדה קישור לקופון BuyMe (מוסתר כברירת מחדל) -->
+        <div class="form-group" id="buyme_coupon_link_group" style="display: none;">
+            <label for="buyme_coupon_link">כתובת URL של הקופון ל-BuyMe</label>
+            {{ form.buyme_coupon_url(class="input-field", id="buyme_coupon_link") }}
+        </div>
 
         <!-- שדה הקוד -->
         <div class="form-group">
@@ -53,24 +57,32 @@
             {% endfor %}
         </div>
 
-        <!-- שדה הערך -->
-        <div class="form-group">
-            {{ form.value.label }}
-            {{ form.value(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
-            {% for error in form.value.errors %}
-                <span class="error">{{ error }}</span>
-            {% endfor %}
-        </div>
-
         <!-- שדה העלות -->
         <div class="form-group">
             {{ form.cost.label }}
-            {{ form.cost(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
+            {{ form.cost(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01", id="coupon_cost") }}
             {% for error in form.cost.errors %}
                 <span class="error">{{ error }}</span>
             {% endfor %}
         </div>
 
+        <!-- שדה אחוז הנחה -->
+        <div class="form-group">
+            {{ form.discount_percentage.label }}
+            {{ form.discount_percentage(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", min="0", max="100", step="0.01", id="discount_percentage_input") }}
+            {% for error in form.discount_percentage.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה הערך -->
+        <div class="form-group">
+            {{ form.value.label }}
+            {{ form.value(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01", id="desired_value") }}
+            {% for error in form.value.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
 
         <!-- שדה תאריך תפוגה -->
         <div class="form-group">
@@ -121,11 +133,20 @@
         </div>
 
         <!-- שדה האם חד-פעמי -->
-        <div class="form-group">
-            <label>
-                {{ form.is_one_time() }}
+        <div class="form-group tooltip-checkbox-container" style="position: relative;">
+            <button type="button" class="tooltip-button-mobile" id="tooltipOneTimeButtonMobile" aria-label="מידע נוסף">❔</button>
+            {{ form.is_one_time() }}
+            <label for="is_one_time">
                 {{ form.is_one_time.label }}
             </label>
+            <div class="mobile-tooltip" id="TooltipOneTimeUse">
+                קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                <span class="close-tooltip" id="closeTooltipOneTime">×</span>
+            </div>
+            <div class="tooltip" id="TooltipOneTimeUse">
+                קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                <span class="close-tooltip" id="closeTooltipOneTime">×</span>
+            </div>
             {% for error in form.is_one_time.errors %}
                 <span class="error">{{ error }}</span>
             {% endfor %}
@@ -142,7 +163,10 @@
 
         <!-- כפתור שמירה -->
         <div class="form-group">
-            {{ form.submit(class="submit-button") }}
+            {{ form.submit(class="submit-button", id="submit_button") }}
+            <div id="validation_message" class="error" style="display:none; margin-top: 5px;">
+                יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה, בערך גדול מ-0.
+            </div>
         </div>
     </form>
 </section>
@@ -247,6 +271,80 @@
         }
     }
 
+    /* סגנונות עבור tooltip */
+    .tooltip-checkbox-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .tooltip-button-mobile {
+        background: none;
+        border: none;
+        color: #666;
+        font-size: 16px;
+        cursor: pointer;
+        margin-right: 5px;
+    }
+
+    .mobile-tooltip {
+        display: none;
+        position: absolute;
+        bottom: 100%;
+        right: 0;
+        width: calc(100% - 20px);
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 100;
+        font-size: 13px;
+        margin-bottom: 5px;
+    }
+
+    .tooltip {
+        visibility: hidden;
+        width: 300px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        right: 50%;
+        margin-right: -150px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .tooltip-checkbox-container:hover .tooltip {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .close-tooltip {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    
+    /* Mobile styles for tooltips */
+    @media (max-width: 768px) {
+        .tooltip {
+            width: calc(100% - 40px);
+            right: 20px;
+            margin-right: 0;
+        }
+        .tooltip .close-tooltip {
+            pointer-events: auto; 
+        }
+    }
 </style>
 {% endblock %}
 
@@ -268,6 +366,94 @@
         if (isOneTimeCheckbox) {
             isOneTimeCheckbox.addEventListener('change', togglePurposeField);
             togglePurposeField(); // הפעלה ראשונית
+        }
+
+        // === Handle Additional Company Field if "other" is selected ===
+        const companySelect = document.getElementById('company_select');
+        const otherCompanyGroup = document.getElementById('other_company_group');
+        const otherCompanyInput = document.getElementById('other_company');
+
+        function toggleOtherCompanyField() {
+            // בדיקה של כל האפשרויות האפשריות לערך "אחר"
+            const otherValue = 'other'; // בהתאם למה שראינו בלוגים, זה הערך המדויק
+            
+            if (companySelect && companySelect.value === otherValue) {
+                otherCompanyGroup.style.display = 'block';
+                console.log('מציג שדה חברה אחרת. ערך נוכחי:', companySelect.value);
+            } else {
+                otherCompanyGroup.style.display = 'none';
+                if (otherCompanyInput) otherCompanyInput.value = '';
+                console.log('מסתיר שדה חברה אחרת. ערך נוכחי:', companySelect.value);
+            }
+        }
+        if (companySelect) {
+            // שמירת המצב הראשוני של ה-URL אם חברת BuyMe נבחרת
+            if (companySelect.value === '54' && buymeCouponLinkInput) {
+                originalBuyMeValue = buymeCouponLinkInput.value;
+            }
+            
+            // בוא נראה את כל האפשרויות בתפריט הנפתח לצורך ניפוי באגים
+            console.log('אפשרויות בתפריט החברות:');
+            Array.from(companySelect.options).forEach(option => {
+                console.log(`ערך: ${option.value}, טקסט: ${option.text}`);
+                // אם הטקסט מכיל "אחר", נסמן את זה במיוחד
+                if (option.text.includes('אחר') || option.text.toLowerCase().includes('other')) {
+                    console.log(`מצאנו אפשרות "אחר" עם ערך: ${option.value}`);
+                }
+            });
+            
+            // מייד כשהדף נטען, נשמור את הערך של שדה URL של BuyMe (אם קיים)
+            if (buymeCouponLinkInput && buymeCouponLinkInput.value) {
+                originalBuyMeValue = buymeCouponLinkInput.value;
+                console.log('שמרנו את ערך ה-BuyMe URL המקורי:', originalBuyMeValue);
+            }
+            
+            // מאזינים לשינויים בבחירת החברה
+            companySelect.addEventListener('change', function() {
+                // שומרים את הערך הנוכחי לפני שמפעילים את הפונקציה שמחביאה
+                if (companySelect.value !== '54' && buymeCouponLinkInput && buymeCouponLinkInput.value) {
+                    originalBuyMeValue = buymeCouponLinkInput.value;
+                    console.log('עדכנו את ערך ה-BuyMe URL המקורי:', originalBuyMeValue);
+                }
+                
+                toggleOtherCompanyField();
+                toggleBuymeCouponLinkField();
+            });
+            
+            toggleOtherCompanyField();
+            toggleBuymeCouponLinkField();
+        }
+
+        // === Handle BuyMe Coupon Link Field ===
+        const buymeCouponLinkGroup = document.getElementById('buyme_coupon_link_group');
+        const buymeCouponLinkInput = document.getElementById('buyme_coupon_link');
+        
+        // מוודא שערך ה-URL נשמר כשמחליפים חברות
+        let originalBuyMeValue = '';
+        if (buymeCouponLinkInput) {
+            originalBuyMeValue = buymeCouponLinkInput.value;
+        }
+        
+        function toggleBuymeCouponLinkField() {
+            // Assuming the BuyMe company id is "54"
+            if (companySelect && companySelect.value === '54') {
+                buymeCouponLinkGroup.style.display = 'block';
+                // משחזר את הערך המקורי אם יש
+                if (buymeCouponLinkInput && originalBuyMeValue) {
+                    buymeCouponLinkInput.value = originalBuyMeValue;
+                }
+            } else {
+                // שומר את הערך הנוכחי לפני שמסתירים את השדה
+                if (buymeCouponLinkInput && buymeCouponLinkInput.value) {
+                    originalBuyMeValue = buymeCouponLinkInput.value;
+                }
+                buymeCouponLinkGroup.style.display = 'none';
+            }
+        }
+        if (companySelect) {
+            companySelect.addEventListener('change', toggleBuymeCouponLinkField);
+            // Initial trigger on page load
+            toggleBuymeCouponLinkField();
         }
 
         // === הגבלת הזנת מספרים בלבד בשדות מספריים ===
@@ -322,34 +508,161 @@
             toggleCardFields(); // הפעלה ראשונית
         }
 
-    const form = document.querySelector('form[action="{{ url_for('coupons.edit_coupon', id=coupon.id) }}"]');
-    const expirationInput = document.getElementById("{{ form.expiration.id }}");
+        // === Automatic formatting for MM/YY field ===
+        const cardExpInput = document.getElementById('card_exp');
+        if (cardExpInput) {
+            cardExpInput.addEventListener('input', function(event) {
+                let value = event.target.value.replace(/\D/g, ''); // Only digits
+                if (value.length > 2) {
+                    value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                }
+                event.target.value = value;
+            });
+        }
 
-    if (form && expirationInput) {
-        form.addEventListener('submit', function(e) {
-            if (!expirationInput.value) return; // לא הוזן תאריך, אין מה לבדוק
+        // === Handle Price and Discount Calculations ===
+        const desiredValueInput = document.getElementById('desired_value');
+        const couponCostInput = document.getElementById('coupon_cost');
+        const discountPercentageInput = document.getElementById('discount_percentage_input');
+        const submitButton = document.getElementById('submit_button');
+        const validationMessage = document.getElementById('validation_message');
 
-            const parts = expirationInput.value.split('-'); // ציפייה לפורמט YYYY-MM-DD
-            if (parts.length === 3) {
-                const year = parseInt(parts[0]);
-                const month = parseInt(parts[1]) - 1;
-                const day = parseInt(parts[2]);
-                const selectedDate = new Date(year, month, day);
+        function toFloat(value) {
+            const num = parseFloat(value);
+            return isNaN(num) ? null : num;
+        }
 
-                const today = new Date();
-                today.setHours(0,0,0,0);
+        function updateFields(changedField) {
+            const cost = toFloat(couponCostInput.value);
+            const value = toFloat(desiredValueInput.value);
+            const discount = toFloat(discountPercentageInput.value);
 
-                if (selectedDate <= today) {
-                    const confirmMsg = "שימו לב! תאריך התפוגה של הקופון הוא היום או קודם. האם להמשיך?";
-                    if (!confirm(confirmMsg)) {
-                        e.preventDefault();
+            // Special case: If cost is exactly 0 and value is positive, set discount to 100%
+            if (cost === 0 && value > 0) {
+                discountPercentageInput.value = "100.00";
+                if (validationMessage) validationMessage.style.display = 'none';
+                return;
+            }
+
+            let filledCount = 0;
+            if (cost !== null && cost >= 0) filledCount++;
+            if (value !== null && value > 0) filledCount++;
+            if (discount !== null && discount > 0 && discount <= 100) filledCount++;
+
+            if (filledCount < 2) {
+                if (validationMessage) validationMessage.style.display = 'block';
+                return;
+            } else {
+                if (validationMessage) validationMessage.style.display = 'none';
+            }
+
+            if (filledCount === 2) {
+                if (cost >= 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
+                    // When cost and discount are provided, calculate value
+                    if (discount === 100) {
+                        // Handle division by zero case when discount is 100%
+                        desiredValueInput.value = cost > 0 ? (cost * 100).toFixed(2) : "0.00";
+                    } else {
+                        desiredValueInput.value = (cost / (1 - discount / 100)).toFixed(2);
+                    }
+                } else if (cost >= 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
+                    // When cost and value are provided, calculate discount
+                    if (cost === 0) {
+                        discountPercentageInput.value = "100.00";
+                    } else {
+                        discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+                    }
+                } else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost < 0)) {
+                    // When value and discount are provided, calculate cost
+                    couponCostInput.value = (value * (1 - discount / 100)).toFixed(2);
+                }
+            } else if (filledCount === 3) {
+                if (changedField === 'cost' && discount > 0 && discount <= 100 && value > 0) {
+                    if (cost === 0) {
+                        discountPercentageInput.value = "100.00";
+                    } else {
+                        discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+                    }
+                } else if (changedField === 'value' && cost >= 0 && discount > 0 && discount <= 100) {
+                    discountPercentageInput.value = cost === 0 ? "100.00" : ((1 - cost / value) * 100).toFixed(2);
+                } else if (changedField === 'discount' && cost >= 0 && value > 0) {
+                    if (discount === 100) {
+                        couponCostInput.value = "0.00";
+                    } else {
+                        discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
                     }
                 }
             }
-        });
-    }
+        }
 
+        if (desiredValueInput && discountPercentageInput && couponCostInput) {
+            desiredValueInput.addEventListener('change', function() {
+                updateFields('value');
+            });
+            discountPercentageInput.addEventListener('change', function() {
+                updateFields('discount');
+            });
+            couponCostInput.addEventListener('change', function() {
+                updateFields('cost');
+            });
+            updateFields(null);
+        }
+
+        // === בדיקת תאריך תפוגה לפני הגשת הטופס ===
+        const form = document.querySelector('form[action="{{ url_for('coupons.edit_coupon', id=coupon.id) }}"]');
+        const expirationInput = document.getElementById("{{ form.expiration.id }}");
+
+        if (form && expirationInput) {
+            form.addEventListener('submit', function(e) {
+                if (!expirationInput.value) return; // לא הוזן תאריך, אין מה לבדוק
+
+                const parts = expirationInput.value.split('-'); // ציפייה לפורמט YYYY-MM-DD
+                if (parts.length === 3) {
+                    const year = parseInt(parts[0]);
+                    const month = parseInt(parts[1]) - 1;
+                    const day = parseInt(parts[2]);
+                    const selectedDate = new Date(year, month, day);
+
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+
+                    if (selectedDate <= today) {
+                        const confirmMsg = "שימו לב! תאריך התפוגה של הקופון הוא היום או קודם. האם להמשיך?";
+                        if (!confirm(confirmMsg)) {
+                            e.preventDefault();
+                        }
+                    }
+                }
+            });
+        }
+
+        // === ניהול tooltips ===
+        // Tooltip על כפתור המידע במובייל
+        const tooltipOneTimeButtonMobile = document.getElementById('tooltipOneTimeButtonMobile');
+        const TooltipOneTimeUse = document.getElementById('TooltipOneTimeUse');
+        const closeTooltipOneTime = document.getElementById('closeTooltipOneTime');
+
+        if (tooltipOneTimeButtonMobile && TooltipOneTimeUse) {
+            tooltipOneTimeButtonMobile.addEventListener('click', function() {
+                TooltipOneTimeUse.style.display = 'block';
+            });
+        }
+
+        if (closeTooltipOneTime && TooltipOneTimeUse) {
+            closeTooltipOneTime.addEventListener('click', function() {
+                TooltipOneTimeUse.style.display = 'none';
+            });
+        }
+
+        // סגירת tooltip בלחיצה מחוץ לו
+        document.addEventListener('click', function(event) {
+            if (TooltipOneTimeUse && 
+                event.target !== tooltipOneTimeButtonMobile && 
+                event.target !== TooltipOneTimeUse &&
+                !TooltipOneTimeUse.contains(event.target)) {
+                TooltipOneTimeUse.style.display = 'none';
+            }
+        });
     });
 </script>
 {% endblock %}
-

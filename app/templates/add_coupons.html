@@ -114,7 +114,7 @@
                 <div class="form-group">
                     {{ coupon_form.value.label }}
                     {# Initialize value if data exists from URL #}
-                    {{ coupon_form.value(class="input-field coupon-value", id="coupons-" ~ loop.index0 ~ "-value", value=coupon_data.value if coupon_data else coupon_form.value.data) }}
+                    {{ coupon_form.value(class="input-field coupon-value", id="coupons-" ~ loop.index0 ~ "-value", value=(coupon_data.value if coupon_data else (coupon_form.value.data if coupon_form.value.data is not none else ''))) }}
                     {% for error in coupon_form.value.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
@@ -123,7 +123,7 @@
                 <div class="form-group">
                     {{ coupon_form.cost.label }}
                     {# Initialize cost if data exists from URL #}
-                    {{ coupon_form.cost(class="input-field coupon-cost", id="coupons-" ~ loop.index0 ~ "-cost", value=coupon_data.cost if coupon_data else coupon_form.cost.data) }}
+                    {{ coupon_form.cost(class="input-field coupon-cost", id="coupons-" ~ loop.index0 ~ "-cost", value=(coupon_data.cost if coupon_data else (coupon_form.cost.data if coupon_form.cost.data is not none else ''))) }}
                     {% for error in coupon_form.cost.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
@@ -146,7 +146,7 @@
                 <div class="form-group">
                     {{ coupon_form.expiration.label }}
                     {# Initialize expiration date if data exists from URL #}
-                    {{ coupon_form.expiration(class="input-field", type="date", value=coupon_data.validity if coupon_data else coupon_form.expiration.data) }}
+                    {{ coupon_form.expiration(class="input-field", type="date", value=(coupon_data.validity if coupon_data else (coupon_form.expiration.data if coupon_form.expiration.data is not none else ''))) }}
                     {% for error in coupon_form.expiration.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}

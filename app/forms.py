@@ -353,6 +353,19 @@ class EditCouponForm(FlaskForm):
     cost = FloatField('כמה שילמת עבור הקופון (בש"ח):', validators=[InputRequired(message="חובה למלא את העלות."),
                                                                    NumberRange(min=0,
                                                                                message="העלות חייבת להיות 0 או גדולה ממנה.")])
+    # שדה חדש להוספה - אחוז הנחה
+    discount_percentage = FloatField(
+        'אחוז הנחה',
+        validators=[
+            Optional(),
+            NumberRange(min=0, max=100, message="אחוז ההנחה חייב להיות בין 0 ל-100.")
+        ]
+    )
+    # שדה חדש להוספה - קישור לקופון BuyMe
+    buyme_coupon_url = StringField(
+        'הכתובת של הקופון מBuyMe',
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)]
+    )
     expiration = DateField('תאריך תפוגה:', format='%Y-%m-%d', validators=[Optional()])
     tags = StringField('תגיות (הפרד עם פסיק):', validators=[Optional()])
     description = TextAreaField('תיאור הקופון:', validators=[Optional()])
@@ -378,6 +391,22 @@ class EditCouponForm(FlaskForm):
 
     submit = SubmitField('שמור שינויים')
 
+    def validate(self, extra_validators=None):
+        if not super(EditCouponForm, self).validate(extra_validators=extra_validators):
+            return False
+
+        fields_filled = [
+            bool(self.cost.data),
+            bool(self.value.data),
+            bool(self.discount_percentage.data)
+        ]
+        if fields_filled.count(True) < 2:
+            error_message = 'יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה.'
+            self.cost.errors.append(error_message)
+            self.value.errors.append(error_message)
+            self.discount_percentage.errors.append(error_message)
+            return False
+        return True
 
 class RegisterForm(FlaskForm):
     first_name = StringField('שם פרטי', validators=[DataRequired(), Length(min=2, max=150)])

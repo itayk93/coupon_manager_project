@@ -1,0 +1,355 @@
+<!-- edit_coupon.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}ערוך קופון{% endblock %}
+
+{% block content %}
+<section class="edit-coupon">
+    <h2>ערוך קופון</h2>
+
+    <form method="post" action="{{ url_for('coupons.edit_coupon', id=coupon.id) }}">
+        {{ form.hidden_tag() }}
+
+        <!-- הודעות שגיאה כלליות -->
+        {% if form.errors %}
+            <div class="error-messages">
+                <ul>
+                {% for field, errors in form.errors.items() %}
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <!-- שדה החברה -->
+        <!-- שדה החברה (סלקט) -->
+        <div class="form-group">
+            {{ form.company_id.label }}
+            {{ form.company_id(class="input-field", id="company_select") }}
+            {% for error in form.company_id.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה חברה אחרת (מוסתר כברירת מחדל) -->
+        <div class="form-group" id="other_company_group" style="display: none;">
+            {{ form.other_company.label }}
+            {{ form.other_company(class="input-field", id="other_company") }}
+            {% for error in form.other_company.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+
+        <!-- שדה הקוד -->
+        <div class="form-group">
+            {{ form.code.label }}
+            {{ form.code(class="input-field") }}
+            {% for error in form.code.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה הערך -->
+        <div class="form-group">
+            {{ form.value.label }}
+            {{ form.value(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
+            {% for error in form.value.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה העלות -->
+        <div class="form-group">
+            {{ form.cost.label }}
+            {{ form.cost(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
+            {% for error in form.cost.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+
+        <!-- שדה תאריך תפוגה -->
+        <div class="form-group">
+            {{ form.expiration.label }}
+            {{ form.expiration(class="input-field", type="date", value=form.expiration.data.strftime('%Y-%m-%d') if form.expiration.data else '') }}
+            {% for error in form.expiration.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה תיאור -->
+        <div class="form-group">
+            {{ form.description.label }}
+            {{ form.description(class="input-field", rows="4") }}
+            {% for error in form.description.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- Checkbox: האם להכניס תוקף כרטיס ו-CVV -->
+        <div class="form-group checkbox-inline">
+            <label for="include_card_info">
+                <input type="checkbox" id="include_card_info" name="include_card_info">
+                האם להכניס תוקף כרטיס ו-CVV?
+            </label>
+        </div>
+        
+        <!-- שדות הכרטיס, מוסתרים כברירת מחדל -->
+        <div id="card_fields_container" style="display: none;">
+            <!-- CVV Field -->
+            <div class="form-group">
+                {{ form.cvv.label }}
+                {{ form.cvv(class="input-field", id="cvv") }}
+                {% for error in form.cvv.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <!-- Card Exp Field -->
+            <div class="form-group">
+                <label for="card_exp">תוקף כרטיס</label>
+                <input type="text" id="card_exp" name="card_exp" class="input-field" maxlength="5" placeholder="MM/YY"
+                value="{{ form.card_exp.data if form.card_exp.data else '' }}">         
+                {% for error in form.card_exp.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </div>            
+        </div>
+
+        <!-- שדה האם חד-פעמי -->
+        <div class="form-group">
+            <label>
+                {{ form.is_one_time() }}
+                {{ form.is_one_time.label }}
+            </label>
+            {% for error in form.is_one_time.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- שדה מטרה (מוצג רק אם חד-פעמי) -->
+        <div class="form-group" id="purpose-field" style="display: none;">
+            {{ form.purpose.label }}
+            {{ form.purpose(class="input-field") }}
+            {% for error in form.purpose.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- כפתור שמירה -->
+        <div class="form-group">
+            {{ form.submit(class="submit-button") }}
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* סגנון לכותרת */
+    .edit-coupon h2 {
+        text-align: center;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+    }
+
+    /* סגנון לכפתורים המשניים (אם תוסיף אותם) */
+    .edit-coupon-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .secondary-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background-color: var(--accent-color);
+        color: var(--white);
+        text-decoration: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color var(--transition-speed);
+        font-size: 0.9em;
+        min-width: 120px;
+    }
+
+    .secondary-button:hover {
+        background-color: #e67e22;
+    }
+
+    .secondary-button .fa {
+        font-size: 1.2em;
+    }
+
+    /* התאמה לכפתורים במובייל */
+    @media (max-width: 768px) {
+        .edit-coupon-buttons {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .secondary-button {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    /* סגנונות נוספים */
+    .error {
+        color: red;
+        font-size: 0.9em;
+    }
+
+    .input-field {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+    }
+
+    .submit-button {
+        background-color: var(--primary-color);
+        color: var(--white);
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1em;
+    }
+
+    .submit-button:hover {
+        background-color: #0056b3;
+    }
+
+    /* יישור של הצ'קבוקס לצד הטקסט */
+    .checkbox-inline label {
+        display: flex;
+        align-items: center;
+        gap: 8px; /* רווח קטן בין הצ'קבוקס לטקסט */
+        font-size: 1em;
+        cursor: pointer;
+    }
+
+    /* ודא שהתצוגה תישאר נכונה במסכים קטנים */
+    @media (max-width: 768px) {
+        .checkbox-inline label {
+            display: flex;
+            align-items: center;
+            gap: 6px; /* התאמת הרווח במסכים קטנים */
+        }
+    }
+
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // === ניהול שדה מטרת הקופון אם חד-פעמי ===
+        const isOneTimeCheckbox = document.getElementById("is_one_time");
+        const purposeField = document.getElementById("purpose-field");
+
+        function togglePurposeField() {
+            if (isOneTimeCheckbox.checked) {
+                purposeField.style.display = 'block';
+            } else {
+                purposeField.style.display = 'none';
+            }
+        }
+
+        if (isOneTimeCheckbox) {
+            isOneTimeCheckbox.addEventListener('change', togglePurposeField);
+            togglePurposeField(); // הפעלה ראשונית
+        }
+
+        // === הגבלת הזנת מספרים בלבד בשדות מספריים ===
+        function enforceNumericInput(event) {
+            const input = event.target;
+            const value = input.value;
+
+            // בדיקה שהערך מכיל רק מספרים או נקודה עשרונית
+            const isValid = /^-?\d*\.?\d*$/.test(value);
+
+            if (!isValid) {
+                // אם הערך אינו חוקי, מחיקת התו האחרון
+                input.value = value.slice(0, -1);
+            }
+        }
+
+        // מציאת כל שדות ה-input שרלוונטיים
+        const numericFields = document.querySelectorAll('input[type="number"]');
+
+        // הוספת מאזין לאירוע input
+        numericFields.forEach(field => {
+            field.addEventListener('input', enforceNumericInput);
+        });
+
+        // === ניהול תצוגת שדות הכרטיס (CVV + תוקף) ושמירת המצב ===
+        const includeCardInfoCheckbox = document.getElementById('include_card_info');
+        const cardFieldsContainer = document.getElementById('card_fields_container');
+
+        function toggleCardFields() {
+            if (includeCardInfoCheckbox.checked) {
+                cardFieldsContainer.style.display = 'block';
+                localStorage.setItem('include_card_info_checked', 'true'); // שמירה במטמון
+            } else {
+                cardFieldsContainer.style.display = 'none';
+                localStorage.removeItem('include_card_info_checked'); // הסרה מהמטמון
+
+                // אופציונלי: ניקוי השדות בעת ביטול הסימון
+                const cardExpInput = document.getElementById('card_exp');
+                const cvvInput = document.getElementById('cvv');
+                if (cardExpInput) cardExpInput.value = '';
+                if (cvvInput) cvvInput.value = '';
+            }
+        }
+
+        if (includeCardInfoCheckbox && cardFieldsContainer) {
+            // בדיקה אם יש מצב שמור ב-localStorage
+            if (localStorage.getItem('include_card_info_checked')) {
+                includeCardInfoCheckbox.checked = true;
+            }
+
+            includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
+            toggleCardFields(); // הפעלה ראשונית
+        }
+
+    const form = document.querySelector('form[action="{{ url_for('coupons.edit_coupon', id=coupon.id) }}"]');
+    const expirationInput = document.getElementById("{{ form.expiration.id }}");
+
+    if (form && expirationInput) {
+        form.addEventListener('submit', function(e) {
+            if (!expirationInput.value) return; // לא הוזן תאריך, אין מה לבדוק
+
+            const parts = expirationInput.value.split('-'); // ציפייה לפורמט YYYY-MM-DD
+            if (parts.length === 3) {
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1;
+                const day = parseInt(parts[2]);
+                const selectedDate = new Date(year, month, day);
+
+                const today = new Date();
+                today.setHours(0,0,0,0);
+
+                if (selectedDate <= today) {
+                    const confirmMsg = "שימו לב! תאריך התפוגה של הקופון הוא היום או קודם. האם להמשיך?";
+                    if (!confirm(confirmMsg)) {
+                        e.preventDefault();
+                    }
+                }
+            }
+        });
+    }
+
+    });
+</script>
+{% endblock %}
+
