@@ -287,75 +287,8 @@
   </div>
 </div>
 
-<!-- Modal for statistics with charts, filters and scrolling -->
-<div id="statsModal" class="modal">
-  <div class="modal-content stats-modal-content">
-    <span class="close-stats-modal">×</span>
-    <h2>סטטיסטיקות החיסכון שלך</h2>
-    
-    <!-- Company filters with proper wrapping behavior -->
-    <div class="filters-container">
-      <span>סינון לפי חברות:</span>
-      <div class="company-filters" id="company-filters">
-        <!-- Dynamic filter controls will be added here -->
-      </div>
-    </div>
-    
-    <!-- Statistics cards with original desktop layout -->
-    <div class="stats-summary">
-      <div class="stats-card" id="total-savings-card">
-        <h3>סך החיסכון שלך</h3>
-        <div class="big-number">{{ '%.0f'|format(total_savings) }} ₪</div>
-        <p>מתוך {{ '%.0f'|format(total_coupons_value) }} ₪ אפשריים</p>
-      </div>
-      <div class="stats-card" id="savings-percentage-card">
-        <h3>אחוז החיסכון</h3>
-        <div class="big-number">{{ '%.0f'|format(percentage_savings) }}%</div>
-        <p>מכלל הקופונים</p>
-      </div>
-      <!-- New statistics cards for total coupons and usage rate -->
-      <div class="stats-card" id="total-coupons-card">
-        <h3>מספר קופונים</h3>
-        <div class="big-number">{{ total_coupons_count }}</div>
-        <p>{{ active_coupons_count if active_coupons_count is defined else "0" }} מתוכם פעילים</p>
-      </div>
-      <div class="stats-card" id="average-usage-card">
-        <h3>אחוז ניצול ממוצע</h3>
-        <div class="big-number">{{ '%.0f'|format(average_usage_percentage) }}%</div>
-        <p>ממוצע ניצול לכל הקופונים</p>
-      </div>
-    </div>
-    
-    <div class="stats-charts">
-      <div class="chart-container">
-        <h3>התפלגות החיסכון לפי חברות</h3>
-        <div id="companySavingsChart" class="chart"></div>
-      </div>
-      <div class="chart-container">
-        <h3>שימוש לאורך זמן</h3>
-        <div id="timelineChart" class="chart"></div>
-      </div>
-    </div>
-    
-    <div class="stats-details">
-      <h3>פירוט החיסכון לפי חברות</h3>
-      <div class="savings-table-wrapper">
-        <table id="savingsTable" class="savings-table">
-          <thead>
-            <tr>
-              <th>חברה</th>
-              <th>סך חיסכון</th>
-              <th>% מהחברה</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Table will be populated via JavaScript -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Stats Modal Container - Will be populated dynamically -->
+<div id="statsModal" class="modal"></div>
 
 <div class="export-buttons">
     <a href="{{ url_for('export.export_excel') }}" class="export-button">
@@ -375,6 +308,18 @@
   </button>
 </form>
 {% endif %}
+
+<!-- Hidden data for statistics -->
+<div id="stats-data" style="display: none;" 
+    data-companies-stats='{{ companies_stats|safe }}' 
+    data-timeline-data='{{ timeline_data|safe }}'
+    data-total-savings='{{ total_savings }}'
+    data-total-coupons-value='{{ total_coupons_value }}'
+    data-percentage-savings='{{ percentage_savings }}'
+    data-total-coupons-count='{{ total_coupons_count }}'
+    data-active-coupons-count='{{ active_coupons_count if active_coupons_count is defined else "0" }}'
+    data-average-usage-percentage='{{ average_usage_percentage }}'>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -1078,6 +1023,18 @@
   max-width: 100%;
 }
 
+/* QR code container styling */
+#qrcode {
+  margin: 15px auto;
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+}
+/* סגנון ספציפי רק לכפתור העדכון מ-Multipass */
+.multipass-update-button {
+  flex-direction: row;  
+}
+
 /* ===== Statistics Modal Specific Styles ===== */
 .stats-modal-content {
   max-width: 800px;
@@ -1348,37 +1305,19 @@
   direction: rtl !important;
   text-align: right !important;
 }
-
-/* QR code container styling */
-#qrcode {
-  margin: 15px auto;
-  padding: 10px;
-  background: white;
-  border-radius: 4px;
-}
-/* סגנון ספציפי רק לכפתור העדכון מ-Multipass */
-.multipass-update-button {
-  flex-direction: row;  
 </style>
 
 <script>
+// Main JavaScript for index.html
 document.addEventListener("DOMContentLoaded", function() {
   // Variable to track if usage has been updated
   let usageUpdated = false;
   
-  // Global variables for statistics
-  let companiesData = [];
-  let originalTimelineData = [];
-  let selectedCompanies = new Set(['all']);
-  let pieChart = null;
-  let timelineChart = null;
-  let lastClickedIndex = -1;
-  let isShiftKeyPressed = false;
-  
   // QR Code variable
   let qrCode = null;
-
+  
   // Shift key tracking
+  let isShiftKeyPressed = false;
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Shift') {
       isShiftKeyPressed = true;
@@ -1804,612 +1743,94 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   });
 
-  // 8) Statistics modal functionality with real data
-  // Function to render charts and initialize filtering
-  function renderSavingsCharts() {
-    try {
-      // קרא את הנתונים שהועברו מהשרת
-      companiesData = JSON.parse('{{ companies_stats|safe }}');
-      originalTimelineData = JSON.parse('{{ timeline_data|safe }}');
-
-      // בדיקה שהנתונים קיימים וחוקיים
-      if (!Array.isArray(companiesData) || companiesData.length === 0) {
-        console.error("Error: companies_stats is empty or not an array");
-        companiesData = [];
-      }
-
-      // ארגון הנתונים לפי פורמט התרשים
-      const pieData = companiesData.map(item => ({
-        company: item.company,
-        value: item.savings || 0
-      }));
-
-      // מיון החברות לפי סכום החיסכון (מהגבוה לנמוך)
-      const sortedCompanies = companiesData
-        .sort((a, b) => (b.savings || 0) - (a.savings || 0))
-        .map(item => item.company);
-      
-      createCompanyFilters(sortedCompanies);
-      updateStatisticsCards(companiesData);
-      updateSavingsTable(companiesData);
-      createPieChart(pieData);
-      createTimelineChart(originalTimelineData);
-      
-      // Add resize event listener for better mobile responsiveness
-      window.addEventListener('resize', function() {
-        if (pieChart) {
-          const isMobile = window.innerWidth < 768;
-          // Update legend position based on screen size
-          if (pieChart.options && pieChart.options.plugins && pieChart.options.plugins.legend) {
-            pieChart.options.plugins.legend.position = isMobile ? 'bottom' : 'right';
-            pieChart.update();
-          }
-        }
-      });
-    } catch (e) {
-      console.error("Error parsing statistics data:", e);
-      companiesData = [];
-    }
-  }
-
-  // Update statistics cards based on filtered data
-  function updateStatisticsCards(data) {
-    let totalSavings = 0;
-    let totalPossibleValue = 0;
-    let totalCoupons = 0;
-    let activeCoupons = 0;
-    let totalUsagePercentage = 0;
-
-    data.forEach(company => {
-      totalSavings += company.savings || 0;
-      totalPossibleValue += company.total_value || 0;
-      totalCoupons += company.coupons_count || 0;
-      activeCoupons += company.active_coupons || 0;
-      totalUsagePercentage += ((company.usage_percentage || 0) * (company.coupons_count || 0));
-    });
-
-    const avgUsagePercentage = totalCoupons > 0 ? totalUsagePercentage / totalCoupons : 0;
-    const savingsPercentage = totalPossibleValue > 0 ? (totalSavings / totalPossibleValue) * 100 : 0;
-
-    // עדכון הכרטיסיות
-    document.querySelector('#total-savings-card .big-number').textContent = Math.round(totalSavings).toString() + ' ₪';
-    document.querySelector('#total-savings-card p').textContent = 'מתוך ' + Math.round(totalPossibleValue).toString() + ' ₪ אפשריים';
-    
-    document.querySelector('#savings-percentage-card .big-number').textContent = Math.round(savingsPercentage).toString() + '%';
-    
-    document.querySelector('#total-coupons-card .big-number').textContent = totalCoupons.toString();
-    document.querySelector('#total-coupons-card p').textContent = activeCoupons.toString() + ' מתוכם פעילים';
-    
-    document.querySelector('#average-usage-card .big-number').textContent = Math.round(avgUsagePercentage).toString() + '%';
-  }
-
-  // Create filter controls for companies - UPDATED to support multiple selections and shift+click
-  function createCompanyFilters(companies) {
-    const filtersContainer = document.getElementById('company-filters');
-    filtersContainer.innerHTML = '';
-    
-    const allFilter = document.createElement('div');
-    allFilter.className = 'company-filter-item active';
-    allFilter.dataset.company = 'all';
-    allFilter.dataset.index = -1;
-    allFilter.innerHTML = '<span>הכל</span>';
-    filtersContainer.appendChild(allFilter);
-    
-    companies.forEach((company, index) => {
-      const filterItem = document.createElement('div');
-      filterItem.className = 'company-filter-item';
-      filterItem.dataset.company = company;
-      filterItem.dataset.index = index;
-      filterItem.innerHTML = `<span>${company}</span>`;
-      filtersContainer.appendChild(filterItem);
-    });
-    
-    // מניעת סימון טקסט בעת שימוש ב-Shift+Click
-    document.querySelectorAll('.company-filter-item').forEach(item => {
-      item.addEventListener('mousedown', function(e) {
-        if (isShiftKeyPressed) {
-          e.preventDefault();
-        }
-      });
-    });
-
-    // הוספת אירוע לחיצה עם תמיכה בבחירה מרובה
-    document.querySelectorAll('.company-filter-item').forEach(item => {
-      item.addEventListener('click', function(e) {
-        const companyName = this.dataset.company;
-        const currentIndex = parseInt(this.dataset.index);
-        
-        // טיפול בלחיצה על "הכל"
-        if (companyName === 'all') {
-          document.querySelectorAll('.company-filter-item').forEach(i => {
-            i.classList.remove('active');
-          });
-          this.classList.add('active');
-          selectedCompanies.clear();
-          selectedCompanies.add('all');
-          lastClickedIndex = -1;
-        } else {
-          // טיפול בלחיצת Shift לבחירה מרובה
-          if (isShiftKeyPressed && lastClickedIndex !== -1 && lastClickedIndex !== currentIndex) {
-            // הסרת "הכל" אם נבחר
-            const allItem = document.querySelector('.company-filter-item[data-company="all"]');
-            allItem.classList.remove('active');
-            selectedCompanies.delete('all');
-            
-            // קביעת הטווח לבחירה
-            const start = Math.min(lastClickedIndex, currentIndex);
-            const end = Math.max(lastClickedIndex, currentIndex);
-
-            // איסוף כל האלמנטים בסדר הטבעי שלהם בדף
-            const allItems = Array.from(document.querySelectorAll('.company-filter-item'));
-            const allIndices = allItems.map(item => parseInt(item.dataset.index));
-            const itemsInRange = allItems.filter(item => {
-              const idx = parseInt(item.dataset.index);
-              return idx >= start && idx <= end && idx !== -1; // לא לכלול את אפשרות "הכל"
-            });
-
-            // בחירת כל החברות בטווח
-            itemsInRange.forEach(item => {
-              if (!item.classList.contains('active')) {
-                item.classList.add('active');
-                selectedCompanies.add(item.dataset.company);
-              }
-            });
-          } else {
-            // החלפת מצב פעיל/לא פעיל לחברה הנוכחית (ללא Shift)
-            // הסרת "הכל" אם נבחר חברה ספציפית
-            const allItem = document.querySelector('.company-filter-item[data-company="all"]');
-            allItem.classList.remove('active');
-            selectedCompanies.delete('all');
-            
-            // החלפת מצב פעיל/לא פעיל לחברה הנוכחית
-            if (this.classList.contains('active')) {
-              this.classList.remove('active');
-              selectedCompanies.delete(companyName);
-              
-              // אם אין חברות נבחרות, החזר ל"הכל"
-              if (document.querySelectorAll('.company-filter-item.active').length === 0) {
-                allItem.classList.add('active');
-                selectedCompanies.add('all');
-                lastClickedIndex = -1;
-              }
-            } else {
-              this.classList.add('active');
-              selectedCompanies.add(companyName);
-            }
-          }
-          
-          // שמירת האינדקס האחרון שנלחץ (לשימוש ב-Shift+Click)
-          if (currentIndex >= 0) {
-            lastClickedIndex = currentIndex;
-          }
-        }
-        
-        filterAndUpdateCharts();
-      });
-    });
-  }
-
-  // Filter data and update charts/table based on selected companies
-  function filterAndUpdateCharts() {
-    let filteredData;
-    
-    if (selectedCompanies.has('all')) {
-      filteredData = companiesData;
-      
-      // עדכון כל הגרפים והטבלאות
-      const pieData = companiesData.map(item => ({
-        company: item.company,
-        value: item.savings || 0
-      }));
-      
-      updatePieChart(pieData);
-      updateTimelineChart(originalTimelineData);
-    } else {
-      // סינון הנתונים לפי החברות שנבחרו
-      filteredData = companiesData.filter(item => selectedCompanies.has(item.company));
-      
-      // עדכון גרף העוגה
-      const filteredPieData = filteredData.map(item => ({
-        company: item.company,
-        value: item.savings || 0
-      }));
-      
-      updatePieChart(filteredPieData);
-      
-      // סינון נתוני ציר הזמן לפי החברות שנבחרו
-      if (originalTimelineData && originalTimelineData.length) {
-        // Filter timeline data based on selected companies
-        const filteredTimelineData = originalTimelineData.filter(item => {
-          // If the timeline data has company information
-          if (item.company) {
-            return selectedCompanies.has(item.company);
-          }
-          // If there's no company info, keep the data point
-          return true;
-        });
-        
-        updateTimelineChart(filteredTimelineData.length > 0 ? filteredTimelineData : originalTimelineData);
-      }
-    }
-    
-    updateStatisticsCards(filteredData);
-    updateSavingsTable(filteredData);
-  }
-
-  // Update the savings table with company-specific savings percentages
-  function updateSavingsTable(data) {
-    const tableBody = document.querySelector("#savingsTable tbody");
-    tableBody.innerHTML = '';
-    
-    data.forEach(item => {
-      // החיסכון באחוזים מתוך ערך הקופונים של החברה
-      const percentOfCompany = item.total_value > 0 ? 
-        (item.savings / item.total_value * 100).toFixed(1) : "0.0";
-      
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${item.company}</td>
-        <td>${(item.savings || 0).toFixed(2)} ₪</td>
-        <td>${percentOfCompany}%</td>
-      `;
-      tableBody.appendChild(row);
-    });
-  }
-
-  // Create pie chart for company savings distribution
-  function createPieChart(pieData) {
-    if (typeof Chart !== 'undefined') {
-      document.getElementById('companySavingsChart').innerHTML = '';
-      const canvas = document.createElement('canvas');
-      document.getElementById('companySavingsChart').appendChild(canvas);
-      const ctx = canvas.getContext('2d');
-      
-      // Standard colors for the pie chart
-      const colors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', 
-        '#FF9F40', '#50AF95', '#7E57C2', '#2196F3', '#F44336',
-        '#4CAF50', '#FF5722', '#9C27B0', '#673AB7', '#3F51B5'
-      ];
-      
-      // Create enough colors for all data points
-      const backgroundColors = [];
-      for (let i = 0; i < pieData.length; i++) {
-        backgroundColors.push(colors[i % colors.length]);
-      }
-            
-      // ייצור מיפוי של נתוני החברות המלאים להצגת פרטים בטולטיפ
-      const companyDetailsMap = {};
-      pieData.forEach((item, index) => {
-        // מוצא את הנתונים המלאים של החברה
-        const fullCompanyData = companiesData.find(c => c.company === item.company);
-        if (fullCompanyData) {
-          companyDetailsMap[item.company] = fullCompanyData;
-        }
-      });
-      
-      // Responsive legend position based on screen size
-      const isMobile = window.innerWidth < 768;
-      
-      pieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: pieData.map(d => d.company),
-          datasets: [{
-            data: pieData.map(d => d.value),
-            backgroundColor: backgroundColors
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: isMobile ? 'bottom' : 'right',
-              labels: { 
-                font: { size: isMobile ? 10 : 12 },
-                boxWidth: isMobile ? 10 : 15
-              }
-            },
-            tooltip: {
-              rtl: true, // הגדרת כיוון הטקסט לימין-לשמאל
-              textDirection: 'rtl',
-              // עיצוב מותאם לטולטיפ
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleFont: {
-                size: 14
-              },
-              bodyFont: {
-                size: 14
-              },
-              padding: 12,
-              titleAlign: 'right',
-              bodyAlign: 'right',
-              callbacks: {
-                // טיפול בשורות הטקסט להצגה מימין לשמאל
-                label: function(context) {
-                  const company = context.label;
-                  const value = context.raw;
-                  const companyData = companiesData.find(c => c.company === company);
-                  
-                  if (!companyData) return [`${value.toFixed(2)} :${company}`];
-                  
-                  // בניית שורות הטקסט עם סימן הנקודתיים מהצד השמאלי
-                  // כדי שבתצוגה RTL הטקסט יראה כאילו הנקודתיים בצד ימין
-                  const lines = [
-                    `${value.toFixed(2)} :${company}`
-                  ];
-                  
-                  // חישוב אחוז מסך החיסכון
-                  const totalSavings = companiesData.reduce((sum, c) => sum + (c.savings || 0), 0);
-                  const savingsPercentage = totalSavings > 0 ? ((value / totalSavings) * 100).toFixed(1) : "0.0";
-                  lines.push(`${savingsPercentage}% :אחוז מסך החיסכון`);
-                  
-                  // מספר קופונים אם קיים
-                  if (companyData.coupons_count !== undefined) {
-                    lines.push(`${companyData.coupons_count} :מספר קופונים`);
-                  }
-                  
-                  // אחוז ניצול אם קיים
-                  if (companyData.usage_percentage !== undefined) {
-                    lines.push(`${companyData.usage_percentage.toFixed(1)}% :אחוז ניצול`);
-                  }
-                  
-                  // יתרה אם קיימת
-                  if (companyData.remaining_value !== undefined) {
-                    lines.push(`₪ ${companyData.remaining_value.toFixed(2)} :יתרה`);
-                  }
-                  
-                  return lines;
-                },
-                // התאמת הסדר של כותרת הטולטיפ
-                title: function(tooltipItems) {
-                  return ''; // אופציונלי: להסיר את הכותרת המקורית
-                }
-              }
-            }
-          }
-        }
-      });
-    } else {
-      document.getElementById('companySavingsChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
-    }
-  }
-
-  // Update pie chart data
-  function updatePieChart(pieData) {
-    if (pieChart) {
-      pieChart.data.labels = pieData.map(d => d.company);
-      pieChart.data.datasets[0].data = pieData.map(d => d.value);
-      pieChart.update();
-    }
-  }
-  // Create timeline (line) chart with real data
-  function createTimelineChart(timelineData) {
-    if (typeof Chart !== 'undefined') {
-      document.getElementById('timelineChart').innerHTML = '';
-      const canvas = document.createElement('canvas');
-      document.getElementById('timelineChart').appendChild(canvas);
-      const ctx = canvas.getContext('2d');
-      
-      // Responsive font size based on screen size
-      const isMobile = window.innerWidth < 768;
-      const fontSize = isMobile ? 10 : 12;
-      
-      // הוספת מעקף לטיפול בטולטיפים מותאמים
-      const customTooltip = {
-        id: 'customTooltip',
-        afterDraw(chart, args, options) {
-          const { ctx } = chart;
-          ctx.canvas.style.direction = 'rtl';
-        }
-      };
-      
-      timelineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: timelineData.map(d => d.month),
-          datasets: [{
-            label: 'חיסכון חודשי (ש"ח)',
-            data: timelineData.map(d => d.value),
-            borderColor: '#3498db',
-            backgroundColor: 'rgba(52, 152, 219, 0.2)',
-            borderWidth: 2,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { 
-            y: { 
-              beginAtZero: true,
-              ticks: {
-                font: { size: fontSize }
-              }
-            },
-            x: {
-              ticks: {
-                font: { size: fontSize },
-                maxRotation: isMobile ? 45 : 0
-              }
-            }
-          },
-          plugins: {
-            tooltip: {
-              rtl: true,
-              textDirection: 'rtl',
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleFont: {
-                size: 14
-              },
-              bodyFont: {
-                size: 14
-              },
-              padding: 12,
-              titleAlign: 'right',
-              bodyAlign: 'right',
-              displayColors: false,
-              position: 'nearest',
-              caretSize: 6,
-              callbacks: {
-                label: function(context) {
-                  const index = context.dataIndex;
-                  const data = timelineData[index];
-                  
-                  if (!data) return [`חיסכון: ${context.raw.toFixed(2)} ₪`];
-                  
-                  const lines = [];
-                  lines.push(`סה"כ חיסכון בחודש זה: ${context.raw.toFixed(2)} ₪`);
-                  
-                  if (data.original_value !== undefined) {
-                    lines.push(`סה"כ ערך מקורי: ${data.original_value.toFixed(2)} ₪`);
-                  }
-                  
-                  if (data.remaining_value !== undefined) {
-                    lines.push(`סה"כ ערך שנותר: ${data.remaining_value.toFixed(2)} ₪`);
-                  }
-                  
-                  if (data.coupons_count !== undefined) {
-                    lines.push(`מספר קופונים שנקנו: ${data.coupons_count}`);
-                  }
-                  
-                  if (data.discount_percentage !== undefined) {
-                    lines.push(`אחוז הנחה ממוצע: ${data.discount_percentage.toFixed(1)}%`);
-                  }
-                  
-                  if (data.companies && data.companies.length > 0) {
-                    lines.push(`חברות בחודש זה:`);
-                    data.companies.forEach(company => {
-                      lines.push(`• ${company}`);
-                    });
-                  }
-                  
-                  return lines;
-                },
-                title: function(tooltipItems) {
-                  return tooltipItems[0].label; // חודש
-                },
-                labelTextColor: function(context) {
-                  return 'white';
-                }
-              }
-            },
-            legend: {
-              labels: { 
-                font: { size: fontSize }
-              }
-            }
-          },
-          layout: {
-            padding: {
-              left: 10,
-              right: 10
-            }
-          }
-        },
-        plugins: [customTooltip]
-      });
-      
-      // הוספת סגנונות ישירות לקנבס ולטולטיפים
-      canvas.style.direction = 'rtl';
-      document.getElementById('timelineChart').style.direction = 'rtl';
-      
-      // הוספת סגנונות גלובליים לטולטיפים
-      const tooltipStyles = document.createElement('style');
-      tooltipStyles.textContent = `
-        #timelineChart {
-          direction: rtl !important;
-          text-align: right !important;
-        }
-        #timelineChart canvas {
-          direction: rtl !important;
-        }
-        .chartjs-tooltip {
-          direction: rtl !important;
-          text-align: right !important;
-        }
-        .chartjs-tooltip-body {
-          direction: rtl !important;
-          text-align: right !important;
-        }
-        .chartjs-tooltip-title {
-          text-align: right !important;
-        }
-        #tooltip-el {
-          direction: rtl !important;
-          text-align: right !important;
-        }
-        .chartjs-tooltip p {
-          margin: 2px 0;
-          padding-right: 5px;
-          text-align: right;
-        }
-      `;
-      document.head.appendChild(tooltipStyles);
-    } else {
-      document.getElementById('timelineChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
-    }
-  }
-  
-  // Update timeline chart data
-  function updateTimelineChart(timelineData) {
-    if (timelineChart) {
-      timelineChart.data.labels = timelineData.map(d => d.month);
-      timelineChart.data.datasets[0].data = timelineData.map(d => d.value);
-      timelineChart.update();
-    }
-  }
-
-  // הוספת CSS מותאם לטולטיפים של גרף הזמן
-  document.addEventListener('DOMContentLoaded', function() {
-    const style = document.createElement('style');
-    style.textContent = `
-      #timelineChart canvas {
-        direction: rtl !important;
-      }
-      .chartjs-tooltip {
-        direction: rtl !important;
-        text-align: right !important;
-      }
-      #timelineChart {
-        direction: rtl !important;
-      }
-    `;
-    document.head.appendChild(style);
-  });
-  // Update timeline chart data
-  function updateTimelineChart(timelineData) {
-    if (timelineChart) {
-      timelineChart.data.labels = timelineData.map(d => d.month);
-      timelineChart.data.datasets[0].data = timelineData.map(d => d.value);
-      timelineChart.update();
-    }
-  }
-
-  // Open statistics modal and render charts
-  const statsModal = document.getElementById("statsModal");
+  // 8) Load statistics modal dynamically
   const openStatsModalBtn = document.getElementById("open-stats-modal");
-  const closeStatsModal = document.querySelector(".close-stats-modal");
-
+  const statsModal = document.getElementById("statsModal");
+  
   if (openStatsModalBtn) {
     openStatsModalBtn.addEventListener("click", function() {
-      statsModal.classList.add("active");
-      renderSavingsCharts();
+      loadStatsModal();
     });
   }
   
-  if (closeStatsModal) {
-    closeStatsModal.addEventListener("click", function() {
-      statsModal.classList.remove("active");
-    });
+  // Function to load stats modal content dynamically
+  function loadStatsModal() {
+    fetch('{{ url_for("profile.load_stats_modal") }}')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load stats modal');
+        }
+        return response.text();
+      })
+      .then(html => {
+        // Insert the modal HTML
+        statsModal.innerHTML = html;
+        
+        // חשוב - בצע הוצאה והרצה ידנית של סקריפטים
+        const scriptTags = statsModal.getElementsByTagName('script');
+        for (let i = 0; i < scriptTags.length; i++) {
+          const newScript = document.createElement('script');
+          Array.from(scriptTags[i].attributes).forEach(attr => {
+            newScript.setAttribute(attr.name, attr.value);
+          });
+          newScript.appendChild(document.createTextNode(scriptTags[i].innerHTML));
+          document.head.appendChild(newScript);
+        }
+        
+        // Show the modal
+        statsModal.classList.add("active");
+        
+        // Add event listeners for modal close
+        const closeStatsModal = document.querySelector(".close-stats-modal");
+        if (closeStatsModal) {
+          closeStatsModal.addEventListener("click", function() {
+            statsModal.classList.remove("active");
+          });
+        }
+        
+        window.addEventListener("click", function(e) {
+          if (e.target === statsModal) {
+            statsModal.classList.remove("active");
+          }
+        });
+        
+        // המתן זמן קצר לסיום טעינת הסקריפטים
+        setTimeout(() => {
+          // Get the stats data from the hidden div
+          const statsData = document.getElementById('stats-data');
+          const companiesStats = JSON.parse(statsData.getAttribute('data-companies-stats'));
+          const timelineData = JSON.parse(statsData.getAttribute('data-timeline-data'));
+          const totalSavings = parseFloat(statsData.getAttribute('data-total-savings'));
+          const totalCouponsValue = parseFloat(statsData.getAttribute('data-total-coupons-value'));
+          const percentageSavings = parseFloat(statsData.getAttribute('data-percentage-savings'));
+          const totalCouponsCount = parseInt(statsData.getAttribute('data-total-coupons-count'));
+          const activeCouponsCount = parseInt(statsData.getAttribute('data-active-coupons-count') || '0');
+          const averageUsagePercentage = parseFloat(statsData.getAttribute('data-average-usage-percentage'));
+          
+          // בדוק אם הפונקציה זמינה אחרי הרצת הסקריפט
+          if (typeof window.renderSavingsCharts === 'function') {
+            window.renderSavingsCharts({
+              companiesStats,
+              timelineData,
+              totalSavings,
+              totalCouponsValue,
+              percentageSavings,
+              totalCouponsCount,
+              activeCouponsCount,
+              averageUsagePercentage
+            });
+          } else {
+            console.error('Error: renderSavingsCharts function not found after script execution');
+            alert('שגיאה באתחול נתוני הסטטיסטיקות. אנא רענן את הדף ונסה שוב.');
+          }
+        }, 50);  // השהייה קצרה כדי לוודא שהסקריפטים הוטענו
+      })
+      .catch(error => {
+        console.error('Error loading stats modal:', error);
+        alert('שגיאה בטעינת חלון הסטטיסטיקות. אנא נסה שוב מאוחר יותר.');
+      });
   }
   
-  window.addEventListener("click", function(e) {
-    if (e.target === statsModal) {
-      statsModal.classList.remove("active");
-    }
-  });
 });
 </script>
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>

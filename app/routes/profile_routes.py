@@ -130,7 +130,6 @@ from app.forms import ProfileForm, UsageExplanationForm
 def get_ip_address():
     return request.remote_addr or '0.0.0.0'
 
-
 @profile_bp.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
@@ -174,57 +173,23 @@ def index():
     greeting = get_greeting()  # For example: based on time, returns "Good morning" / "Good evening", etc.
 
     # --------------------------------------------------------------------------------
-    # 1. Calculate total coupons and savings (the original part)
+    # 1. Calculate total coupons and savings - INCLUDING BOTH ONE-TIME AND NON-ONE-TIME
     # --------------------------------------------------------------------------------
 
-    # 1. Calculate total coupons and savings (without status filter)
-    all_non_one_time_coupons = Coupon.query.filter(
+    # Get all coupons (including one-time) but excluding those for sale
+    all_coupons = Coupon.query.filter(
         Coupon.user_id == current_user.id,
         Coupon.is_for_sale == False,
-        ~Coupon.is_one_time,
         Coupon.exclude_saving != True
     ).all()
 
-    total_remaining = sum(coupon.value - coupon.used_value for coupon in all_non_one_time_coupons)
+    # Calculate total remaining value, savings, and total value
+    total_remaining = sum(coupon.value - coupon.used_value for coupon in all_coupons)
     total_savings = sum(
-        (coupon.value - coupon.cost) for coupon in all_non_one_time_coupons if coupon.value > coupon.cost
+        (coupon.value - coupon.cost) for coupon in all_coupons if coupon.value > coupon.cost
     )
-    total_coupons_value = sum(coupon.value for coupon in all_non_one_time_coupons)
+    total_coupons_value = sum(coupon.value for coupon in all_coupons)
     percentage_savings = (total_savings / total_coupons_value) * 100 if total_coupons_value > 0 else 0
-
-    # 2. Split coupons into categories (categories remain the same)
-    active_one_time_coupons = Coupon.query.filter(
-        Coupon.status == 'פעיל',
-        Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == False,
-        Coupon.is_one_time == True
-    ).all()
-
-    used_coupons = Coupon.query.filter(
-        Coupon.status != 'פעיל',
-        Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == False,
-        ~Coupon.is_one_time
-    ).all()
-
-    coupons_for_sale = Coupon.query.filter(
-        Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == True,
-        ~Coupon.is_one_time
-    ).all()
-
-    active_coupons = Coupon.query.filter(
-        Coupon.user_id == current_user.id,
-        Coupon.status == 'פעיל',
-        Coupon.is_for_sale == False,
-        ~Coupon.is_one_time
-    ).order_by(Coupon.date_added.desc()).all()
-
-    # 3. Status update - using the variable we defined above
-    all_to_update = all_non_one_time_coupons + active_one_time_coupons + used_coupons + coupons_for_sale
-    for coupon in all_to_update:
-        update_coupon_status(coupon)
-    db.session.commit()
 
     # --------------------------------------------------------------------------------
     # 2. Fetch and divide into categories (active, active_one_time, used, for_sale)
@@ -242,15 +207,13 @@ def index():
     used_coupons = Coupon.query.filter(
         Coupon.status != 'פעיל',
         Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == False,
-        ~Coupon.is_one_time
+        Coupon.is_for_sale == False
     ).all()
 
     # Coupons for sale
     coupons_for_sale = Coupon.query.filter(
         Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == True,
-        ~Coupon.is_one_time
+        Coupon.is_for_sale == True
     ).all()
 
     # Active coupons (non-one-time)
@@ -264,7 +227,7 @@ def index():
     # --------------------------------------------------------------------------------
     # 3. Update status (for all categories) and then commit
     # --------------------------------------------------------------------------------
-    all_to_update = all_non_one_time_coupons + active_one_time_coupons + used_coupons + coupons_for_sale
+    all_to_update = all_coupons + coupons_for_sale
     for coupon in all_to_update:
         update_coupon_status(coupon)
     db.session.commit()
@@ -272,21 +235,6 @@ def index():
     # --------------------------------------------------------------------------------
     # 4. Check "Are there coupons expiring in the next 7 days" + show banner once a day
     # --------------------------------------------------------------------------------
-
-    # Check if user dismissed the alert today
-    dismissed_today = (session.get('dismissed_expiring_alert_date') == str(date.today()))
-
-    # Find coupons expiring in the next week
-    one_week_from_now = date.today() + timedelta(days=7)
-    expiring_coupons = Coupon.query.filter(
-        Coupon.user_id == current_user.id,
-        Coupon.status == 'פעיל',
-        Coupon.is_for_sale == False,
-        Coupon.expiration.isnot(None)  # Make sure the field is not NULL
-    ).filter(
-        cast(Coupon.expiration, Date) >= date.today(),
-        cast(Coupon.expiration, Date) <= date.today() + timedelta(days=7)
-    ).all()
 
     # Check if user dismissed the alert today
     dismissed_today = (
@@ -325,7 +273,14 @@ def index():
     # --------------------------------------------------------------------------------
     # Organize data by company
     companies_stats = {}
-    for coupon in all_non_one_time_coupons:
+    
+    # Create dictionary to track earliest expiration date per company
+    company_earliest_expirations = {}
+    
+    # Track coupon types per company
+    company_coupon_types = {}
+    
+    for coupon in all_coupons:
         company = coupon.company
         if company not in companies_stats:
             companies_stats[company] = {
@@ -333,7 +288,13 @@ def index():
                 'used_value': 0,
                 'remaining_value': 0, 
                 'savings': 0,
-                'count': 0
+                'count': 0,
+                'one_time_count': 0,
+                'non_one_time_count': 0
+            }
+            company_coupon_types[company] = {
+                'one_time': 0,
+                'non_one_time': 0
             }
         
         companies_stats[company]['total_value'] += coupon.value
@@ -341,6 +302,25 @@ def index():
         companies_stats[company]['remaining_value'] += (coupon.value - coupon.used_value)
         companies_stats[company]['savings'] += max(0, coupon.value - coupon.cost)
         companies_stats[company]['count'] += 1
+        
+        # Track coupon type counts
+        if coupon.is_one_time:
+            companies_stats[company]['one_time_count'] += 1
+            company_coupon_types[company]['one_time'] += 1
+        else:
+            companies_stats[company]['non_one_time_count'] += 1
+            company_coupon_types[company]['non_one_time'] += 1
+        
+        # Track earliest expiration date for each company
+        if coupon.expiration and coupon.status == 'פעיל':
+            # Convert string to date if needed
+            exp_date = coupon.expiration
+            if isinstance(exp_date, str):
+                exp_date = datetime.strptime(exp_date, "%Y-%m-%d").date()
+                
+            # Update the earliest date for this company
+            if company not in company_earliest_expirations or exp_date < company_earliest_expirations[company]:
+                company_earliest_expirations[company] = exp_date
 
     # Sort companies by savings amount
     sorted_companies = sorted(
@@ -349,191 +329,149 @@ def index():
         reverse=True
     )
 
-    # Data for time series (coupon usage by month)
-    timeline_data = {}
+    # --------------------------------------------------------------------------------
+    # 7. Prepare timeline data (monthly savings data)
+    # --------------------------------------------------------------------------------
     
-    # Assumption: You have a CouponUsage model. If not, use update history from the log
-    try:
-        # Try to fetch usage history from CouponUsage table
-        usage_records = CouponUsage.query.filter(
-            CouponUsage.coupon_id.in_([c.id for c in all_non_one_time_coupons]),
-            CouponUsage.user_id == current_user.id
-        ).all()
-        
-        for record in usage_records:
-            usage_month = record.date_used.strftime('%Y-%m')
-            if usage_month not in timeline_data:
-                timeline_data[usage_month] = 0
-            timeline_data[usage_month] += record.amount
-            
-    except (NameError, AttributeError):
-        # If there's no CouponUsage table, create temporary data by the day of each update
-        # This is not accurate but will provide at least a basic display
-        
-        # Try to use the last update date of the coupon
-        for coupon in all_non_one_time_coupons:
-            if hasattr(coupon, 'last_updated') and coupon.last_updated and coupon.used_value > 0:
-                usage_month = coupon.last_updated.strftime('%Y-%m')
-                if usage_month not in timeline_data:
-                    timeline_data[usage_month] = 0
-                timeline_data[usage_month] += coupon.used_value
-            elif hasattr(coupon, 'date_added') and coupon.date_added and coupon.used_value > 0:
-                usage_month = coupon.date_added.strftime('%Y-%m')
-                if usage_month not in timeline_data:
-                    timeline_data[usage_month] = 0
-                timeline_data[usage_month] += coupon.used_value
-    
-    # Sort dates chronologically
-    sorted_timeline = sorted(timeline_data.items())
-    
-    # Convert months to words
+    # Month names in Hebrew
     month_names = {
         '01': 'ינואר', '02': 'פברואר', '03': 'מרץ', '04': 'אפריל',
         '05': 'מאי', '06': 'יוני', '07': 'יולי', '08': 'אוגוסט',
         '09': 'ספטמבר', '10': 'אוקטובר', '11': 'נובמבר', '12': 'דצמבר'
     }
     
-    # Convert to JSON format for JavaScript
-    sorted_company_data = [
-        {
+    # Group coupons by month added
+    monthly_data = {}
+    
+    for coupon in all_coupons:
+        # Use date_added as the reference month
+        if hasattr(coupon, 'date_added') and coupon.date_added:
+            month_key = coupon.date_added.strftime('%Y-%m')
+            
+            if month_key not in monthly_data:
+                monthly_data[month_key] = {
+                    'savings': 0,           # Value - cost (the actual savings)
+                    'count': 0,
+                    'original_value': 0,    # Total face value
+                    'remaining_value': 0,   # Remaining value
+                    'companies': set(),     # Set of companies for this month
+                    'one_time_count': 0,    # Count of one-time coupons
+                    'non_one_time_count': 0 # Count of non-one-time coupons
+                }
+            
+            # Add coupon data to the month
+            monthly_data[month_key]['savings'] += max(0, coupon.value - coupon.cost)
+            monthly_data[month_key]['count'] += 1
+            monthly_data[month_key]['original_value'] += coupon.value
+            monthly_data[month_key]['remaining_value'] += (coupon.value - coupon.used_value)
+            monthly_data[month_key]['companies'].add(coupon.company)
+            
+            # Track coupon type
+            if coupon.is_one_time:
+                monthly_data[month_key]['one_time_count'] += 1
+            else:
+                monthly_data[month_key]['non_one_time_count'] += 1
+    
+    # Convert to sorted list for timeline charts
+    timeline_data_formatted = []
+    
+    for month_year, data in sorted(monthly_data.items()):
+        year, month = month_year.split('-')
+        month_name = month_names.get(month, month)
+        
+        # Calculate average discount percentage
+        discount_percentage = 0
+        if data['original_value'] > 0:
+            discount_percentage = (data['savings'] / data['original_value']) * 100
+        
+        # Convert company set to list
+        companies_list = list(data['companies'])
+        
+        # Create data entry
+        timeline_data_formatted.append({
+            'month': f"{month_name} {year}",
+            'value': data['savings'],               # Using savings as the value
+            'original_value': data['original_value'],
+            'remaining_value': data['remaining_value'],
+            'coupons_count': data['count'],
+            'one_time_count': data['one_time_count'],
+            'non_one_time_count': data['non_one_time_count'],
+            'discount_percentage': discount_percentage,
+            'companies': companies_list
+        })
+
+    # --------------------------------------------------------------------------------
+    # 8. Prepare cumulative savings data
+    # --------------------------------------------------------------------------------
+    
+    # This should be based on actual savings (value - cost), not just usage
+    cumulative_savings = []
+    running_total = 0
+    
+    for entry in timeline_data_formatted:
+        monthly_savings = entry['value']  # This is already the savings amount
+        running_total += monthly_savings
+        
+        cumulative_savings.append({
+            'month': entry['month'],
+            'value': monthly_savings,
+            'cumulative': running_total
+        })
+
+    # --------------------------------------------------------------------------------
+    # 9. Calculate additional metrics for general statistics
+    # --------------------------------------------------------------------------------
+    
+    # Basic counts
+    total_coupons_count = len(all_coupons)
+    active_coupons_count = len(active_coupons) + len(active_one_time_coupons)
+    total_companies_count = len(companies_stats)
+    
+    # Calculate average usage percentage
+    average_usage_percentage = 0
+    if total_coupons_value > 0:
+        total_used_value = sum(coupon.used_value for coupon in all_coupons)
+        average_usage_percentage = (total_used_value / total_coupons_value) * 100
+
+    # Count one-time vs non-one-time coupons
+    one_time_count = sum(1 for coupon in all_coupons if coupon.is_one_time)
+    non_one_time_count = total_coupons_count - one_time_count
+
+    # --------------------------------------------------------------------------------
+    # 10. Convert data for JSON and template rendering
+    # --------------------------------------------------------------------------------
+    
+    # Convert expiration from String to Date (if it's not None)
+    for coupon in expiring_coupons:
+        if isinstance(coupon.expiration, str):  # If expiration is a string
+            coupon.expiration = datetime.strptime(coupon.expiration, "%Y-%m-%d").date()
+    
+    # Convert companies data to format for JavaScript
+    sorted_company_data = []
+    for company, stats in sorted_companies:
+        # Get earliest expiration date for this company
+        earliest_expiration = None
+        if company in company_earliest_expirations:
+            earliest_expiration = company_earliest_expirations[company].strftime("%Y-%m-%d")
+            
+        # Create company data entry
+        sorted_company_data.append({
             'company': company, 
             'savings': stats['savings'],
             'used_value': stats['used_value'],
             'total_value': stats['total_value'],
             'remaining_value': stats['remaining_value'],
             'coupons_count': stats['count'],
-            'active_coupons': sum(1 for coupon in active_coupons if coupon.company == company),
-            'usage_percentage': (stats['used_value'] / stats['total_value'] * 100) if stats['total_value'] > 0 else 0
-        } 
-        for company, stats in sorted_companies
-    ]
-
-    # Change date format to a more readable format with additional data for tooltips
-    timeline_data_formatted = []
-    
-    for month_year, value in sorted_timeline:
-        year, month = month_year.split('-')
-        month_name = month_names.get(month, month)
-        
-        # Collect additional data for this month
-        month_coupons = []
-        month_original_value = 0
-        month_remaining_value = 0
-        month_discount_percentage = 0
-        
-        # Collect all coupons added/used in this month
-        for coupon in all_non_one_time_coupons:
-            # Check if coupon was updated in this month
-            coupon_month = None
-            if hasattr(coupon, 'last_updated') and coupon.last_updated:
-                coupon_month = coupon.last_updated.strftime('%Y-%m')
-            elif hasattr(coupon, 'date_added') and coupon.date_added:
-                coupon_month = coupon.date_added.strftime('%Y-%m')
-                
-            if coupon_month == month_year:
-                month_coupons.append(coupon)
-                month_original_value += coupon.value
-                month_remaining_value += (coupon.value - coupon.used_value)
-        
-        # Calculate average discount percentage
-        month_total_cost = sum(coupon.cost for coupon in month_coupons) if month_coupons else 0
-        if month_original_value > 0 and month_total_cost > 0:
-            month_discount_percentage = ((month_original_value - month_total_cost) / month_original_value) * 100
-        
-        # Create extended data object
-        timeline_data_formatted.append({
-            'month': f"{month_name} {year}",
-            'value': value,
-            'original_value': month_original_value,
-            'remaining_value': month_remaining_value,
-            'coupons_count': len(month_coupons),
-            'discount_percentage': month_discount_percentage
-        })
-
-    # Calculate additional metrics for general statistics
-    total_coupons_count = len(all_non_one_time_coupons)
-    total_companies_count = len(companies_stats)
-    
-    # Calculate average usage percentage
-    average_usage_percentage = 0
-    if total_coupons_value > 0:
-        total_used_value = sum(coupon.used_value for coupon in all_non_one_time_coupons)
-        average_usage_percentage = (total_used_value / total_coupons_value) * 100
-
-    # --------------------------------------------------------------------------------
-    # 6a. נתונים לגרפים חדשים
-    # --------------------------------------------------------------------------------
-
-    # נתונים לגרף התפלגות אחוזי שימוש לפי חברות
-    company_usage_data = []
-    for company, stats in sorted_companies:
-        usage_percentage = (stats['used_value'] / stats['total_value'] * 100) if stats['total_value'] > 0 else 0
-        company_usage_data.append({
-            'company': company,
-            'usage_percentage': round(usage_percentage, 1),
-            'coupons_count': stats['count']
-        })
-
-    # נתונים לגרף ניתוח פגי תוקף
-    expiration_data = {}
-    # חפש את כל הקופונים הפעילים עם תאריך תפוגה
-    coupons_with_expiration = Coupon.query.filter(
-        Coupon.user_id == current_user.id,
-        Coupon.status == 'פעיל',
-        Coupon.is_for_sale == False,
-        Coupon.expiration.isnot(None)
-    ).all()
-
-    # יצירת מבנה נתונים לתפוגה עתידית (6 חודשים)
-    today = date.today()
-    for i in range(7):  # 0 עד 6 חודשים
-        future_month = today + timedelta(days=30 * i)
-        month_key = future_month.strftime('%Y-%m')
-        expiration_data[month_key] = {
-            'month': f"{month_names.get(future_month.strftime('%m'), future_month.strftime('%m'))} {future_month.strftime('%Y')}",
-            'count': 0,
-            'value': 0
-        }
-
-    # מיון הקופונים לחודשי תפוגה
-    for coupon in coupons_with_expiration:
-        exp_date = coupon.expiration
-        if isinstance(exp_date, str):
-            exp_date = datetime.strptime(exp_date, "%Y-%m-%d").date()
-        
-        # בדוק אם התאריך בטווח של 6 חודשים
-        if exp_date <= today + timedelta(days=30 * 6):
-            month_key = exp_date.strftime('%Y-%m')
-            if month_key in expiration_data:
-                expiration_data[month_key]['count'] += 1
-                expiration_data[month_key]['value'] += (coupon.value - coupon.used_value)
-
-    # המרה לרשימה ממוינת
-    expiration_data_list = [value for month, value in sorted(expiration_data.items())]
-
-    # נתונים לגרף חיסכון מצטבר
-    # איסוף נתונים למגמת חיסכון מצטבר
-    cumulative_savings = []
-    running_total = 0
-
-    for entry in timeline_data_formatted:
-        running_total += entry['value']
-        cumulative_savings.append({
-            'month': entry['month'],
-            'value': entry['value'],
-            'cumulative': running_total
+            'one_time_count': stats['one_time_count'],
+            'non_one_time_count': stats['non_one_time_count'],
+            'active_coupons': sum(1 for coupon in active_coupons if coupon.company == company) + 
+                             sum(1 for coupon in active_one_time_coupons if coupon.company == company),
+            'usage_percentage': (stats['used_value'] / stats['total_value'] * 100) if stats['total_value'] > 0 else 0,
+            'earliest_expiration': earliest_expiration  # Add earliest expiration date
         })
 
     # --------------------------------------------------------------------------------
-    # 7. Return the 'index.html' Template
-    # --------------------------------------------------------------------------------
-    # Convert expiration from String to Date (if it's not None)
-    for coupon in expiring_coupons:
-        if isinstance(coupon.expiration, str):  # If expiration is a string
-            coupon.expiration = datetime.strptime(coupon.expiration, "%Y-%m-%d").date()
-
-    # --------------------------------------------------------------------------------
-    # Admin message
+    # 11. Admin message handling
     # --------------------------------------------------------------------------------
     # Get the latest message
     latest_message = AdminMessage.query.order_by(AdminMessage.id.desc()).first()
@@ -543,6 +481,9 @@ def index():
         if (current_user.dismissed_message_id is None) or (current_user.dismissed_message_id < latest_message.id):
             show_admin_message = True
             
+    # --------------------------------------------------------------------------------
+    # 12. Return the completed template with all data
+    # --------------------------------------------------------------------------------
     return render_template(
         'index.html',
         profile_form=profile_form,
@@ -565,25 +506,33 @@ def index():
         show_expiring_alert=show_expiring_alert,
         expiring_coupons=expiring_coupons,
 
-        # ✅ Add current_date and timedelta to template
+        # Add current_date and timedelta to template
         current_date=date.today(),
         timedelta=timedelta,
 
-        # New variables for statistics
+        # Statistics data
         companies_stats=json.dumps(sorted_company_data),
         timeline_data=json.dumps(timeline_data_formatted),
         total_coupons_count=total_coupons_count,
         total_companies_count=total_companies_count,
         average_usage_percentage=average_usage_percentage,
+        active_coupons_count=active_coupons_count,
+        one_time_count=one_time_count,
+        non_one_time_count=non_one_time_count,
 
-        # נתונים לגרפים חדשים
-        company_usage_data=json.dumps(company_usage_data),
-        expiration_data=json.dumps(expiration_data_list),
+        # Cumulative savings data
         cumulative_savings=json.dumps(cumulative_savings),
 
+        # Admin messages
         show_admin_message=show_admin_message,
         admin_message=latest_message if show_admin_message else None
     )
+
+
+@profile_bp.route('/load_stats_modal')
+@login_required
+def load_stats_modal():
+    return render_template('index_modals/stats_modal.html')
 
 @profile_bp.route('/dismiss_expiring_alert', methods=['GET'])
 @login_required
