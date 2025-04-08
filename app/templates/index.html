@@ -69,7 +69,7 @@
     <!-- CHANGED: Replaced savings text with centered statistics button -->
     <div style="display: flex; justify-content: center;">
       <button id="open-stats-modal" class="stats-button">
-          <i class="fas fa-chart-bar"></i> סטטיסטיקות חיסכון
+          <i class="fas fa-chart-bar"></i> על מה חסכת?
       </button>
     </div>
 </section>
@@ -233,59 +233,8 @@
     {% endfor %}
 </section>
 
-<!-- Modal for displaying company coupons with animation -->
-<div id="companyModal" class="modal">
-  <div class="modal-content">
-    <!-- Close modal button -->
-    <span class="close-modal">×</span>
-    <!-- Company title -->
-    <h2 id="modal-company-name">קופונים מחברת ...</h2>
-    <!-- Company logo -->
-    <img id="modal-company-logo" alt="Company Logo" style="display: block;" src="/static/images/carrefour.png">
-    <!-- Total remaining value -->
-    <p id="modal-total-remaining" style="font-size: 1.2em; font-weight: bold; margin: 5px 0;"></p>
-    <ul id="modal-coupons-list"></ul>
-  </div>
-</div>
-
-<!-- Modal for updating coupon usage with animation -->
-<div id="usageModal" class="modal">
-  <div class="modal-content usage-modal-content" style="max-width: 600px;">
-    <span class="close-usage-modal">×</span>
-    <h3>עדכון סכום שימוש</h3>
-    <!-- Dynamic content will be filled here -->
-    <h2 id="usage-modal-company" style="color: #00bfff; font-size: 1.8em; margin-bottom: 5px;"></h2>
-    <img id="usage-modal-logo" alt="Company Logo" style="display: block; margin: 10px auto 0 auto; width: 80px; height: 80px;" src="/static/images/carrefour.png">
-    <p id="usage-modal-code" style="margin-bottom:10px;"><strong></strong></p>
-    <p id="usage-modal-remaining" style="margin-bottom:10px;"><strong>יתרה נוכחית: <span id="remainingValue">70.30</span> ש"ח</strong></p>
-    <input type="number" id="usageAmount" step="0.01" placeholder="בכמה השתמשת?" style="padding:8px; width:200px;">
-    <br>
-    <button id="usageConfirmButton" style="margin-top:10px; padding:8px 16px; background-color:#3498db; color:#fff; border:none; border-radius:5px; cursor:pointer;">
-      אישור
-    </button>
-    <button id="updateFullAmountButton" style="margin-top:10px; padding:8px 16px; background-color:#2ecc71; color:#fff; border:none; border-radius:5px; cursor:pointer;">
-      עדכון כל היתרה
-    </button>
-    <div id="usageErrorMsg" style="color:red; margin-top:10px; display:none;"></div>
-  </div>
-</div>
-
-<!-- Modal for large display with animation -->
-<div id="bigDisplayModal" class="modal">
-  <div class="modal-content">
-    <span class="close-big-modal">×</span>
-    <h2 id="bigModalCompanyName">Be שופרסל</h2>
-    <img id="bigModalLogo" alt="Logo" style="width:120px;height:120px;object-fit:cover;margin:10px auto;border-radius:8px;" src="/static/images/be_shufersal.png">
-    <h1 id="bigModalCouponCode" style="margin-top:20px;">91381000401555109674</h1>
-    <!-- Block for displaying CVV and card expiration -->
-    <div id="bigModalExtraDetails" style="margin-top:20px; display:none;">
-      <h1 id="bigModalCouponCVV" style="margin:0; font-weight: bold;"></h1>
-      <h1 id="bigModalCardExp" style="margin:0; font-weight: bold;"></h1>
-    </div>
-    <!-- QR code element for coupon code -->
-    <div id="qrcode" style="margin: 20px auto; width: 200px; height: 200px;"></div>
-  </div>
-</div>
+<!-- Modal Container - Will be filled dynamically -->
+<div id="couponModalsContainer"></div>
 
 <!-- Stats Modal Container - Will be populated dynamically -->
 <div id="statsModal" class="modal"></div>
@@ -430,7 +379,33 @@
 .hidden-text {
     display: none;
 }
+.total-value {
+    background-color: var(--white);
+    padding: 20px 0px;
+    margin: 25px auto;
+    border-radius: 10px;
+    border: 1px solid var(--light-gray);
+    width: 350px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
 
+.total-value p {
+    font-size: 1em;
+    color: var(--text-color);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.total-value h1 {
+    font-size: 3em;
+    margin: 0 auto;
+    color: var(--success-color);
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0.3em;
+}
 /* ===== Company Cards Row ===== */
 .company-cards-row {
     display: flex;
@@ -490,35 +465,140 @@
 }
 
 /* ===== Forms (Usage Report / Add Coupon) ===== */
+/* ===== Forms Container & Responsiveness ===== */
 .usage-forms-container {
     display: flex;
-    gap: 5px;
+    gap: 20px; /* # Increased gap between forms for better spacing */
     justify-content: center;
     align-items: stretch;
-    margin: 20px auto;
+    margin: 30px auto; /* # Increased vertical margin */
     max-width: 800px;
-    border-radius: 10px;
+    width: 90%; /* # Added width control for smaller screens */
+    padding: 10px; /* # Added padding to prevent content touching edges */
 }
+
 .usage-form-wrapper {
     flex: 1;
-    max-width: 360px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
+    background-color: #fff; /* # Added background color */
+    border-radius: 10px; /* # Rounded corners */
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1); /* # Subtle shadow for depth */
+    border: 1px solid #e6e6e6; /* # Light border */
+    padding: 20px; /* # Added internal padding */
+    transition: transform 0.2s ease, box-shadow 0.2s ease; /* # Smooth hover effect */
 }
+
+.usage-form-wrapper:hover {
+    transform: translateY(-3px); /* # Slight lift effect on hover */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* # Enhanced shadow on hover */
+}
+
 .usage-form-wrapper form {
     display: flex;
     flex-direction: column;
     height: 100%;
 }
+
 .input-wrapper {
-    margin-bottom: 10px;
+    margin-bottom: 15px; /* # Increased margin */
 }
+
+.input-wrapper label {
+    display: block;
+    margin-bottom: 8px; /* # Added space after label */
+    font-weight: bold; /* # Made label bold for emphasis */
+    color: #444; /* # Slightly darker than black for easier reading */
+}
+
+.input-field_centered {
+    width: 100%;
+    padding: 12px; /* # Increased padding for better touch targets */
+    border: 1px solid #ddd;
+    border-radius: 6px; /* # Rounded input field */
+    resize: vertical; /* # Allow vertical resizing only */
+    font-family: inherit; /* # Consistent font */
+    transition: border-color 0.2s ease; /* # Smooth focus transition */
+}
+
+.input-field_centered:focus {
+    border-color: var(--primary-color, #3498db); /* # Highlight border on focus */
+    outline: none; /* # Remove default focus outline */
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2); /* # Subtle focus glow */
+}
+
+/* # This is the key part we need to fix */
 .button-with-explanation {
-    position: relative;
-    display: inline-block;
-    margin-top: auto;
+    display: flex;
+    flex-direction: row; /* # Explicit direction */
+    align-items: center;
+    margin-top: auto; /* # Push to bottom of container */
 }
+
+/* # Place tooltip button first (on the right in RTL) */
+.tooltip-button-mobile {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-left: 10px; /* # Space between tooltip and button */
+    order: 1; /* # First in visual order (right side in RTL) */
+}
+
+.tooltip-button-mobile:hover {
+    background-color: #f5f5f5;
+}
+
+/* # Submit button follows the tooltip button */
+.submit-button {
+    background-color: var(--primary-color, #3498db);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+    width: 120px; /* # Fixed width for consistent sizing */
+    order: 2; /* # Second in visual order */
+}
+
+.submit-button:hover {
+    background-color: var(--primary-hover, #2980b9); /* # Darker shade on hover */
+}
+
+/* # Media query for mobile responsiveness */
+@media (max-width: 768px) {
+    .usage-forms-container {
+        flex-direction: column; /* # Stack forms vertically on mobile */
+        gap: 30px; /* # Increased gap between stacked forms */
+    }
+    
+    .usage-form-wrapper {
+        max-width: 100%; /* # Full width on mobile */
+        width: 100%;
+    }
+    
+    /* # Force the correct order on mobile too */
+    .button-with-explanation {
+        display: flex;
+        flex-direction: row; /* # Keep horizontal layout */
+    }
+    
+    .tooltip-button-mobile {
+        order: 1; /* # Keep tooltip first (on right) */
+    }
+    
+    .submit-button {
+        order: 2; /* # Keep submit button second */
+        width: 120px; /* # Same fixed width as desktop */
+    }
+}
+
 .button-with-explanation:hover .tooltip,
 .tooltip-trigger:hover .tooltip {
     display: block;
@@ -909,7 +989,7 @@
   background-color: #2980b9;
 }
 
-/* ===== Modal Styles with Animation ===== */
+/* ===== Modal basic styles (minimal needed for the page) ===== */
 .modal {
   position: fixed;
   z-index: 1000;
@@ -926,373 +1006,10 @@
   opacity: 1;
   visibility: visible;
 }
-.modal-content {
-  background-color: #fff;
-  margin: 8% auto;
-  padding: 20px;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-sizing: border-box;
-  text-align: center;
-}
-.modal-content h2,
-.modal-content h3 {
-  margin: 10px 0;
-}
-.close-modal,
-.close-usage-modal,
-.close-big-modal,
-.close-stats-modal {
-  position: absolute;
-  top: 10px;
-  right: 20px;
-  font-size: 1.5em;
-  cursor: pointer;
-}
-#modal-company-logo {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin: 10px auto 0 auto;
-  display: block;
-}
-#modal-coupons-list {
-  margin-top: 20px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  align-items: center;
-  list-style: none;
-  padding: 0;
-}
-#modal-coupons-list li {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-#modal-coupons-list li a {
-  text-decoration: none;
-  color: #3498db;
-  margin-bottom: 5px;
-  text-align: center;
-}
-#modal-coupons-list li a:hover {
-  text-decoration: underline;
-}
-.coupon-info-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-.update-usage-btn,
-.show-big-btn {
-  border: none;
-  border-radius: 5px;
-  padding: 4px 8px;
-  cursor: pointer;
-  color: #fff;
-  font-size: 0.9em;
-}
-.update-usage-btn {
-  background-color: #27ae60;
-}
-.update-usage-btn:hover {
-  background-color: #229954;
-}
-.show-big-btn {
-  background-color: #8e44ad;
-}
-.show-big-btn:hover {
-  background-color: #7d3c98;
-}
 
-/* Fix long text wrapping in modal */
-#bigModalCouponCode {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  white-space: normal;
-  text-align: center;
-  max-width: 100%;
-}
-
-/* QR code container styling */
-#qrcode {
-  margin: 15px auto;
-  padding: 10px;
-  background: white;
-  border-radius: 4px;
-}
 /* סגנון ספציפי רק לכפתור העדכון מ-Multipass */
 .multipass-update-button {
   flex-direction: row;  
-}
-
-/* ===== Statistics Modal Specific Styles ===== */
-.stats-modal-content {
-  max-width: 800px;
-  padding: 25px;
-  max-height: 85vh;
-  overflow-y: auto;
-}
-
-/* Original desktop styling for stats cards */
-.stats-summary {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  margin: 20px 0;
-  gap: 20px;
-}
-.stats-card {
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  padding: 15px;
-  flex: 1;
-  min-width: 200px;
-  text-align: center;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-.big-number {
-  font-size: 2.5em;
-  font-weight: bold;
-  color: #3498db;
-  margin: 10px 0;
-}
-
-/* סגנונות גרפים לכל הגדלים */
-.stats-charts {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin: 20px 0;
-  width: 100%;
-}
-
-.chart-container {
-  width: 100%;
-  min-height: 300px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  padding: 15px;
-  margin-bottom: 15px;
-}
-
-.chart {
-  width: 100% !important;
-  height: 250px !important;
-}
-
-/* Table styling with wrapper for scrolling if needed */
-.savings-table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.savings-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 20px 0;
-  min-width: 300px; /* Ensures table doesn't get too narrow */
-}
-.savings-table th,
-.savings-table td {
-  padding: 10px;
-  text-align: right;
-  border-bottom: 1px solid #ddd;
-}
-.savings-table th {
-  background-color: #f2f2f2;
-  position: sticky;
-  top: 0;
-}
-
-/* Filters container with proper wrapping */
-.filters-container {
-  margin: 10px 0;
-  padding: 10px 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.filters-container span {
-  font-weight: bold;
-  margin-right: 10px;
-}
-.company-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin: 0 auto;
-  width: 100%;
-  text-align: center;
-}
-.company-filter-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 4px 8px;
-  background-color: #fff;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-  cursor: pointer;
-  font-size: 0.85em;
-  text-align: center;
-  min-width: 90px;
-  margin: 0 auto;
-  user-select: none;
-}
-.company-filter-item span {
-  display: block;
-  width: 100%;
-  text-align: center;
-  margin: 0 auto;
-  pointer-events: none;
-}
-.company-filter-item.active {
-  background-color: #e3f2fd;
-  border-color: #2196F3;
-}
-
-/* סגנונות למסכי מחשב - גרפים גדולים */
-@media (min-width: 992px) {
-  .stats-modal-content {
-    max-width: 90%;
-    width: 1000px;
-  }
-  
-  .chart-container {
-    min-height: 50px;  /* הקטנה מ-450px ל-350px */
-  }
-  
-  .chart {
-    height: 300px !important;  /* הקטנה מ-400px ל-300px */
-  }
-  
-  /* שיפור הצגת ה-canvas בגרפים */
-  #timelineChart canvas,
-  #companySavingsChart canvas {
-    height: 100% !important;
-    width: 70% !important;
-    max-height: 300px !important;  /* הקטנה מ-400px ל-300px */
-    margin: 0 auto !important;  /* מרכוז הגרף */
-    display: block !important;  /* נדרש למרכוז אלמנט block */
-  }
-}
-
-/* Mobile-specific styles */
-@media (max-width: 767px) {
-  .stats-modal-content {
-    padding: 15px;
-    margin: 5% auto;
-    width: 95%;
-    max-width: 95%;
-  }
-  
-  /* Mobile optimized cards - 2 per row */
-  .stats-summary {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-  
-  .stats-card {
-    min-width: unset;
-    padding: 10px;
-  }
-  
-  .stats-card h3 {
-    font-size: 0.9em;
-  }
-  
-  .big-number {
-    font-size: 1.8em;
-    margin: 5px 0;
-  }
-  
-  .stats-card p {
-    font-size: 0.8em;
-    margin: 5px 0;
-  }
-  
-  /* Mobile optimized charts */
-  .chart-container {
-    min-height: 250px;
-    padding: 10px;
-  }
-  
-  .chart {
-    height: 200px !important;
-  }
-  
-  .stats-details h3 {
-    font-size: 1.1em;
-  }
-  
-  .savings-table th,
-  .savings-table td {
-    padding: 8px 5px;
-    font-size: 0.9em;
-  }
-  
-  .close-stats-modal {
-    top: 5px;
-    right: 10px;
-  }
-  
-  .coupon-info-buttons {
-    flex-direction: column;
-    gap: 5px;
-    width: 100%;
-  }
-  
-  .update-usage-btn,
-  .show-big-btn {
-    width: 100%;
-    padding: 6px 0;
-  }
-}
-
-/* For very small devices */
-@media (max-width: 400px) {
-  .coupon-actions {
-    gap: 6px; /* מרווח קטן יותר במסכים קטנים */
-  }
-    
-  .coupon-actions .action-button {
-    flex: 0 0 calc(50% - 3px); /* התאמה למרווח הקטן יותר */
-  }
-    
-  .coupon-actions .action-button:last-child {
-    flex: 0 0 calc(50% - 3px); /* התאמה למרווח הקטן יותר */
-  }
-
-  .stats-card {
-    padding: 8px 5px;
-  }
-  
-  .big-number {
-    font-size: 1.5em;
-  }
-  
-  .company-filter-item {
-    min-width: 70px;
-    padding: 3px 6px;
-    font-size: 0.8em;
-  }
 }
 
 #tooltipEl {
@@ -1305,16 +1022,110 @@
   direction: rtl !important;
   text-align: right !important;
 }
+
+/* # Hero Section */
+.hero {
+    text-align: center;
+    padding: 20px 15px;
+    background-color: var(--white);
+    margin: 15px auto;
+    margin-top: 10px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    width: 55%;
+    max-width: 750px;
+    line-height: 1.2;
+}
+
+.hero h2 {
+    margin-top: 0px;
+    font-size: 2.2em;
+    color: var(--primary-color);
+}
+
+.hero p {
+    font-size: 1.1em;
+    color: var(--text-color);
+    margin-bottom: 0px;
+}
+
+/* # Total Value Display */
+.total-value {
+    background-color: var(--white);
+    padding: 20px 0px;
+    margin: 25px auto;
+    border-radius: 10px;
+    border: 1px solid var(--light-gray);
+    width: 350px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.total-value p {
+    font-size: 1em;
+    color: var(--text-color);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.total-value h1 {
+    font-size: 3em;
+    margin: 0 auto;
+    color: var(--success-color);
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0.3em;
+}
+
+/* # Hidden SEO Text */
+.hidden-text {
+    display: none;
+}
+
+/* # Stats Button */
+.stats-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.9em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin: 10px auto;
+    transition: background-color 0.2s ease;
+}
+
+.stats-button:hover {
+    background-color: #2980b9;
+}
+
+/* # Responsive Adjustments */
+@media (max-width: 768px) {
+    .hero {
+        width: 90%;
+        max-width: none;
+        margin: 20px auto;
+    }
+    
+    .total-value {
+        width: 100%;
+    }
+}
 </style>
 
 <script>
 // Main JavaScript for index.html
 document.addEventListener("DOMContentLoaded", function() {
+  // Load the coupon modals
+  loadCouponModals();
+  
   // Variable to track if usage has been updated
   let usageUpdated = false;
-  
-  // QR Code variable
-  let qrCode = null;
   
   // Shift key tracking
   let isShiftKeyPressed = false;
@@ -1393,332 +1204,44 @@ document.addEventListener("DOMContentLoaded", function() {
     companyCardsRow.appendChild(cardBox);
   });
 
-  // 4) Modal for displaying company's coupons
-  const modal = document.getElementById("companyModal");
-  const modalCompanyName = document.getElementById("modal-company-name");
-  const modalCompanyLogo = document.getElementById("modal-company-logo");
-  const modalTotalRemaining = document.getElementById("modal-total-remaining");
-  const modalCouponsList = document.getElementById("modal-coupons-list");
-  const closeModal = document.querySelector(".close-modal");
-
-  function openCompanyModal(companyName, cardList) {
-    const firstCard = cardList[0];
-    const logoSrc = firstCard.getAttribute("data-logo-src") || "";
-
-    modalCompanyLogo.src = logoSrc;
-    modalCompanyLogo.style.display = logoSrc ? "block" : "none";
-    modalCompanyName.textContent = "קופונים מחברת " + companyName;
-
-    let totalRemaining = 0;
-    cardList.forEach(card => {
-      const remainingVal = parseFloat(card.getAttribute("data-remaining")) || 0;
-      totalRemaining += remainingVal;
-    });
-    modalTotalRemaining.textContent = "סה\"כ נותר: " + totalRemaining.toFixed(2) + " ₪";
-
-    modalCouponsList.innerHTML = "";
-    cardList.forEach(card => {
-      const couponCode = card.getAttribute("data-coupon-code");
-      const couponId = card.getAttribute("data-coupon-id");
-      const remaining = parseFloat(card.getAttribute("data-remaining") || "0").toFixed(2);
-      const couponLink = card.querySelector("a.view-details").getAttribute("href");
-      const logoSrcItem = card.getAttribute("data-logo-src") || "";
-      const isOneTime = card.getAttribute("data-is-one-time") === "true";
-      const cvv = card.getAttribute("data-coupon-cvv") || "";
-      const cardExp = card.getAttribute("data-coupon-card-index-exp") || "";
-
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center;">
-          <a href="${couponLink}">
-            קוד: ${couponCode} - ${isOneTime ? 'מטרה: ' + card.getAttribute("data-purpose") : 'נותר: ' + remaining + ' ₪'}
-          </a>
-          <div class="coupon-info-buttons">
-            ${!isOneTime ? `
-            <button
-              class="update-usage-btn"
-              data-coupon-id="${couponId}"
-              data-coupon-code="${couponCode}"
-              data-company="${companyName}"
-              data-remaining="${remaining}"
-              data-logo-src="${logoSrcItem}"
-            >
-              עדכון שימוש
-            </button>
-            ` : ''}
-            <button
-              class="show-big-btn"
-              data-company="${companyName}"
-              data-coupon-code="${couponCode}"
-              data-logo-src="${logoSrcItem}"
-              data-coupon-cvv="${cvv}"
-              data-coupon-card-index-exp="${cardExp}"
-            >
-              הצגת קוד הקופון
-            </button>
-          </div>
-        </div>
-      `;
-      modalCouponsList.appendChild(li);
-    });
-
-    modal.classList.add("active");
-  }
-
-  closeModal.addEventListener("click", function() {
-    modal.classList.remove("active");
-    if (usageUpdated) {
-      window.location.reload();
-    }
-  });
-  window.addEventListener("click", function(e) {
-    if (e.target === modal) {
-      modal.classList.remove("active");
-      if (usageUpdated) {
-        window.location.reload();
-      }
-    }
-  });
-
-  // 5) Modal for updating coupon usage
-  const usageModal = document.getElementById("usageModal");
-  const closeUsageModal = document.querySelector(".close-usage-modal");
-  const usageCompany = document.getElementById("usage-modal-company");
-  const usageCode = document.getElementById("usage-modal-code");
-  const usageAmountInput = document.getElementById("usageAmount");
-  const usageErrorMsg = document.getElementById("usageErrorMsg");
-  const usageConfirmBtn = document.getElementById("usageConfirmButton");
-  const updateFullAmountBtn = document.getElementById("updateFullAmountButton");
-
-  let currentCouponId = null;
-  let currentRemaining = 0;
-
-  // Event delegation for update-usage buttons
-  document.addEventListener("click", function(e) {
-    if (e.target && (e.target.classList.contains("update-usage-btn") || e.target.classList.contains("update-usage"))) {
-      let btn = e.target;
-      let cardWrapper;
-      
-      if (e.target.classList.contains("update-usage")) {
-        // For buttons in the new card layout
-        cardWrapper = btn.closest(".coupon-card-index-wrapper");
-        currentCouponId = cardWrapper.getAttribute("data-coupon-id");
-        const cName = cardWrapper.getAttribute("data-company");
-        const cCode = cardWrapper.getAttribute("data-coupon-code");
-        currentRemaining = parseFloat(cardWrapper.getAttribute("data-remaining"));
-        const logoSrc = cardWrapper.getAttribute("data-logo-src") || "";
+  // Function to load coupon modals
+  function loadCouponModals() {
+    fetch('{{ url_for("coupons.load_coupon_modals") }}')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load coupon modals');
+        }
+        return response.text();
+      })
+      .then(html => {
+        // Insert the modal HTML
+        document.getElementById('couponModalsContainer').innerHTML = html;
         
-        usageCompany.textContent = "חברה: " + cName;
-        usageCode.innerHTML = "<strong>קוד קופון: " + cCode + "</strong>";
-        usageAmountInput.value = "";
-        usageErrorMsg.style.display = "none";
-        document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
-        document.getElementById("usage-modal-logo").src = logoSrc;
-        usageModal.classList.add("active");
-      } else {
-        // For buttons in the modal
-        currentCouponId = btn.getAttribute("data-coupon-id");
-        const cName = btn.getAttribute("data-company");
-        const cCode = btn.getAttribute("data-coupon-code");
-        currentRemaining = parseFloat(btn.getAttribute("data-remaining"));
-        const logoSrc = btn.getAttribute("data-logo-src") || "";
-
-        usageCompany.textContent = "חברה: " + cName;
-        usageCode.innerHTML = "<strong>קוד קופון: " + cCode + "</strong>";
-        usageAmountInput.value = "";
-        usageErrorMsg.style.display = "none";
-        document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
-        document.getElementById("usage-modal-logo").src = logoSrc;
-        usageModal.classList.add("active");
-      }
-    }
-  });
-
-  closeUsageModal.addEventListener("click", function() {
-    usageModal.classList.remove("active");
-    if (usageUpdated) {
-      window.location.reload();
-    }
-  });
-  window.addEventListener("click", function(e) {
-    if (e.target === usageModal) {
-      usageModal.classList.remove("active");
-      if (usageUpdated) {
-        window.location.reload();
-      }
-    }
-  });
-
-  // Update full amount button handler
-  updateFullAmountBtn.addEventListener("click", function() {
-    usageAmountInput.value = currentRemaining;
-  });
-
-  usageConfirmBtn.addEventListener("click", function() {
-    const usedAmount = parseFloat(usageAmountInput.value);
-    if (isNaN(usedAmount) || usedAmount <= 0) {
-      usageErrorMsg.textContent = "אנא הזן סכום חוקי (> 0).";
-      usageErrorMsg.style.display = "block";
-      return;
-    }
-    if (usedAmount > currentRemaining) {
-      usageErrorMsg.textContent = "הסכום שהוזן חורג מהיתרה הקיימת (" + currentRemaining.toFixed(2) + " ש\"ח).";
-      usageErrorMsg.style.display = "block";
-      return;
-    }
-    usageErrorMsg.style.display = "none";
-
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
-    fetch(`/update_coupon_usage/${currentCouponId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: `csrf_token=${csrfToken}&used_amount=${usedAmount}`
-    })
-    .then(async response => {
-      if (!response.ok) {
-        const text = await response.text();
-        usageErrorMsg.textContent = text || "שגיאה בעדכון השימוש.";
-        usageErrorMsg.style.display = "block";
-        return;
-      }
-      usageUpdated = true;
-      usageModal.classList.remove("active");
-      
-      // Update UI after successful usage update
-      updateUIAfterUsage(currentCouponId, usedAmount);
-      
-      const theButton = document.querySelector(`.update-usage-btn[data-coupon-id="${currentCouponId}"]`);
-      if (theButton) {
-        const oldRemaining = parseFloat(theButton.getAttribute("data-remaining")) || 0;
-        const newRemaining = Math.max(0, oldRemaining - usedAmount).toFixed(2);
-        theButton.setAttribute("data-remaining", newRemaining);
-        const linkEl = theButton.parentElement.parentElement.querySelector("a");
-        if (linkEl) {
-          const codeText = linkEl.textContent.split("- נותר:");
-          if (codeText.length === 2) {
-            linkEl.textContent = codeText[0] + "- נותר: " + newRemaining + " ₪";
-          }
+        // Execute scripts from the loaded content
+        const scriptTags = document.getElementById('couponModalsContainer').getElementsByTagName('script');
+        for (let i = 0; i < scriptTags.length; i++) {
+          const newScript = document.createElement('script');
+          Array.from(scriptTags[i].attributes).forEach(attr => {
+            newScript.setAttribute(attr.name, attr.value);
+          });
+          newScript.appendChild(document.createTextNode(scriptTags[i].innerHTML));
+          document.head.appendChild(newScript);
         }
-      }
-    })
-    .catch(err => {
-      usageErrorMsg.textContent = "שגיאה בלתי צפויה: " + err;
-      usageErrorMsg.style.display = "block";
-    });
-  });
-
-  // Function to update UI after successful usage update
-  function updateUIAfterUsage(couponId, usedAmount) {
-    // Update the coupon card in the main UI
-    const cardWrapper = document.querySelector(`.coupon-card-index-wrapper[data-coupon-id="${couponId}"]`);
-    if (cardWrapper) {
-      const oldRemaining = parseFloat(cardWrapper.getAttribute("data-remaining")) || 0;
-      const newRemaining = Math.max(0, oldRemaining - usedAmount).toFixed(2);
-      
-      // Update the data attribute
-      cardWrapper.setAttribute("data-remaining", newRemaining);
-      
-      // Update the displayed remaining value
-      const valueElement = cardWrapper.querySelector('.coupon-value .value');
-      if (valueElement) {
-        valueElement.textContent = newRemaining + " ₪";
-      }
-      
-      // Update progress bar if exists
-      if (cardWrapper.querySelector('.progress-fill')) {
-        const couponValue = parseFloat(oldRemaining) + parseFloat(usedAmount);
-        if (couponValue > 0) {
-          const usedValue = couponValue - parseFloat(newRemaining);
-          const percentage = (usedValue / couponValue * 100).toFixed(1);
-          
-          cardWrapper.querySelector('.progress-text').textContent = `שימוש: ${percentage}%`;
-          cardWrapper.querySelector('.progress-fill').style.width = `${percentage}%`;
-        }
-      }
-    }
-  }
-
-  // 6) Modal for large display of coupon code
-  const bigModal = document.getElementById("bigDisplayModal");
-  const closeBigModal = document.querySelector(".close-big-modal");
-  const bigModalCompanyName = document.getElementById("bigModalCompanyName");
-  const bigModalLogo = document.getElementById("bigModalLogo");
-  const bigModalCouponCode = document.getElementById("bigModalCouponCode");
-  const bigModalExtraDetails = document.getElementById("bigModalExtraDetails");
-  const bigModalCouponCVV = document.getElementById("bigModalCouponCVV");
-  const bigModalCardExp = document.getElementById("bigModalCardExp");
-  const qrCodeContainer = document.getElementById("qrcode");
-
-  // Generate QR code function
-  function generateQRCode(code) {
-    if (typeof QRCode !== 'undefined') {
-      // Clear previous QR code
-      qrCodeContainer.innerHTML = '';
-      
-      // Create new QR code
-      qrCode = new QRCode(qrCodeContainer, {
-        text: code,
-        width: 200,
-        height: 200,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
+      })
+      .catch(error => {
+        console.error('Error loading coupon modals:', error);
       });
-    }
   }
 
-  // Event delegation for show-code buttons
-  document.addEventListener("click", function(e) {
-    if (e.target && (e.target.classList.contains("show-big-btn") || e.target.classList.contains("show-code"))) {
-      let btn = e.target;
-      let company, couponCode, logoSrc, couponCVV, couponCardExp;
-      
-      if (e.target.classList.contains("show-code")) {
-        // For buttons in the new card layout
-        const cardWrapper = btn.closest(".coupon-card-index-wrapper");
-        company = cardWrapper.getAttribute("data-company");
-        couponCode = cardWrapper.getAttribute("data-coupon-code");
-        logoSrc = cardWrapper.getAttribute("data-logo-src") || "";
-        couponCVV = cardWrapper.getAttribute("data-coupon-cvv");
-        couponCardExp = cardWrapper.getAttribute("data-coupon-card-index-exp");
-      } else {
-        // For buttons in the modal
-        company = btn.getAttribute("data-company");
-        couponCode = btn.getAttribute("data-coupon-code");
-        logoSrc = btn.getAttribute("data-logo-src") || "";
-        couponCVV = btn.getAttribute("data-coupon-cvv");
-        couponCardExp = btn.getAttribute("data-coupon-card-index-exp");
-      }
-
-      bigModalCompanyName.textContent = company;
-      bigModalLogo.src = logoSrc;
-      bigModalCouponCode.textContent = couponCode;
-
-      if (couponCVV || couponCardExp) {
-        bigModalExtraDetails.style.display = "block";
-        bigModalCouponCVV.textContent = couponCVV ? `${couponCVV} :CVV` : "";
-        bigModalCardExp.textContent = couponCardExp ? `תוקף: ${couponCardExp}` : "";
-      } else {
-        bigModalExtraDetails.style.display = "none";
-      }
-      
-      // Generate QR code
-      generateQRCode(couponCode);
-
-      bigModal.classList.add("active");
+  // Function to open company modal (will be handled by the loaded modal script)
+  function openCompanyModal(company, cardList) {
+    // This function will be replaced by the one loaded from coupon_modals.html
+    if (window.openCompanyModal) {
+      window.openCompanyModal(company, cardList);
+    } else {
+      console.error('Modal functions not loaded yet');
     }
-  });
-
-  closeBigModal.addEventListener("click", function() {
-    bigModal.classList.remove("active");
-  });
-  window.addEventListener("click", function(e) {
-    if (e.target === bigModal) {
-      bigModal.classList.remove("active");
-    }
-  });
+  }
 
   // 7) Close admin message
   document.querySelectorAll(".close-button").forEach(button => {
@@ -1830,7 +1353,6 @@ document.addEventListener("DOMContentLoaded", function() {
         alert('שגיאה בטעינת חלון הסטטיסטיקות. אנא נסה שוב מאוחר יותר.');
       });
   }
-  
 });
 </script>
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>

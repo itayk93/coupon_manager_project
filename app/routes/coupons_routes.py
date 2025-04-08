@@ -405,6 +405,15 @@ def upload_coupons():
 
     return render_template('upload_coupons.html', form=form)
 
+@coupons_bp.route('/load_coupon_modals')
+@login_required
+def load_coupon_modals():
+    """
+    Route to dynamically load the coupon modals HTML content.
+    This keeps the modal code separate from the main index page.
+    """
+    return render_template('index_modals/coupon_modals.html')
+
 DEBUG_PRINT = False  # הגדר True כדי להדפיס הודעות debug, False כדי לכבות
 
 @coupons_bp.route('/add_coupons_bulk', methods=['GET', 'POST'])

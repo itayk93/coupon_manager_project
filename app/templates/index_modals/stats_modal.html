@@ -248,12 +248,103 @@ function generateCumulativeData(timelineData) {
 /**
  * Setup tooltips for chart information icons
  */
+/**
+ * Setup tooltips for chart information icons
+ * Support both desktop (hover) and mobile (touch)
+ */
 function setupChartInfoTooltips() {
   const infoIcons = document.querySelectorAll('.chart-info-icon');
+  let activeTooltip = null; // Track the currently active tooltip on mobile
   
   infoIcons.forEach(icon => {
-    // Only show tooltip on desktop
-    if (window.innerWidth >= 768) {
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      // For mobile - use touch events
+      icon.addEventListener('click', function(e) {
+        e.preventDefault();
+        const tooltip = this.getAttribute('data-tooltip');
+        if (!tooltip) return;
+        
+        // Create tooltip element if it doesn't exist
+        let tooltipEl = document.getElementById('chart-info-tooltip');
+        if (!tooltipEl) {
+          tooltipEl = document.createElement('div');
+          tooltipEl.id = 'chart-info-tooltip';
+          document.body.appendChild(tooltipEl);
+        }
+        
+        // If we're clicking the same icon that's already showing a tooltip, hide it
+        if (activeTooltip === this) {
+          tooltipEl.style.display = 'none';
+          activeTooltip = null;
+          return;
+        }
+        
+        // Position and show tooltip
+        tooltipEl.textContent = tooltip;
+        tooltipEl.style.display = 'block';
+        
+        // Position tooltip near the icon, keeping it within screen bounds
+        const iconRect = this.getBoundingClientRect();
+        const tooltipWidth = Math.min(300, window.innerWidth - 40); // Limit width on mobile
+        
+        // Set initial styles for tooltip
+        tooltipEl.style.width = tooltipWidth + 'px';
+        tooltipEl.style.maxWidth = tooltipWidth + 'px';
+        
+        // Show tooltip temporarily with visibility:hidden to calculate its dimensions
+        tooltipEl.style.visibility = 'hidden';
+        tooltipEl.style.display = 'block';
+        
+        // Calculate optimal position to ensure tooltip stays within screen
+        setTimeout(() => {
+          const tooltipHeight = tooltipEl.offsetHeight;
+          const scrollTop = window.scrollY || document.documentElement.scrollTop;
+          const viewportHeight = window.innerHeight;
+          
+          // Check if tooltip would go off the bottom of the screen
+          let topPosition = iconRect.bottom + scrollTop + 10;
+          if (topPosition + tooltipHeight > scrollTop + viewportHeight - 20) {
+            // Place it above the icon instead
+            topPosition = iconRect.top + scrollTop - tooltipHeight - 10;
+          }
+          
+          // Ensure tooltip is never positioned off-screen at the top
+          topPosition = Math.max(scrollTop + 10, topPosition);
+          
+          // Center horizontally
+          const leftPosition = Math.max(10, Math.min(
+            window.innerWidth - tooltipWidth - 10,
+            (window.innerWidth - tooltipWidth) / 2
+          ));
+          
+          // Apply final position
+          tooltipEl.style.left = leftPosition + 'px';
+          tooltipEl.style.top = topPosition + 'px';
+          tooltipEl.style.visibility = 'visible';
+        }, 0);
+        
+        // Remember which icon we're showing the tooltip for
+        activeTooltip = this;
+        
+        // Add a slight bounce animation
+        tooltipEl.style.animation = 'tooltipBounce 0.3s ease';
+      });
+      
+      // Close tooltip when tapping elsewhere
+      document.addEventListener('click', function(e) {
+        if (activeTooltip && !activeTooltip.contains(e.target)) {
+          const tooltipEl = document.getElementById('chart-info-tooltip');
+          if (tooltipEl) {
+            tooltipEl.style.display = 'none';
+            activeTooltip = null;
+          }
+        }
+      });
+      
+    } else {
+      // For desktop - use hover events
       icon.addEventListener('mouseenter', function(e) {
         const tooltip = this.getAttribute('data-tooltip');
         if (!tooltip) return;
@@ -269,8 +360,40 @@ function setupChartInfoTooltips() {
         // Position and show tooltip
         tooltipEl.textContent = tooltip;
         tooltipEl.style.display = 'block';
-        tooltipEl.style.left = (e.pageX + 10) + 'px';
-        tooltipEl.style.top = (e.pageY + 10) + 'px';
+        // Position tooltip near cursor, but ensure it stays within the screen
+        const tooltipWidth = tooltipEl.offsetWidth || 300;
+        const tooltipHeight = tooltipEl.offsetHeight || 100;
+        
+        // Calculate optimal position
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        
+        // Default position is to the right and below cursor
+        let leftPos = e.pageX + 10;
+        let topPos = e.pageY + 10;
+        
+        // Check if tooltip would go off right edge
+        if (leftPos + tooltipWidth > scrollLeft + viewportWidth - 10) {
+          // Place it to the left of cursor instead
+          leftPos = e.pageX - tooltipWidth - 10;
+        }
+        
+        // Check if tooltip would go off bottom edge
+        if (topPos + tooltipHeight > scrollTop + viewportHeight - 10) {
+          // Place it above cursor instead
+          topPos = e.pageY - tooltipHeight - 10;
+        }
+        
+        // Ensure tooltip is never positioned off-screen
+        leftPos = Math.max(scrollLeft + 10, leftPos);
+        topPos = Math.max(scrollTop + 10, topPos);
+        
+        tooltipEl.style.left = leftPos + 'px';
+        tooltipEl.style.top = topPos + 'px';
+        tooltipEl.style.width = 'auto';
+        tooltipEl.style.maxWidth = '300px';
       });
       
       icon.addEventListener('mouseleave', function() {
@@ -290,7 +413,86 @@ function setupChartInfoTooltips() {
       });
     }
   });
+  
+  // Add CSS animation for mobile tooltip
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes tooltipBounce {
+      0% { transform: translateY(10px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    
+    #chart-info-tooltip {
+      position: absolute;
+      z-index: 1000;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      pointer-events: none;
+      display: none;
+      direction: rtl;
+      text-align: right;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+      line-height: 1.5;
+    }
+    
+    @media (max-width: 767px) {
+      .chart-info-icon {
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        text-align: center;
+        font-size: 18px;
+        background-color: rgba(52, 152, 219, 0.15);
+        border-radius: 50%;
+        padding: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      #chart-info-tooltip {
+        font-size: 14px;
+        padding: 15px;
+        pointer-events: auto; /* Allow scrolling the tooltip on mobile */
+        max-height: 60vh;
+        overflow-y: auto;
+        text-align: right;
+        width: 85% !important; /* Force width to be consistent */
+        max-width: 85% !important;
+        left: 7.5% !important; /* Center horizontally with 7.5% margin on each side */
+        right: 7.5% !important;
+        box-sizing: border-box;
+        line-height: 1.6;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Update tooltip styles on screen resize
+  window.addEventListener('resize', function() {
+    const tooltipEl = document.getElementById('chart-info-tooltip');
+    if (tooltipEl) {
+      tooltipEl.style.display = 'none';
+      activeTooltip = null;
+    }
+    
+    // Force tooltips to be reset when switching between mobile/desktop
+    const wasMobile = isMobile;
+    isMobile = window.innerWidth < 768;
+    
+    if (wasMobile !== isMobile) {
+      setupChartInfoTooltips(); // Re-setup tooltips when switching modes
+    }
+  });
 }
+
+// Ensure we call the setup function on page load
+document.addEventListener('DOMContentLoaded', function() {
+  setupChartInfoTooltips();
+});
 
 /**
  * Handle resize event for responsive charts
@@ -2120,6 +2322,40 @@ function updateCouponTypeChart(companiesData) {
       // Setup chart info tooltips
       setupChartInfoTooltips();
     });
+    // Add an event listener to close the modal when the Escape key is pressed
+    document.addEventListener('keydown', function(event) {
+      // Check if the key is Escape (keyCode 27 or key='Escape')
+      if (event.key === 'Escape' || event.keyCode === 27) {
+        // Check if the modal is open before attempting to close it
+        const modal = document.querySelector('.modal-content.stats-modal-content');
+        if (modal) {
+          // Verify if the modal is visible on the page
+          const modalStyle = window.getComputedStyle(modal);
+          if (modalStyle.display !== 'none') {
+            // Trigger the same function as the close button click
+            const closeButton = document.querySelector('.close-stats-modal');
+            if (closeButton) {
+              closeButton.click();
+            } else {
+              // If no close button exists, simply hide the modal
+              modal.style.display = 'none';
+              
+              // Hide the overlay if it exists
+              const overlay = document.querySelector('.modal-overlay');
+              if (overlay) {
+                overlay.style.display = 'none';
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Ensure the Escape key handler works even when the modal is loaded dynamically
+    document.addEventListener('DOMContentLoaded', function() {
+      // This initializes the Escape key listener when the page loads
+      console.log("Modal escape key handler initialized");
+    });
     </script>
 
     <style>
@@ -2491,4 +2727,84 @@ function updateCouponTypeChart(companiesData) {
       height: 100%;
       color: #777;
       font-size: 0.9rem;
-    }</style>
+    }
+
+    /* 
+      שינויים למסכים ניידים בלבד
+      הקוד הזה יחול רק על מסכים שרוחבם עד 767px 
+      במחשב (מסכים מעל 767px) הטבלה תישאר ללא שינוי
+    */
+    @media (max-width: 767px) {
+      /* הקטנת רוחב הטבלה רק במובייל */
+      .savings-table-wrapper {
+        width: 92%;
+        margin: 0 auto;
+      }
+      
+      /* מקסימום רוחב לתאי הטבלה במובייל בלבד */
+      .savings-table.mobile-view td {
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      
+      /* שיפור סגנון הטבלה במובייל בלבד */
+      .savings-table.mobile-view tr.mobile-row {
+        width: 100%;
+        margin-bottom: 12px;
+      }
+      
+      /* התאמת גרפים לרוחב המסך במובייל בלבד */
+      .chart-container {
+        width: 92%;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 10px;
+      }
+      
+      /* תיקון גלישת תוכן בתאי הטבלה במובייל */
+      .mobile-row-data {
+        word-break: break-word;
+      }
+    }
+
+    /* תיקון למסכים קטנים במיוחד - גם זה רק למובייל */
+    @media (max-width: 400px) {
+      .savings-table-wrapper,
+      .chart-container {
+        width: 90%;
+      }
+    }
+    /* 
+  הקטנת רוחב הטבלה במסכים ניידים בלבד
+  משאיר את כל שאר העיצוב כפי שהיה
+    */
+    @media (max-width: 767px) {
+      /* הקטנת רוחב עטיפת הטבלה במובייל בלבד */
+      .savings-table-wrapper {
+        width: 92%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      
+      /* הקטנת הרוחב גם לכל התיבות של השורות בטבלה */
+      .savings-table.mobile-view tr.mobile-row {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      
+      /* גם את הגרפים */
+      .chart-container {
+        width: 92%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+
+    /* יותר קטן למסכים קטנים במיוחד */
+    @media (max-width: 400px) {
+      .savings-table-wrapper,
+      .chart-container {
+        width: 90%;
+      }
+    }
+  </style>

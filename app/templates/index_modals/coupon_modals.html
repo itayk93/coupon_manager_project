@@ -1,0 +1,552 @@
+<!-- Modal for displaying company coupons with animation -->
+<div id="companyModal" class="modal">
+  <div class="modal-content">
+    <!-- Close modal button -->
+    <span class="close-modal">×</span>
+    <!-- Company title -->
+    <h2 id="modal-company-name">קופונים מחברת ...</h2>
+    <!-- Company logo -->
+    <img id="modal-company-logo" alt="Company Logo" style="display: block;" src="/static/images/carrefour.png">
+    <!-- Total remaining value -->
+    <p id="modal-total-remaining" style="font-size: 1.2em; font-weight: bold; margin: 5px 0;"></p>
+    <ul id="modal-coupons-list"></ul>
+  </div>
+</div>
+
+<!-- Modal for updating coupon usage with animation -->
+<div id="usageModal" class="modal">
+  <div class="modal-content usage-modal-content" style="max-width: 600px;">
+    <span class="close-usage-modal">×</span>
+    <h3>עדכון סכום שימוש</h3>
+    <!-- Dynamic content will be filled here -->
+    <h2 id="usage-modal-company" style="color: #00bfff; font-size: 1.8em; margin-bottom: 5px;"></h2>
+    <img id="usage-modal-logo" alt="Company Logo" style="display: block; margin: 10px auto 0 auto; width: 80px; height: 80px;" src="/static/images/carrefour.png">
+    <p id="usage-modal-code" style="margin-bottom:10px;"><strong></strong></p>
+    <p id="usage-modal-remaining" style="margin-bottom:10px;"><strong>יתרה נוכחית: <span id="remainingValue">70.30</span> ש"ח</strong></p>
+    <input type="number" id="usageAmount" step="0.01" placeholder="בכמה השתמשת?" style="padding:8px; width:200px;">
+    <br>
+    <button id="usageConfirmButton" style="margin-top:10px; padding:8px 16px; background-color:#3498db; color:#fff; border:none; border-radius:5px; cursor:pointer;">
+      אישור
+    </button>
+    <button id="updateFullAmountButton" style="margin-top:10px; padding:8px 16px; background-color:#2ecc71; color:#fff; border:none; border-radius:5px; cursor:pointer;">
+      עדכון כל היתרה
+    </button>
+    <div id="usageErrorMsg" style="color:red; margin-top:10px; display:none;"></div>
+  </div>
+</div>
+
+<!-- Modal for large display with animation -->
+<div id="bigDisplayModal" class="modal">
+  <div class="modal-content">
+    <span class="close-big-modal">×</span>
+    <h2 id="bigModalCompanyName">Be שופרסל</h2>
+    <img id="bigModalLogo" alt="Logo" style="width:120px;height:120px;object-fit:cover;margin:10px auto;border-radius:8px;" src="/static/images/be_shufersal.png">
+    <h1 id="bigModalCouponCode" style="margin-top:20px;">91381000401555109674</h1>
+    <!-- Block for displaying CVV and card expiration -->
+    <div id="bigModalExtraDetails" style="margin-top:20px; display:none;">
+      <h1 id="bigModalCouponCVV" style="margin:0; font-weight: bold;"></h1>
+      <h1 id="bigModalCardExp" style="margin:0; font-weight: bold;"></h1>
+    </div>
+    <!-- QR code element for coupon code -->
+    <div id="qrcode" style="margin: 20px auto; width: 200px; height: 200px;"></div>
+  </div>
+</div>
+
+<style>
+/* ===== Modal Styles with Animation ===== */
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.4);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.modal.active {
+  opacity: 1;
+  visibility: visible;
+}
+.modal-content {
+  background-color: #fff;
+  margin: 8% auto;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  text-align: center;
+}
+.modal-content h2,
+.modal-content h3 {
+  margin: 10px 0;
+}
+.close-modal,
+.close-usage-modal,
+.close-big-modal,
+.close-stats-modal {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 1.5em;
+  cursor: pointer;
+}
+#modal-company-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin: 10px auto 0 auto;
+  display: block;
+}
+#modal-coupons-list {
+  margin-top: 20px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+  list-style: none;
+  padding: 0;
+}
+#modal-coupons-list li {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#modal-coupons-list li a {
+  text-decoration: none;
+  color: #3498db;
+  margin-bottom: 5px;
+  text-align: center;
+}
+#modal-coupons-list li a:hover {
+  text-decoration: underline;
+}
+.coupon-info-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.update-usage-btn,
+.show-big-btn {
+  border: none;
+  border-radius: 5px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 0.9em;
+}
+.update-usage-btn {
+  background-color: #27ae60;
+}
+.update-usage-btn:hover {
+  background-color: #229954;
+}
+.show-big-btn {
+  background-color: #8e44ad;
+}
+.show-big-btn:hover {
+  background-color: #7d3c98;
+}
+
+/* Fix long text wrapping in modal */
+#bigModalCouponCode {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  text-align: center;
+  max-width: 100%;
+}
+
+/* QR code container styling */
+#qrcode {
+  margin: 15px auto;
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+}
+
+/* Mobile-specific modal styles */
+@media (max-width: 767px) {
+  .coupon-info-buttons {
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+  }
+  
+  .update-usage-btn,
+  .show-big-btn {
+    width: 100%;
+    padding: 6px 0;
+  }
+}
+
+/* For very small devices */
+@media (max-width: 400px) {
+  .modal-content {
+    width: 95%;
+    padding: 15px;
+    margin: 10% auto;
+  }
+}
+</style>
+
+<script>
+// # Modal functionality script
+(function() {
+  // Make functions available globally
+  window.openCompanyModal = openCompanyModal;
+  window.updateUIAfterUsage = updateUIAfterUsage;
+  
+  // Initialize variables
+  let usageUpdated = false;
+  let qrCode = null;
+  let currentCouponId = null;
+  let currentRemaining = 0;
+  
+  // DOM elements
+  const modal = document.getElementById("companyModal");
+  const modalCompanyName = document.getElementById("modal-company-name");
+  const modalCompanyLogo = document.getElementById("modal-company-logo");
+  const modalTotalRemaining = document.getElementById("modal-total-remaining");
+  const modalCouponsList = document.getElementById("modal-coupons-list");
+  const closeModal = document.querySelector(".close-modal");
+  
+  const usageModal = document.getElementById("usageModal");
+  const closeUsageModal = document.querySelector(".close-usage-modal");
+  const usageCompany = document.getElementById("usage-modal-company");
+  const usageCode = document.getElementById("usage-modal-code");
+  const usageAmountInput = document.getElementById("usageAmount");
+  const usageErrorMsg = document.getElementById("usageErrorMsg");
+  const usageConfirmBtn = document.getElementById("usageConfirmButton");
+  const updateFullAmountBtn = document.getElementById("updateFullAmountButton");
+  
+  const bigModal = document.getElementById("bigDisplayModal");
+  const closeBigModal = document.querySelector(".close-big-modal");
+  const bigModalCompanyName = document.getElementById("bigModalCompanyName");
+  const bigModalLogo = document.getElementById("bigModalLogo");
+  const bigModalCouponCode = document.getElementById("bigModalCouponCode");
+  const bigModalExtraDetails = document.getElementById("bigModalExtraDetails");
+  const bigModalCouponCVV = document.getElementById("bigModalCouponCVV");
+  const bigModalCardExp = document.getElementById("bigModalCardExp");
+  const qrCodeContainer = document.getElementById("qrcode");
+  
+  // Set up event listeners
+  if (closeModal) {
+    closeModal.addEventListener("click", function() {
+      modal.classList.remove("active");
+      if (usageUpdated) {
+        window.location.reload();
+      }
+    });
+  }
+  
+  window.addEventListener("click", function(e) {
+    if (e.target === modal) {
+      modal.classList.remove("active");
+      if (usageUpdated) {
+        window.location.reload();
+      }
+    }
+  });
+  
+  if (closeUsageModal) {
+    closeUsageModal.addEventListener("click", function() {
+      usageModal.classList.remove("active");
+      if (usageUpdated) {
+        window.location.reload();
+      }
+    });
+  }
+  
+  window.addEventListener("click", function(e) {
+    if (e.target === usageModal) {
+      usageModal.classList.remove("active");
+      if (usageUpdated) {
+        window.location.reload();
+      }
+    }
+  });
+  
+  if (closeBigModal) {
+    closeBigModal.addEventListener("click", function() {
+      bigModal.classList.remove("active");
+    });
+  }
+  
+  window.addEventListener("click", function(e) {
+    if (e.target === bigModal) {
+      bigModal.classList.remove("active");
+    }
+  });
+  
+  // Function to open company modal
+  function openCompanyModal(companyName, cardList) {
+    const firstCard = cardList[0];
+    const logoSrc = firstCard.getAttribute("data-logo-src") || "";
+
+    modalCompanyLogo.src = logoSrc;
+    modalCompanyLogo.style.display = logoSrc ? "block" : "none";
+    modalCompanyName.textContent = "קופונים מחברת " + companyName;
+
+    let totalRemaining = 0;
+    cardList.forEach(card => {
+      const remainingVal = parseFloat(card.getAttribute("data-remaining")) || 0;
+      totalRemaining += remainingVal;
+    });
+    modalTotalRemaining.textContent = "סה\"כ נותר: " + totalRemaining.toFixed(2) + " ₪";
+
+    modalCouponsList.innerHTML = "";
+    cardList.forEach(card => {
+      const couponCode = card.getAttribute("data-coupon-code");
+      const couponId = card.getAttribute("data-coupon-id");
+      const remaining = parseFloat(card.getAttribute("data-remaining") || "0").toFixed(2);
+      const couponLink = card.querySelector("a.view-details").getAttribute("href");
+      const logoSrcItem = card.getAttribute("data-logo-src") || "";
+      const isOneTime = card.getAttribute("data-is-one-time") === "true";
+      const cvv = card.getAttribute("data-coupon-cvv") || "";
+      const cardExp = card.getAttribute("data-coupon-card-index-exp") || "";
+
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <a href="${couponLink}">
+            קוד: ${couponCode} - ${isOneTime ? 'מטרה: ' + card.getAttribute("data-purpose") : 'נותר: ' + remaining + ' ₪'}
+          </a>
+          <div class="coupon-info-buttons">
+            ${!isOneTime ? `
+            <button
+              class="update-usage-btn"
+              data-coupon-id="${couponId}"
+              data-coupon-code="${couponCode}"
+              data-company="${companyName}"
+              data-remaining="${remaining}"
+              data-logo-src="${logoSrcItem}"
+            >
+              עדכון שימוש
+            </button>
+            ` : ''}
+            <button
+              class="show-big-btn"
+              data-company="${companyName}"
+              data-coupon-code="${couponCode}"
+              data-logo-src="${logoSrcItem}"
+              data-coupon-cvv="${cvv}"
+              data-coupon-card-index-exp="${cardExp}"
+            >
+              הצגת קוד הקופון
+            </button>
+          </div>
+        </div>
+      `;
+      modalCouponsList.appendChild(li);
+    });
+
+    modal.classList.add("active");
+  }
+  
+  // Update full amount button handler
+  if (updateFullAmountBtn) {
+    updateFullAmountBtn.addEventListener("click", function() {
+      usageAmountInput.value = currentRemaining;
+    });
+  }
+  
+  if (usageConfirmBtn) {
+    usageConfirmBtn.addEventListener("click", function() {
+      const usedAmount = parseFloat(usageAmountInput.value);
+      if (isNaN(usedAmount) || usedAmount <= 0) {
+        usageErrorMsg.textContent = "אנא הזן סכום חוקי (> 0).";
+        usageErrorMsg.style.display = "block";
+        return;
+      }
+      if (usedAmount > currentRemaining) {
+        usageErrorMsg.textContent = "הסכום שהוזן חורג מהיתרה הקיימת (" + currentRemaining.toFixed(2) + " ש\"ח).";
+        usageErrorMsg.style.display = "block";
+        return;
+      }
+      usageErrorMsg.style.display = "none";
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+      fetch(`/update_coupon_usage/${currentCouponId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: `csrf_token=${csrfToken}&used_amount=${usedAmount}`
+      })
+      .then(async response => {
+        if (!response.ok) {
+          const text = await response.text();
+          usageErrorMsg.textContent = text || "שגיאה בעדכון השימוש.";
+          usageErrorMsg.style.display = "block";
+          return;
+        }
+        usageUpdated = true;
+        usageModal.classList.remove("active");
+        
+        // Update UI after successful usage update
+        updateUIAfterUsage(currentCouponId, usedAmount);
+        
+        const theButton = document.querySelector(`.update-usage-btn[data-coupon-id="${currentCouponId}"]`);
+        if (theButton) {
+          const oldRemaining = parseFloat(theButton.getAttribute("data-remaining")) || 0;
+          const newRemaining = Math.max(0, oldRemaining - usedAmount).toFixed(2);
+          theButton.setAttribute("data-remaining", newRemaining);
+          const linkEl = theButton.parentElement.parentElement.querySelector("a");
+          if (linkEl) {
+            const codeText = linkEl.textContent.split("- נותר:");
+            if (codeText.length === 2) {
+              linkEl.textContent = codeText[0] + "- נותר: " + newRemaining + " ₪";
+            }
+          }
+        }
+      })
+      .catch(err => {
+        usageErrorMsg.textContent = "שגיאה בלתי צפויה: " + err;
+        usageErrorMsg.style.display = "block";
+      });
+    });
+  }
+  
+  // Function to update UI after successful usage update
+  function updateUIAfterUsage(couponId, usedAmount) {
+    // Update the coupon card in the main UI
+    const cardWrapper = document.querySelector(`.coupon-card-index-wrapper[data-coupon-id="${couponId}"]`);
+    if (cardWrapper) {
+      const oldRemaining = parseFloat(cardWrapper.getAttribute("data-remaining")) || 0;
+      const newRemaining = Math.max(0, oldRemaining - usedAmount).toFixed(2);
+      
+      // Update the data attribute
+      cardWrapper.setAttribute("data-remaining", newRemaining);
+      
+      // Update the displayed remaining value
+      const valueElement = cardWrapper.querySelector('.coupon-value .value');
+      if (valueElement) {
+        valueElement.textContent = newRemaining + " ₪";
+      }
+      
+      // Update progress bar if exists
+      if (cardWrapper.querySelector('.progress-fill')) {
+        const couponValue = parseFloat(oldRemaining) + parseFloat(usedAmount);
+        if (couponValue > 0) {
+          const usedValue = couponValue - parseFloat(newRemaining);
+          const percentage = (usedValue / couponValue * 100).toFixed(1);
+          
+          cardWrapper.querySelector('.progress-text').textContent = `שימוש: ${percentage}%`;
+          cardWrapper.querySelector('.progress-fill').style.width = `${percentage}%`;
+        }
+      }
+    }
+  }
+  
+  // Generate QR code function
+  function generateQRCode(code) {
+    if (typeof QRCode !== 'undefined' && qrCodeContainer) {
+      // Clear previous QR code
+      qrCodeContainer.innerHTML = '';
+      
+      // Create new QR code
+      qrCode = new QRCode(qrCodeContainer, {
+        text: code,
+        width: 200,
+        height: 200,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+  }
+  
+  // Event delegation for all button clicks
+  document.addEventListener("click", function(e) {
+    // Handle show-code and show-big-btn clicks
+    if (e.target && (e.target.classList.contains("show-big-btn") || e.target.classList.contains("show-code"))) {
+      let btn = e.target;
+      let company, couponCode, logoSrc, couponCVV, couponCardExp;
+      
+      if (e.target.classList.contains("show-code")) {
+        // For buttons in the new card layout
+        const cardWrapper = btn.closest(".coupon-card-index-wrapper");
+        company = cardWrapper.getAttribute("data-company");
+        couponCode = cardWrapper.getAttribute("data-coupon-code");
+        logoSrc = cardWrapper.getAttribute("data-logo-src") || "";
+        couponCVV = cardWrapper.getAttribute("data-coupon-cvv");
+        couponCardExp = cardWrapper.getAttribute("data-coupon-card-index-exp");
+      } else {
+        // For buttons in the modal
+        company = btn.getAttribute("data-company");
+        couponCode = btn.getAttribute("data-coupon-code");
+        logoSrc = btn.getAttribute("data-logo-src") || "";
+        couponCVV = btn.getAttribute("data-coupon-cvv");
+        couponCardExp = btn.getAttribute("data-coupon-card-index-exp");
+      }
+
+      bigModalCompanyName.textContent = company;
+      bigModalLogo.src = logoSrc;
+      bigModalCouponCode.textContent = couponCode;
+
+      if (couponCVV || couponCardExp) {
+        bigModalExtraDetails.style.display = "block";
+        bigModalCouponCVV.textContent = couponCVV ? `${couponCVV} :CVV` : "";
+        bigModalCardExp.textContent = couponCardExp ? `תוקף: ${couponCardExp}` : "";
+      } else {
+        bigModalExtraDetails.style.display = "none";
+      }
+      
+      // Generate QR code
+      generateQRCode(couponCode);
+
+      bigModal.classList.add("active");
+    }
+    
+    // Handle update-usage and update-usage-btn clicks
+    if (e.target && (e.target.classList.contains("update-usage-btn") || e.target.classList.contains("update-usage"))) {
+      let btn = e.target;
+      let cardWrapper;
+      
+      if (e.target.classList.contains("update-usage")) {
+        // For buttons in the new card layout
+        cardWrapper = btn.closest(".coupon-card-index-wrapper");
+        currentCouponId = cardWrapper.getAttribute("data-coupon-id");
+        const cName = cardWrapper.getAttribute("data-company");
+        const cCode = cardWrapper.getAttribute("data-coupon-code");
+        currentRemaining = parseFloat(cardWrapper.getAttribute("data-remaining"));
+        const logoSrc = cardWrapper.getAttribute("data-logo-src") || "";
+        
+        usageCompany.textContent = "חברה: " + cName;
+        usageCode.innerHTML = "<strong>קוד קופון: " + cCode + "</strong>";
+        usageAmountInput.value = "";
+        usageErrorMsg.style.display = "none";
+        document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
+        document.getElementById("usage-modal-logo").src = logoSrc;
+        usageModal.classList.add("active");
+      } else {
+        // For buttons in the modal
+        currentCouponId = btn.getAttribute("data-coupon-id");
+        const cName = btn.getAttribute("data-company");
+        const cCode = btn.getAttribute("data-coupon-code");
+        currentRemaining = parseFloat(btn.getAttribute("data-remaining"));
+        const logoSrc = btn.getAttribute("data-logo-src") || "";
+
+        usageCompany.textContent = "חברה: " + cName;
+        usageCode.innerHTML = "<strong>קוד קופון: " + cCode + "</strong>";
+        usageAmountInput.value = "";
+        usageErrorMsg.style.display = "none";
+        document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
+        document.getElementById("usage-modal-logo").src = logoSrc;
+        usageModal.classList.add("active");
+      }
+    }
+  });
+})();
+</script>
