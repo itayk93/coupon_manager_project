@@ -2,295 +2,771 @@
 
 {% block title %}התחברות{% endblock %}
 
-{% block content %}
-<h2 class="page-title">ברוכים הבאים!</h2>
-
-<section class="auth-form">
-    <h2>התחברות</h2>
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-
-        <!-- שדה אימייל -->
-        <div class="form-group">
-            {{ form.email.label }}
-            {{ form.email(class="input-field") }}
-            {% for error in form.email.errors %}
-                <span class="error-message">{{ error }}</span>
-            {% endfor %}
-        </div>
-
-        <!-- שדה סיסמה -->
-        <div class="form-group">
-            {{ form.password.label }}
-            <div class="input-with-button">
-                {{ form.password(id="password", class="input-field") }}
-                <button type="button" class="show-password-button" data-field-id="password">👁️</button>
-            </div>
-            {% for error in form.password.errors %}
-                <span class="error-message">{{ error }}</span>
-            {% endfor %}
-        </div>
-
-        <!-- כפתור התחברות -->
-        <div class="form-group">
-            {{ form.submit(class="submit-button") }}
-        </div>
-
-    </form>
-
-    <!-- הצגת הודעות פלאש -->
-    {% if request.endpoint != 'auth.login' %}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-    {% endif %}
-
-    <div class="auth-buttons">
-        <a href="{{ url_for('auth.register') }}" class="secondary-button">
-            <i class="fa fa-user-plus" aria-hidden="true"></i> הירשם כאן
-        </a>
-        <a href="{{ url_for('auth.forgot_password') }}" class="secondary-button">
-            <i class="fa fa-key" aria-hidden="true"></i> שחזור סיסמה
-        </a>
-    </div>
-
-    <!-- 🔹 כפתורי התחברות עם Google -->
-    <div class="auth-buttons google-auth">
-        <a href="{{ url_for('auth.login_google') }}" class="google-button">
-            <img src="{{ url_for('static', filename='images/google-logo.png') }}" alt="Google Logo">
-            התחברות עם Google
-        </a>
-    </div>
-
-</section>
-
-<!-- כותרת התכונות -->
-<h2 class="features-title">אז מה עושים אצלנו?</h2>
-
-<!-- בלוקים עם תכונות עיקריות של האתר -->
-<section class="features">
-    <div class="feature-box_login">
-        <i class="fa fa-wallet feature-icon"></i>
-        <h3>נהלו את כל הקופונים שלכם במקום אחד</h3>
-        <p>צרו ארנק דיגיטלי חכם וגלו כמה קל לנהל את כל ההטבות שלכם. התחילו לחסוך עכשיו!</p>
-    </div>
-    <div class="feature-box_login">
-        <i class="fa fa-handshake feature-icon"></i>
-        <h3>הרוויחו מקופונים שאינכם צריכים</h3>
-        <p>מכרו או העבירו קופונים שלא תנצלו ותנו לאחרים ליהנות מההטבות. הצטרפו לקהילת החיסכון שלנו!</p>
-    </div>
-    <div class="feature-box_login">
-        <i class="fa fa-clock feature-icon"></i>
-        <h3>לעולם לא תפספסו עוד הטבה</h3>
-        <p>קבלו התראות חכמות לפני פקיעת הקופונים ונצלו כל הטבה בזמן. הירשמו עכשיו והתחילו לחסוך!</p>
-    </div>
-    <div class="feature-box_login">
-        <i class="fa fa-lock feature-icon"></i>
-        <h3>הנתונים שלכם שמורים</h3>
-        <p>כל הפרטים נשמרים בצורה מוצפנת ומאובטחת, כך שרק אתם שולטים בקופונים שלכם!</p>
-    </div>
-</section>
-
-{% endblock %}
-
-{% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // פונקציית הצגת/הסתרת סיסמה
-        const showPasswordButtons = document.querySelectorAll('.show-password-button');
-        showPasswordButtons.forEach(function(button) {
-            button.addEventListener('click', function() {
-                const fieldId = this.getAttribute('data-field-id');
-                const passwordField = document.getElementById(fieldId);
-                if (passwordField.type === 'password') {
-                    passwordField.type = 'text';
-                    this.textContent = '🙈';
-                } else {
-                    passwordField.type = 'password';
-                    this.textContent = '👁️';
-                }
-            });
-        });
-    });
-</script>
-
+{% block styles %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-.auth-buttons {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 15px;
-}
-
-.secondary-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 5px;
-    background-color: #f3f3f3;
-    color: #333;
-    font-size: 14px;
-    text-decoration: none;
-    transition: background-color 0.3s;
-    width: auto;
-    min-width: 150px;
-}
-
-.secondary-button:hover {
-    background-color: #e0e0e0;
-}
-
-/* כותרת התכונות */
-.features-title {
-    text-align: center;
-    font-size: 1.8em;
-    margin-top: 40px;
-    margin-bottom: 20px;
-    color: var(--primary-color);
-}
-
-/* סגנון לבלוקים של התכונות */
-.features {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    max-width: 800px;
-    margin: 20px auto;
-    text-align: center;
-}
-
-.feature-box_login {
-    background-color: #f9f9f9;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.feature-box_login:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-}
-
-.feature-icon {
-    font-size: 1.5em;
-    color: #2473CC;
-    margin-bottom: 8px;
-}
-
-/* 2 עמודות גם במסכים קטנים כמו טלפונים */
-@media (max-width: 768px) {
-    .features {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-/* למסכים צרים במיוחד (מתחת ל-400px) - עמודה אחת */
-@media (max-width: 400px) {
-    .features {
-        grid-template-columns: 1fr;
-    }
-}
-.feature-box_login h3 {
-    margin-top: 0px; /* מקטין את הרווח העליון של ה-<h3> */
-}
-
-/* למסכים גדולים */
-@media (min-width: 1024px) {
-    .features {
-        max-width: 600px;
+    /* מסתיר את ה-header בדף ההתחברות */
+    header {
+        display: none !important;
     }
 
-    .feature-box_login {
-        padding: 10px;
+    /* ###### VARIABLES ###### */
+    :root {
+        --primary-color: #2473CC;
+        --primary-dark: #1a5aa3;
+        --primary-light: #e8f0fd;
+        --secondary-color: #ff6b6b;
+        --text-color: #333333;
+        --text-light: #666666;
+        --bg-color: #f7f9fc;
+        --card-bg: #ffffff;
+        --border-radius: 12px;
+        --box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        --transition: all 0.3s ease;
     }
 
-    .feature-box_login h3 {
-        font-size: 1.2em;
+    /* ###### GLOBAL STYLES ###### */
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: 'Rubik', sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        direction: rtl;
+        text-align: right;
     }
 
-    .feature-box_login p {
-        font-size: 0.9em;
+    .login-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+        /* Added padding bottom for more space at the bottom of the page */
+        padding-bottom: 4rem;
     }
 
-    .feature-icon {
-        font-size: 1.2em;
+    /* ###### HEADER STYLES ###### */
+    .login-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        position: relative;
     }
-    .auth-form {
-        margin-top: 0px; /* הקטן את הרווח בהתאם */
+
+    .welcome-title {
+        color: var(--primary-color);
+        font-size: 2.5rem;
+        margin-bottom: 0.8rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
     }
+
+    .decorative-line {
+        height: 4px;
+        width: 80px;
+        background: #FF8800; /* צבע כתום במקום linear-gradient */
+        margin: 0 auto;
+        border-radius: 2px;
     }
-    .page-title {
-        margin: 1;
+
+    /* ###### AUTH CARD STYLES ###### */
+    .auth-card {
+        background-color: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 2.5rem;
+        max-width: 500px;
+        margin: 0 auto 3rem;
+        position: relative;
+        overflow: hidden;
     }
-    .auth-form {
-        margin-top: 0;
-    }
-    .google-auth {
+
+    .auth-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
+        height: 6px;
+        background: var(--primary-color); /* במקום linear-gradient */
+    }
+
+    .auth-card-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+
+    .auth-card-header h2 {
+        font-size: 1.8rem;
+        color: var(--primary-color);
+        margin-bottom: 0.8rem;
+    }
+
+    .decorative-dots {
         display: flex;
         justify-content: center;
-        gap: 10px;
-        margin-top: 10px;
+        gap: 6px;
     }
 
-    .google-auth {
+    .decorative-dots span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        opacity: 0.7;
+    }
+
+    .decorative-dots span:nth-child(2) {
+        background-color: var(--secondary-color);
+    }
+
+    /* ###### FORM STYLES ###### */
+    .auth-form {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text-color);
+    }
+
+    .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-icon {
+        position: absolute;
+        right: 16px;
+        color: var(--text-light);
+        font-size: 1rem;
+    }
+
+    /* ###### RTL INPUT FIELDS ###### */
+    .input-field {
         width: 100%;
+        padding: 12px 42px 12px 42px;
+        border: 1px solid #e1e5ee;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: var(--transition);
+        color: var(--text-color);
+        background-color: #f8fafc;
+        direction: rtl;
+        text-align: right;
+    }
+
+    .input-field:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(36, 115, 204, 0.1);
+        outline: none;
+        background-color: #fff;
+    }
+
+    .input-field::placeholder {
+        color: #a0aec0;
+        direction: rtl;
+        text-align: right;
+    }
+
+    /* ###### PASSWORD FIELD STYLES ###### */
+    .password-wrapper {
+        position: relative;
+    }
+
+    .toggle-password {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--text-light);
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition);
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+    }
+
+    .toggle-password:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        color: var(--primary-color);
+    }
+
+    .toggle-password:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(36, 115, 204, 0.3);
+    }
+
+    /* ###### BUTTON STYLES ###### */
+    .primary-button {
+        width: 100%;
+        padding: 12px 20px;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .primary-button:hover {
+        background-color: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(36, 115, 204, 0.2);
+    }
+
+    .primary-button:active {
+        transform: translateY(0);
+    }
+
+    /* ###### RIPPLE EFFECT FOR BUTTONS ###### */
+    .ripple-effect {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        transform: scale(0);
+        animation: ripple 0.6s linear;
+        pointer-events: none;
+    }
+
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+
+    /* ###### FLASH MESSAGES ###### */
+    .flash-message {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.95rem;
+    }
+
+    .flash-message i {
+        font-size: 1.1rem;
+    }
+
+    .flash-message.success {
+        background-color: #e6f7ef;
+        color: #0c6e47;
+        border-right: 4px solid #0c6e47;
+    }
+
+    .flash-message.error {
+        background-color: #feeceb;
+        color: #e12d39;
+        border-right: 4px solid #e12d39;
+    }
+
+    .flash-message.info {
+        background-color: #e8f0fd;
+        color: var(--primary-dark);
+        border-right: 4px solid var(--primary-color);
+    }
+
+    /* ###### AUTH OPTIONS ###### */
+    .auth-options {
+        margin-top: 1.5rem;
+    }
+
+    .secondary-options {
         display: flex;
         justify-content: center;
-        gap: 10px;
-        margin-top: 10px;
-        flex-wrap: nowrap; /* מונע שבירה לשורה חדשה */
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .secondary-link {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .secondary-link:hover {
+        color: var(--primary-dark);
+        text-decoration: underline;
+    }
+
+    .divider {
+        color: #d1d5db;
+        font-weight: 300;
+    }
+
+    .or-divider {
+        text-align: center;
+        position: relative;
+        margin: 1.5rem 0;
+        color: var(--text-light);
+        font-size: 0.9rem;
+    }
+
+    .or-divider::before,
+    .or-divider::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: calc(50% - 30px);
+        height: 1px;
+        background-color: #e5e7eb;
+    }
+
+    .or-divider::before {
+        right: 0;
+    }
+
+    .or-divider::after {
+        left: 0;
+    }
+
+    .or-divider span {
+        display: inline-block;
+        padding: 0 10px;
+        background-color: var(--card-bg);
+        position: relative;
+    }
+
+    .social-login {
+        text-align: center;
     }
 
     .google-button {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px; /* רווח בין האייקון לטקסט */
-        padding: 12px 15px;
-        border: none;
-        border-radius: 5px;
-        background-color: #DB4437;
-        color: white;
-        font-size: 14px;
-        font-weight: bold;
+        gap: 12px; /* הגדלנו את המרווח בין האלמנטים */
+        width: 100%;
+        padding: 12px 20px;
+        background-color: #ffffff;
+        color: #444444;
+        border: 1px solid #e1e5ee;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
         text-decoration: none;
-        transition: background-color 0.3s;
-        width: 180px; /* מספיק רחב כדי להימנע משבירה */
-        text-align: center; /* ממורכז */
-        white-space: nowrap; /* מונע ירידת טקסט לשורה חדשה */
-    }
-
-    .google-button img {
-        width: 24px;
-        height: 24px;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
     .google-button:hover {
-        background-color: #C1351D;
+        background-color: #f8f8f8;
+        border-color: #d1d5db;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
 
-    /* לוודא שבמובייל גם אם אין הרבה מקום, הכפתורים נשארים אחד ליד השני */
+    .google-button img {
+        width: 20px;
+        height: 20px;
+        margin-left: 5px; /* מוסיף מרווח נוסף מצד שמאל של הלוגו */
+    }
+
+    /* ###### FEATURES SECTION ###### */
+    .features-section {
+        margin-top: 4rem;
+        /* Added bottom margin for more space at the bottom of the page */
+        margin-bottom: 4rem;
+    }
+
+    .features-title {
+        text-align: center;
+        font-size: 2rem;
+        color: var(--primary-color);
+        margin-bottom: 2.5rem;
+        position: relative;
+        padding-bottom: 1rem;
+    }
+
+    .features-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 3px;
+        background: #FF8800; /* צבע כתום במקום linear-gradient */
+        border-radius: 3px;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2.5rem;
+        margin: 0 auto;
+        max-width: 1100px; /* Ensure there's enough space for proper gaps */
+    }
+
+    .feature-card {
+        background-color: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 2rem 1.5rem;
+        text-align: center;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px);
+    }
+
+    .feature-card:hover .feature-hover-effect {
+        opacity: 1;
+    }
+
+    .feature-hover-effect {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: #FF8800; /* צבע כתום במקום linear-gradient */
+        opacity: 0;
+        transition: var(--transition);
+    }
+
+    .feature-icon-wrapper {
+        width: 60px;
+        height: 60px;
+        background-color: var(--primary-light);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.2rem;
+        color: var(--primary-color);
+        font-size: 1.5rem;
+        transition: var(--transition);
+    }
+
+    .feature-card:hover .feature-icon-wrapper {
+        transform: scale(1.1);
+        box-shadow: 0 5px 15px rgba(36, 115, 204, 0.2);
+    }
+
+    .feature-card h3 {
+        font-size: 1.2rem;
+        margin-bottom: 0.8rem;
+        color: var(--text-color);
+    }
+
+    .feature-card p {
+        color: var(--text-light);
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+
+    /* ###### ERROR MESSAGES ###### */
+    .error-message {
+        color: #e12d39;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        display: block;
+    }
+
+    /* ###### RESPONSIVE DESIGN ###### */
+    @media (max-width: 992px) {
+        .features-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            max-width: 700px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .auth-card {
+            padding: 1.8rem;
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+        }
+
+        .features-title {
+            font-size: 1.7rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        /* Changed to always display 2 columns on mobile */
+        .features-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            max-width: 100%;
+        }
+
+        .feature-card {
+            padding: 1.5rem 1rem;
+        }
+
+        .feature-icon-wrapper {
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .secondary-options {
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .divider {
+            display: none;
+        }
+
+        .welcome-title {
+            font-size: 1.8rem;
+        }
+
+        .auth-card {
+            padding: 1.5rem;
+        }
+
+        /* Added more bottom padding for mobile views */
+        .login-container {
+            padding-bottom: 3rem;
+        }
+    }
+
     @media (max-width: 400px) {
-        .google-auth {
-            flex-wrap: nowrap; /* חשוב! מונע שבירה לשורה שנייה */
-            justify-content: space-evenly; /* מבטיח מרווח טוב */
+        .features-grid {
+            gap: 1rem;
         }
 
-        .google-button {
-            width: 48%; /* נותן לכל כפתור 48% מרוחב המסך כדי להישאר בשורה אחת */
-            font-size: 13px; /* מקטין טיפה את הגופן כדי למנוע שבירה */
+        .feature-card {
+            padding: 1.2rem 0.8rem;
+        }
+
+        .feature-icon-wrapper {
+            width: 45px;
+            height: 45px;
+            font-size: 1rem;
         }
     }
-
 </style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-header">
+        <h1 class="welcome-title">ברוכים הבאים!</h1>
+        <div class="decorative-line"></div>
+    </div>
+
+    <div class="auth-card">
+        <div class="auth-card-header">
+            <h2>התחברות</h2>
+            <div class="decorative-dots">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+
+        <form method="POST" action="" class="auth-form">
+            {{ form.hidden_tag() }}
+
+            <!-- Email Field -->
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }}
+                <div class="input-wrapper">
+                    <i class="fa fa-envelope input-icon"></i>
+                    {{ form.email(class="input-field", placeholder="הזן את כתובת האימייל שלך") }}
+                </div>
+                {% for error in form.email.errors %}
+                    <span class="error-message">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <!-- Password Field -->
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }}
+                <div class="input-wrapper password-wrapper">
+                    <i class="fa fa-lock input-icon"></i>
+                    {{ form.password(id="password", class="input-field", placeholder="הזן את הסיסמה שלך") }}
+                    <button type="button" class="toggle-password" data-field-id="password" aria-label="הצג/הסתר סיסמה">
+                        <i class="fa fa-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
+                {% for error in form.password.errors %}
+                    <span class="error-message">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="form-group">
+                {{ form.submit(class="primary-button") }}
+            </div>
+        </form>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">
+                        <i class="fa fa-info-circle"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Auth Options -->
+        <div class="auth-options">
+            <div class="secondary-options">
+                <a href="{{ url_for('auth.register') }}" class="secondary-link">
+                    <i class="fa fa-user-plus"></i> הירשם כאן
+                </a>
+                <span class="divider">|</span>
+                <a href="{{ url_for('auth.forgot_password') }}" class="secondary-link">
+                    <i class="fa fa-key"></i> שחזור סיסמה
+                </a>
+            </div>
+
+            <div class="social-login">
+                <p class="or-divider"><span>או</span></p>
+                <a href="{{ url_for('auth.login_google') }}" class="google-button">
+                    <img src="{{ url_for('static', filename='images/google-logo.png') }}" alt="Google Logo">
+                    <span>התחברות עם Google</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <h2 class="features-title">מה תוכלו לעשות באתר שלנו?</h2>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon-wrapper">
+                    <i class="fa fa-wallet"></i>
+                </div>
+                <h3>ארנק דיגיטלי חכם</h3>
+                <p>נהלו את כל הקופונים וההטבות שלכם במקום אחד. נגישות מכל מכשיר, בכל זמן.</p>
+                <div class="feature-hover-effect"></div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon-wrapper">
+                    <i class="fa fa-handshake"></i>
+                </div>
+                <h3>סחר והחלפת קופונים</h3>
+                <p>הרוויחו מקופונים שאינכם צריכים. מכרו או החליפו קופונים בקהילה הגדלה שלנו.</p>
+                <div class="feature-hover-effect"></div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon-wrapper">
+                    <i class="fa fa-clock"></i>
+                </div>
+                <h3>התראות חכמות</h3>
+                <p>לעולם לא תפספסו עוד הטבה. קבלו התראות לפני פקיעת קופונים וחסכו עוד יותר.</p>
+                <div class="feature-hover-effect"></div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon-wrapper">
+                    <i class="fa fa-lock"></i>
+                </div>
+                <h3>אבטחה ופרטיות</h3>
+                <p>הנתונים שלכם מוצפנים ומאובטחים. אנו מקפידים על סטנדרטים גבוהים של אבטחת מידע.</p>
+                <div class="feature-hover-effect"></div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Password visibility toggle functionality
+        const toggleButtons = document.querySelectorAll('.toggle-password');
+
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const fieldId = this.getAttribute('data-field-id');
+                const passwordField = document.getElementById(fieldId);
+                const icon = this.querySelector('i');
+
+                if (passwordField.type === 'password') {
+                    passwordField.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    passwordField.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+        });
+
+        // Add ripple effect to buttons
+        const buttons = document.querySelectorAll('.primary-button, .google-button');
+
+        buttons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple-effect');
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+
+                this.appendChild(ripple);
+
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+    });
+</script>
 {% endblock %}

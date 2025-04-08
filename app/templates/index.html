@@ -517,6 +517,32 @@
     resize: vertical; /* # Allow vertical resizing only */
     font-family: inherit; /* # Consistent font */
     transition: border-color 0.2s ease; /* # Smooth focus transition */
+    direction: rtl; /* # Keep RTL text direction for Hebrew */
+    text-align: center; /* # Center-align text instead of right-align */
+}
+
+/* # Ensure placeholder text is also centered */
+.input-field_centered::placeholder {
+    direction: rtl;
+    text-align: center;
+}
+
+/* # Handle all browser variations of placeholder */
+.input-field_centered::-webkit-input-placeholder {
+    direction: rtl;
+    text-align: center;
+}
+.input-field_centered::-moz-placeholder {
+    direction: rtl;
+    text-align: center;
+}
+.input-field_centered:-ms-input-placeholder {
+    direction: rtl;
+    text-align: center;
+}
+.input-field_centered:-moz-placeholder {
+    direction: rtl;
+    text-align: center;
 }
 
 .input-field_centered:focus {
@@ -525,12 +551,13 @@
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2); /* # Subtle focus glow */
 }
 
-/* # This is the key part we need to fix */
+/* # Container for button and tooltip */
 .button-with-explanation {
     display: flex;
     flex-direction: row; /* # Explicit direction */
     align-items: center;
     margin-top: auto; /* # Push to bottom of container */
+    position: relative; /* # Important for tooltip positioning */
 }
 
 /* # Place tooltip button first (on the right in RTL) */
@@ -547,6 +574,7 @@
     transition: background-color 0.2s ease;
     margin-left: 10px; /* # Space between tooltip and button */
     order: 1; /* # First in visual order (right side in RTL) */
+    position: relative; /* # Important for tooltip positioning */
 }
 
 .tooltip-button-mobile:hover {
@@ -569,6 +597,48 @@
 
 .submit-button:hover {
     background-color: var(--primary-hover, #2980b9); /* # Darker shade on hover */
+}
+
+/* # Tooltip Styles */
+.tooltip {
+    display: none;
+    position: absolute;
+    background-color: #333;
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    max-width: 250px;
+    z-index: 9999;
+    text-align: right; /* # Align text right for RTL */
+    /* # Position from top right of the button */
+    top: -5px;
+    left: 30px; /* # Position to the left of the tooltip button */
+    transform: translateY(-100%); /* # Move up above the button */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.tooltip::after {
+    content: "";
+    position: absolute;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+    top: 100%; /* # Position at the bottom of tooltip */
+    right: 10px; /* # Position towards the right side for RTL */
+}
+
+.close-tooltip {
+    float: left; /* # Position on left for RTL */
+    cursor: pointer;
+    margin-right: 8px;
+}
+
+/* # Show tooltip on hover or focus */
+.tooltip-button-mobile:hover + .tooltip,
+.tooltip-button-mobile:focus + .tooltip,
+.tooltip:hover {
+    display: block;
 }
 
 /* # Media query for mobile responsiveness */
@@ -596,6 +666,23 @@
     .submit-button {
         order: 2; /* # Keep submit button second */
         width: 120px; /* # Same fixed width as desktop */
+    }
+    
+    /* # Fix tooltip positioning for mobile */
+    .tooltip {
+        max-width: 200px; /* # Slightly narrower */
+        font-size: 0.85em; /* # Smaller font */
+        top: auto; /* # Reset top */
+        bottom: 30px; /* # Position above the button */
+        left: auto; /* # Reset left */
+        right: 0; /* # Align to the right edge of container */
+        transform: none; /* # No transform needed */
+    }
+    
+    .tooltip::after {
+        top: 100%; /* # Arrow at bottom */
+        left: auto; /* # Reset left */
+        right: 10px; /* # Right-aligned arrow */
     }
 }
 

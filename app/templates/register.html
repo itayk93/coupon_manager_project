@@ -2,6 +2,322 @@
 
 {% block title %}הרשמה{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    /* מסתיר את ה-header בדף ההרשמה */
+    header {
+        display: none !important;
+    }
+
+    /* ###### VARIABLES ###### */
+    :root {
+        --primary-color: #2473CC;
+        --primary-dark: #1a5aa3;
+        --primary-light: #e8f0fd;
+        --secondary-color: #ff6b6b;
+        --text-color: #333333;
+        --text-light: #666666;
+        --bg-color: #f7f9fc;
+        --card-bg: #ffffff;
+        --border-radius: 12px;
+        --box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        --transition: all 0.3s ease;
+        --success-color: #27AE60;
+        --warning-color: #F39C12;
+        --danger-color: #C0392B;
+    }
+
+    /* ###### GLOBAL STYLES ###### */
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: 'Rubik', sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        direction: rtl;
+        text-align: right;
+    }
+
+    /* ###### AUTH FORM STYLES ###### */
+    .auth-form {
+        max-width: 500px;
+        margin: 3rem auto;
+        padding: 2.5rem;
+        background-color: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .auth-form::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 6px;
+        background: var(--primary-color);
+    }
+
+    .auth-form h2 {
+        font-size: 1.8rem;
+        color: var(--primary-color);
+        margin-bottom: 1.8rem;
+        text-align: center;
+        position: relative;
+    }
+
+    .auth-form h2::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 3px;
+        background: #FF8800;
+        border-radius: 3px;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text-color);
+    }
+
+    .input-field {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #e1e5ee;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: var(--transition);
+        color: var(--text-color);
+        background-color: #f8fafc;
+        direction: rtl;
+        text-align: right;
+        box-sizing: border-box;
+    }
+
+    .input-field:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(36, 115, 204, 0.1);
+        outline: none;
+        background-color: #fff;
+    }
+
+    .input-field::placeholder {
+        color: #a0aec0;
+        direction: rtl;
+        text-align: right;
+    }
+
+    /* ###### INPUT WITH BUTTON ###### */
+    .input-with-button {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .show-password-button {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--text-light);
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition);
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+    }
+
+    .show-password-button:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        color: var(--primary-color);
+    }
+
+    /* ###### PASSWORD STRENGTH ###### */
+    #password-strength {
+        height: 5px;
+        background-color: #e0e0e0;
+        margin-top: 8px;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    #password-strength-bar {
+        height: 100%;
+        width: 0%;
+        background-color: var(--primary-color);
+        transition: width 0.3s ease, background-color 0.3s ease;
+    }
+
+    #strength-message {
+        font-size: 0.8rem;
+        color: var(--text-light);
+        margin-top: 5px;
+    }
+
+    /* ###### SUBMIT BUTTON ###### */
+    .submit-button {
+        width: 100%;
+        padding: 12px 20px;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .submit-button:hover {
+        background-color: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(36, 115, 204, 0.2);
+    }
+
+    .submit-button:active {
+        transform: translateY(0);
+    }
+
+    /* ###### RIPPLE EFFECT FOR BUTTONS ###### */
+    .ripple-effect {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        transform: scale(0);
+        animation: ripple 0.6s linear;
+        pointer-events: none;
+    }
+
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+
+    /* ###### AUTH BUTTONS ###### */
+    .auth-buttons {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+
+    .secondary-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border: 1px solid #e1e5ee;
+        border-radius: 8px;
+        background-color: #ffffff;
+        color: var(--text-color);
+        font-size: 0.95rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: var(--transition);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .secondary-button:hover {
+        background-color: #f8f8f8;
+        border-color: #d1d5db;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ###### FLASH MESSAGES ###### */
+    .flash {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.95rem;
+    }
+
+    .flash.success {
+        background-color: #e6f7ef;
+        color: #0c6e47;
+        border-right: 4px solid #0c6e47;
+    }
+
+    .flash.error {
+        background-color: #feeceb;
+        color: #e12d39;
+        border-right: 4px solid #e12d39;
+    }
+
+    .flash.info {
+        background-color: #e8f0fd;
+        color: var(--primary-dark);
+        border-right: 4px solid var(--primary-color);
+    }
+
+    /* ###### ERROR MESSAGES ###### */
+    .error-message {
+        color: #e12d39;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        display: block;
+    }
+
+    /* ###### RESPONSIVE DESIGN ###### */
+    @media (max-width: 768px) {
+        .auth-form {
+            padding: 1.8rem;
+            margin: 2rem auto;
+        }
+
+        .auth-form h2 {
+            font-size: 1.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .auth-form {
+            padding: 1.5rem;
+            margin: 1.5rem 1rem;
+        }
+
+        .auth-buttons {
+            flex-direction: column;
+        }
+
+        .secondary-button {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="auth-form">
     <h2>הרשמה</h2>
@@ -9,8 +325,8 @@
         {{ form.hidden_tag() }}
         <!-- שדה שם פרטי -->
         <div class="form-group">
-            {{ form.first_name.label }}
-            {{ form.first_name(class="input-field") }}
+            {{ form.first_name.label(class="form-label") }}
+            {{ form.first_name(class="input-field", placeholder="הזן את שמך הפרטי") }}
             {% for error in form.first_name.errors %}
                 <span class="error-message">{{ error }}</span>
             {% endfor %}
@@ -18,8 +334,8 @@
 
         <!-- שדה שם משפחה -->
         <div class="form-group">
-            {{ form.last_name.label }}
-            {{ form.last_name(class="input-field") }}
+            {{ form.last_name.label(class="form-label") }}
+            {{ form.last_name(class="input-field", placeholder="הזן את שם המשפחה שלך") }}
             {% for error in form.last_name.errors %}
                 <span class="error-message">{{ error }}</span>
             {% endfor %}
@@ -27,7 +343,7 @@
 
         <!-- שדה בחירת מגדר -->
         <div class="form-group">
-            {{ form.gender.label }}
+            {{ form.gender.label(class="form-label") }}
             {{ form.gender(class="input-field") }}
             {% for error in form.gender.errors %}
                 <span class="error-message">{{ error }}</span>
@@ -36,8 +352,8 @@
 
         <!-- שדה אימייל -->
         <div class="form-group">
-            {{ form.email.label }}
-            {{ form.email(class="input-field") }}
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="input-field", placeholder="הזן את כתובת האימייל שלך") }}
             {% for error in form.email.errors %}
                 <span class="error-message">{{ error }}</span>
             {% endfor %}
@@ -45,10 +361,12 @@
 
         <!-- שדה סיסמה -->
         <div class="form-group">
-            {{ form.password.label }}
+            {{ form.password.label(class="form-label") }}
             <div class="input-with-button">
-                {{ form.password(id="password", class="input-field") }}
-                <button type="button" class="show-password-button" data-field-id="password">👁️</button>
+                {{ form.password(id="password", class="input-field", placeholder="הזן סיסמה") }}
+                <button type="button" class="show-password-button" data-field-id="password">
+                    <i class="fa fa-eye" aria-hidden="true"></i>
+                </button>
             </div>
             <div id="password-strength">
                 <div id="password-strength-bar"></div>
@@ -61,10 +379,12 @@
 
         <!-- שדה אישור סיסמה -->
         <div class="form-group">
-            {{ form.confirm_password.label }}
+            {{ form.confirm_password.label(class="form-label") }}
             <div class="input-with-button">
-                {{ form.confirm_password(id="confirm_password", class="input-field") }}
-                <button type="button" class="show-password-button" data-field-id="confirm_password">👁️</button>
+                {{ form.confirm_password(id="confirm_password", class="input-field", placeholder="הזן את הסיסמה שוב") }}
+                <button type="button" class="show-password-button" data-field-id="confirm_password">
+                    <i class="fa fa-eye" aria-hidden="true"></i>
+                </button>
             </div>
             {% for error in form.confirm_password.errors %}
                 <span class="error-message">{{ error }}</span>
@@ -81,17 +401,20 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="flash {{ category }}">{{ message }}</div>
+                <div class="flash {{ category }}">
+                    <i class="fa fa-info-circle"></i>
+                    <span>{{ message }}</span>
+                </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
     <div class="auth-buttons">
         <a href="{{ url_for('auth.login') }}" class="secondary-button">
-            <i class="fa fa-sign-in" aria-hidden="true"></i> כבר יש לך חשבון? זה הזמן להתחבר
+            <i class="fa fa-sign-in-alt"></i> כבר יש לך חשבון? לחץ להתחברות
         </a>
     </div>
-    </section>
+</section>
 {% endblock %}
 
 {% block scripts %}
@@ -134,46 +457,41 @@
             button.addEventListener('click', function() {
                 const fieldId = this.getAttribute('data-field-id');
                 const passwordField = document.getElementById(fieldId);
+                const icon = this.querySelector('i');
+
                 if (passwordField.type === 'password') {
                     passwordField.type = 'text';
-                    this.textContent = '🙈'; // שינוי אייקון אם רוצים
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
                 } else {
                     passwordField.type = 'password';
-                    this.textContent = '👁️';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
                 }
+            });
+        });
+
+        // אפקט גלים (ripple) לכפתורים
+        const buttons = document.querySelectorAll('.submit-button, .secondary-button');
+
+        buttons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple-effect');
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+
+                this.appendChild(ripple);
+
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
             });
         });
     });
 </script>
-
-<style>
-.auth-buttons {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 15px;
-}
-
-.secondary-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 5px;
-    background-color: #f3f3f3;
-    color: #333;
-    font-size: 14px;
-    text-decoration: none;
-    transition: background-color 0.3s;
-    width: auto;
-    min-width: 150px;
-}
-
-.secondary-button:hover {
-    background-color: #e0e0e0;
-}
-</style>
 {% endblock %}
