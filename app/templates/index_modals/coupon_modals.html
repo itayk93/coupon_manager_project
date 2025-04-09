@@ -54,6 +54,8 @@
 
 <style>
 /* ===== Modal Styles with Animation ===== */
+
+/* # Base Modal Structure */
 .modal {
   position: fixed;
   z-index: 1000;
@@ -61,20 +63,27 @@
   top: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0,0,0,0.4);
+  background-color: rgba(0,0,0,0.5); /* Slightly darker overlay for better contrast */
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease, visibility 0.3s ease;
+  display: none; /* Start hidden, will be set to flex when opened */
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
 }
+
+/* # Active Modal State */
 .modal.active {
   opacity: 1;
   visibility: visible;
+  display: flex; /* Show modal when active */
 }
+
+/* # Modal Content Container */
 .modal-content {
   background-color: #fff;
-  margin: 8% auto;
-  padding: 20px;
-  border-radius: 8px;
+  padding: 25px;
+  border-radius: 10px; /* Increased radius for modern look */
   width: 90%;
   max-width: 500px;
   position: relative;
@@ -83,21 +92,50 @@
   align-items: center;
   box-sizing: border-box;
   text-align: center;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3); /* Enhanced shadow for depth */
+  transform: translateY(20px); /* Start slightly below for animation */
+  transition: transform 0.3s ease;
+  max-height: 90vh; /* Prevent overflow on small screens */
+  overflow-y: auto; /* Allow scrolling for overflow content */
 }
+
+/* # Modal Content Animation */
+.modal.active .modal-content {
+  transform: translateY(0); /* Move to final position when active */
+}
+
+/* # Modal Headers */
 .modal-content h2,
 .modal-content h3 {
   margin: 10px 0;
+  color: #2c3e50; /* Dark blue color for headers */
 }
+
+/* # Close Button Styles */
 .close-modal,
 .close-usage-modal,
 .close-big-modal,
 .close-stats-modal {
   position: absolute;
-  top: 10px;
+  top: 15px;
   right: 20px;
-  font-size: 1.5em;
+  font-size: 1.8em;
   cursor: pointer;
+  color: #95a5a6; /* Subtle gray */
+  transition: color 0.2s ease;
+  line-height: 1;
+  z-index: 10; /* Ensure it's above other content */
 }
+
+/* # Close Button Hover Effect */
+.close-modal:hover,
+.close-usage-modal:hover,
+.close-big-modal:hover,
+.close-stats-modal:hover {
+  color: #e74c3c; /* Red on hover for visibility */
+}
+
+/* # Company Modal Logo */
 #modal-company-logo {
   width: 80px;
   height: 80px;
@@ -105,7 +143,12 @@
   border-radius: 8px;
   margin: 10px auto 0 auto;
   display: block;
+  background-color: #f9f9f9; /* Light background for logo */
+  padding: 5px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
+
+/* # Coupons List in Modal */
 #modal-coupons-list {
   margin-top: 20px;
   width: 100%;
@@ -116,89 +159,185 @@
   list-style: none;
   padding: 0;
 }
+
+/* # Individual Coupon List Item */
 #modal-coupons-list li {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee; /* Subtle separator */
 }
+
+/* # Remove border from last coupon item */
+#modal-coupons-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* # Coupon Link Styling */
 #modal-coupons-list li a {
   text-decoration: none;
   color: #3498db;
-  margin-bottom: 5px;
+  margin-bottom: 10px;
   text-align: center;
+  font-weight: 600;
+  transition: color 0.2s ease;
 }
+
+/* # Coupon Link Hover Effect */
 #modal-coupons-list li a:hover {
   text-decoration: underline;
+  color: #2980b9; /* Darker blue on hover */
 }
+
+/* # Coupon Action Buttons Container */
 .coupon-info-buttons {
   display: flex;
   justify-content: center;
   gap: 10px;
+  width: 100%;
+  margin-top: 5px;
 }
-.update-usage-btn,
-.show-big-btn {
+
+/* # Usage Update Button */
+.update-usage-btn {
   border: none;
   border-radius: 5px;
-  padding: 4px 8px;
+  padding: 6px 12px;
   cursor: pointer;
   color: #fff;
   font-size: 0.9em;
-}
-.update-usage-btn {
-  background-color: #27ae60;
-}
-.update-usage-btn:hover {
-  background-color: #229954;
-}
-.show-big-btn {
-  background-color: #8e44ad;
-}
-.show-big-btn:hover {
-  background-color: #7d3c98;
+  background-color: #27ae60; /* Green */
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  font-weight: 500;
 }
 
-/* Fix long text wrapping in modal */
+/* # Usage Update Button Hover Effect */
+.update-usage-btn:hover {
+  background-color: #219a52;
+  transform: translateY(-2px);
+}
+
+/* # Show Code Button */
+.show-big-btn {
+  border: none;
+  border-radius: 5px;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 0.9em;
+  background-color: #3498db; /* Blue instead of purple for better match */
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  font-weight: 500;
+}
+
+/* # Show Code Button Hover Effect */
+.show-big-btn:hover {
+  background-color: #2980b9;
+  transform: translateY(-2px);
+}
+
+/* # Big Modal Coupon Code Display */
 #bigModalCouponCode {
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: normal;
   text-align: center;
   max-width: 100%;
+  font-size: 1.5em;
+  margin: 15px 0;
+  padding: 12px;
+  background-color: #f7f7f7;
+  border-radius: 6px;
+  font-family: monospace;
+  border: 1px dashed #ccc;
+  user-select: all; /* Makes it easy to select the entire code */
 }
 
-/* QR code container styling */
+/* # QR Code Container */
 #qrcode {
-  margin: 15px auto;
-  padding: 10px;
+  margin: 20px auto;
+  padding: 15px;
   background: white;
-  border-radius: 4px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  width: 220px; /* Slightly larger to account for padding */
+  height: 220px;
 }
 
-/* Mobile-specific modal styles */
+/* # Big Modal Logo */
+#bigModalLogo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin: 10px auto;
+  padding: 5px;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* # Extra Details Container (CVV & Expiration) */
+#bigModalExtraDetails {
+  margin-top: 15px;
+  width: 100%;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+/* # Mobile Responsive Adjustments */
 @media (max-width: 767px) {
+  /* Stack buttons on mobile */
   .coupon-info-buttons {
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
     width: 100%;
   }
   
+  /* Full-width buttons on mobile */
   .update-usage-btn,
   .show-big-btn {
     width: 100%;
-    padding: 6px 0;
+    padding: 8px 0;
+  }
+  
+  /* Smaller font for coupon code on mobile */
+  #bigModalCouponCode {
+    font-size: 1.2em;
+    padding: 10px;
+  }
+  
+  /* Adjust modal position on mobile */
+  .modal-content {
+    margin: 0;
+    padding: 20px 15px;
   }
 }
 
-/* For very small devices */
+/* # Small Screen Adjustments */
 @media (max-width: 400px) {
+  /* Further adjustments for very small screens */
   .modal-content {
     width: 95%;
-    padding: 15px;
-    margin: 10% auto;
+    padding: 15px 10px;
   }
-}
-</style>
+  
+  /* Smaller QR code on very small screens */
+  #qrcode {
+    width: 180px;
+    height: 180px;
+    padding: 10px;
+  }
+  
+  /* Smaller logo on very small screens */
+  #bigModalLogo {
+    width: 80px;
+    height: 80px;
+  }
+}</style>
 
 <script>
 // # Modal functionality script
@@ -470,11 +609,18 @@
   // Event delegation for all button clicks
   document.addEventListener("click", function(e) {
     // Handle show-code and show-big-btn clicks
-    if (e.target && (e.target.classList.contains("show-big-btn") || e.target.classList.contains("show-code"))) {
+    if (e.target.classList.contains("show-big-btn") || e.target.classList.contains("show-code") || 
+        (e.target.parentElement && e.target.parentElement.classList.contains("show-code"))) {
       let btn = e.target;
+      
+      // Handle when clicked on the icon or span inside the button
+      if (e.target.parentElement && e.target.parentElement.classList.contains("show-code")) {
+        btn = e.target.parentElement;
+      }
+      
       let company, couponCode, logoSrc, couponCVV, couponCardExp;
       
-      if (e.target.classList.contains("show-code")) {
+      if (btn.classList.contains("show-code")) {
         // For buttons in the new card layout
         const cardWrapper = btn.closest(".coupon-card-index-wrapper");
         company = cardWrapper.getAttribute("data-company");
@@ -510,43 +656,50 @@
     }
     
     // Handle update-usage and update-usage-btn clicks
-    if (e.target && (e.target.classList.contains("update-usage-btn") || e.target.classList.contains("update-usage"))) {
+    if (e.target.classList.contains("update-usage-btn") || e.target.classList.contains("update-usage") || 
+       (e.target.parentElement && e.target.parentElement.classList.contains("update-usage"))) {
       let btn = e.target;
+      
+      // Handle when clicked on the icon or span inside the button
+      if (e.target.parentElement && e.target.parentElement.classList.contains("update-usage")) {
+      btn = e.target.parentElement;
+      }
+      
       let cardWrapper;
       
-      if (e.target.classList.contains("update-usage")) {
-        // For buttons in the new card layout
-        cardWrapper = btn.closest(".coupon-card-index-wrapper");
-        currentCouponId = cardWrapper.getAttribute("data-coupon-id");
-        const cName = cardWrapper.getAttribute("data-company");
-        const cCode = cardWrapper.getAttribute("data-coupon-code");
-        currentRemaining = parseFloat(cardWrapper.getAttribute("data-remaining"));
-        const logoSrc = cardWrapper.getAttribute("data-logo-src") || "";
-        
-        usageCompany.textContent = "חברה: " + cName;
-        usageCode.innerHTML = "<strong>קוד קופון: " + cCode + "</strong>";
-        usageAmountInput.value = "";
-        usageErrorMsg.style.display = "none";
-        document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
-        document.getElementById("usage-modal-logo").src = logoSrc;
-        usageModal.classList.add("active");
+      if (btn.classList.contains("update-usage")) {
+      // For buttons in the new card layout
+      cardWrapper = btn.closest(".coupon-card-index-wrapper");
+      currentCouponId = cardWrapper.getAttribute("data-coupon-id");
+      const cName = cardWrapper.getAttribute("data-company");
+      const cCode = cardWrapper.getAttribute("data-coupon-code");
+      currentRemaining = parseFloat(cardWrapper.getAttribute("data-remaining"));
+      const logoSrc = cardWrapper.getAttribute("data-logo-src") || "";
+      
+      usageCompany.textContent = "חברה: " + cName;
+      usageCode.innerHTML = "<strong>קוד קופון: " + cCode + "</strong>";
+      usageAmountInput.value = "";
+      usageErrorMsg.style.display = "none";
+      document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
+      document.getElementById("usage-modal-logo").src = logoSrc;
+      usageModal.classList.add("active");
       } else {
-        // For buttons in the modal
-        currentCouponId = btn.getAttribute("data-coupon-id");
-        const cName = btn.getAttribute("data-company");
-        const cCode = btn.getAttribute("data-coupon-code");
-        currentRemaining = parseFloat(btn.getAttribute("data-remaining"));
-        const logoSrc = btn.getAttribute("data-logo-src") || "";
+      // For buttons in the modal
+      currentCouponId = btn.getAttribute("data-coupon-id");
+      const cName = btn.getAttribute("data-company");
+      const cCode = btn.getAttribute("data-coupon-code");
+      currentRemaining = parseFloat(btn.getAttribute("data-remaining"));
+      const logoSrc = btn.getAttribute("data-logo-src") || "";
 
-        usageCompany.textContent = "חברה: " + cName;
-        usageCode.innerHTML = "<strong>קוד קופון: " + cCode + "</strong>";
-        usageAmountInput.value = "";
-        usageErrorMsg.style.display = "none";
-        document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
-        document.getElementById("usage-modal-logo").src = logoSrc;
-        usageModal.classList.add("active");
+      usageCompany.textContent = "חברה: " + cName;
+      usageCode.innerHTML = "<strong>קוד קופון: " + cCode + "</strong>";
+      usageAmountInput.value = "";
+      usageErrorMsg.style.display = "none";
+      document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
+      document.getElementById("usage-modal-logo").src = logoSrc;
+      usageModal.classList.add("active");
       }
-    }
+    } 
   });
 })();
 </script>

@@ -212,6 +212,14 @@ class Coupon(db.Model):
         return max(self.value - self.used_value, 0)
 
     @property
+    def original_value(self):
+        """
+        מחזיר את הערך המקורי של הקופון.
+        זהה ל-value בשלב זה, אך יכול להשתנות בעתיד אם תרצה.
+        """
+        return self.value
+
+    @property
     def computed_discount_percentage(self):
         """
         פרופרטי מחושב לאחוז ההנחה על הקופון.

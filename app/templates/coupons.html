@@ -5,109 +5,251 @@
 
 {% block content %}
 <section class="coupon-management">
-    <!-- Section Header for "הקופונים שלך" -->
+    <!-- Section Header -->
     <div class="section-header">
         <h2>הקופונים שלך</h2>
     </div>
 
     <section class="coupons">
-        <!-- קופונים פעילים -->
+        <!-- Active coupons section -->
         {% if active_coupons %}
             <h3 class="coupon-section-title">קופונים פעילים</h3>
-            <div class="coupon-container">
+            <div class="coupon-container-index">
                 {% for coupon in active_coupons %}
-                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
-                        {% set company_lower = coupon.company.lower() %}
-                        {% if company_lower in company_logo_mapping %}
-                            <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo">
-                        {% else %}
-                            <img src="{{ url_for('static', filename='images/default.png') }}" alt="Logo" class="logo">
-                        {% endif %}
-                        <p class="company-name">{{ coupon.company }}</p>
-                        <p>קוד: {{ coupon.code }}</p>
-                        {% if coupon.tags %}
-                            <p>קטגוריה:
-                                {% for tag in coupon.tags %}
-                                    {{ tag.name }}{% if not loop.last %}, {% endif %}
-                                {% endfor %}
-                            </p>
-                        {% endif %}
-                        {% if not coupon.is_one_time %}
-                            <p class="remaining-value">ערך נותר: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח</p>
-                        {% endif %}
-                    </a>
+                    <div class="coupon-card-index-wrapper" 
+                         data-company="{{ coupon.company }}" 
+                         data-coupon-code="{{ coupon.code }}" 
+                         data-coupon-id="{{ coupon.id }}" 
+                         data-remaining="{{ '%.2f'|format(coupon.remaining_value) }}" 
+                         data-logo-src="{{ url_for('static', filename=company_logo_mapping.get(coupon.company.lower(), 'images/default.png')) }}"
+                         data-is-one-time="false">
+                        <div class="coupon-card-index">
+                            <div class="coupon-header">
+                                {% set company_lower = coupon.company.lower() %}
+                                {% if company_lower in company_logo_mapping %}
+                                    <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="company-logo">
+                                {% endif %}
+                                <h4>{{ coupon.company }}</h4>
+                            </div>
+                            
+                            <div class="coupon-content">
+                                <div class="coupon-code">
+                                    <span class="label">קוד קופון:</span>
+                                    <span class="value">{{ coupon.code }}</span>
+                                </div>
+                                
+                                <div class="coupon-value">
+                                    <span class="label">יתרה:</span>
+                                    <span class="value">{{ '%.2f'|format(coupon.remaining_value) }} ₪</span>
+                                </div>
+                                
+                                <div class="usage-progress">
+                                    <div class="progress-text">
+                                        {% if coupon.original_value > 0 %}
+                                          שימוש: {{ coupon.usage_percentage }}%
+                                        {% else %}
+                                          שימוש: 0%
+                                        {% endif %}
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: {{ coupon.usage_percentage }}%"></div>
+                                    </div>
+                                </div>
+                                
+                                {% if coupon.tags %}
+                                <div class="coupon-tags">
+                                    <span class="label">קטגוריה:</span>
+                                    <span class="value">
+                                        {% for tag in coupon.tags %}
+                                            {{ tag.name }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="coupon-actions">
+                                <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="action-button view-details">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>פרטים</span>
+                                </a>
+                                <button class="action-button show-code">
+                                    <i class="fas fa-eye"></i>
+                                    <span>הצג קוד</span>
+                                </button>
+                                
+                                <button class="action-button update-usage">
+                                    <i class="fas fa-edit"></i>
+                                    <span>עדכן שימוש</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 {% endfor %}
             </div>
         {% else %}
             <p class="no-data-message">אין קופונים פעילים.</p>
         {% endif %}
 
-        <!-- קופונים חד פעמיים פעילים -->
+        <!-- One-time active coupons section -->
         {% if active_one_time_coupons %}
             <h3 class="coupon-section-title">קופונים חד פעמיים פעילים</h3>
-            <div class="coupon-container">
+            <div class="coupon-container-index">
                 {% for coupon in active_one_time_coupons %}
-                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
-                        {% set company_lower = coupon.company.lower() %}
-                        {% if company_lower in company_logo_mapping %}
-                            <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo">
-                        {% else %}
-                            <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="company-logo">
-                        {% endif %}
-                        <p class="company-name">{{ coupon.company }}</p>
-                        <p>קוד: {{ coupon.code }}</p>
-                        <p>מטרה: {{ coupon.purpose }}</p>
-                    </a>
+                    <div class="coupon-card-index-wrapper" 
+                         data-company="{{ coupon.company }}" 
+                         data-coupon-code="{{ coupon.code }}" 
+                         data-coupon-id="{{ coupon.id }}" 
+                         data-remaining="0.00" 
+                         data-logo-src="{{ url_for('static', filename=company_logo_mapping.get(coupon.company.lower(), 'images/default.png')) }}"
+                         data-is-one-time="true"
+                         data-purpose="{{ coupon.purpose }}">
+                        <div class="coupon-card-index">
+                            <div class="coupon-header">
+                                {% set company_lower = coupon.company.lower() %}
+                                {% if company_lower in company_logo_mapping %}
+                                    <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="company-logo">
+                                {% endif %}
+                                <h4>{{ coupon.company }}</h4>
+                            </div>
+                            
+                            <div class="coupon-content">
+                                <div class="coupon-code">
+                                    <span class="label">קוד קופון:</span>
+                                    <span class="value">{{ coupon.code }}</span>
+                                </div>
+                                
+                                <div class="coupon-purpose">
+                                    <span class="label">מטרה:</span>
+                                    <span class="value">{{ coupon.purpose }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="coupon-actions">
+                                <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="action-button view-details">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>פרטים</span>
+                                </a>
+                                <button class="action-button show-code">
+                                    <i class="fas fa-eye"></i>
+                                    <span>הצג קוד</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 {% endfor %}
             </div>
         {% else %}
             <p class="no-data-message">אין קופונים חד פעמיים פעילים.</p>
         {% endif %}
 
-        <!-- קופונים למכירה -->
+        <!-- Coupons for sale section -->
         {% if coupons_for_sale %}
             <h3 class="coupon-section-title">קופונים למכירה</h3>
-            <div class="coupon-container">
+            <div class="coupon-container-index">
                 {% for coupon in coupons_for_sale %}
-                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="coupon-card">
-                        {% set company_lower = coupon.company.lower() %}
-                        {% if company_lower in company_logo_mapping %}
-                            <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="coupon-logo">
-                        {% else %}
-                            <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="coupon-logo">
-                        {% endif %}
-                        <p class="company-name">{{ coupon.company }}</p>
-                        {% if coupon.is_one_time %}
-                            <p>מטרה: {{ coupon.purpose }}</p>
-                        {% endif %}
-                        {% if not coupon.is_one_time %}
-                            <p class="remaining-value">ערך נותר: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח</p>
-                        {% endif %}
-                        <p class="notification-link">הקופון עומד למכירה</p>
-                    </a>
+                    <div class="coupon-card-index-wrapper" 
+                         data-company="{{ coupon.company }}" 
+                         data-coupon-code="{{ coupon.code }}" 
+                         data-coupon-id="{{ coupon.id }}" 
+                         data-remaining="{{ '%.2f'|format(coupon.remaining_value) }}" 
+                         data-logo-src="{{ url_for('static', filename=company_logo_mapping.get(coupon.company.lower(), 'images/default.png')) }}"
+                         data-is-one-time="{{ 'true' if coupon.is_one_time else 'false' }}"
+                         {% if coupon.is_one_time %}data-purpose="{{ coupon.purpose }}"{% endif %}>
+                        <div class="coupon-card-index">
+                            <div class="coupon-header">
+                                {% set company_lower = coupon.company.lower() %}
+                                {% if company_lower in company_logo_mapping %}
+                                    <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="company-logo">
+                                {% endif %}
+                                <h4>{{ coupon.company }}</h4>
+                                <div class="for-sale-badge">למכירה</div>
+                            </div>
+                            
+                            <div class="coupon-content">
+                                {% if coupon.is_one_time %}
+                                    <div class="coupon-purpose">
+                                        <span class="label">מטרה:</span>
+                                        <span class="value">{{ coupon.purpose }}</span>
+                                    </div>
+                                {% else %}
+                                    <div class="coupon-value">
+                                        <span class="label">יתרה:</span>
+                                        <span class="value">{{ '%.2f'|format(coupon.remaining_value) }} ₪</span>
+                                    </div>
+                                    
+                                    <div class="usage-progress">
+                                        <div class="progress-text">
+                                            {% if coupon.original_value > 0 %}
+                                              שימוש: {{ ((coupon.original_value - coupon.remaining_value) / coupon.original_value * 100)|round(1) }}%
+                                            {% else %}
+                                              שימוש: 0%
+                                            {% endif %}
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: {% if coupon.original_value > 0 %}{{ ((coupon.original_value - coupon.remaining_value) / coupon.original_value * 100)|round(1) }}{% else %}0{% endif %}%"></div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="sale-price">
+                                    <span class="label">מחיר מכירה:</span>
+                                    <span class="value" style="color: var(--accent-color);">{{ '%.2f'|format(coupon.cost) }} ₪</span>
+                                </div>
+                            </div>
+                            
+                            <div class="coupon-actions">
+                                <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="action-button view-details">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>פרטים</span>
+                                </a>
+                                <button class="action-button show-code">
+                                    <i class="fas fa-eye"></i>
+                                    <span>הצג קוד</span>
+                                </button>
+                                
+                                {% if not coupon.is_one_time %}
+                                <button class="action-button update-usage">
+                                    <i class="fas fa-edit"></i>
+                                    <span>עדכן שימוש</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 {% endfor %}
             </div>
         {% else %}
             <p class="no-data-message">אין קופונים למכירה.</p>
         {% endif %}
 
-        <!-- סקשן לקופונים שנוצלו ולא פעילים -->
+        <!-- Inactive coupons section -->
         {% if inactive_coupons_with_usage %}
             <h3 class="coupon-section-title">קופונים שנוצלו ולא פעילים</h3>
             <div class="toggle-button-container">
-                <button id="toggle-inactive-coupons" class="action-button">
-                    <i class="fa fa-eye-slash" aria-hidden="true"></i> הסתר קופונים שנוצלו ולא פעילים
+                <button id="toggle-inactive-coupons" class="action-button toggle-button">
+                    <i class="fas fa-eye-slash"></i>
+                    <span>הסתר קופונים שנוצלו ולא פעילים</span>
                 </button>
             </div>
-                <table class="coupon-data-table" id="inactive-coupons-table">
+            
+            <div class="inactive-coupons-container" id="inactive-coupons-container">
+                <!-- Desktop table view -->
+                <table class="coupon-data-table desktop-table" id="inactive-coupons-table">
                     <thead>
                         <tr>
                             <th>שם החברה</th>
                             <th>קוד קופון</th>
-                            <th>תגיות</th>
+                            <th class="hide-on-mobile">תגיות</th>
                             <th>מטרה</th>
                             <th>סטטוס</th>
-                            <th>תאריך ניצול אחרון</th>
+                            <th class="hide-on-mobile">תאריך ניצול אחרון</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -115,7 +257,7 @@
                             <tr class="clickable-row" data-href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}">
                                 <td>{{ coupon.company }}</td>
                                 <td>{{ coupon.code }}</td>
-                                <td>
+                                <td class="hide-on-mobile">
                                     {% if coupon.tags %}
                                         {% for tag in coupon.tags %}
                                             {{ tag.name }}{% if not loop.last %}, {% endif %}
@@ -142,7 +284,7 @@
                                         {{ coupon.status }}
                                     {% endif %}
                                 </td>
-                                <td>
+                                <td class="hide-on-mobile">
                                     {% if latest_usage %}
                                         {{ latest_usage | to_israel_time }}
                                     {% else %}
@@ -153,322 +295,1225 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                
+                <!-- Mobile card view for inactive coupons -->
+                <div class="mobile-cards-view" id="inactive-coupons-mobile">
+                    {% for coupon, latest_usage in inactive_coupons_with_usage %}
+                        <div class="inactive-coupon-card" onclick="window.location.href='{{ url_for('coupons.coupon_detail', id=coupon.id) }}'">
+                            <div class="inactive-coupon-header">
+                                {% set company_lower = coupon.company.lower() %}
+                                {% if company_lower in company_logo_mapping %}
+                                    <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo-small">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="company-logo-small">
+                                {% endif %}
+                                <div class="inactive-coupon-company">{{ coupon.company }}</div>
+                            </div>
+                            <div class="inactive-coupon-details">
+                                <div class="detail-row">
+                                    <span class="detail-label">קוד:</span>
+                                    <span class="detail-value">{{ coupon.code }}</span>
+                                </div>
+                                {% if coupon.is_one_time %}
+                                <div class="detail-row">
+                                    <span class="detail-label">מטרה:</span>
+                                    <span class="detail-value">{{ coupon.purpose }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="detail-row">
+                                    <span class="detail-label">סטטוס:</span>
+                                    <span class="detail-value">
+                                        {% if coupon.status == 'פעיל' %}
+                                            פעיל
+                                        {% elif coupon.status == 'נוצל' %}
+                                            נוצל
+                                        {% elif coupon.status == 'פג תוקף' %}
+                                            פג תוקף
+                                        {% else %}
+                                            {{ coupon.status }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                {% if latest_usage %}
+                                <div class="detail-row">
+                                    <span class="detail-label">ניצול אחרון:</span>
+                                    <span class="detail-value">{{ latest_usage | to_israel_time }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
         {% endif %}
 
-        <!-- כפתורי פעולה -->
+        <!-- Action buttons -->
         <div class="action-buttons">
             <a href="{{ url_for('export.export_excel') }}" class="export-button">
-                <i class="fas fa-file-excel" aria-hidden="true"></i> ייצוא ל-Excel
+                <i class="fas fa-file-excel"></i>
+                <span>ייצוא ל-Excel</span>
             </a>
             <a href="{{ url_for('export.export_pdf') }}" class="export-button">
-                <i class="fas fa-file-pdf" aria-hidden="true"></i> ייצוא ל-PDF
+                <i class="fas fa-file-pdf"></i>
+                <span>ייצוא ל-PDF</span>
             </a>
             {% if current_user.is_admin %}
                 <a href="{{ url_for('coupons.update_all_coupons_route') }}" class="export-button">
-                    <i class="fa fa-refresh" aria-hidden="true"></i> עדכון קופונים מ-Multipass
+                    <i class="fas fa-sync-alt"></i>
+                    <span>עדכון קופונים מ-Multipass</span>
                 </a>
             {% endif %}
             <a href="{{ url_for('coupons.select_coupons_to_delete') }}" class="export-button">
-                <i class="fa fa-trash" aria-hidden="true"></i> בחירת קופונים למחיקה
+                <i class="fas fa-trash"></i>
+                <span>בחירת קופונים למחיקה</span>
             </a>
         </div>
     </section>
 </section>
+
+<!-- Modal for displaying company coupons with animation -->
+<div id="companyModal" class="modal">
+  <div class="modal-content">
+    <!-- Close modal button -->
+    <span class="close-modal">×</span>
+    <!-- Company title -->
+    <h2 id="modal-company-name">קופונים מחברת ...</h2>
+    <!-- Company logo -->
+    <img id="modal-company-logo" alt="Company Logo" style="display: block;" src="/static/images/carrefour.png">
+    <!-- Total remaining value -->
+    <p id="modal-total-remaining" style="font-size: 1.2em; font-weight: bold; margin: 5px 0;"></p>
+    <ul id="modal-coupons-list"></ul>
+  </div>
+</div>
+
+<!-- Modal for updating coupon usage with animation -->
+<div id="usageModal" class="modal">
+  <div class="modal-content usage-modal-content" style="max-width: 600px;">
+    <span class="close-usage-modal">×</span>
+    <h3>עדכון סכום שימוש</h3>
+    <!-- Dynamic content will be filled here -->
+    <h2 id="usage-modal-company" style="color: #00bfff; font-size: 1.8em; margin-bottom: 5px;"></h2>
+    <img id="usage-modal-logo" alt="Company Logo" style="display: block; margin: 10px auto 0 auto; width: 80px; height: 80px;" src="/static/images/carrefour.png">
+    <p id="usage-modal-code" style="margin-bottom:10px;"><strong></strong></p>
+    <p id="usage-modal-remaining" style="margin-bottom:10px;"><strong>יתרה נוכחית: <span id="remainingValue">70.30</span> ש"ח</strong></p>
+    <input type="number" id="usageAmount" step="0.01" placeholder="בכמה השתמשת?" style="padding:8px; width:200px;">
+    <br>
+    <button id="usageConfirmButton" style="margin-top:10px; padding:8px 16px; background-color:#3498db; color:#fff; border:none; border-radius:5px; cursor:pointer;">
+      אישור
+    </button>
+    <button id="updateFullAmountButton" style="margin-top:10px; padding:8px 16px; background-color:#2ecc71; color:#fff; border:none; border-radius:5px; cursor:pointer;">
+      עדכון כל היתרה
+    </button>
+    <div id="usageErrorMsg" style="color:red; margin-top:10px; display:none;"></div>
+  </div>
+</div>
+
+<!-- Modal for large display with animation -->
+<div id="bigDisplayModal" class="modal">
+  <div class="modal-content">
+    <span class="close-big-modal">×</span>
+    <h2 id="bigModalCompanyName">Be שופרסל</h2>
+    <img id="bigModalLogo" alt="Logo" style="width:120px;height:120px;object-fit:cover;margin:10px auto;border-radius:8px;" src="/static/images/be_shufersal.png">
+    <h1 id="bigModalCouponCode" style="margin-top:20px;">91381000401555109674</h1>
+    <!-- Block for displaying CVV and card expiration -->
+    <div id="bigModalExtraDetails" style="margin-top:20px; display:none;">
+      <h1 id="bigModalCouponCVV" style="margin:0; font-weight: bold;"></h1>
+      <h1 id="bigModalCardExp" style="margin:0; font-weight: bold;"></h1>
+    </div>
+    <!-- QR code element for coupon code -->
+    <div id="qrcode" style="margin: 20px auto; width: 200px; height: 200px;"></div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const toggleButton = document.getElementById('toggle-inactive-coupons');
-        const table = document.getElementById('inactive-coupons-table');
-
-        if (toggleButton && table) {
-            toggleButton.addEventListener('click', function() {
-                if (table.style.display === 'none' || table.style.display === '') {
-                    table.style.display = 'table';
-                    toggleButton.innerHTML = '<i class="fa fa-eye-slash" aria-hidden="true"></i> הסתר קופונים שנוצלו ולא פעילים';
-                } else {
-                    table.style.display = 'none';
-                    toggleButton.innerHTML = '<i class="fa fa-eye" aria-hidden="true"></i> הצג קופונים שנוצלו ולא פעילים';
-                }
-            });
-
-            table.style.display = 'table';
-        }
-    });
-
-    function openTab(evt, tabName) {
-        var tabContents = document.getElementsByClassName("tab-content");
-        for (var i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-
-        var tabButtons = document.getElementsByClassName("tab-button");
-        for (var i = 0; i < tabButtons.length; i++) {
-            tabButtons[i].classList.remove("active");
-        }
-
-        document.getElementById(tabName).classList.add("active");
-        evt.currentTarget.classList.add("active");
+// # Main JavaScript for coupon management page functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // # Toggle inactive coupons visibility
+    const toggleButton = document.getElementById('toggle-inactive-coupons');
+    const container = document.getElementById('inactive-coupons-container');
+    
+    if (toggleButton && container) {
+        toggleButton.addEventListener('click', function() {
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                toggleButton.innerHTML = '<i class="fas fa-eye-slash"></i><span>הסתר קופונים שנוצלו ולא פעילים</span>';
+            } else {
+                container.style.display = 'none';
+                toggleButton.innerHTML = '<i class="fas fa-eye"></i><span>הצג קופונים שנוצלו ולא פעילים</span>';
+            }
+        });
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
-        var defaultTab = document.querySelector(".tab-button.active");
-        if (defaultTab) {
-            defaultTab.click();
-        }
-    });
-        document.addEventListener('DOMContentLoaded', function () {
-        const rows = document.querySelectorAll('.clickable-row');
-        rows.forEach(row => {
-            row.addEventListener('click', function () {
-                const href = this.getAttribute('data-href');
-                if (href) {
-                    window.location.href = href;
-                }
-            });
+    // # Make table rows clickable
+    const rows = document.querySelectorAll('.clickable-row');
+    rows.forEach(row => {
+        row.addEventListener('click', function() {
+            const href = this.getAttribute('data-href');
+            if (href) {
+                window.location.href = href;
+            }
         });
     });
+    
+    // # Setup coupon card interactions
+    setupCouponCardInteractions();
+});
+
+// # Function to handle coupon card interactions
+function setupCouponCardInteractions() {
+    // Event delegation for all coupon card buttons
+    document.addEventListener('click', function(e) {
+        // Show code button
+        if (e.target.closest('.show-code')) {
+            const card = e.target.closest('.coupon-card-index-wrapper');
+            const company = card.getAttribute('data-company');
+            const couponCode = card.getAttribute('data-coupon-code');
+            const logoSrc = card.getAttribute('data-logo-src');
+            const couponCVV = card.getAttribute('data-coupon-cvv') || '';
+            const couponCardExp = card.getAttribute('data-coupon-card-index-exp') || '';
+            
+            showBigDisplay(company, couponCode, logoSrc, couponCVV, couponCardExp);
+        }
+        
+        // Update usage button
+        if (e.target.closest('.update-usage')) {
+            const card = e.target.closest('.coupon-card-index-wrapper');
+            const couponId = card.getAttribute('data-coupon-id');
+            const company = card.getAttribute('data-company');
+            const couponCode = card.getAttribute('data-coupon-code');
+            const remaining = parseFloat(card.getAttribute('data-remaining'));
+            const logoSrc = card.getAttribute('data-logo-src');
+            
+            showUsageModal(couponId, company, couponCode, remaining, logoSrc);
+        }
+    });
+}
+
+// # Function to show the big display modal with QR code
+function showBigDisplay(company, couponCode, logoSrc, couponCVV, couponCardExp) {
+    const bigModalCompanyName = document.getElementById('bigModalCompanyName');
+    const bigModalLogo = document.getElementById('bigModalLogo');
+    const bigModalCouponCode = document.getElementById('bigModalCouponCode');
+    const bigModalExtraDetails = document.getElementById('bigModalExtraDetails');
+    const bigModalCouponCVV = document.getElementById('bigModalCouponCVV');
+    const bigModalCardExp = document.getElementById('bigModalCardExp');
+    const bigModal = document.getElementById('bigDisplayModal');
+    
+    // Set modal content
+    bigModalCompanyName.textContent = company;
+    bigModalLogo.src = logoSrc;
+    bigModalCouponCode.textContent = couponCode;
+    
+    // Display or hide CVV and expiration info
+    if (couponCVV || couponCardExp) {
+        bigModalExtraDetails.style.display = 'block';
+        bigModalCouponCVV.textContent = couponCVV ? `${couponCVV} :CVV` : '';
+        bigModalCardExp.textContent = couponCardExp ? `תוקף: ${couponCardExp}` : '';
+    } else {
+        bigModalExtraDetails.style.display = 'none';
+    }
+    
+    // Generate QR code
+    generateQRCode(couponCode);
+    
+    // Show modal
+    bigModal.classList.add('active');
+}
+
+// # Function to show the usage modal
+function showUsageModal(couponId, company, couponCode, remaining, logoSrc) {
+    const usageModal = document.getElementById('usageModal');
+    const usageCompany = document.getElementById('usage-modal-company');
+    const usageCode = document.getElementById('usage-modal-code');
+    const usageAmountInput = document.getElementById('usageAmount');
+    const usageErrorMsg = document.getElementById('usageErrorMsg');
+    
+    // Set modal content
+    usageCompany.textContent = 'חברה: ' + company;
+    usageCode.innerHTML = '<strong>קוד קופון: ' + couponCode + '</strong>';
+    usageAmountInput.value = '';
+    usageErrorMsg.style.display = 'none';
+    document.getElementById('remainingValue').textContent = remaining.toFixed(2);
+    document.getElementById('usage-modal-logo').src = logoSrc;
+    
+    // Store current coupon info for the usage confirmation button
+    window.currentCouponId = couponId;
+    window.currentRemaining = remaining;
+    
+    // Show modal
+    usageModal.classList.add('active');
+}
+
+// # Generate QR code function
+function generateQRCode(code) {
+    const qrCodeContainer = document.getElementById('qrcode');
+    if (typeof QRCode !== 'undefined' && qrCodeContainer) {
+        // Clear previous QR code
+        qrCodeContainer.innerHTML = '';
+        
+        // Create new QR code
+        new QRCode(qrCodeContainer, {
+            text: code,
+            width: 200,
+            height: 200,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+}
+
+// # Modal functionality script
+(function() {
+    // Make functions available globally
+    window.openCompanyModal = openCompanyModal;
+    window.updateUIAfterUsage = updateUIAfterUsage;
+    
+    // Initialize variables
+    let usageUpdated = false;
+    let currentCouponId = null;
+    let currentRemaining = 0;
+    
+    // DOM elements
+    const modal = document.getElementById('companyModal');
+    const modalCompanyName = document.getElementById('modal-company-name');
+    const modalCompanyLogo = document.getElementById('modal-company-logo');
+    const modalTotalRemaining = document.getElementById('modal-total-remaining');
+    const modalCouponsList = document.getElementById('modal-coupons-list');
+    const closeModal = document.querySelector('.close-modal');
+    
+    const usageModal = document.getElementById('usageModal');
+    const closeUsageModal = document.querySelector('.close-usage-modal');
+    const usageCompany = document.getElementById('usage-modal-company');
+    const usageCode = document.getElementById('usage-modal-code');
+    const usageAmountInput = document.getElementById('usageAmount');
+    const usageErrorMsg = document.getElementById('usageErrorMsg');
+    const usageConfirmBtn = document.getElementById('usageConfirmButton');
+    const updateFullAmountBtn = document.getElementById('updateFullAmountButton');
+    
+    const bigModal = document.getElementById('bigDisplayModal');
+    const closeBigModal = document.querySelector('.close-big-modal');
+    
+    // Set up event listeners
+    if (closeModal) {
+        closeModal.addEventListener('click', function() {
+            modal.classList.remove('active');
+            if (usageUpdated) {
+                window.location.reload();
+            }
+        });
+    }
+    
+    window.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+            if (usageUpdated) {
+                window.location.reload();
+            }
+        }
+    });
+    
+    if (closeUsageModal) {
+        closeUsageModal.addEventListener('click', function() {
+            usageModal.classList.remove('active');
+            if (usageUpdated) {
+                window.location.reload();
+            }
+        });
+    }
+    
+    window.addEventListener('click', function(e) {
+        if (e.target === usageModal) {
+            usageModal.classList.remove('active');
+            if (usageUpdated) {
+                window.location.reload();
+            }
+        }
+    });
+    
+    if (closeBigModal) {
+        closeBigModal.addEventListener('click', function() {
+            bigModal.classList.remove('active');
+        });
+    }
+    
+    window.addEventListener('click', function(e) {
+        if (e.target === bigModal) {
+            bigModal.classList.remove('active');
+        }
+    });
+    
+    // Update full amount button handler
+    if (updateFullAmountBtn) {
+        updateFullAmountBtn.addEventListener('click', function() {
+            usageAmountInput.value = currentRemaining;
+        });
+    }
+    
+    if (usageConfirmBtn) {
+        usageConfirmBtn.addEventListener('click', function() {
+            const usedAmount = parseFloat(usageAmountInput.value);
+            if (isNaN(usedAmount) || usedAmount <= 0) {
+                usageErrorMsg.textContent = 'אנא הזן סכום חוקי (> 0).';
+                usageErrorMsg.style.display = 'block';
+                return;
+            }
+            if (usedAmount > currentRemaining) {
+                usageErrorMsg.textContent = 'הסכום שהוזן חורג מהיתרה הקיימת (' + currentRemaining.toFixed(2) + ' ש"ח).';
+                usageErrorMsg.style.display = 'block';
+                return;
+            }
+            usageErrorMsg.style.display = 'none';
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            fetch(`/update_coupon_usage/${currentCouponId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `csrf_token=${csrfToken}&used_amount=${usedAmount}`
+            })
+            .then(async response => {
+                if (!response.ok) {
+                    const text = await response.text();
+                    usageErrorMsg.textContent = text || 'שגיאה בעדכון השימוש.';
+                    usageErrorMsg.style.display = 'block';
+                    return;
+                }
+                usageUpdated = true;
+                usageModal.classList.remove('active');
+                
+                // Update UI after successful usage update
+                updateUIAfterUsage(currentCouponId, usedAmount);
+            })
+            .catch(err => {
+                usageErrorMsg.textContent = 'שגיאה בלתי צפויה: ' + err;
+                usageErrorMsg.style.display = 'block';
+            });
+        });
+    }
+    
+    // Function to update UI after successful usage update
+    function updateUIAfterUsage(couponId, usedAmount) {
+        // Update the coupon card in the main UI
+        const cardWrapper = document.querySelector(`.coupon-card-index-wrapper[data-coupon-id="${couponId}"]`);
+        if (cardWrapper) {
+            const oldRemaining = parseFloat(cardWrapper.getAttribute('data-remaining')) || 0;
+            const newRemaining = Math.max(0, oldRemaining - usedAmount).toFixed(2);
+            
+            // Update the data attribute
+            cardWrapper.setAttribute('data-remaining', newRemaining);
+            
+            // Update the displayed remaining value
+            const valueElement = cardWrapper.querySelector('.coupon-value .value');
+            if (valueElement) {
+                valueElement.textContent = newRemaining + ' ₪';
+            }
+            
+            // Update progress bar if exists
+            if (cardWrapper.querySelector('.progress-fill')) {
+                const couponValue = parseFloat(oldRemaining) + parseFloat(usedAmount);
+                if (couponValue > 0) {
+                    const usedValue = couponValue - parseFloat(newRemaining);
+                    const percentage = (usedValue / couponValue * 100).toFixed(1);
+                    
+                    cardWrapper.querySelector('.progress-text').textContent = `שימוש: ${percentage}%`;
+                    cardWrapper.querySelector('.progress-fill').style.width = `${percentage}%`;
+                }
+            }
+        }
+    }
+    
+    // Function to open company modal
+    function openCompanyModal(companyName, cardList) {
+        const firstCard = cardList[0];
+        const logoSrc = firstCard.getAttribute('data-logo-src') || '';
+
+        modalCompanyLogo.src = logoSrc;
+        modalCompanyLogo.style.display = logoSrc ? 'block' : 'none';
+        modalCompanyName.textContent = 'קופונים מחברת ' + companyName;
+
+        let totalRemaining = 0;
+        cardList.forEach(card => {
+            const remainingVal = parseFloat(card.getAttribute('data-remaining')) || 0;
+            totalRemaining += remainingVal;
+        });
+        modalTotalRemaining.textContent = 'סה"כ נותר: ' + totalRemaining.toFixed(2) + ' ₪';
+
+        modalCouponsList.innerHTML = '';
+        cardList.forEach(card => {
+            const couponCode = card.getAttribute('data-coupon-code');
+            const couponId = card.getAttribute('data-coupon-id');
+            const remaining = parseFloat(card.getAttribute('data-remaining') || '0').toFixed(2);
+            const couponLink = card.querySelector('a.view-details').getAttribute('href');
+            const logoSrcItem = card.getAttribute('data-logo-src') || '';
+            const isOneTime = card.getAttribute('data-is-one-time') === 'true';
+            const cvv = card.getAttribute('data-coupon-cvv') || '';
+            const cardExp = card.getAttribute('data-coupon-card-index-exp') || '';
+            const purpose = card.getAttribute('data-purpose') || '';
+
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <a href="${couponLink}">
+                        קוד: ${couponCode} - ${isOneTime ? 'מטרה: ' + purpose : 'נותר: ' + remaining + ' ₪'}
+                    </a>
+                    <div class="coupon-info-buttons">
+                        ${!isOneTime ? `
+                        <button
+                            class="update-usage-btn"
+                            data-coupon-id="${couponId}"
+                            data-coupon-code="${couponCode}"
+                            data-company="${companyName}"
+                            data-remaining="${remaining}"
+                            data-logo-src="${logoSrcItem}"
+                        >
+                            עדכון שימוש
+                        </button>
+                        ` : ''}
+                        <button
+                            class="show-big-btn"
+                            data-company="${companyName}"
+                            data-coupon-code="${couponCode}"
+                            data-logo-src="${logoSrcItem}"
+                            data-coupon-cvv="${cvv}"
+                            data-coupon-card-index-exp="${cardExp}"
+                        >
+                            הצגת קוד הקופון
+                        </button>
+                    </div>
+                </div>
+            `;
+            modalCouponsList.appendChild(li);
+        });
+
+        modal.classList.add('active');
+    }
+})();
 </script>
+
 <style>
-    /* 1. עיצוב כותרת העמוד והסקשן הראשי */
-    .coupon-management h2 {
-        font-size: 2.5em;
-        font-weight: bold;
-        color: var(--primary-color);
-        margin: 0;
-        margin-top: -20px; /* Small spacing adjustment at the top */
-        position: relative;
-        display: inline-block;
-        /* Space below the title – הערה: הערך האחרון שתקף */
-        padding-bottom: 5px;
-        text-align: center;
-        /* Matching the underline style */
-        border-bottom: 4px solid var(--accent-color);
+/* ===== Main Styles for Coupon Management Page ===== */
+
+/* # Base Styles */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #ecf0f1;
+    --accent-color: #e67e22;
+    --light-accent: #f39c12;
+    --success-color: #2ecc71;
+    --danger-color: #e74c3c;
+    --info-color: #3498db;
+    --white: #ffffff;
+    --light-gray: #e0e0e0;
+    --gray: #95a5a6;
+    --text-color: #333333;
+    --transition-speed: 0.3s;
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* # Section Header Styles */
+.coupon-management {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.coupon-management h2 {
+    font-size: 2.2em;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 0;
+    padding-bottom: 10px;
+    position: relative;
+    display: inline-block;
+    border-bottom: 4px solid var(--accent-color);
+}
+
+.coupon-section-title {
+    font-size: 1.5em;
+    color: var(--primary-color);
+    text-align: center;
+    margin: 25px 0 15px;
+    position: relative;
+}
+
+.coupon-section-title::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 3px;
+    background-color: var(--accent-color);
+    margin: 8px auto 0;
+    border-radius: 2px;
+}
+
+/* # Coupon Container & Card Styling - Using Index.html Style */
+.coupon-container-index {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+    justify-content: center;
+    grid-auto-flow: row;
+    grid-template-rows: auto;
+}
+
+.coupon-card-index-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    overflow: visible;
+    padding-top: 5px;
+}
+
+.coupon-card-index {
+    background-color: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+    max-width: 260px;
+}
+
+.coupon-card-index:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.coupon-header {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+}
+
+.coupon-header img {
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.coupon-header h4 {
+    margin: 0;
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #333;
+}
+
+.for-sale-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: var(--accent-color);
+    color: var(--white);
+    padding: 3px 10px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.coupon-content {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.coupon-code, .coupon-value, .sale-price {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Style for coupon-purpose */
+.coupon-purpose {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.coupon-purpose .label {
+    font-size: 0.85em;
+    color: #777;
+    margin-bottom: 3px;
+}
+
+.coupon-purpose .value {
+    width: 100%;
+    font-weight: 600;
+    color: #333;
+    word-break: break-word;
+}
+
+.coupon-tags {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.label {
+    font-size: 0.85em;
+    color: #777;
+}
+
+.value {
+    font-weight: 600;
+    color: #333;
+    word-break: break-word;
+    max-width: 60%;
+    text-align: left;
+}
+
+.usage-progress {
+    margin-top: 8px;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.progress-bar {
+    height: 8px;
+    background-color: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--info-color);
+    border-radius: 4px;
+}
+
+.coupon-actions {
+    padding: 16px;
+    display: flex;
+    gap: 8px;
+    border-top: 1px solid #eee;
+}
+
+.action-button {
+    flex: 1;
+    background-color: #f5f5f5;
+    color: #555;
+    border: none;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.75em;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    text-decoration: none;
+}
+
+.action-button i {
+    font-size: 1em;
+}
+
+.action-button:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+.view-details:hover {
+    background-color: var(--info-color);
+}
+
+.show-code:hover {
+    background-color: var(--light-accent);
+}
+
+.update-usage:hover {
+    background-color: var(--success-color);
+}
+
+/* # Empty State Message */
+.no-data-message {
+    text-align: center;
+    color: var(--gray);
+    font-size: 1.1em;
+    margin: 20px 0;
+    padding: 15px;
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+}
+
+/* # Inactive Coupons Table Styles */
+.toggle-button-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.toggle-button {
+    background-color: var(--info-color);
+    color: var(--white);
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.toggle-button:hover {
+    background-color: #2980b9;
+}
+
+.toggle-button i {
+    margin-right: 5px;
+}
+
+.coupon-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    box-shadow: var(--card-shadow);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+.coupon-data-table th {
+    background-color: var(--primary-color);
+    color: var(--white);
+    font-weight: bold;
+    padding: 12px;
+    text-align: right;
+}
+
+.coupon-data-table td {
+    padding: 12px;
+    border-top: 1px solid var(--light-gray);
+    text-align: right;
+}
+
+.coupon-data-table tbody tr {
+    transition: background-color var(--transition-speed);
+}
+
+.coupon-data-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.coupon-data-table tbody tr:hover {
+    background-color: #f0f0f0;
+    cursor: pointer;
+}
+
+/* # Mobile Card View for Inactive Coupons */
+.mobile-cards-view {
+    display: none;
+}
+
+.inactive-coupon-card {
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 15px;
+    overflow: hidden;
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.inactive-coupon-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--hover-shadow);
+    cursor: pointer;
+}
+
+.inactive-coupon-header {
+    display: flex;
+    align-items: center;
+    background-color: var(--secondary-color);
+    padding: 10px;
+}
+
+.company-logo-small {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 5px;
+    margin-right: 10px;
+    background-color: var(--white);
+    padding: 3px;
+}
+
+.inactive-coupon-company {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.inactive-coupon-details {
+    padding: 10px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* # Export Buttons Section */
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 30px 0;
+}
+
+.export-button {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: var(--accent-color);
+    color: var(--white);
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+}
+
+.export-button:hover {
+    background-color: #d35400;
+    transform: translateY(-2px);
+}
+
+.export-button i {
+    margin-right: 8px;
+}
+
+/* ===== Modal Styles with Animation ===== */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.modal.active .modal-content {
+    transform: translateY(0);
+}
+
+.modal-content h2,
+.modal-content h3 {
+    margin: 10px 0;
+    color: var(--primary-color);
+}
+
+.close-modal,
+.close-usage-modal,
+.close-big-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 1.8em;
+    cursor: pointer;
+    color: var(--gray);
+    transition: color var(--transition-speed);
+    line-height: 1;
+}
+
+.close-modal:hover,
+.close-usage-modal:hover,
+.close-big-modal:hover {
+    color: var(--danger-color);
+}
+
+#modal-company-logo,
+#usage-modal-logo,
+#bigModalLogo {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin: 15px auto;
+    display: block;
+    background-color: var(--secondary-color);
+    padding: 5px;
+}
+
+#modal-coupons-list {
+    margin-top: 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+    list-style: none;
+    padding: 0;
+}
+
+#modal-coupons-list li {
+    width: 100%;
+    border-bottom: 1px solid var(--light-gray);
+    padding-bottom: 15px;
+}
+
+#modal-coupons-list li:last-child {
+    border-bottom: none;
+}
+
+#modal-coupons-list li a {
+    text-decoration: none;
+    color: var(--info-color);
+    margin-bottom: 10px;
+    display: block;
+    font-weight: bold;
+}
+
+#modal-coupons-list li a:hover {
+    text-decoration: underline;
+}
+
+.coupon-info-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.update-usage-btn,
+.show-big-btn {
+    border: none;
+    border-radius: 5px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: #fff;
+    font-size: 0.9em;
+    transition: background-color var(--transition-speed);
+}
+
+.update-usage-btn {
+    background-color: var(--success-color);
+}
+
+.update-usage-btn:hover {
+    background-color: #27ae60;
+}
+
+.show-big-btn {
+    background-color: var(--light-accent);
+}
+
+.show-big-btn:hover {
+    background-color: #d35400;
+}
+
+/* QR code styling */
+#qrcode {
+    margin: 20px auto;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#bigModalCouponCode {
+    word-break: break-word;
+    font-size: 1.5em;
+    margin: 15px 0;
+    padding: 10px;
+    background-color: var(--secondary-color);
+    border-radius: 5px;
+    font-family: monospace;
+}
+
+/* ===== Responsive Styles ===== */
+@media (max-width: 1200px) {
+    .coupon-container-index {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+@media (max-width: 992px) {
+    .coupon-container-index {
+        grid-template-columns: repeat(2, 1fr);
     }
     
-    .coupon-management h2::after {
-        content: '';
-        position: absolute;
-        width: 60px;
-        height: 4px;
-        background-color: var(--accent-color);
-        bottom: 0;
-        border-radius: 2px;
-        left: 50%;
-        transform: translateX(-50%);
+    .coupon-card-index {
+        max-width: 100%;
     }
-    
-    .section-header h2::after {
-      display: none;
-    }
-    
-    /* 2. כותרות קטגוריות וקופונים */
-    .coupon-section-title {
-        text-align: center;
-        color: var(--primary-color);
-        margin: 10px 0;
-    }
-    
-    /* 3. מכולת הקופונים (הכרטיסים) */
-    .coupon-container {
-        display: flex;
+}
+@media (max-width: 768px) {
+    .coupon-actions {
+        flex-direction: row;
         flex-wrap: wrap;
-        justify-content: center;
-        gap: 20px;
+        padding: 10px;
+        justify-content: space-between;
+        gap: 8px;
     }
     
-    .coupon-card {
-        box-sizing: border-box;
-        padding: 15px 20px;
-        border: 1px solid var(--light-gray);
-        border-radius: 8px;
-        background-color: var(--white);
-        transition: transform var(--transition-speed), box-shadow var(--transition-speed);
-        color: inherit;
-        text-decoration: none;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+    .coupon-actions .action-button {
+        flex: 0 0 calc(50% - 4px);
+        margin: 0;
+        padding: 6px 0;
     }
     
-    .coupon-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    .coupon-actions .action-button:last-child {
+        flex: 0 0 calc(50% - 4px);
+        margin: 0 auto;
     }
     
-    .coupon-card p {
-        margin: 10px 0;
-        color: black;
-    }
-    
-    .coupon-card .company-name {
-        font-weight: bold;
-    }
-    
-    /* 4. תמונות הלוגו בתוך הכרטיסים */
-    .company-logo,
-    .coupon-logo,
-    .logo,
-    .coupon-image {
-        width: 100px;
-        height: 100px;
-        object-fit: contain;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        transition: transform var(--transition-speed), box-shadow var(--transition-speed);
-    }
-    
-    .company-logo:hover,
-    .coupon-logo:hover,
-    .logo:hover,
-    .coupon-image:hover {
-        transform: scale(1.05);
-        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-    }
-    
-    /* 5. הודעת “אין קופונים” */
-    .no-data-message {
-        text-align: center;
-        color: var(--gray);
-        font-size: 1.1em;
-        margin-top: 10px;
-    }
-    
-    /* 6. כפתור "הצג/הסתר קופונים לא פעילים" וטבלת הקופונים */
-    .toggle-button-container {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-        margin-bottom: 10px;
-    }
-    
-    #toggle-inactive-coupons {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: var(--primary-color);
-        color: var(--white);
-        border: none;
-        padding: 10px 16px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: background-color var(--transition-speed);
-        font-size: 0.9em;
-    }
-    
-    #toggle-inactive-coupons:hover {
-        background-color: #1A5A8D;
-    }
-    
-    .coupon-data-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-    }
-    
-    .coupon-data-table th,
-    .coupon-data-table td {
-        border: 1px solid var(--light-gray);
-        padding: 12px;
-        text-align: center;
-    }
-    
-    .coupon-data-table th {
-        background-color: var(--secondary-color);
-        color: var(--text-color);
-        font-weight: bold;
-    }
-    
-    .coupon-data-table tbody tr:nth-child(odd) {
-        background-color: #f2f2f2;
-    }
-    
-    .coupon-data-table tbody tr:hover {
-        background-color: #ddd;
-    }
-    
-    /* 7. כפתורי פעולה (ייצוא ל-Excel, PDF, עדכון קופונים למחיקה וכו') */
     .action-buttons {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 15px;
-        margin-top: 30px;
-        flex-wrap: nowrap;
+        flex-direction: column;
+        align-items: stretch;
     }
     
     .export-button {
-        display: flex;
-        align-items: center;
+        justify-content: center;
+    }
+    
+    .desktop-table {
+        display: none;
+    }
+    
+    .mobile-cards-view {
+        display: block;
+    }
+    
+    .hide-on-mobile {
+        display: none;
+    }
+    
+    .coupon-management h2 {
+        font-size: 1.8em;
+    }
+    
+    .coupon-section-title {
+        font-size: 1.3em;
+    }
+    
+    .modal-content {
+        width: 95%;
+        padding: 15px;
+    }
+}
+
+@media (max-width: 600px) {
+    .coupon-container-index {
+        grid-template-columns: repeat(2, 1fr);
         gap: 8px;
-        padding: 12px 20px;
-        background-color: var(--accent-color);
-        color: var(--white);
-        text-align: center;
-        text-decoration: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: background-color var(--transition-speed);
-        font-size: 0.9em;
+        padding: 0 8px;
+        width: 100%;
+        max-width: 100%;
+        justify-content: center;
     }
     
-    .export-button:hover {
-        background-color: #e67e22;
+    .coupon-card-index-wrapper {
+        width: 100%;
     }
     
-    .export-button .fa {
-        font-size: 1.2em;
+    .coupon-card-index {
+        width: 100%;
     }
     
-    /* 8. התאמות רספונסיביות לעיצוב כרטיסי הקופון */
-    @media (max-width: 1200px) {
-        .coupon-card {
-            flex: 0 0 calc(25% - 20px);
-            max-width: calc(25% - 20px);
-        }
+    .coupon-header {
+        padding: 8px;
     }
     
-    @media (max-width: 992px) {
-        .coupon-card {
-            flex: 0 0 calc(33.333% - 20px);
-            max-width: calc(33.333% - 20px);
-        }
+    .coupon-header img {
+        width: 45px;
+        height: 45px;
+        margin-bottom: 5px;
     }
     
-    @media (max-width: 768px) {
-        .coupon-card {
-            flex: 0 0 calc(50% - 20px);
-            max-width: calc(50% - 20px);
-        }
-        .coupon-data-table th:nth-child(3),
-        .coupon-data-table td:nth-child(3),
-        .coupon-data-table th:nth-child(6),
-        .coupon-data-table td:nth-child(6) {
-            display: none;
-        }
-        .company-logo,
-        .coupon-logo,
-        .logo {
-            width: 40px;
-            height: auto;
-        }
-        .coupon-data-table th,
-        .coupon-data-table td {
-            font-size: 0.9em;
-            padding: 8px;
-        }
+    .coupon-header h4 {
+        font-size: 1em;
     }
     
-    @media (max-width: 500px) {
-        .coupon-card {
-            flex: 0 0 calc(50% - 20px);
-            max-width: calc(50% - 20px);
-        }
+    .coupon-content {
+        padding: 8px;
+        gap: 8px;
     }
+    
+    .label, .value {
+        font-size: 0.8em;
+    }
+    
+    .coupon-actions {
+        padding: 8px;
+    }
+    
+    .action-button {
+        padding: 6px 4px;
+        font-size: 0.7em;
+    }
+    
+    .coupon-card-index-wrapper:last-child:nth-child(odd) {
+        grid-column-start: 1;
+        grid-column-end: 3;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .coupon-card-index-wrapper:last-child:nth-child(odd) .coupon-card-index {
+        width: 100%;
+        max-width: 200px;
+    }
+}
 </style>
-    
-    
 {% endblock %}
