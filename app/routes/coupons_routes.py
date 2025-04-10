@@ -414,6 +414,12 @@ def load_coupon_modals():
     """
     return render_template('index_modals/coupon_modals.html')
 
+@coupons_bp.route('/load_quick_add_coupon_modal')
+@login_required
+def load_quick_add_coupon_modal():
+    companies = Company.query.order_by(Company.name).all()
+    return render_template('index_modals/quick_add_coupon_modal.html', companies=companies)
+
 DEBUG_PRINT = False  # הגדר True כדי להדפיס הודעות debug, False כדי לכבות
 
 @coupons_bp.route('/add_coupons_bulk', methods=['GET', 'POST'])

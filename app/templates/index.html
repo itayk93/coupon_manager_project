@@ -66,11 +66,14 @@
       <strong>לחסוך כסף בקניות</strong> בכל החנויות הגדולות בישראל.
     </p>
     
-    <!-- CHANGED: Replaced savings text with centered statistics button -->
-    <div style="display: flex; justify-content: center;">
-      <button id="open-stats-modal" class="stats-button">
-          <i class="fas fa-chart-bar"></i> על מה חסכת?
-      </button>
+    <!-- Statistics and Quick Add buttons -->
+    <div style="display: flex; justify-content: center; gap: 15px;">
+        <button id="open-stats-modal" class="stats-button">
+            <i class="fas fa-chart-bar"></i> על מה חסכת?
+        </button>
+        <button id="quick-add-coupon-btn" class="stats-button quick-add-button">
+            <i class="fas fa-plus"></i> הוספת קופון מהירה
+        </button>
     </div>
 </section>
 
@@ -238,6 +241,9 @@
 
 <!-- Stats Modal Container - Will be populated dynamically -->
 <div id="statsModal" class="modal"></div>
+
+<!-- Quick Add Coupon Modal Container -->
+<div id="quickAddCouponModal" class="modal"></div>
 
 <div class="export-buttons">
     <a href="{{ url_for('export.export_excel') }}" class="export-button">
@@ -1203,6 +1209,13 @@
         width: 100%;
     }
 }
+/* Quick add button style */
+.quick-add-button {
+  background-color: #27ae60;
+}
+.quick-add-button:hover {
+  background-color: #219653;
+}
 </style>
 
 <script>
@@ -1440,6 +1453,62 @@ document.addEventListener("DOMContentLoaded", function() {
         alert('שגיאה בטעינת חלון הסטטיסטיקות. אנא נסה שוב מאוחר יותר.');
       });
   }
+  // Quick Add Coupon Modal functionality
+    const quickAddCouponBtn = document.getElementById("quick-add-coupon-btn");
+    const quickAddCouponModal = document.getElementById("quickAddCouponModal");
+
+    if (quickAddCouponBtn) {
+    quickAddCouponBtn.addEventListener("click", function() {
+        loadQuickAddCouponModal();
+    });
+    }
+
+    // Function to load quick add coupon modal
+    function loadQuickAddCouponModal() {
+    fetch('{{ url_for("coupons.load_quick_add_coupon_modal") }}')
+        .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to load quick add coupon modal');
+        }
+        return response.text();
+        })
+        .then(html => {
+        // Insert the modal HTML
+        quickAddCouponModal.innerHTML = html;
+        
+        // Execute scripts from the loaded content
+        const scriptTags = quickAddCouponModal.getElementsByTagName('script');
+        for (let i = 0; i < scriptTags.length; i++) {
+            const newScript = document.createElement('script');
+            Array.from(scriptTags[i].attributes).forEach(attr => {
+            newScript.setAttribute(attr.name, attr.value);
+            });
+            newScript.appendChild(document.createTextNode(scriptTags[i].innerHTML));
+            document.head.appendChild(newScript);
+        }
+        
+        // Show the main modal
+        quickAddCouponModal.classList.add("active");
+        
+        // Also activate the inner modal content (wait a tiny bit to ensure DOM is updated)
+        setTimeout(() => {
+            const innerModal = document.getElementById("quickAddModal");
+            if (innerModal) {
+            innerModal.classList.add("active");
+            // Apply direct styles to make content visible
+            const modalContent = innerModal.querySelector('.quick-add-modal-content');
+            if (modalContent) {
+                modalContent.style.transform = 'translateY(0)';
+                modalContent.style.opacity = '1';
+            }
+            }
+        }, 10);
+        })
+        .catch(error => {
+        console.error('Error loading quick add coupon modal:', error);
+        alert('שגיאה בטעינת הודעת הוספת קופון מהירה. אנא נסה שוב מאוחר יותר.');
+        });
+    }
 });
 </script>
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>

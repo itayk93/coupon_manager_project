@@ -45,13 +45,13 @@
             const parts = value.split(`; ${name}=`);
             if (parts.length === 2) return parts.pop().split(';').shift();
         }
-    
+
         if (getCookie('cookies_accepted') === 'true') {
             var script = document.createElement("script");
             script.src = "https://www.googletagmanager.com/gtag/js?id={{ ga_tracking_id }}";
             script.async = true;
             document.head.appendChild(script);
-    
+
             script.onload = function () {
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
@@ -67,7 +67,7 @@
         }
     </script>
     {% endif %}
-    
+
     <!-- Apple Touch Icon (for Home Screen) -->
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
@@ -89,27 +89,6 @@
 
     <!-- סגנונות מובנים -->
     <style>
-        /* # CSS Variables for Consistency */
-        :root {
-            --primary-color: #2E86C1; /* Calm Blue */
-            --secondary-color: #A9CCE3; /* Light Blue */
-            --accent-color: #F5B041; /* Light Orange for emphasis */
-            --background-color: #f9f9f9;
-            --text-color: #2C3E50;
-            --white: #ffffff;
-            --light-gray: #e0e0e0;
-            --gray: #bdc3c7;
-            --success-color: #27AE60;
-            --success-text: #ffffff;
-            --danger-color: #C0392B;
-            --danger-text: #ffffff;
-            --warning-color: #F39C12;
-            --warning-text: #ffffff;
-            --font-family: 'Rubik', Arial, sans-serif;
-            --transition-speed: 0.3s;
-            --max-width: 1200px;
-        }
-
         /* # Reset and Base Styles */
         html {
             box-sizing: border-box;
@@ -340,6 +319,7 @@
 
         .dropdown-content a:hover {
             background-color: var(--secondary-color);
+            color: var(--text-color); /* או color: #000000; */
         }
 
         .dropdown-divider {

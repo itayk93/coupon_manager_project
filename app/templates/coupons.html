@@ -148,85 +148,87 @@
         {% endif %}
 
         <!-- Coupons for sale section -->
-        {% if coupons_for_sale %}
-            <h3 class="coupon-section-title">קופונים למכירה</h3>
-            <div class="coupon-container-index">
-                {% for coupon in coupons_for_sale %}
-                    <div class="coupon-card-index-wrapper" 
-                         data-company="{{ coupon.company }}" 
-                         data-coupon-code="{{ coupon.code }}" 
-                         data-coupon-id="{{ coupon.id }}" 
-                         data-remaining="{{ '%.2f'|format(coupon.remaining_value) }}" 
-                         data-logo-src="{{ url_for('static', filename=company_logo_mapping.get(coupon.company.lower(), 'images/default.png')) }}"
-                         data-is-one-time="{{ 'true' if coupon.is_one_time else 'false' }}"
-                         {% if coupon.is_one_time %}data-purpose="{{ coupon.purpose }}"{% endif %}>
-                        <div class="coupon-card-index">
-                            <div class="coupon-header">
-                                {% set company_lower = coupon.company.lower() %}
-                                {% if company_lower in company_logo_mapping %}
-                                    <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo">
-                                {% else %}
-                                    <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="company-logo">
-                                {% endif %}
-                                <h4>{{ coupon.company }}</h4>
-                                <div class="for-sale-badge">למכירה</div>
-                            </div>
-                            
-                            <div class="coupon-content">
-                                {% if coupon.is_one_time %}
-                                    <div class="coupon-purpose">
-                                        <span class="label">מטרה:</span>
-                                        <span class="value">{{ coupon.purpose }}</span>
-                                    </div>
-                                {% else %}
-                                    <div class="coupon-value">
-                                        <span class="label">יתרה:</span>
-                                        <span class="value">{{ '%.2f'|format(coupon.remaining_value) }} ₪</span>
-                                    </div>
-                                    
-                                    <div class="usage-progress">
-                                        <div class="progress-text">
-                                            {% if coupon.original_value > 0 %}
-                                              שימוש: {{ ((coupon.original_value - coupon.remaining_value) / coupon.original_value * 100)|round(1) }}%
-                                            {% else %}
-                                              שימוש: 0%
-                                            {% endif %}
-                                        </div>
-                                        <div class="progress-bar">
-                                            <div class="progress-fill" style="width: {% if coupon.original_value > 0 %}{{ ((coupon.original_value - coupon.remaining_value) / coupon.original_value * 100)|round(1) }}{% else %}0{% endif %}%"></div>
-                                        </div>
-                                    </div>
-                                {% endif %}
+        {% if has_feature_access('CouponMarketplace', current_user) %}
+            {% if coupons_for_sale %}
+                <h3 class="coupon-section-title">קופונים למכירה</h3>
+                <div class="coupon-container-index">
+                    {% for coupon in coupons_for_sale %}
+                        <div class="coupon-card-index-wrapper" 
+                            data-company="{{ coupon.company }}" 
+                            data-coupon-code="{{ coupon.code }}" 
+                            data-coupon-id="{{ coupon.id }}" 
+                            data-remaining="{{ '%.2f'|format(coupon.remaining_value) }}" 
+                            data-logo-src="{{ url_for('static', filename=company_logo_mapping.get(coupon.company.lower(), 'images/default.png')) }}"
+                            data-is-one-time="{{ 'true' if coupon.is_one_time else 'false' }}"
+                            {% if coupon.is_one_time %}data-purpose="{{ coupon.purpose }}"{% endif %}>
+                            <div class="coupon-card-index">
+                                <div class="coupon-header">
+                                    {% set company_lower = coupon.company.lower() %}
+                                    {% if company_lower in company_logo_mapping %}
+                                        <img src="{{ url_for('static', filename=company_logo_mapping[company_lower]) }}" alt="{{ coupon.company }} Logo" class="company-logo">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename='images/default.png') }}" alt="Default Logo" class="company-logo">
+                                    {% endif %}
+                                    <h4>{{ coupon.company }}</h4>
+                                    <div class="for-sale-badge">למכירה</div>
+                                </div>
                                 
-                                <div class="sale-price">
-                                    <span class="label">מחיר מכירה:</span>
-                                    <span class="value" style="color: var(--accent-color);">{{ '%.2f'|format(coupon.cost) }} ₪</span>
+                                <div class="coupon-content">
+                                    {% if coupon.is_one_time %}
+                                        <div class="coupon-purpose">
+                                            <span class="label">מטרה:</span>
+                                            <span class="value">{{ coupon.purpose }}</span>
+                                        </div>
+                                    {% else %}
+                                        <div class="coupon-value">
+                                            <span class="label">יתרה:</span>
+                                            <span class="value">{{ '%.2f'|format(coupon.remaining_value) }} ₪</span>
+                                        </div>
+                                        
+                                        <div class="usage-progress">
+                                            <div class="progress-text">
+                                                {% if coupon.original_value > 0 %}
+                                                שימוש: {{ ((coupon.original_value - coupon.remaining_value) / coupon.original_value * 100)|round(1) }}%
+                                                {% else %}
+                                                שימוש: 0%
+                                                {% endif %}
+                                            </div>
+                                            <div class="progress-bar">
+                                                <div class="progress-fill" style="width: {% if coupon.original_value > 0 %}{{ ((coupon.original_value - coupon.remaining_value) / coupon.original_value * 100)|round(1) }}{% else %}0{% endif %}%"></div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="sale-price">
+                                        <span class="label">מחיר מכירה:</span>
+                                        <span class="value" style="color: var(--accent-color);">{{ '%.2f'|format(coupon.cost) }} ₪</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="coupon-actions">
+                                    <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="action-button view-details">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span>פרטים</span>
+                                    </a>
+                                    <button class="action-button show-code">
+                                        <i class="fas fa-eye"></i>
+                                        <span>הצג קוד</span>
+                                    </button>
+                                    
+                                    {% if not coupon.is_one_time %}
+                                    <button class="action-button update-usage">
+                                        <i class="fas fa-edit"></i>
+                                        <span>עדכן שימוש</span>
+                                    </button>
+                                    {% endif %}
                                 </div>
                             </div>
-                            
-                            <div class="coupon-actions">
-                                <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}" class="action-button view-details">
-                                    <i class="fas fa-info-circle"></i>
-                                    <span>פרטים</span>
-                                </a>
-                                <button class="action-button show-code">
-                                    <i class="fas fa-eye"></i>
-                                    <span>הצג קוד</span>
-                                </button>
-                                
-                                {% if not coupon.is_one_time %}
-                                <button class="action-button update-usage">
-                                    <i class="fas fa-edit"></i>
-                                    <span>עדכן שימוש</span>
-                                </button>
-                                {% endif %}
-                            </div>
                         </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p class="no-data-message">אין קופונים למכירה.</p>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="no-data-message">אין קופונים למכירה.</p>
+            {% endif %}
         {% endif %}
 
         <!-- Inactive coupons section -->
@@ -799,7 +801,6 @@ function generateQRCode(code) {
 
 /* # Base Styles */
 :root {
-    --primary-color: #2c3e50;
     --secondary-color: #ecf0f1;
     --accent-color: #e67e22;
     --light-accent: #f39c12;
