@@ -1,3 +1,4 @@
+<!-- index.html -->
 {% extends 'base.html' %}
 
 {% block title %}קופונים והנחות אונליין - Coupon Master{% endblock %}
@@ -1465,49 +1466,111 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Function to load quick add coupon modal
     function loadQuickAddCouponModal() {
-    fetch('{{ url_for("coupons.load_quick_add_coupon_modal") }}')
-        .then(response => {
-        if (!response.ok) {
-            throw new Error('Failed to load quick add coupon modal');
-        }
-        return response.text();
-        })
-        .then(html => {
-        // Insert the modal HTML
-        quickAddCouponModal.innerHTML = html;
+        // # First, clear any previous content and add active class
+        quickAddCouponModal.innerHTML = '';
+        quickAddCouponModal.className = 'modal active';
         
-        // Execute scripts from the loaded content
-        const scriptTags = quickAddCouponModal.getElementsByTagName('script');
-        for (let i = 0; i < scriptTags.length; i++) {
-            const newScript = document.createElement('script');
-            Array.from(scriptTags[i].attributes).forEach(attr => {
-            newScript.setAttribute(attr.name, attr.value);
+        // # Set up container styles directly
+        quickAddCouponModal.style.position = 'fixed';
+        quickAddCouponModal.style.zIndex = '9999';
+        quickAddCouponModal.style.left = '0';
+        quickAddCouponModal.style.top = '0';
+        quickAddCouponModal.style.width = '100%';
+        quickAddCouponModal.style.height = '100%';
+        quickAddCouponModal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        quickAddCouponModal.style.display = 'flex';
+        quickAddCouponModal.style.justifyContent = 'center';
+        quickAddCouponModal.style.alignItems = 'center';
+        
+        // # Fetch the modal content from the server
+        fetch('{{ url_for("coupons.load_quick_add_coupon_modal") }}')
+            .then(response => response.text())
+            .then(html => {
+                // # Create an iframe to isolate the modal content
+                const iframe = document.createElement('iframe');
+                iframe.style.width = '90%';
+                iframe.style.maxWidth = '550px';
+                iframe.style.height = '80vh';
+                iframe.style.maxHeight = '600px';
+                iframe.style.border = 'none';
+                iframe.style.borderRadius = '15px';
+                iframe.style.backgroundColor = 'white';
+                iframe.style.overflow = 'hidden';
+                
+                // # Add to modal container
+                quickAddCouponModal.appendChild(iframe);
+                
+                // # Add close button on top of iframe
+                const closeButton = document.createElement('button');
+                closeButton.textContent = '×';
+                closeButton.style.position = 'absolute';
+                closeButton.style.top = '10px';
+                closeButton.style.right = '10px';
+                closeButton.style.width = '30px';
+                closeButton.style.height = '30px';
+                closeButton.style.backgroundColor = 'white';
+                closeButton.style.border = 'none';
+                closeButton.style.borderRadius = '50%';
+                closeButton.style.fontSize = '24px';
+                closeButton.style.cursor = 'pointer';
+                closeButton.style.zIndex = '10000';
+                closeButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+                closeButton.style.display = 'flex';
+                closeButton.style.justifyContent = 'center';
+                closeButton.style.alignItems = 'center';
+                
+                // # Add click event to close button
+                closeButton.addEventListener('click', function() {
+                    quickAddCouponModal.classList.remove('active');
+                });
+                
+                // # Add backdrop click to close
+                quickAddCouponModal.addEventListener('click', function(e) {
+                    if (e.target === quickAddCouponModal) {
+                        quickAddCouponModal.classList.remove('active');
+                    }
+                });
+                
+                // # Add close button to modal
+                quickAddCouponModal.appendChild(closeButton);
+                
+                // # Write the HTML content to the iframe
+                // # This avoids all CSS and JavaScript conflicts
+                setTimeout(() => {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write(html);
+                    iframeDoc.close();
+                    
+                    // # After iframe content is loaded, adjust any necessary elements
+                    iframe.onload = function() {
+                        try {
+                            // # Remove unnecessary elements from iframe content
+                            const iframeBody = iframe.contentDocument.body;
+                            const modalElement = iframeBody.querySelector('#quickAddModal');
+                            
+                            // # Make sure the modal is active within the iframe
+                            if (modalElement) {
+                                modalElement.classList.add('active');
+                                
+                                // # Override the close function inside the iframe
+                                const innerCloseBtn = modalElement.querySelector('.close-modal');
+                                if (innerCloseBtn) {
+                                    innerCloseBtn.addEventListener('click', function() {
+                                        quickAddCouponModal.classList.remove('active');
+                                    });
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error adjusting iframe content:', error);
+                        }
+                    };
+                }, 100);
+            })
+            .catch(error => {
+                console.error('Error loading modal:', error);
+                quickAddCouponModal.innerHTML = '<div style="background:white; padding:20px; border-radius:10px; text-align:center;">שגיאה בטעינת המודל. אנא נסה שוב.</div>';
             });
-            newScript.appendChild(document.createTextNode(scriptTags[i].innerHTML));
-            document.head.appendChild(newScript);
-        }
-        
-        // Show the main modal
-        quickAddCouponModal.classList.add("active");
-        
-        // Also activate the inner modal content (wait a tiny bit to ensure DOM is updated)
-        setTimeout(() => {
-            const innerModal = document.getElementById("quickAddModal");
-            if (innerModal) {
-            innerModal.classList.add("active");
-            // Apply direct styles to make content visible
-            const modalContent = innerModal.querySelector('.quick-add-modal-content');
-            if (modalContent) {
-                modalContent.style.transform = 'translateY(0)';
-                modalContent.style.opacity = '1';
-            }
-            }
-        }, 10);
-        })
-        .catch(error => {
-        console.error('Error loading quick add coupon modal:', error);
-        alert('שגיאה בטעינת הודעת הוספת קופון מהירה. אנא נסה שוב מאוחר יותר.');
-        });
     }
 });
 </script>

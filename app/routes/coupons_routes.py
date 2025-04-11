@@ -418,7 +418,13 @@ def load_coupon_modals():
 @login_required
 def load_quick_add_coupon_modal():
     companies = Company.query.order_by(Company.name).all()
-    return render_template('index_modals/quick_add_coupon_modal.html', companies=companies)
+    # Get the base URL for static files - need to pass it to construct full image paths
+    static_url = url_for('static', filename='')
+    return render_template(
+        'index_modals/quick_add_coupon_modal.html', 
+        companies=companies,
+        static_url=static_url
+    )
 
 DEBUG_PRINT = False  # הגדר True כדי להדפיס הודעות debug, False כדי לכבות
 
