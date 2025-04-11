@@ -1065,7 +1065,7 @@
 
 /* ===== Centering Statistics Button ===== */
 .stats-button {
-  background-color: #3498db;
+  background-color: #2c3e50;
   color: white;
   border: none;
   border-radius: 6px;
@@ -1216,6 +1216,51 @@
 }
 .quick-add-button:hover {
   background-color: #219653;
+}
+/* Add this to your CSS in index.html */
+.flash-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #333;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 280px;
+  max-width: 400px;
+  transform: translateX(110%);
+  transition: transform 0.3s ease;
+}
+
+.flash-message.show {
+  transform: translateX(0);
+}
+
+.flash-message.success {
+  border-right: 4px solid var(--success-color);
+}
+
+.flash-message.error, .flash-message.danger {
+  border-right: 4px solid var(--secondary-color);
+}
+
+.flash-message .close-flash {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  margin-right: -10px;
+  margin-left: 10px;
+  color: #777;
+}
+
+.flash-message .close-flash:hover {
+  color: #333;
 }
 </style>
 
@@ -1470,14 +1515,14 @@ document.addEventListener("DOMContentLoaded", function() {
         quickAddCouponModal.innerHTML = '';
         quickAddCouponModal.className = 'modal active';
         
-        // # Set up container styles directly
+        // # Set up container styles directly - dark semi-transparent background
         quickAddCouponModal.style.position = 'fixed';
         quickAddCouponModal.style.zIndex = '9999';
         quickAddCouponModal.style.left = '0';
         quickAddCouponModal.style.top = '0';
         quickAddCouponModal.style.width = '100%';
         quickAddCouponModal.style.height = '100%';
-        quickAddCouponModal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        quickAddCouponModal.style.backgroundColor = 'rgba(0,0,0,0.7)'; // # Semi-transparent dark background
         quickAddCouponModal.style.display = 'flex';
         quickAddCouponModal.style.justifyContent = 'center';
         quickAddCouponModal.style.alignItems = 'center';
@@ -1486,16 +1531,25 @@ document.addEventListener("DOMContentLoaded", function() {
         fetch('{{ url_for("coupons.load_quick_add_coupon_modal") }}')
             .then(response => response.text())
             .then(html => {
-                // # Create an iframe to isolate the modal content
+                // # Create an iframe with height that fills most of the screen
                 const iframe = document.createElement('iframe');
-                iframe.style.width = '90%';
-                iframe.style.maxWidth = '550px';
-                iframe.style.height = '80vh';
-                iframe.style.maxHeight = '600px';
+                iframe.style.width = '90%'; // # 90% of screen width
+                iframe.style.maxWidth = '550px'; // # Maximum width
+                iframe.style.height = '90vh'; // # 90% of viewport height
+                iframe.style.maxHeight = '90vh'; // # Maximum 90% of viewport height
                 iframe.style.border = 'none';
                 iframe.style.borderRadius = '15px';
-                iframe.style.backgroundColor = 'white';
-                iframe.style.overflow = 'hidden';
+                iframe.style.backgroundColor = 'white'; // # White background for modal
+                iframe.style.boxShadow = '0 5px 15px rgba(0,0,0,0.5)'; // # Strong shadow
+                
+                // # Check if device is mobile
+                const isMobile = window.innerWidth <= 768;
+                
+                // # Adjust height for mobile - almost full screen
+                if (isMobile) {
+                    iframe.style.height = '85vh';
+                    iframe.style.maxHeight = '85vh';
+                }
                 
                 // # Add to modal container
                 quickAddCouponModal.appendChild(iframe);
@@ -1535,19 +1589,38 @@ document.addEventListener("DOMContentLoaded", function() {
                 quickAddCouponModal.appendChild(closeButton);
                 
                 // # Write the HTML content to the iframe
-                // # This avoids all CSS and JavaScript conflicts
                 setTimeout(() => {
                     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
                     iframeDoc.open();
                     iframeDoc.write(html);
                     iframeDoc.close();
                     
-                    // # After iframe content is loaded, adjust any necessary elements
+                    // # After iframe content is loaded, adjust internal styling
                     iframe.onload = function() {
                         try {
-                            // # Remove unnecessary elements from iframe content
-                            const iframeBody = iframe.contentDocument.body;
-                            const modalElement = iframeBody.querySelector('#quickAddModal');
+                            const style = iframe.contentDocument.createElement('style');
+                            style.textContent = `
+                                body, html {
+                                    background-color: white !important;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                    height: 100% !important;
+                                }
+                                
+                                #quickAddModal {
+                                    height: 100% !important;
+                                    max-height: 100% !important;
+                                }
+                                
+                                .modal-content {
+                                    border-radius: 15px !important;
+                                    height: 100% !important;
+                                }
+                            `;
+                            iframe.contentDocument.head.appendChild(style);
+                            
+                            // # Process iframe content elements
+                            const modalElement = iframe.contentDocument.querySelector('#quickAddModal');
                             
                             // # Make sure the modal is active within the iframe
                             if (modalElement) {
@@ -1572,6 +1645,44 @@ document.addEventListener("DOMContentLoaded", function() {
                 quickAddCouponModal.innerHTML = '<div style="background:white; padding:20px; border-radius:10px; text-align:center;">שגיאה בטעינת המודל. אנא נסה שוב.</div>';
             });
     }
+    // Add this to the main JS in index.html
+    // This creates a function to show flash messages programmatically
+    function showFlashMessage(message, type = 'success') {
+    const flashContainer = document.createElement('div');
+    flashContainer.className = `flash-message ${type}`;
+    flashContainer.innerHTML = `
+        <span>${message}</span>
+        <button class="close-flash">&times;</button>
+    `;
+    document.body.appendChild(flashContainer);
+    
+    // Add animation class after a short delay
+    setTimeout(() => {
+        flashContainer.classList.add('show');
+    }, 10);
+    
+    // Remove the message after 5 seconds
+    setTimeout(() => {
+        flashContainer.classList.remove('show');
+        setTimeout(() => {
+        flashContainer.remove();
+        }, 300);
+    }, 5000);
+    
+    // Add click handler to close button
+    const closeButton = flashContainer.querySelector('.close-flash');
+    closeButton.addEventListener('click', () => {
+        flashContainer.classList.remove('show');
+        setTimeout(() => {
+        flashContainer.remove();
+        }, 300);
+    });
+    }
+
+    // Listen for custom events from the iframe
+    document.addEventListener('showFlashMessage', function(e) {
+    showFlashMessage(e.detail.message, e.detail.type);
+    });
 });
 </script>
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
