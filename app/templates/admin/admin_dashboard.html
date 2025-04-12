@@ -6,79 +6,294 @@
 
 {% block content %}
 <section class="admin-dashboard">
-    <h2>לוח ניהול מנהלים</h2>
+    <div class="dashboard-header">
+        <h1>לוח ניהול מנהלים</h1>
+    </div>
 
     <div class="admin-cards">
-        <a href="{{ url_for('admin_companies_bp.manage_companies') }}" class="action-button">
-            ניהול חברות
+        <a href="{{ url_for('admin_companies_bp.manage_companies') }}" class="card">
+            <div class="card-icon">
+                <svg class="icon"><use xlink:href="#building-icon"></use></svg>
+            </div>
+            <div class="card-content">
+                <h2>ניהול חברות</h2>
+            </div>
         </a>
-        <a href="{{ url_for('admin_coupon_tags_bp.manage_coupon_tags') }}" class="action-button">
-            ניהול תגיות קופונים
+
+        <a href="{{ url_for('admin_coupon_tags_bp.manage_coupon_tags') }}" class="card">
+            <div class="card-icon">
+                <svg class="icon"><use xlink:href="#tags-icon"></use></svg>
+            </div>
+            <div class="card-content">
+                <h2>ניהול תגיות קופונים</h2>
+            </div>
         </a>
-        <a href="{{ url_for('admin_tags_bp.manage_tags') }}" class="action-button">
-            ניהול תגיות כלליות
+
+        <a href="{{ url_for('admin_tags_bp.manage_tags') }}" class="card">
+            <div class="card-icon">
+                <svg class="icon"><use xlink:href="#tag-icon"></use></svg>
+            </div>
+            <div class="card-content">
+                <h2>ניהול תגיות כלליות</h2>
+            </div>
         </a>
-        <!-- קישור לניהול משתמשים -->
-        <a href="{{ url_for('admin_bp.admin_users_bp.manage_users') }}" class="action-button">
-            ניהול משתמשים
+
+        <a href="{{ url_for('admin_bp.admin_users_bp.manage_users') }}" class="card">
+            <div class="card-icon">
+                <svg class="icon"><use xlink:href="#users-icon"></use></svg>
+            </div>
+            <div class="card-content">
+                <h2>ניהול משתמשים</h2>
+            </div>
         </a>
-        <a href="{{ url_for('admin_dashboard_bp.dashboard') }}" class="action-button">
-            דשבורד
+
+        <a href="{{ url_for('admin_dashboard_bp.dashboard') }}" class="card">
+            <div class="card-icon">
+                <svg class="icon"><use xlink:href="#dashboard-icon"></use></svg>
+            </div>
+            <div class="card-content">
+                <h2>דשבורד</h2>
+            </div>
         </a>
-        <!-- כפתור לניהול קופונים אוטומטיים -->
-        <a href="{{ url_for('admin_bp.admin_coupons_bp.index') }}" class="action-button">
-            ניהול קופונים אוטומטיים
+
+        <a href="{{ url_for('admin_bp.admin_coupons_bp.index') }}" class="card">
+            <div class="card-icon">
+                <svg class="icon"><use xlink:href="#ticket-icon"></use></svg>
+            </div>
+            <div class="card-content">
+                <h2>ניהול קופונים אוטומטיים</h2>
+            </div>
         </a>
-        <a href="{{ url_for('admin_bp.admin_messages_bp.manage_admin_messages') }}" class="action-button">
-            ניהול הודעות מנהל
+
+        <a href="{{ url_for('admin_bp.admin_messages_bp.manage_admin_messages') }}" class="card">
+            <div class="card-icon">
+                <svg class="icon"><use xlink:href="#envelope-icon"></use></svg>
+            </div>
+            <div class="card-content">
+                <h2>ניהול הודעות מנהל</h2>
+            </div>
         </a>
     </div>
 </section>
+
+<!-- SVG Icons -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="building-icon" viewBox="0 0 24 24">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+    </symbol>
+    <symbol id="tags-icon" viewBox="0 0 24 24">
+        <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l7.29-7.29c.94-.94.94-2.48 0-3.42L12.71 1.7A2.5 2.5 0 0 0 9 5z"></path>
+        <circle cx="6" cy="9" r="1"></circle>
+    </symbol>
+    <symbol id="tag-icon" viewBox="0 0 24 24">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+    </symbol>
+    <symbol id="users-icon" viewBox="0 0 24 24">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </symbol>
+    <symbol id="dashboard-icon" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7"></rect>
+        <rect x="14" y="3" width="7" height="7"></rect>
+        <rect x="14" y="14" width="7" height="7"></rect>
+        <rect x="3" y="14" width="7" height="7"></rect>
+    </symbol>
+    <symbol id="ticket-icon" viewBox="0 0 24 24">
+        <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
+        <path d="M20 12v4H6a2 2 0 0 0-2 2c0 1.1.9 2 2 2h12v-4"></path>
+        <path d="M20 12a2 2 0 0 0 0-4"></path>
+        <path d="M20 12a2 2 0 0 1 0 4"></path>
+    </symbol>
+    <symbol id="envelope-icon" viewBox="0 0 24 24">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+        <polyline points="22,6 12,13 2,6"></polyline>
+    </symbol>
+</svg>
 {% endblock %}
 
 {% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add fade-in animation to cards
+        const cards = document.querySelectorAll('.card');
+        cards.forEach((card, index) => {
+            setTimeout(() => {
+                card.classList.add('visible');
+            }, 100 * index);
+        });
+    });
+</script>
+
 <style>
-/* סגנון כללי של עמודי הניהול */
-.admin-dashboard {
-    max-width: 900px;
-    margin: 40px auto;
-    padding: 20px;
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+:root {
+    --primary-light: #4895ef;
+    --primary-hover: #3a56d4;
+    --secondary-color: #f72585;
+    --text-color: #2b2d42;
+    --background-light: #f8f9fa;
+    --card-shadow: 0 10px 20px rgba(0,0,0,0.05), 0 6px 6px rgba(0,0,0,0.07);
+    --hover-shadow: 0 14px 28px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.08);
+    --transition-speed: 0.3s;
 }
 
-.admin-dashboard h2 {
-    font-size: 2rem;
-    margin-bottom: 20px;
+/* עיצוב כללי של עמודי הניהול */
+.admin-dashboard {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--background-light);
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    direction: rtl;
+}
+
+.dashboard-header {
+    margin-bottom: 2rem;
     text-align: center;
-    color: #343a40;
+}
+
+.dashboard-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+    padding-bottom: 1rem;
+    position: relative;
+}
+
+.dashboard-header h1:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 50%;
+    -webkit-transform: translateX(50%);
+    transform: translateX(50%);
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-light), var(--primary-color));
+    border-radius: 2px;
 }
 
 .admin-cards {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    align-items: center;
-    justify-content: center;
+    display: -ms-grid;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
 }
 
-/* עיצוב הכפתורים */
-.action-button {
-    background-color: #007bff;
-    color: #fff;
-    padding: 15px 30px;
-    border-radius: 6px;
+/* עיצוב הכרטיסים */
+.card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
     text-decoration: none;
-    font-size: 1.1rem;
-    transition: background-color 0.3s ease, transform 0.3s ease;
-    display: inline-block;
+    color: var(--text-color);
+    -webkit-transition: all var(--transition-speed);
+    transition: all var(--transition-speed);
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    opacity: 0;
+    -webkit-transform: translateY(20px);
+    transform: translateY(20px);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.05);
 }
 
-.action-button:hover {
-    background-color: #0056b3;
-    transform: scale(1.03);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.1) 0%, rgba(67, 97, 238, 0) 100%);
+    opacity: 0;
+    -webkit-transition: opacity var(--transition-speed);
+    transition: opacity var(--transition-speed);
+    z-index: 1;
+}
+
+.card.visible {
+    opacity: 1;
+    -webkit-transform: translateY(0);
+    transform: translateY(0);
+    -webkit-transition: opacity 0.5s ease, -webkit-transform 0.5s ease;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.card:hover {
+    -webkit-transform: translateY(-5px);
+    transform: translateY(-5px);
+    box-shadow: var(--hover-shadow);
+}
+
+.card:hover::before {
+    opacity: 1;
+}
+
+.card-icon {
+    margin-bottom: 1.5rem;
+    -webkit-transition: -webkit-transform var(--transition-speed);
+    transition: transform var(--transition-speed);
+    position: relative;
+    z-index: 2;
+}
+
+.icon {
+    width: 3rem;
+    height: 3rem;
+    fill: none;
+    stroke: var(--primary-color);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.card:hover .card-icon {
+    -webkit-transform: scale(1.1);
+    transform: scale(1.1);
+}
+
+.card-content {
+    position: relative;
+    z-index: 2;
+}
+
+.card-content h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* רספונסיביות */
+@media (max-width: 768px) {
+    .admin-dashboard {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+
+    .admin-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-header h1 {
+        font-size: 2rem;
+    }
 }
 </style>
 {% endblock %}

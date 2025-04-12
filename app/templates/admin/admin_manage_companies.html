@@ -1,109 +1,566 @@
 {% extends "base.html" %}
 
+{% block styles %}
+<!-- Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --primary-hover: #3a56d4;
+    --secondary-color: #f5f7fa;
+    --danger-color: #e63946;
+    --danger-hover: #d62c3b;
+    --text-color: #333;
+    --light-text: #6c757d;
+    --bg-color: #f8f9fa;
+    --card-bg: #fff;
+    --border-color: #dee2e6;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    --radius: 8px;
+    --transition: all 0.25s ease;
+  }
+
+  /* General Styles */
+  .admin-panel {
+    direction: rtl;
+    font-family: 'Rubik', 'Heebo', Arial, sans-serif;
+    background-color: var(--bg-color);
+    padding: 24px;
+    min-height: calc(100vh - 48px);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Header Section */
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+  }
+
+  .page-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+  }
+
+  /* Button Styles */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    font-weight: 500;
+    font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--primary-hover);
+  }
+
+  .btn-secondary {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+  }
+
+  .btn-secondary:hover {
+    background-color: #e2e6ea;
+  }
+
+  .btn-delete {
+    background-color: var(--danger-color);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+  }
+
+  .btn-delete:hover {
+    background-color: var(--danger-hover);
+  }
+
+  .btn-edit {
+    background-color: #3498db;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+  }
+
+  .btn-edit:hover {
+    background-color: #2980b9;
+  }
+
+  /* Card/Panel Styles */
+  .panel {
+    background-color: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 30px;
+  }
+
+  .panel-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .panel-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text-color);
+  }
+
+  .panel-body {
+    padding: 24px;
+  }
+
+  /* Search Box */
+  .search-box {
+    position: relative;
+    width: 300px;
+  }
+
+  .search-box input {
+    width: 100%;
+    padding: 10px 40px 10px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    transition: var(--transition);
+  }
+
+  .search-box input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+  }
+
+  .search-box i {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--light-text);
+  }
+
+  /* Table Styles */
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 14px 18px;
+    text-align: right;
+  }
+
+  .data-table th {
+    background-color: var(--secondary-color);
+    font-weight: 500;
+    color: var(--text-color);
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  .data-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition);
+  }
+
+  .data-table tbody tr:hover {
+    background-color: rgba(236, 240, 245, 0.5);
+  }
+
+  .data-table td.actions-cell {
+    display: flex;
+    gap: 8px;
+  }
+
+  .inline-form {
+    display: inline;
+  }
+
+  /* Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal.active {
+    display: flex;
+    animation: fadeIn 0.3s;
+  }
+
+  .modal-content {
+    background-color: var(--card-bg);
+    border-radius: var(--radius);
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    animation: slideIn 0.3s;
+  }
+
+  .modal-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-direction: row-reverse;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--text-color);
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--light-text);
+    transition: var(--transition);
+  }
+
+  .close-btn:hover {
+    color: var(--danger-color);
+  }
+
+  .modal-body {
+    padding: 24px;
+  }
+
+  /* Form Styles */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color);
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    transition: var(--transition);
+  }
+
+  .form-control:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+  }
+
+  .form-control::placeholder {
+    color: #aaa;
+  }
+
+  .error-message {
+    color: var(--danger-color);
+    font-size: 0.85rem;
+    margin-top: 6px;
+    display: none;
+  }
+
+  .error-message.active {
+    display: block;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 30px;
+    flex-direction: row-reverse;
+  }
+
+  /* Animation */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideIn {
+    from { transform: translateY(-30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    .admin-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .search-box {
+      width: 100%;
+    }
+
+    .panel-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .form-actions {
+      flex-direction: column;
+    }
+
+    .form-actions button {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="admin-companies">
-    <h2 class="page-title">ניהול חברות (Admin)</h2>
+<section class="admin-panel">
+  <div class="container">
+    <header class="admin-header">
+      <h1 class="page-title">ניהול חברות</h1>
+      <div class="admin-actions">
+        <button id="addCompanyBtn" class="btn btn-primary">
+          <i class="fas fa-plus"></i> הוספת חברה חדשה
+        </button>
+      </div>
+    </header>
 
-    <div class="company-form card">
-        <h3 class="form-title">הוספת חברה חדשה</h3>
-        <form method="POST">
-            {{ form.hidden_tag() }}
-
-            <div class="form-group">
-                {{ form.name.label(class="form-label") }}
-                {{ form.name(class="form-control", placeholder="הקלד שם חברה...") }}
-                {% for error in form.name.errors %}
-                    <div class="error-message">{{ error }}</div>
-                {% endfor %}
-            </div>
-
-            <div class="text-center">
-                {{ form.submit(class="action-button") }}
-            </div>
-        </form>
-    </div>
-
-    <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'companies-list')">רשימת חברות</button>
-        <button class="tab-button" onclick="openTab(event, 'add-company')">הוספת חברה</button>
-    </div>
-
-    <div id="companies-list" class="tab-content active">
-        <h3 class="table-title">רשימת חברות קיימות</h3>
-        <div class="table-responsive">
-            <table class="table company-table">
-                <thead>
-                    <tr>
-                        <th>מזהה</th>
-                        <th>שם חברה</th>
-                        <th>פעולות</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for company in companies %}
-                    <tr>
-                        <td>{{ company.id }}</td>
-                        <td>{{ company.name }}</td>
-                        <td>
-                            <form method="POST" action="{{ url_for('admin_companies_bp.delete_company', company_id=company.id) }}" onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את החברה הזו?');">
-                                {{ delete_form.hidden_tag() }}
-                                <input type="hidden" name="company_id" value="{{ company.id }}">
-                                <button type="submit" class="action-button danger">
-                                    <i class="fa fa-trash"></i> מחיקה
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
+    <div class="admin-content">
+      <!-- Companies Table Panel -->
+      <div id="companiesTable" class="panel">
+        <div class="panel-header">
+          <h2>רשימת חברות קיימות</h2>
+          <div class="search-box">
+            <input type="text" id="companySearch" placeholder="חיפוש חברה...">
+            <i class="fas fa-search"></i>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>מזהה</th>
+                  <th>שם חברה</th>
+                  <th>פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% for company in companies %}
+                <tr>
+                  <td>{{ company.id }}</td>
+                  <td>{{ company.name }}</td>
+                  <td class="actions-cell">
+                    <button class="btn btn-edit" onclick="editCompany({{ company.id }}, '{{ company.name }}')">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <form method="POST" action="{{ url_for('admin_companies_bp.delete_company', company_id=company.id) }}" class="inline-form delete-form">
+                      {{ delete_form.hidden_tag() }}
+                      <input type="hidden" name="company_id" value="{{ company.id }}">
+                      <button type="submit" class="btn btn-delete">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+              </tbody>
             </table>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 
-    <div id="add-company" class="tab-content">
-        <div class="company-form">
-            <h3 class="form-title">הוספת חברה חדשה</h3>
-            <form method="POST">
-                {{ form.hidden_tag() }}
+  <!-- Add/Edit Company Modal -->
+  <div id="companyModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">הוספת חברה חדשה</h3>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="companyForm" method="POST">
+          {{ form.hidden_tag() }}
+          <input type="hidden" id="companyId" name="company_id">
 
-                <div class="form-group">
-                    {{ form.name.label(class="form-label") }}
-                    {{ form.name(class="form-control", placeholder="הקלד שם חברה...") }}
-                    {% for error in form.name.errors %}
-                        <div class="error-message">{{ error }}</div>
-                    {% endfor %}
-                </div>
+          <div class="form-group">
+            {{ form.name.label(class="form-label") }}
+            {{ form.name(class="form-control", placeholder="הקלד שם חברה...") }}
+            <div class="error-message" id="nameError">
+              {% for error in form.name.errors %}
+                {{ error }}
+              {% endfor %}
+            </div>
+          </div>
 
-                <div class="text-center">
-                    {{ form.submit(class="action-button") }}
-                </div>
-            </form>
-        </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">ביטול</button>
+            {{ form.submit(class="btn btn-primary") }}
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function openTab(evt, tabName) {
-        var tabContents = document.getElementsByClassName("tab-content");
-        for (var i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-        var tabButtons = document.getElementsByClassName("tab-button");
-        for (var i = 0; i < tabButtons.length; i++) {
-            tabButtons[i].classList.remove("active");
-        }
-        document.getElementById(tabName).classList.add("active");
-        evt.currentTarget.classList.add("active");
+  document.addEventListener('DOMContentLoaded', function() {
+    // Modal Elements
+    const modal = document.getElementById('companyModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const companyForm = document.getElementById('companyForm');
+    const companyIdInput = document.getElementById('companyId');
+    const addCompanyBtn = document.getElementById('addCompanyBtn');
+    const nameError = document.getElementById('nameError');
+
+    // Search Functionality
+    const companySearch = document.getElementById('companySearch');
+    if (companySearch) {
+      companySearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const tableRows = document.querySelectorAll('.data-table tbody tr');
+
+        tableRows.forEach(row => {
+          const companyName = row.cells[1].textContent.toLowerCase();
+          if (companyName.includes(searchTerm)) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
-        var defaultTab = document.querySelector(".tab-button.active");
-        if (defaultTab) {
-            var tabName = defaultTab.getAttribute("onclick").split("'")[1];
-            document.getElementById(tabName).classList.add("active");
+    // Open modal for adding a new company
+    if (addCompanyBtn) {
+      addCompanyBtn.addEventListener('click', function() {
+        openModal('add');
+      });
+    }
+
+    // Delete confirmation
+    const deleteForms = document.querySelectorAll('.delete-form');
+    deleteForms.forEach(form => {
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (confirm('האם אתה בטוח שברצונך למחוק את החברה הזו?')) {
+          this.submit();
         }
+      });
     });
+
+    // Form validation
+    if (companyForm) {
+      companyForm.addEventListener('submit', function(e) {
+        const nameInput = document.querySelector('#companyForm .form-control');
+        let isValid = true;
+
+        if (!nameInput.value.trim()) {
+          e.preventDefault();
+          nameError.textContent = 'שם החברה לא יכול להיות ריק';
+          nameError.classList.add('active');
+          nameInput.classList.add('invalid');
+          isValid = false;
+        } else {
+          nameError.classList.remove('active');
+          nameInput.classList.remove('invalid');
+        }
+
+        return isValid;
+      });
+    }
+  });
+
+  // Open modal for adding or editing a company
+  function openModal(mode, companyId = null, companyName = '') {
+    const modal = document.getElementById('companyModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const companyIdInput = document.getElementById('companyId');
+    const nameInput = document.querySelector('#companyForm .form-control');
+
+    // Reset form
+    document.getElementById('companyForm').reset();
+    document.getElementById('nameError').classList.remove('active');
+
+    if (mode === 'edit') {
+      modalTitle.textContent = 'עריכת חברה';
+      companyIdInput.value = companyId;
+      nameInput.value = companyName;
+    } else {
+      modalTitle.textContent = 'הוספת חברה חדשה';
+      companyIdInput.value = '';
+    }
+
+    modal.classList.add('active');
+    nameInput.focus();
+  }
+
+  // Close the modal
+  function closeModal() {
+    const modal = document.getElementById('companyModal');
+    modal.classList.remove('active');
+  }
+
+  // Edit company function
+  function editCompany(companyId, companyName) {
+    openModal('edit', companyId, companyName);
+  }
+
+  // Close modal if clicked outside content
+  window.addEventListener('click', function(event) {
+    const modal = document.getElementById('companyModal');
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  // Close modal with Escape key
+  window.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      closeModal();
+    }
+  });
 </script>
 {% endblock %}

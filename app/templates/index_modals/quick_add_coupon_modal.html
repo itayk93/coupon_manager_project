@@ -1394,22 +1394,6 @@ document.addEventListener('DOMContentLoaded', function() {
     companySelect.addEventListener('change', function() {
       debug(`Company changed to: ${this.value}`);
       
-      // # Toggle auto-detect section visibility
-      const autoDetectSection = document.getElementById('quick_auto_detect_section');
-      const sectionDivider = document.querySelector('#quickAddModal .section-divider');
-      
-      if (autoDetectSection) {
-        if (this.value === '') {
-          // Show auto-detect section when "בחר חברה" is selected
-          autoDetectSection.style.display = 'block';
-          if (sectionDivider) sectionDivider.style.display = 'flex';
-        } else {
-          // Hide auto-detect section when any company or "other" is selected
-          autoDetectSection.style.display = 'none';
-          if (sectionDivider) sectionDivider.style.display = 'none';
-        }
-      }
-      
       // # Show/hide other company input field
       if (otherCompanyGroup && otherCompanyInput) {
         if (this.value === 'other') {
@@ -1442,15 +1426,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     
-    // # Initial call to set auto-detect section visibility
-    const autoDetectSection = document.getElementById('quick_auto_detect_section');
-    const sectionDivider = document.querySelector('#quickAddModal .section-divider');
-    
-    if (autoDetectSection) {
-      autoDetectSection.style.display = companySelect.value === '' ? 'block' : 'none';
-      if (sectionDivider) sectionDivider.style.display = companySelect.value === '' ? 'flex' : 'none';
-    }
-  }
     // # Initial calls to set field visibility and logo
     if (otherCompanyGroup && otherCompanyInput) {
       if (companySelect.value === 'other') {

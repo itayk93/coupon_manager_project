@@ -104,29 +104,6 @@
             </div>
         </form>
     </section>
-
-    <!-- Form for automatic coupon addition -->
-    <section class="usage-form-wrapper">
-        <form method="POST" action="{{ url_for('coupons.add_coupon') }}">
-            {{ sms_form.hidden_tag() }}
-            <div class="input-wrapper">
-                <label for="sms_text">זיהוי והוספה אוטומטית של קופון</label>
-                <textarea class="input-field_centered"
-                          id="sms_text"
-                          name="sms_text"
-                          rows="2"
-                          placeholder="{% if current_user.gender == 'male' %}תפרט כאן את הפרטים של הקופון שקנית להוספה אוטומטית שלו{% else %}תפרטי כאן את הפרטים של הקופון שקנית להוספה אוטומטית שלו{% endif %}"></textarea>
-            </div>
-            <div class="button-with-explanation">
-                <input class="submit-button" id="submit_sms" name="submit_sms" type="submit" value="הבא">
-                <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
-                <div class="tooltip">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטית.
-                    <span class="close-tooltip">×</span>
-                </div>
-            </div>            
-        </form>
-    </section>
 </div>
 
 <!-- Coupon list section -->
