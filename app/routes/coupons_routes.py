@@ -1208,9 +1208,9 @@ def add_coupon_old():
         flash("אירעה שגיאה בלתי צפויה. אנא נסה שוב מאוחר יותר.", "danger")
         return redirect(url_for('coupons.add_coupon'))
 
-@coupons_bp.route('/add_coupon', methods=['GET', 'POST'])
+@coupons_bp.route('/add_coupon_old_12042025', methods=['GET', 'POST'])
 @login_required
-def add_coupon():
+def add_coupon_old_12042025():
     # Log activity snippet (commented out)
     # log_user_activity("add_coupon_view", None)
     try:
@@ -1716,7 +1716,428 @@ def add_coupon_with_image_html():
 
     return render_template('add_coupon_with_image.html', form=form)
 
+@coupons_bp.route('/add_coupon', methods=['GET', 'POST'])
+@login_required
+def add_coupon():
+    # # Log activity snippet (commented out)
+    # log_user_activity("add_coupon_view", None)
+    try:
+        # # Check for AJAX requests first - this is important for SMS detection
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # # Check if this is an SMS detection request
+            if request.form.get('submit_sms') == 'true':
+                # # Get the SMS text from the form
+                sms_text = request.form.get('sms_text', '')
+                
+                if not sms_text:
+                    return jsonify(success=False, message="לא הוזן טקסט SMS")
+                
+                # # Get companies list for matching
+                companies = Company.query.order_by(Company.name).all()
+                companies_list = [c.name for c in companies]
+                
+                # # Extract coupon details from SMS text
+                extracted_data_df, pricing_df = extract_coupon_detail_sms(sms_text, companies_list)
+                
+                # # Log GPT usage if available
+                if not pricing_df.empty:
+                    pricing_row = pricing_df.iloc[0]
+                    new_usage = GptUsage(
+                        user_id=current_user.id,
+                        created=datetime.strptime(pricing_row['created'], '%Y-%m-%d %H:%M:%S'),
+                        id=pricing_row['id'],
+                        object=pricing_row['object'],
+                        model=pricing_row['model'],
+                        prompt_tokens=int(pricing_row['prompt_tokens']),
+                        completion_tokens=int(pricing_row['completion_tokens']),
+                        total_tokens=int(pricing_row['total_tokens']),
+                        cost_usd=float(pricing_row['cost_usd']),
+                        cost_ils=float(pricing_row['cost_ils']),
+                        exchange_rate=float(pricing_row['exchange_rate']),
+                        prompt_text=np.nan,
+                        response_text=np.nan
+                    )
+                    db.session.add(new_usage)
+                    db.session.commit()
+                
+                # # Return extracted data if available
+                if not extracted_data_df.empty:
+                    extracted_data = extracted_data_df.iloc[0].to_dict()
+                    
+                    # # Convert data types for JSON serialization
+                    for key, value in extracted_data.items():
+                        if pd.isna(value):
+                            extracted_data[key] = None
+                        elif isinstance(value, np.int64):
+                            extracted_data[key] = int(value)
+                        elif isinstance(value, np.float64):
+                            extracted_data[key] = float(value)
+                    
+                    return jsonify(success=True, message="הקופון זוהה בהצלחה!", data=extracted_data)
+                else:
+                    return jsonify(success=False, message="לא ניתן לזהות נתונים בטקסט שהוזן")
+                
+            # # Regular AJAX coupon submission
+            elif request.form.get('submit_coupon') == 'true':
+                # # Standard coupon form handling for AJAX
+                # # This part would handle the quick add modal form submission
+                # # Code implementation would be similar to the non-AJAX path but return JSON
+                
+                return jsonify(success=True, message="קופון נוסף בהצלחה!")
+        
+        # # Non-AJAX request handling - the original function logic follows:
+        manual = request.args.get('manual', 'false').lower() == 'true'
+        sms_form = SMSInputForm()
+        coupon_form = CouponForm()
+        show_coupon_form = manual
 
+        companies = Company.query.order_by(Company.name).all()
+        tags = Tag.query.all()
+
+        companies_list = [c.name for c in companies]
+
+        coupon_form.company_id.choices = (
+            [('', 'בחר')] +
+            [(str(company.id), company.name) for company in companies] +
+            [('other', 'אחר')]
+        )
+        coupon_form.tag_id.choices = (
+            [('', 'בחר')] +
+            [(str(tag.id), tag.name) for tag in tags] +
+            [('other', 'אחר')]
+        )
+
+        # # Process SMS submission
+        if sms_form.validate_on_submit() and 'sms_text' in request.form:
+            sms_text = sms_form.sms_text.data
+            extracted_data_df, pricing_df = extract_coupon_detail_sms(sms_text, companies_list)
+            if not pricing_df.empty:
+                pricing_row = pricing_df.iloc[0]
+                new_usage = GptUsage(
+                    user_id=current_user.id,
+                    created=datetime.strptime(pricing_row['created'], '%Y-%m-%d %H:%M:%S'),
+                    id=pricing_row['id'],
+                    object=pricing_row['object'],
+                    model=pricing_row['model'],
+                    prompt_tokens=int(pricing_row['prompt_tokens']),
+                    completion_tokens=int(pricing_row['completion_tokens']),
+                    total_tokens=int(pricing_row['total_tokens']),
+                    cost_usd=float(pricing_row['cost_usd']),
+                    cost_ils=float(pricing_row['cost_ils']),
+                    exchange_rate=float(pricing_row['exchange_rate']),
+                    prompt_text=np.nan,
+                    response_text=np.nan
+                )
+                db.session.add(new_usage)
+                db.session.commit()
+
+            if not extracted_data_df.empty:
+                extracted_data = extracted_data_df.iloc[0].to_dict()
+                company_name = extracted_data.get('חברה', '').strip()
+                best_match_ratio = 0
+                best_company = None
+                for comp in companies:
+                    ratio = fuzz.token_set_ratio(company_name, comp.name)
+                    if ratio > best_match_ratio:
+                        best_match_ratio = ratio
+                        best_company = comp
+
+                if best_company and best_match_ratio >= 90:
+                    coupon_form.company_id.data = str(best_company.id)
+                    coupon_form.other_company.data = ''
+                    chosen_company_name = best_company.name
+                else:
+                    coupon_form.company_id.data = 'other'
+                    coupon_form.other_company.data = company_name
+                    chosen_company_name = company_name
+
+                coupon_form.code.data = extracted_data.get('קוד קופון')
+                coupon_form.cost.data = extracted_data.get('עלות', 0) or 0
+                try:
+                    if extracted_data.get('תאריך תפוגה'):
+                        coupon_form.expiration.data = datetime.strptime(
+                            extracted_data['תאריך תפוגה'], '%Y-%m-%d'
+                        ).date()
+                except Exception as e:
+                    current_app.logger.error(f"[ERROR] parsing expiration date: {e}")
+
+                coupon_form.is_one_time.data = bool(extracted_data.get('קוד לשימוש חד פעמי'))
+                coupon_form.purpose.data = extracted_data.get('מטרת הקופון', '')
+                coupon_form.description.data = extracted_data.get('תיאור', '')
+                coupon_form.value.data = extracted_data.get('ערך מקורי', 0) or 0
+                coupon_form.discount_percentage.data = 0
+
+                if current_user.slots_automatic_coupons > 0:
+                    current_user.slots_automatic_coupons -= 1
+                    db.session.commit()
+                else:
+                    flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
+                    return redirect(url_for('coupons.add_coupon'))
+
+                found_tag = get_most_common_tag_for_company(chosen_company_name)
+                current_app.logger.info(f"[DEBUG] Received tag => '{found_tag}' for company '{chosen_company_name}'")
+                if found_tag:
+                    coupon_form.tag_id.data = str(found_tag.id)
+                    coupon_form.other_tag.data = ''
+
+                show_coupon_form = True
+            else:
+                flash('לא נמצאו נתונים בהודעת ה-SMS.', 'danger')
+
+            return render_template(
+                'add_coupon.html',
+                coupon_form=coupon_form,
+                sms_form=sms_form,
+                show_coupon_form=show_coupon_form,
+                companies=companies,
+                tags=tags
+            )
+
+        # # Process POST request (image upload or manual coupon submission)
+        if request.method == 'POST':
+            if 'upload_image' in request.form and coupon_form.upload_image.data:
+                image_file = coupon_form.coupon_image.data
+                if image_file and image_file.filename != '':
+                    try:
+                        flash("Starting image processing...", "info")
+                        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+                        if not os.path.exists(upload_folder):
+                            os.makedirs(upload_folder)
+                            flash(f"Folder {upload_folder} created.", "info")
+
+                        image_path = os.path.join(upload_folder, image_file.filename)
+                        image_file.save(image_path)
+                        flash(f"Image saved to {image_path}.", "success")
+
+                        if not companies_list:
+                            flash("Company list is empty. Ensure companies exist in the system.", "warning")
+                            return render_template('add_coupon.html',
+                                                   coupon_form=coupon_form,
+                                                   sms_form=sms_form,
+                                                   show_coupon_form=show_coupon_form,
+                                                   companies=companies,
+                                                   tags=tags)
+
+                        coupon_df, pricing_df = extract_coupon_detail_image_proccess(
+                            client_id=os.getenv('IMGUR_CLIENT_ID'),
+                            image_path=image_path,
+                            companies_list=companies_list
+                        )
+                        flash("extract_coupon_detail_image_proccess completed.", "info")
+
+                        if not coupon_df.empty:
+                            flash("Coupon details extracted successfully.", "success")
+
+                            extracted_company = coupon_df.loc[0, 'חברה']
+                            best_match_ratio = 0
+                            best_company = None
+                            for comp in companies:
+                                ratio = fuzz.token_set_ratio(extracted_company, comp.name)
+                                if ratio > best_match_ratio:
+                                    best_match_ratio = ratio
+                                    best_company = comp
+
+                            if best_company and best_match_ratio >= 90:
+                                coupon_form.company_id.data = str(best_company.id)
+                                coupon_form.other_company.data = ''
+                                chosen_company_name = best_company.name
+                            else:
+                                coupon_form.company_id.data = 'other'
+                                coupon_form.other_company.data = extracted_company
+                                chosen_company_name = extracted_company
+
+                            coupon_form.code.data = coupon_df.loc[0, 'קוד קופון']
+                            coupon_form.cost.data = coupon_df.loc[0, 'עלות'] if pd.notnull(coupon_df.loc[0, 'עלות']) else 0
+                            coupon_form.value.data = coupon_df.loc[0, 'ערך מקורי'] if pd.notnull(coupon_df.loc[0, 'ערך מקורי']) else 0
+                            coupon_form.discount_percentage.data = coupon_df.loc[0, 'אחוז הנחה'] if pd.notnull(coupon_df.loc[0, 'אחוז הנחה']) else 0
+                            try:
+                                expiration_val = coupon_df.loc[0, 'תאריך תפוגה']
+                                if pd.notnull(expiration_val):
+                                    coupon_form.expiration.data = pd.to_datetime(expiration_val).date()
+                            except Exception as e:
+                                current_app.logger.error(f"[ERROR] parsing expiration date from image: {e}")
+
+                            coupon_form.description.data = coupon_df.loc[0, 'תיאור'] if pd.notnull(coupon_df.loc[0, 'תיאור']) else ''
+                            coupon_form.is_one_time.data = False
+                            coupon_form.purpose.data = ''
+
+                            if current_user.slots_automatic_coupons > 0:
+                                current_user.slots_automatic_coupons -= 1
+                                db.session.commit()
+                            else:
+                                flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
+                                return redirect(url_for('coupons.add_coupon'))
+
+                            found_tag = get_most_common_tag_for_company(chosen_company_name)
+                            current_app.logger.info(f"[DEBUG] Received tag => '{found_tag}' for company '{chosen_company_name}'")
+                            if found_tag:
+                                coupon_form.tag_id.data = str(found_tag.id)
+                                coupon_form.other_tag.data = ''
+
+                            try:
+                                new_activity = {
+                                    "user_id": current_user.id,
+                                    "coupon_id": None,
+                                    "timestamp": datetime.utcnow(),
+                                    "action": "add_coupon_via_image_upload",
+                                    "device": request.headers.get('User-Agent', '')[:50],
+                                    "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                                    "ip_address": ip_address[:45] if ip_address else None,
+                                    "geo_location": get_geo_location(ip_address)[:100]
+                                }
+                                db.session.execute(
+                                    text("""
+                                        INSERT INTO user_activities
+                                            (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                                        VALUES
+                                            (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                                    """),
+                                    new_activity
+                                )
+                                db.session.commit()
+                            except Exception as e:
+                                db.session.rollback()
+                                current_app.logger.error(f"Error logging activity [add_coupon_via_image_upload]: {e}")
+
+                            show_coupon_form = True
+                            flash("Form populated successfully. Please check and edit if necessary.", "success")
+                        else:
+                            flash("Could not extract coupon details from image.", "danger")
+                    except Exception as e:
+                        current_app.logger.error(f"[ERROR] processing image: {e}")
+                        traceback.print_exc()
+                        flash("An error occurred while processing the image. Please try again later.", "danger")
+                else:
+                    flash("Image is required.", "danger")
+                return render_template('add_coupon.html',
+                                       coupon_form=coupon_form,
+                                       sms_form=sms_form,
+                                       show_coupon_form=show_coupon_form,
+                                       companies=companies,
+                                       tags=tags)
+            elif 'submit_coupon' in request.form and coupon_form.submit_coupon.data:
+                # # Manual flow - user pressed submit_coupon
+                if coupon_form.validate_on_submit():
+                    code = coupon_form.code.data.strip()
+                    try:
+                        value = float(coupon_form.value.data) if coupon_form.value.data else 0
+                    except Exception as e:
+                        current_app.logger.error(f"[ERROR] converting value to float: {e}")
+                        value = 0
+                    try:
+                        cost = float(coupon_form.cost.data) if coupon_form.cost.data else 0
+                    except Exception as e:
+                        current_app.logger.error(f"[ERROR] converting cost to float: {e}")
+                        cost = 0
+                    description = (coupon_form.description.data or '').strip()
+                    expiration = coupon_form.expiration.data or None
+                    is_one_time = coupon_form.is_one_time.data
+                    purpose = (coupon_form.purpose.data.strip() if is_one_time else '') or None
+                    source = coupon_form.source.data.strip()  # # Source field
+                    selected_company_id = coupon_form.company_id.data
+                    other_company_name = (coupon_form.other_company.data or '').strip()
+                    if selected_company_id == 'other':
+                        if not other_company_name:
+                            flash('יש להזין שם חברה חדשה.', 'danger')
+                            return redirect(url_for('coupons.add_coupon', manual='true'))
+                        existing_company = Company.query.filter_by(name=other_company_name).first()
+                        if existing_company:
+                            company = existing_company
+                        else:
+                            company = Company(name=other_company_name, image_path='default_logo.png')
+                            db.session.add(company)
+                            db.session.flush()
+                    else:
+                        try:
+                            selected_company_id = int(selected_company_id)
+                            company = Company.query.get(selected_company_id)
+                            if not company:
+                                flash('חברה נבחרה אינה תקפה.', 'danger')
+                                return redirect(url_for('coupons.add_coupon', manual='true'))
+                        except (ValueError, TypeError):
+                            flash('חברה נבחרה אינה תקפה.', 'danger')
+                            return redirect(url_for('coupons.add_coupon', manual='true'))
+                    if current_user.slots_automatic_coupons <= 0:
+                        flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
+                        return redirect(url_for('coupons.add_coupon', manual='true'))
+                    current_user.slots_automatic_coupons -= 1
+                    db.session.commit()
+                    new_coupon = Coupon(
+                        code=code,
+                        value=value,
+                        cost=cost,
+                        company=company.name,
+                        description=description,
+                        expiration=expiration,
+                        user_id=current_user.id,
+                        is_one_time=is_one_time,
+                        purpose=purpose,
+                        source=source  # # Source field
+                    )
+                    new_coupon.buyme_coupon_url = coupon_form.buyme_coupon_url.data.strip() if coupon_form.buyme_coupon_url.data else None
+                    chosen_company_name = company.name
+                    found_tag = get_most_common_tag_for_company(chosen_company_name)
+                    if found_tag:
+                        new_coupon.tags.append(found_tag)
+                    db.session.add(new_coupon)
+                    try:
+                        db.session.commit()
+                        add_coupon_transaction(new_coupon)
+                        # # Activity log snippet
+                        try:
+                            new_activity = {
+                                "user_id": current_user.id,
+                                "coupon_id": new_coupon.id,
+                                "timestamp": datetime.utcnow(),
+                                "action": "add_coupon_manual_submit",
+                                "device": request.headers.get('User-Agent', '')[:50],
+                                "browser": request.headers.get('User-Agent', '').split(' ')[0][:50] if request.headers.get('User-Agent', '') else None,
+                                "ip_address": ip_address[:45] if ip_address else None,
+                                "geo_location": get_geo_location(ip_address)[:100]
+                            }
+                            db.session.execute(
+                                text("""
+                                    INSERT INTO user_activities
+                                        (user_id, coupon_id, timestamp, action, device, browser, ip_address, geo_location)
+                                    VALUES
+                                        (:user_id, :coupon_id, :timestamp, :action, :device, :browser, :ip_address, :geo_location)
+                                """),
+                                new_activity
+                            )
+                            db.session.commit()
+                        except Exception as e:
+                            db.session.rollback()
+                            current_app.logger.error(f"Error logging activity [add_coupon_manual_submit]: {e}")
+                        # # If request is made via AJAX, return JSON response without full page reload
+                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            return jsonify(success=True, message="קופון נוסף בהצלחה!")
+                        else:
+                            flash('קופון נוסף בהצלחה!', 'success')
+                            return redirect(url_for('coupons.show_coupons'))
+                    except IntegrityError as e:
+                        db.session.rollback()
+                        current_app.logger.error(f"[ERROR] IntegrityError adding coupon: {e}")
+                        flash('קוד קופון זה כבר קיים. אנא בחר קוד אחר.', 'danger')
+                    except Exception as e:
+                        db.session.rollback()
+                        current_app.logger.error(f"[ERROR] Error adding coupon: {e}")
+                        flash('אירעה שגיאה בעת הוספת הקופון. נסה שוב.', 'danger')
+                else:
+                    flash("הטופס אינו תקין. אנא בדוק את הנתונים שהזנת.", "danger")
+        return render_template(
+            'add_coupon.html',
+            coupon_form=coupon_form,
+            sms_form=sms_form,
+            show_coupon_form=show_coupon_form,
+            companies=companies,
+            tags=tags
+        )
+    except Exception as e:
+        current_app.logger.error(f"[ERROR] Unhandled exception in add_coupon: {e}")
+        traceback.print_exc()
+        flash("אירעה שגיאה בלתי צפויה. אנא נסה שוב מאוחר יותר.", "danger")
+        return redirect(url_for('coupons.add_coupon'))
+    
 @coupons_bp.route('/add_coupon_with_image', methods=['GET', 'POST'])
 @login_required
 def add_coupon_with_image():

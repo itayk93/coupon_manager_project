@@ -1,4 +1,3 @@
-<!-- quick_add_coupon_modal.html -->
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
@@ -10,7 +9,7 @@
 </head>
 <body>
 <!-- 
-  # quick_add_coupon_page.html
+  # quick_add_coupon_modal.html
   # A standalone interactive, swipe-based modal for quickly adding new coupons
 -->
 
@@ -23,7 +22,7 @@
     </div>
     <div class="modal-body">
       <form id="quickAddCouponForm" method="POST" action="/add_coupon">
-      <!-- שימוש ב־Flask-WTF לצורך הוספת CSRF token תקין -->
+      <!-- Using Flask-WTF for valid CSRF token -->
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="quick_add" value="true">
       <input type="hidden" name="submit_coupon" value="true">
@@ -54,7 +53,7 @@
                   </select>
                 </div>
 
-                <!-- מיכל ללוגו החברה (מוסתר בהתחלה) -->
+                <!-- Company logo container (hidden initially) -->
                 <div id="quick_company_logo_container" style="display: none; text-align: center; margin-top: 15px;">
                   <img id="quick_company_logo" src="" alt="לוגו חברה" style="max-width: 100px; max-height: 100px;">
                 </div>                
@@ -70,13 +69,35 @@
                   <label for="quick_buyme_coupon_link">כתובת URL של הקופון ל-BuyMe</label>
                   <input type="text" name="buyme_coupon_url" id="quick_buyme_coupon_link" class="input-field">
                 </div>
+
+                <!-- # Automatic Coupon Detection Section -->
+                <div class="auto-detect-wrapper">
+                  <div class="section-divider">
+                    <span>או</span>
+                  </div>
+                  
+                  <div id="quick_auto_detect_section" class="auto-detect-section">
+                    <h4>זיהוי אוטומטי של קופון</h4>
+                    
+                    <div class="form-group">
+                      <label for="sms_text">הדבק כאן את פרטי הקופון</label>
+                      <textarea class="input-field" id="sms_text" name="sms_text" rows="3" 
+                        placeholder="תפרט כאן את פרטי הקופון שקיבלת להוספה אוטומטית"></textarea>
+                    </div>
+                    
+                    <div class="auto-detect-button-container">
+                      <button type="button" class="submit-button auto-detect-button" id="submit_sms" name="submit_sms">זהה קופון</button>
+                    </div>
+                  </div>
+                </div>
               </div>
+
               <div class="card-actions">
                 <button type="button" class="swipe-button next-button" disabled>הבא <i class="fas fa-arrow-left"></i></button>
               </div>
             </div>
 
-            <!-- # Combined Step 2: Coupon Details -->
+            <!-- # Step 2: Coupon Details -->
             <div class="card" data-step="2">
               <div class="card-content">
                 <h4>פרטי הקופון</h4>
@@ -116,7 +137,7 @@
               </div>
             </div>
 
-            <!-- # Step 4: Expiration and Description -->
+            <!-- # Step 3: Expiration and Description -->
             <div class="card" data-step="3">
               <div class="card-content">
                 <h4>תוקף ותיאור</h4>
@@ -139,7 +160,7 @@
               </div>
             </div>
             
-            <!-- # Step 5: Additional Details -->
+            <!-- # Step 4: Additional Details -->
             <div class="card" data-step="4">
               <div class="card-content">
                 <h4>פרטים נוספים</h4>
@@ -172,7 +193,7 @@
                 </div>
                 
                 <!-- One-time Use -->
-                <div class="form-group checkbox-container tooltip-checkbox-container">
+                <div class="form-group checkbox-container tooltip-container">
                   <input type="checkbox" id="quick_is_one_time" name="is_one_time">
                   <label for="quick_is_one_time">קוד לשימוש חד פעמי</label>
                   <button type="button" class="tooltip-button" id="quick_tooltip_one_time_button" aria-label="מידע נוסף">❔</button>
@@ -197,7 +218,7 @@
               </div>
             </div>
             
-            <!-- # Step 6: Summary and Submit -->
+            <!-- # Step 5: Summary and Submit -->
             <div class="card" data-step="5">
               <div class="card-content">
                 <h4>סיכום הקופון</h4>
@@ -277,605 +298,729 @@
   </div>
 </div>
 
-
 <style>
-/* # === Reset & Base Styles === */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  /* # Background styling for standalone page view */
-  background-color: rgba(0,0,0,0.5);
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-#quickAddModal * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-#quickAddModal {
-  --primary-color: #3498db;
-  --primary-hover: #2980b9;
-  --secondary-color: #e74c3c;
-  --success-color: #2ecc71;
-  --warning-color: #f39c12;
-  --light-bg: #f8f9fa;
-  --dark-bg: #2c3e50;
-  --text-color: #333;
-  --border-color: #ddd;
-  --light-text: #f8f9fa;
-  --shadow: 0 2px 10px rgba(0,0,0,0.1);
-  --transition: all 0.3s ease;
-}
-
-/* # === Modal Container Styles === */
-#quickAddModal.modal {
-  position: relative;
-  width: 100%;
-  max-width: 550px;
-  z-index: 1000;
-  overflow-y: auto;
-  opacity: 1;
-  transition: opacity 0.3s ease;
-}
-
-#quickAddModal.modal.active {
-  display: block;
-  opacity: 1;
-}
-
-/* # === Modal Content Styles === */
-#quickAddModal .modal-content {
-  direction: rtl;
-  background-color: white;
-  width: 100%;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-  position: relative;
-  transform: translateY(0);
-  opacity: 1;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  overflow: hidden;
-}
-
-#quickAddModal.modal.active .modal-content {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-#quickAddModal .modal-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: var(--light-bg);
-}
-
-#quickAddModal .modal-header h3 {
-  margin: 0;
-  color: var(--primary-color);
-  font-size: 1.4em;
-  font-weight: 600;
-}
-
-#quickAddModal .close-modal {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #999;
-  transition: color 0.2s ease;
-}
-
-#quickAddModal .close-modal:hover {
-  color: var(--secondary-color);
-}
-
-#quickAddModal .modal-body {
-  padding: 0;
-  max-height: 80vh;
-  overflow: hidden;
-}
-
-/* # === Swipe Container Styles === */
-#quickAddModal .swipe-container {
-  position: relative;
-  width: 100%;
-  height: 540px; /* Increased from 480px to 580px */
-  overflow: hidden;
-}
-
-#quickAddModal .swipe-indicator {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background-color: rgba(0,0,0,0.1);
-  color: var(--text-color);
-  font-size: 0.8em;
-  padding: 2px 8px;
-  border-radius: 15px;
-  z-index: 10;
-  font-weight: bold;
-}
-
-#quickAddModal .swipe-progress {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 4px;
-  background-color: rgba(0,0,0,0.05);
-  z-index: 10;
-}
-
-#quickAddModal .progress-bar {
-  height: 100%;
-  width: 20%; /* 1/5 of total width */
-  background-color: var(--primary-color);
-  transition: width 0.3s ease;
-}
-
-/* # === Card Stack Styles === */
-#quickAddModal .card-stack {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-#quickAddModal .card {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 100%;
-  height: 100%;
-  background-color: white;
-  transition: transform 0.4s ease-in-out;
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-  transform: translateX(100%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-#quickAddModal .card[data-step="1"] {
-  transform: translateX(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-
-#quickAddModal .card.moving-left {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-
-#quickAddModal .card.moving-right {
-  transform: translateX(100%);
-  opacity: 0;
-}
-
-#quickAddModal .card.active {
-  transform: translateX(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-
-#quickAddModal .card-content {
-  flex: 1;
-  overflow-y: auto;
-  padding-bottom: 70px; /* Add padding to prevent content from being hidden by buttons */
-}
-
-#quickAddModal .card-content h4 {
-  margin-bottom: 20px;
-  color: var(--primary-color);
-  font-size: 1.2em;
-  text-align: center;
-}
-
-/* # This is the key style for button positioning */
-#quickAddModal .card-actions {
-  position: fixed;
-  bottom: 70px; /* Position from bottom of viewport */
-  left: 0;
-  right: 0;
-  width: 90%;
-  max-width: 550px;
-  margin: 0 auto;
-  padding: 15px 20px;
-  display: flex;
-  justify-content: space-between;
-  background-color: white;
-  border-top: 1px solid var(--border-color);
-  z-index: 50;
-}
-
-/* # === Form Elements === */
-#quickAddModal .form-group {
-  margin-bottom: 15px;
-}
-
-#quickAddModal label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-  color: var(--text-color);
-}
-
-#quickAddModal .input-field {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1em;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  background-color: var(--light-bg);
-}
-
-#quickAddModal .input-field:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
-  outline: none;
-}
-
-#quickAddModal .input-large {
-  font-size: 1.2em;
-  padding: 12px 15px;
-}
-
-#quickAddModal textarea.input-field {
-  resize: vertical;
-  min-height: 80px;
-}
-
-#quickAddModal .checkbox-container {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-#quickAddModal .checkbox-container input[type="checkbox"] {
-  margin-left: 10px;
-  width: 18px;
-  height: 18px;
-}
-
-#quickAddModal .tooltip-checkbox-container {
-  position: relative;
-}
-
-#quickAddModal .tooltip-button {
-  background: none;
-  border: 1px solid var(--border-color);
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  margin-right: 10px;
-  font-size: 12px;
-}
-
-#quickAddModal .tooltip-button:hover {
-  background-color: var(--light-bg);
-}
-
-#quickAddModal .tooltip, #quickAddModal .mobile-tooltip {
-  display: none;
-  position: absolute;
-  background-color: var(--dark-bg);
-  color: var(--light-text);
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.9em;
-  max-width: 250px;
-  z-index: 100;
-  text-align: right;
-  top: -5px;
-  right: 35px;
-  transform: translateY(-100%);
-  box-shadow: var(--shadow);
-}
-
-#quickAddModal .tooltip::after, #quickAddModal .mobile-tooltip::after {
-  content: "";
-  position: absolute;
-  border-width: 5px;
-  border-style: solid;
-  border-color: var(--dark-bg) transparent transparent transparent;
-  top: 100%;
-  right: 10px;
-}
-
-#quickAddModal .close-tooltip {
-  float: left;
-  cursor: pointer;
-  margin-right: 8px;
-}
-
-/* # === Button Styles === */
-#quickAddModal .swipe-button {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 1em;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 100px;
-  text-align: center;
-}
-
-#quickAddModal .prev-button {
-  background-color: var(--light-bg);
-  color: var(--text-color);
-}
-
-#quickAddModal .prev-button:hover {
-  background-color: #e9ecef;
-}
-
-#quickAddModal .next-button {
-  background-color: var(--primary-color);
-  color: white;
-}
-
-#quickAddModal .next-button:hover {
-  background-color: var(--primary-hover);
-}
-
-#quickAddModal .next-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-#quickAddModal .next-button i {
-  margin-right: 5px;
-}
-
-#quickAddModal .prev-button i {
-  margin-left: 5px;
-}
-
-#quickAddModal .submit-button {
-  width: 100%;
-  background-color: var(--success-color);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 12px;
-  font-size: 1em;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#quickAddModal .submit-button:hover:not(:disabled) {
-  background-color: #27ae60;
-}
-
-#quickAddModal .submit-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-#quickAddModal .submit-button i {
-  margin-right: 8px;
-}
-
-/* # === Navigation Dots === */
-#quickAddModal .swipe-dots {
-  position: fixed;
-  bottom: 40px;
-  right: 0;
-  left: 0;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  z-index: 49;
-  width: 90%;
-  max-width: 550px;
-  margin: 0 auto;
-}
-
-#quickAddModal .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #ccc;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-#quickAddModal .dot.active {
-  background-color: var(--primary-color);
-  transform: scale(1.2);
-}
-
-/* # === Summary Styles === */
-#quickAddModal .coupon-summary {
-  background-color: var(--light-bg);
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 15px;
-}
-
-#quickAddModal .summary-item {
-  margin-bottom: 10px;
-  display: flex;
-  border-bottom: 1px dashed #eee;
-  padding-bottom: 5px;
-}
-
-#quickAddModal .summary-label {
-  font-weight: bold;
-  min-width: 80px;
-  color: var(--text-color);
-}
-
-#quickAddModal .summary-value {
-  flex: 1;
-}
-
-#quickAddModal .summary-loading {
-  text-align: center;
-  padding: 20px;
-  color: #777;
-}
-
-/* # === Discount Display === */
-#quickAddModal .discount-display-container {
-  margin-top: 5px;
-  width: 100%;
-  height: 30px;
-  position: relative;
-}
-
-#quickAddModal .discount-display {
-  background: linear-gradient(to right, var(--light-bg) 0%, var(--primary-color) 100%);
-  height: 100%;
-  border-radius: 15px;
-  overflow: hidden;
-  position: relative;
-  width: 0%;
-  transition: width 0.3s ease;
-}
-
-#quickAddModal .discount-value {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-color);
-  font-weight: bold;
-  font-size: 0.9em;
-  text-shadow: 0 0 2px white;
-}
-
-/* # === Error Messages === */
-#quickAddModal .error {
-  color: var(--secondary-color);
-  font-size: 0.85em;
-  margin-top: 5px;
-  margin-bottom: 10px;
-}
-
-/* # === Responsive Styles === */
-@media (max-width: 768px) {
-  #quickAddModal .modal-content {
-    width: 95%;
+  /* # === Reset & Base Styles === */
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    /* # Background styling for standalone page view */
+    background-color: rgba(0,0,0,0.5);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+  
+  #quickAddModal * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  #quickAddModal {
+    --primary-color: #3498db;
+    --primary-hover: #2980b9;
+    --secondary-color: #e74c3c;
+    --success-color: #2ecc71;
+    --warning-color: #f39c12;
+    --light-bg: #f8f9fa;
+    --dark-bg: #2c3e50;
+    --text-color: #333;
+    --border-color: #ddd;
+    --light-text: #f8f9fa;
+    --shadow: 0 2px 10px rgba(0,0,0,0.1);
+    --transition: all 0.3s ease;
+    --accent-color: var(--primary-color); /* Default blue color */
+    --accent-hover: var(--primary-hover);
+  }
+  
+  /* # === Modal Container Styles === */
+  #quickAddModal.modal {
+    position: relative;
+    width: 100%;
     max-width: 550px;
-    margin: auto;
-  }
-  
-  #quickAddModal .tooltip {
-    display: none !important; /* # Hide desktop tooltip on mobile */
-  }
-  
-  #quickAddModal .mobile-tooltip {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 80%;
-    max-width: 300px;
-    background-color: var(--dark-bg);
-    color: white;
-    padding: 15px;
-    border-radius: 8px;
     z-index: 1000;
+    overflow-y: auto;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+  
+  #quickAddModal.modal.active {
+    display: block;
+    opacity: 1;
+  }
+  
+  /* # === Modal Content Styles === */
+  #quickAddModal .modal-content {
+    direction: rtl;
+    background-color: white;
+    width: 100%;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    position: relative;
+    transform: translateY(0);
+    opacity: 1;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+  }
+  
+  #quickAddModal.modal.active .modal-content {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  
+  #quickAddModal .modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--light-bg);
+  }
+  
+  #quickAddModal .modal-header h3 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 1.4em;
+    font-weight: 600;
+  }
+  
+  #quickAddModal .close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.2s ease;
+  }
+  
+  #quickAddModal .close-modal:hover {
+    color: var(--secondary-color);
+  }
+  
+  #quickAddModal .modal-body {
+    padding: 0;
+    max-height: 80vh;
+    overflow: hidden;
+  }
+  
+  /* # === Swipe Container Styles === */
+  #quickAddModal .swipe-container {
+    position: relative;
+    width: 100%;
+    height: 540px;
+    overflow: hidden;
+  }
+  
+  #quickAddModal .swipe-indicator {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(0,0,0,0.1);
+    color: var(--text-color);
+    font-size: 0.8em;
+    padding: 2px 8px;
+    border-radius: 15px;
+    z-index: 10;
+    font-weight: bold;
+  }
+  
+  #quickAddModal .swipe-progress {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 4px;
+    background-color: rgba(0,0,0,0.05);
+    z-index: 10;
+  }
+  
+  #quickAddModal .progress-bar {
+    height: 100%;
+    width: 20%; /* 1/5 of total width */
+    background-color: var(--primary-color);
+    transition: width 0.3s ease;
+  }
+  
+  /* # === Card Stack Styles === */
+  #quickAddModal .card-stack {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  
+  #quickAddModal .card {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    background-color: white;
+    transition: transform 0.4s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  #quickAddModal .card[data-step="1"] {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
+  #quickAddModal .card.moving-left {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  
+  #quickAddModal .card.moving-right {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  
+  #quickAddModal .card.active {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
+  #quickAddModal .card-content {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 70px; /* Add padding to prevent content from being hidden by buttons */
+  }
+  
+  #quickAddModal .card-content h4 {
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-size: 1.2em;
     text-align: center;
   }
   
-  #quickAddModal .mobile-tooltip::after {
-    display: none;
-  }
-  
-  #quickAddModal .mobile-tooltip .close-tooltip {
-    position: absolute;
-    top: 5px;
-    left: 10px;
-    font-size: 1.5em;
-  }
-  
-  #quickAddModal .swipe-dots {
-    bottom: 30px;
-  }
-}
-
-@media (min-width: 769px) {
-  #quickAddModal .mobile-tooltip {
-    display: none !important; /* # Hide mobile tooltip on desktop */
-  }
-  
-  #quickAddModal .tooltip-button:hover + .tooltip,
-  #quickAddModal .tooltip-button:focus + .tooltip,
-  #quickAddModal .tooltip:hover {
-    display: block;
-  }
-}
-/* # === Responsive Styles === */
-@media (max-width: 768px) {
-  /* # Add mobile-specific styles here */
-  
-  /* # Fixed button positioning for mobile only */
+  /* # This is the key style for button positioning */
   #quickAddModal .card-actions {
-    position: fixed;
-    bottom: 60px;
+    position: absolute;
+    bottom: 20px;
     left: 0;
     right: 0;
-    width: 90%;
-    max-width: 550px;
+    width: calc(100% - 40px);
     margin: 0 auto;
-    padding: 15px 20px;
+    padding: 15px 0;
+    display: flex;
+    justify-content: space-between;
     background-color: white;
-    border-top: 1px solid var(--border-color);
     z-index: 50;
   }
   
-  /* # Fixed dots positioning for mobile only */
-  #quickAddModal .swipe-dots {
-    position: fixed;
-    bottom: 30px;
-    right: 0;
-    left: 0;
-    z-index: 49;
-    width: 90%;
-    max-width: 550px;
-    margin: 0 auto;
+  /* # === Form Elements === */
+  #quickAddModal .form-group {
+    margin-bottom: 15px;
   }
   
-  /* # Add extra space for content on mobile so buttons don't cover it */
-  #quickAddModal .card-content {
-    padding-bottom: 70px;
+  #quickAddModal label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: var(--text-color);
   }
-}
-
+  
+  #quickAddModal .input-field {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: var(--light-bg);
+  }
+  
+  #quickAddModal .input-field:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    outline: none;
+  }
+  
+  #quickAddModal .input-large {
+    font-size: 1.2em;
+    padding: 12px 15px;
+  }
+  
+  #quickAddModal textarea.input-field {
+    resize: vertical;
+    min-height: 80px;
+  }
+  
+  #quickAddModal .checkbox-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  
+  #quickAddModal .checkbox-container input[type="checkbox"] {
+    margin-left: 10px;
+    width: 18px;
+    height: 18px;
+  }
+  
+  #quickAddModal .tooltip-container {
+    position: relative;
+  }
+  
+  #quickAddModal .tooltip-button {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-right: 10px;
+    font-size: 12px;
+  }
+  
+  #quickAddModal .tooltip-button:hover {
+    background-color: var(--light-bg);
+  }
+  
+  #quickAddModal .tooltip, 
+  #quickAddModal .mobile-tooltip {
+    display: none;
+    position: absolute;
+    background-color: var(--dark-bg);
+    color: var(--light-text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    max-width: 250px;
+    z-index: 100;
+    text-align: right;
+    top: -5px;
+    right: 35px;
+    transform: translateY(-100%);
+    box-shadow: var(--shadow);
+  }
+  
+  #quickAddModal .tooltip::after, 
+  #quickAddModal .mobile-tooltip::after {
+    content: "";
+    position: absolute;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--dark-bg) transparent transparent transparent;
+    top: 100%;
+    right: 10px;
+  }
+  
+  #quickAddModal .close-tooltip {
+    float: left;
+    cursor: pointer;
+    margin-right: 8px;
+  }
+  
+  /* # === Button Styles === */
+  #quickAddModal .swipe-button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+    text-align: center;
+  }
+  
+  #quickAddModal .prev-button {
+    background-color: var(--light-bg);
+    color: var(--text-color);
+  }
+  
+  #quickAddModal .prev-button:hover {
+    background-color: #e9ecef;
+  }
+  
+  #quickAddModal .next-button {
+    background-color: var(--primary-color);
+    color: white;
+  }
+  
+  #quickAddModal .next-button:hover {
+    background-color: var(--primary-hover);
+  }
+  
+  #quickAddModal .next-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  #quickAddModal .next-button i {
+    margin-right: 5px;
+  }
+  
+  #quickAddModal .prev-button i {
+    margin-left: 5px;
+  }
+  
+  #quickAddModal .submit-button {
+    width: 100%;
+    background-color: var(--success-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  #quickAddModal .submit-button:hover:not(:disabled) {
+    background-color: #27ae60;
+  }
+  
+  #quickAddModal .submit-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  #quickAddModal .submit-button i {
+    margin-right: 8px;
+  }
+  
+  /* # === Navigation Dots === */
+  #quickAddModal .swipe-dots {
+    position: absolute;
+    bottom: 5px;
+    right: 0;
+    left: 0;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    z-index: 49;
+    padding: 10px 0;
+  }
+  
+  #quickAddModal .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #ccc;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  
+  #quickAddModal .dot.active {
+    background-color: var(--primary-color);
+    transform: scale(1.2);
+  }
+  
+  /* # === Summary Styles === */
+  #quickAddModal .coupon-summary {
+    background-color: var(--light-bg);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  
+  #quickAddModal .summary-item {
+    margin-bottom: 10px;
+    display: flex;
+    border-bottom: 1px dashed #eee;
+    padding-bottom: 5px;
+  }
+  
+  #quickAddModal .summary-label {
+    font-weight: bold;
+    min-width: 80px;
+    color: var(--text-color);
+  }
+  
+  #quickAddModal .summary-value {
+    flex: 1;
+  }
+  
+  #quickAddModal .summary-loading {
+    text-align: center;
+    padding: 20px;
+    color: #777;
+  }
+  
+  /* # === Discount Display === */
+  #quickAddModal .discount-display-container {
+    margin-top: 5px;
+    width: 100%;
+    height: 30px;
+    position: relative;
+  }
+  
+  #quickAddModal .discount-display {
+    background: linear-gradient(to right, var(--light-bg) 0%, var(--primary-color) 100%);
+    height: 100%;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  
+  #quickAddModal .discount-value {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-color);
+    font-weight: bold;
+    font-size: 0.9em;
+    text-shadow: 0 0 2px white;
+  }
+  
+  /* # === Error Messages === */
+  #quickAddModal .error {
+    color: var(--secondary-color);
+    font-size: 0.85em;
+    margin-top: 5px;
+    margin-bottom: 10px;
+  }
+  
+  /* # === Automatic Coupon Detection Section - UPGRADED === */
+  #quickAddModal .auto-detect-section {
+    margin: 15px 0;
+    padding: 20px;
+    background: linear-gradient(to bottom, #f9f9ff, #eef1f7);
+    border-radius: 12px;
+    border: 1px solid #e0e7ff;
+    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.1);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  #quickAddModal .auto-detect-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 30%;
+    height: 5px;
+    background: linear-gradient(to right, transparent, var(--accent-color));
+    border-radius: 0 5px 0 0;
+  }
+  
+  #quickAddModal .section-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 15px;
+  }
+  
+  #quickAddModal .section-divider::before,
+  #quickAddModal .section-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #d0d8e6;
+  }
+  
+  #quickAddModal .section-divider span {
+    padding: 0 12px;
+    font-weight: bold;
+    color: #666;
+    font-size: 1.1em;
+  }
+  
+  #quickAddModal .auto-detect-section h4 {
+    color: var(--accent-color);
+    font-size: 1.2em;
+    margin-bottom: 15px;
+    position: relative;
+    display: inline-block;
+  }
+  
+  #quickAddModal .auto-detect-section h4::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    width: 50px;
+    height: 3px;
+    background-color: var(--accent-color);
+    transform: translateX(-50%);
+    border-radius: 3px;
+  }
+  
+  #quickAddModal .auto-detect-section .form-group {
+    margin-bottom: 15px;
+  }
+  
+  #quickAddModal .auto-detect-section .input-field {
+    border: 1px solid #d1d9e6;
+    background-color: #fff;
+    padding: 12px 15px;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+  }
+  
+  #quickAddModal .auto-detect-section .input-field:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.2);
+  }
+  
+  #quickAddModal .auto-detect-section .input-field::placeholder {
+    color: #aaa;
+    font-style: italic;
+  }
+  
+  #quickAddModal .auto-detect-button-container {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+  }
+  
+  #quickAddModal .auto-detect-button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 10px 25px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(155, 89, 182, 0.3);
+  }
+  
+  #quickAddModal .auto-detect-button:hover {
+    background-color: var(--accent-hover);
+    box-shadow: 0 6px 15px rgba(155, 89, 182, 0.4);
+    transform: translateY(-2px);
+  }
+  
+  #quickAddModal .auto-detect-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(155, 89, 182, 0.4);
+  }
+  
+  /* # Add icon to auto-detect button */
+  #quickAddModal .auto-detect-button::before {
+    content: '\f002';  /* Magnifying glass icon */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    margin-right: 8px;
+    font-size: 0.9em;
+  }
+  
+  /* # === Responsive Styles === */
+  @media (max-width: 768px) {
+    #quickAddModal .modal-content {
+      width: 95%;
+      max-width: 550px;
+      margin: auto;
+    }
+    
+    #quickAddModal .tooltip {
+      display: none !important; /* # Hide desktop tooltip on mobile */
+    }
+    
+    #quickAddModal .mobile-tooltip {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      max-width: 300px;
+      background-color: var(--dark-bg);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      z-index: 1000;
+      text-align: center;
+    }
+    
+    #quickAddModal .mobile-tooltip::after {
+      display: none;
+    }
+    
+    #quickAddModal .mobile-tooltip .close-tooltip {
+      position: absolute;
+      top: 5px;
+      left: 10px;
+      font-size: 1.5em;
+    }
+    
+    #quickAddModal .swipe-dots {
+      bottom: 15px;
+    }
+    
+    /* # Card actions for mobile */
+    #quickAddModal .card-actions {
+      position: absolute;
+      bottom: 50px;
+      width: calc(100% - 40px);
+    }
+    
+    /* # Add extra space for content on mobile so buttons don't cover it */
+    #quickAddModal .card-content {
+      padding-bottom: 100px;
+    }
+    
+    /* # Mobile adjustments for auto-detect section */
+    #quickAddModal .auto-detect-section {
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    
+    #quickAddModal .auto-detect-button {
+      width: 80%;
+      padding: 12px 20px;
+    }
+  }
+  
+  @media (min-width: 769px) {
+    #quickAddModal .mobile-tooltip {
+      display: none !important; /* # Hide mobile tooltip on desktop */
+    }
+    
+    #quickAddModal .tooltip-button:hover + .tooltip,
+    #quickAddModal .tooltip-button:focus + .tooltip,
+    #quickAddModal .tooltip:hover {
+      display: block;
+    }
+  }
 </style>
+
 <script>
-// # Interactive Coupon Modal Functionality
+// # Quick Add Coupon Modal Functionality
 document.addEventListener('DOMContentLoaded', function() {
+  // # Debug helper function
+  function debug(message) {
+    if (false) { // Set to true to enable debug messages
+      console.log(`[QuickAddModal] ${message}`);
+    }
+  }
+  
+  debug('Initializing quick add coupon modal');
+  
   // # Initialize DOM elements
   const closeModalBtn = document.getElementById('closeQuickAddModal');
   const quickAddModal = document.getElementById('quickAddModal');
@@ -883,28 +1028,42 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // # Function to close the modal
   function closeQuickAddModal() {
+    debug('Closing modal');
     quickAddModal.classList.remove('active');
+    
+    // # If this is inside an iframe, notify the parent
+    if (window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({ action: 'closeQuickAddModal' }, '*');
+      } catch (e) {
+        debug('Error posting message to parent: ' + e);
+      }
+    }
   }
   
-  // # Set up close button functionality
+  // # Setup close button functionality
   if (closeModalBtn) {
     closeModalBtn.addEventListener('click', function() {
       closeQuickAddModal();
     });
+    debug('Close button event listener attached');
+  } else {
+    debug('Close button not found');
   }
   
-  // # Prevent modal close on outside click for standalone version
-  
-  // # Swipe navigation elements
-  const cards = document.querySelectorAll('.card');
-  const dots = document.querySelectorAll('.dot');
-  const progressBar = document.querySelector('.progress-bar');
-  const currentStepEl = document.querySelector('.current-step');
-  const totalStepsEl = document.querySelector('.total-steps');
+  // # Get navigation elements
+  const cards = document.querySelectorAll('#quickAddModal .card');
+  const dots = document.querySelectorAll('#quickAddModal .dot');
+  const progressBar = document.querySelector('#quickAddModal .progress-bar');
+  const currentStepEl = document.querySelector('#quickAddModal .current-step');
+  const totalStepsEl = document.querySelector('#quickAddModal .total-steps');
   
   // # Set total steps indicator
-  const totalSteps = 5; // Updated from 6 to 5
-  totalStepsEl.textContent = totalSteps;
+  const totalSteps = 5;
+  if (totalStepsEl) {
+    totalStepsEl.textContent = totalSteps;
+    debug(`Total steps set to ${totalSteps}`);
+  }
   
   // # Get form field elements
   const companySelect = document.getElementById('quick_company_id');
@@ -912,12 +1071,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const otherCompanyInput = document.getElementById('quick_other_company');
   const buymeCouponLinkGroup = document.getElementById('quick_buyme_coupon_link_group');
   const buymeCouponLinkInput = document.getElementById('quick_buyme_coupon_link');
+  const companyLogoContainer = document.getElementById('quick_company_logo_container');
+  const companyLogo = document.getElementById('quick_company_logo');
   const codeInput = document.getElementById('quick_code');
   const costInput = document.getElementById('quick_cost');
   const valueInput = document.getElementById('quick_value');
   const discountInput = document.getElementById('quick_discount_percentage');
-  const discountDisplay = document.querySelector('.discount-display');
-  const discountValue = document.querySelector('.discount-value');
+  const discountDisplay = document.querySelector('#quickAddModal .discount-display');
+  const discountValue = document.querySelector('#quickAddModal .discount-value');
   const expirationInput = document.getElementById('quick_expiration');
   const descriptionInput = document.getElementById('quick_description');
   const sourceInput = document.getElementById('quick_source');
@@ -930,18 +1091,23 @@ document.addEventListener('DOMContentLoaded', function() {
   const purposeInput = document.getElementById('quick_purpose');
   const submitButton = document.getElementById('quick_submit_button');
   const validationMessage = document.getElementById('quick_validation_message');
+  const smsTextArea = document.getElementById('sms_text');
+  const submitSmsButton = document.getElementById('submit_sms');
   
   // # Navigation buttons
-  const prevButtons = document.querySelectorAll('.prev-button');
-  const nextButtons = document.querySelectorAll('.next-button');
+  const prevButtons = document.querySelectorAll('#quickAddModal .prev-button');
+  const nextButtons = document.querySelectorAll('#quickAddModal .next-button');
   
   // # Current step tracking
   let currentStep = 1;
   
   // # Function to navigate to a specific step
   function goToStep(step) {
+    debug(`Attempting to go to step ${step} from ${currentStep}`);
+    
     // # Validate current step before proceeding
     if (step > currentStep && !validateCurrentStep()) {
+      debug(`Validation failed for step ${currentStep}`);
       return false;
     }
     
@@ -973,17 +1139,24 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // # Update progress bar
     const progressPercent = ((step - 1) / (totalSteps - 1)) * 100;
-    progressBar.style.width = progressPercent + '%';
+    if (progressBar) {
+      progressBar.style.width = progressPercent + '%';
+      debug(`Progress bar updated to ${progressPercent}%`);
+    }
 
     // # Update step counter
-    currentStepEl.textContent = step;
+    if (currentStepEl) {
+      currentStepEl.textContent = step;
+    }
     
     // # Update current step tracker
     currentStep = step;
+    debug(`Current step updated to ${currentStep}`);
     
     // # If on final step, update summary view
     if (step === totalSteps) {
       updateSummary();
+      debug('Final step reached, summary updated');
     }
     
     return true;
@@ -991,18 +1164,20 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // # Validation function for the current step
   function validateCurrentStep() {
+    debug(`Validating step ${currentStep}`);
+    
     switch(currentStep) {
       case 1:
         // # Company selection validation
-        if (companySelect.value === '') {
+        if (!companySelect || companySelect.value === '') {
           alert('יש לבחור חברה');
           return false;
         }
-        if (companySelect.value === 'other' && otherCompanyInput.value.trim() === '') {
+        if (companySelect.value === 'other' && (!otherCompanyInput || otherCompanyInput.value.trim() === '')) {
           alert('יש להזין שם חברה חדשה');
           return false;
         }
-        if (companySelect.value === '54' && buymeCouponLinkInput.value.trim() === '') {
+        if (companySelect.value === '54' && buymeCouponLinkInput && buymeCouponLinkInput.value.trim() === '') {
           // # Soft validation - warn but allow continuation
           if (!confirm('לא הזנת כתובת URL לקופון BuyMe. האם להמשיך?')) {
             return false;
@@ -1011,15 +1186,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
       
       case 2:
-        // # Combined validation for coupon code, cost, value and discount
-        if (codeInput.value.trim() === '') {
+        // # Coupon code, cost, value and discount validation
+        if (!codeInput || codeInput.value.trim() === '') {
           alert('יש להזין קוד קופון');
           return false;
         }
-        // # Value and discount validation - at least 2 fields must be filled
-        const cost = toFloat(costInput.value);
-        const value = toFloat(valueInput.value);
-        const discount = toFloat(discountInput.value);
+        
+        // # At least 2 fields must be filled
+        const cost = toFloat(costInput?.value);
+        const value = toFloat(valueInput?.value);
+        const discount = toFloat(discountInput?.value);
         
         let filledCount = 0;
         if (cost !== null && cost >= 0) filledCount++;
@@ -1034,7 +1210,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       case 3:
         // # Expiration date validation (optional field)
-        if (expirationInput.value) {
+        if (expirationInput && expirationInput.value) {
           const selectedDate = new Date(expirationInput.value);
           const today = new Date();
           today.setHours(0, 0, 0, 0);
@@ -1049,15 +1225,16 @@ document.addEventListener('DOMContentLoaded', function() {
       
       case 4:
         // # Card info validation
-        if (includeCardInfoCheckbox.checked) {
-          if (cardExpInput.value && !/^\d{2}\/\d{2}$/.test(cardExpInput.value)) {
+        if (includeCardInfoCheckbox && includeCardInfoCheckbox.checked && cardExpInput && cardExpInput.value) {
+          if (!/^\d{2}\/\d{2}$/.test(cardExpInput.value)) {
             alert('יש להזין תוקף כרטיס בפורמט MM/YY');
             return false;
           }
         }
         
         // # One-time coupon purpose validation
-        if (isOneTimeCheckbox.checked && purposeInput.value.trim() === '') {
+        if (isOneTimeCheckbox && isOneTimeCheckbox.checked && 
+            purposeInput && purposeInput.value.trim() === '') {
           if (!confirm('לא הזנת מטרה לקופון חד פעמי. האם להמשיך?')) {
             return false;
           }
@@ -1071,140 +1248,223 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // # Function to update the summary view before submission
   function updateSummary() {
+    debug('Updating summary view');
+    
     // # Hide loading, show content
-    document.querySelector('.summary-loading').style.display = 'none';
-    document.querySelector('.summary-content').style.display = 'block';
+    const summaryLoading = document.querySelector('#quickAddModal .summary-loading');
+    const summaryContent = document.querySelector('#quickAddModal .summary-content');
+    
+    if (summaryLoading) summaryLoading.style.display = 'none';
+    if (summaryContent) summaryContent.style.display = 'block';
     
     // # Company name
-    let companyName = '';
-    if (companySelect.value === 'other') {
-      companyName = otherCompanyInput.value;
-    } else {
-      const selectedOption = companySelect.options[companySelect.selectedIndex];
-      companyName = selectedOption.textContent;
+    if (companySelect) {
+      let companyName = '';
+      if (companySelect.value === 'other') {
+        companyName = otherCompanyInput ? otherCompanyInput.value : '';
+      } else {
+        const selectedOption = companySelect.options[companySelect.selectedIndex];
+        companyName = selectedOption ? selectedOption.textContent : '';
+      }
+      
+      const summaryCompany = document.getElementById('summary_company');
+      if (summaryCompany) summaryCompany.textContent = companyName;
     }
-    document.getElementById('summary_company').textContent = companyName;
     
     // # Basic coupon info
-    document.getElementById('summary_code').textContent = codeInput.value;
-    document.getElementById('summary_cost').textContent = costInput.value ? costInput.value + ' ₪' : 'לא צוין';
-    document.getElementById('summary_value').textContent = valueInput.value ? valueInput.value + ' ₪' : 'לא צוין';
-    document.getElementById('summary_discount').textContent = discountInput.value ? discountInput.value + '%' : 'לא צוין';
+    const summaryCode = document.getElementById('summary_code');
+    const summaryCost = document.getElementById('summary_cost');
+    const summaryValue = document.getElementById('summary_value');
+    const summaryDiscount = document.getElementById('summary_discount');
+    
+    if (summaryCode && codeInput) summaryCode.textContent = codeInput.value;
+    if (summaryCost && costInput) summaryCost.textContent = costInput.value ? costInput.value + ' ₪' : 'לא צוין';
+    if (summaryValue && valueInput) summaryValue.textContent = valueInput.value ? valueInput.value + ' ₪' : 'לא צוין';
+    if (summaryDiscount && discountInput) summaryDiscount.textContent = discountInput.value ? discountInput.value + '%' : 'לא צוין';
     
     // # Expiration date (optional)
     const expirationContainer = document.getElementById('summary_expiration_container');
-    if (expirationInput.value) {
+    const summaryExpiration = document.getElementById('summary_expiration');
+    
+    if (expirationContainer && summaryExpiration && expirationInput && expirationInput.value) {
       // # Format date to DD/MM/YYYY for display
       const dateObj = new Date(expirationInput.value);
       const day = dateObj.getDate().toString().padStart(2, '0');
       const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
       const year = dateObj.getFullYear();
-      document.getElementById('summary_expiration').textContent = `${day}/${month}/${year}`;
+      summaryExpiration.textContent = `${day}/${month}/${year}`;
       expirationContainer.style.display = 'flex';
-    } else {
+    } else if (expirationContainer) {
       expirationContainer.style.display = 'none';
     }
     
     // # Description (optional)
     const descriptionContainer = document.getElementById('summary_description_container');
-    if (descriptionInput.value) {
-      document.getElementById('summary_description').textContent = descriptionInput.value;
+    const summaryDescription = document.getElementById('summary_description');
+    
+    if (descriptionContainer && summaryDescription && descriptionInput && descriptionInput.value) {
+      summaryDescription.textContent = descriptionInput.value;
       descriptionContainer.style.display = 'flex';
-    } else {
+    } else if (descriptionContainer) {
       descriptionContainer.style.display = 'none';
     }
     
     // # Source (optional)
     const sourceContainer = document.getElementById('summary_source_container');
-    if (sourceInput.value) {
-      document.getElementById('summary_source').textContent = sourceInput.value;
+    const summarySource = document.getElementById('summary_source');
+    
+    if (sourceContainer && summarySource && sourceInput && sourceInput.value) {
+      summarySource.textContent = sourceInput.value;
       sourceContainer.style.display = 'flex';
-    } else {
+    } else if (sourceContainer) {
       sourceContainer.style.display = 'none';
     }
     
     // # Card info (optional)
     const cardContainer = document.getElementById('summary_card_container');
-    if (includeCardInfoCheckbox.checked) {
+    const summaryCard = document.getElementById('summary_card');
+    
+    if (cardContainer && summaryCard && includeCardInfoCheckbox && includeCardInfoCheckbox.checked) {
       let cardInfo = '';
-      if (cvvInput.value) {
+      if (cvvInput && cvvInput.value) {
         cardInfo += 'CVV: ' + cvvInput.value;
       }
-      if (cardExpInput.value) {
+      if (cardExpInput && cardExpInput.value) {
         if (cardInfo) cardInfo += ', ';
         cardInfo += 'תוקף: ' + cardExpInput.value;
       }
-      document.getElementById('summary_card').textContent = cardInfo || 'מידע חסר';
+      summaryCard.textContent = cardInfo || 'מידע חסר';
       cardContainer.style.display = 'flex';
-    } else {
+    } else if (cardContainer) {
       cardContainer.style.display = 'none';
     }
     
     // # One-time use info (optional)
     const oneTimeContainer = document.getElementById('summary_one_time_container');
     const purposeContainer = document.getElementById('summary_purpose_container');
-    if (isOneTimeCheckbox.checked) {
+    const summaryPurpose = document.getElementById('summary_purpose');
+    
+    if (oneTimeContainer && purposeContainer && summaryPurpose && 
+        isOneTimeCheckbox && isOneTimeCheckbox.checked) {
       oneTimeContainer.style.display = 'flex';
-      if (purposeInput.value) {
-        document.getElementById('summary_purpose').textContent = purposeInput.value;
+      if (purposeInput && purposeInput.value) {
+        summaryPurpose.textContent = purposeInput.value;
         purposeContainer.style.display = 'flex';
       } else {
         purposeContainer.style.display = 'none';
       }
     } else {
-      oneTimeContainer.style.display = 'none';
-      purposeContainer.style.display = 'none';
+      if (oneTimeContainer) oneTimeContainer.style.display = 'none';
+      if (purposeContainer) purposeContainer.style.display = 'none';
     }
     
     // # Enable/disable submit button based on validation
     validateFormForSubmission();
   }
   
-  // # Handle "Other" company selection
+  // # Function to update company logo
+  function updateCompanyLogo() {
+    debug('Updating company logo');
+    
+    if (companySelect && companyLogoContainer && companyLogo) {
+      if (companySelect.value && companySelect.value !== 'other') {
+        const selectedOption = companySelect.options[companySelect.selectedIndex];
+        
+        if (selectedOption) {
+          const imagePath = selectedOption.getAttribute('data-image-path');
+          
+          if (imagePath) {
+            companyLogo.src = imagePath;
+            companyLogoContainer.style.display = 'block';
+            debug(`Updated logo to: ${imagePath}`);
+          } else {
+            companyLogoContainer.style.display = 'none';
+            debug('No image path found');
+          }
+        }
+      } else {
+        companyLogoContainer.style.display = 'none';
+        debug('No company selected or "other" selected');
+      }
+    }
+  }
+  
+  // # Handle "Other" company selection and logo updates
   if (companySelect) {
     companySelect.addEventListener('change', function() {
+      debug(`Company changed to: ${this.value}`);
+      
       // # Show/hide other company input field
-      if (this.value === 'other') {
+      if (otherCompanyGroup && otherCompanyInput) {
+        if (this.value === 'other') {
+          otherCompanyGroup.style.display = 'block';
+          otherCompanyInput.setAttribute('required', 'required');
+        } else {
+          otherCompanyGroup.style.display = 'none';
+          otherCompanyInput.removeAttribute('required');
+          otherCompanyInput.value = '';
+        }
+      }
+      
+      // # Handle BuyMe specific field
+      if (buymeCouponLinkGroup && buymeCouponLinkInput) {
+        if (this.value === '54') { // BuyMe company ID
+          buymeCouponLinkGroup.style.display = 'block';
+        } else {
+          buymeCouponLinkGroup.style.display = 'none';
+          buymeCouponLinkInput.value = '';
+        }
+      }
+      
+      // # Update company logo
+      updateCompanyLogo();
+      
+      // # Enable next button when company is selected
+      const stepOneNextButton = document.querySelector('#quickAddModal .card[data-step="1"] .next-button');
+      if (stepOneNextButton) {
+        stepOneNextButton.disabled = this.value === '';
+      }
+    });
+    
+    // # Initial calls to set field visibility and logo
+    if (otherCompanyGroup && otherCompanyInput) {
+      if (companySelect.value === 'other') {
         otherCompanyGroup.style.display = 'block';
         otherCompanyInput.setAttribute('required', 'required');
       } else {
         otherCompanyGroup.style.display = 'none';
         otherCompanyInput.removeAttribute('required');
-        otherCompanyInput.value = '';
       }
-      
-      // # Handle BuyMe specific field
-      toggleBuymeCouponLinkField();
-      
-      // # Enable next button when company is selected
-      const stepOneNextButton = document.querySelector('.card[data-step="1"] .next-button');
-      stepOneNextButton.disabled = this.value === '';
-    });
-  }
-  
-  // # Handle BuyMe coupon link field visibility
-  function toggleBuymeCouponLinkField() {
-    if (companySelect && companySelect.value === '54') { // # BuyMe company id
-      buymeCouponLinkGroup.style.display = 'block';
-    } else {
-      buymeCouponLinkGroup.style.display = 'none';
-      if (buymeCouponLinkInput) {
-        buymeCouponLinkInput.value = '';
+    }
+    
+    if (buymeCouponLinkGroup && buymeCouponLinkInput) {
+      if (companySelect.value === '54') {
+        buymeCouponLinkGroup.style.display = 'block';
+      } else {
+        buymeCouponLinkGroup.style.display = 'none';
       }
+    }
+    
+    // # Initial company logo
+    updateCompanyLogo();
+    
+    // # Initial next button state
+    const stepOneNextButton = document.querySelector('#quickAddModal .card[data-step="1"] .next-button');
+    if (stepOneNextButton) {
+      stepOneNextButton.disabled = companySelect.value === '';
     }
   }
   
-  // # Initial call to set BuyMe field visibility
-  toggleBuymeCouponLinkField();
-  
   // # Handle one-time checkbox and purpose field
   function togglePurposeField() {
-    if (isOneTimeCheckbox && isOneTimeCheckbox.checked) {
-      purposeGroup.style.display = 'block';
-    } else {
-      purposeGroup.style.display = 'none';
-      if (purposeInput) {
-        purposeInput.value = '';
+    if (isOneTimeCheckbox && purposeGroup) {
+      if (isOneTimeCheckbox.checked) {
+        purposeGroup.style.display = 'block';
+      } else {
+        purposeGroup.style.display = 'none';
+        if (purposeInput) {
+          purposeInput.value = '';
+        }
       }
     }
   }
@@ -1215,27 +1475,42 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // # Listen for checkbox changes
     isOneTimeCheckbox.addEventListener('change', togglePurposeField);
+    debug('One-time checkbox listener attached');
   }
   
   // # Handle card fields visibility with localStorage for persistence
   function toggleCardFields() {
-    if (includeCardInfoCheckbox && includeCardInfoCheckbox.checked) {
-      cardFieldsContainer.style.display = 'block';
-      localStorage.setItem('include_card_info_checked', 'true'); // # Save state
-    } else {
-      cardFieldsContainer.style.display = 'none';
-      localStorage.removeItem('include_card_info_checked'); // # Remove state
-      
-      // # Clear fields
-      if (cvvInput) cvvInput.value = '';
-      if (cardExpInput) cardExpInput.value = '';
+    if (includeCardInfoCheckbox && cardFieldsContainer) {
+      if (includeCardInfoCheckbox.checked) {
+        cardFieldsContainer.style.display = 'block';
+        try {
+          localStorage.setItem('include_card_info_checked', 'true'); // # Save state
+        } catch (e) {
+          debug('Error saving to localStorage: ' + e);
+        }
+      } else {
+        cardFieldsContainer.style.display = 'none';
+        try {
+          localStorage.removeItem('include_card_info_checked'); // # Remove state
+        } catch (e) {
+          debug('Error removing from localStorage: ' + e);
+        }
+        
+        // # Clear fields
+        if (cvvInput) cvvInput.value = '';
+        if (cardExpInput) cardExpInput.value = '';
+      }
     }
   }
   
   if (includeCardInfoCheckbox && cardFieldsContainer) {
-    // # Restore state from localStorage if available
-    if (localStorage.getItem('include_card_info_checked')) {
-      includeCardInfoCheckbox.checked = true;
+    try {
+      // # Restore state from localStorage if available
+      if (localStorage.getItem('include_card_info_checked')) {
+        includeCardInfoCheckbox.checked = true;
+      }
+    } catch (e) {
+      debug('Error accessing localStorage: ' + e);
     }
     
     // # Listen for checkbox changes
@@ -1243,6 +1518,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // # Initial call to set card fields visibility
     toggleCardFields();
+    debug('Card info checkbox listener attached');
   }
   
   // # Auto-formatting for MM/YY input field
@@ -1254,6 +1530,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       event.target.value = value;
     });
+    debug('Card expiration formatter attached');
   }
   
   // # Tooltip functionality for both mobile and desktop
@@ -1265,56 +1542,64 @@ document.addEventListener('DOMContentLoaded', function() {
   if (tooltipButton) {
     // # Mobile tooltip click handler
     tooltipButton.addEventListener('click', function() {
-      if (window.innerWidth <= 768) {
+      if (window.innerWidth <= 768 && mobileTooltip) {
         if (mobileTooltip.style.display === 'block') {
           mobileTooltip.style.display = 'none';
         } else {
           mobileTooltip.style.display = 'block';
-          mobileTooltip.classList.add('active');
         }
       }
     });
     
     // # Desktop hover functionality
-    tooltipButton.addEventListener('mouseenter', function() {
-      if (window.innerWidth > 768) {
-        tooltipDesktop.style.display = 'block';
-      }
-    });
-    
-    tooltipButton.addEventListener('mouseleave', function() {
-      if (window.innerWidth > 768) {
-        tooltipDesktop.style.display = 'none';
-      }
-    });
-    
-    // # Close tooltip button for mobile
-    if (closeTooltipBtn) {
-      closeTooltipBtn.addEventListener('click', function() {
-        mobileTooltip.style.display = 'none';
-        mobileTooltip.classList.remove('active');
+    if (tooltipDesktop) {
+      tooltipButton.addEventListener('mouseenter', function() {
+        if (window.innerWidth > 768) {
+          tooltipDesktop.style.display = 'block';
+        }
+      });
+      
+      tooltipButton.addEventListener('mouseleave', function() {
+        if (window.innerWidth > 768) {
+          tooltipDesktop.style.display = 'none';
+        }
       });
     }
+    
+    // # Close tooltip button for mobile
+    if (closeTooltipBtn && mobileTooltip) {
+      closeTooltipBtn.addEventListener('click', function() {
+        mobileTooltip.style.display = 'none';
+      });
+    }
+    
+    debug('Tooltip listeners attached');
   }
   
   // # Helper function to parse float values safely
   function toFloat(value) {
+    if (value === undefined || value === null || value === '') return null;
     const num = parseFloat(value);
     return isNaN(num) ? null : num;
   }
   
   // # Field calculation and validation logic
   function updateFields(changedField) {
+    debug(`Updating fields after change in ${changedField}`);
+    
+    if (!costInput || !valueInput || !discountInput) {
+      debug('Missing cost, value, or discount inputs');
+      return;
+    }
+    
     const cost = toFloat(costInput.value);
     const value = toFloat(valueInput.value);
     const discount = toFloat(discountInput.value);
     
     // # Update discount visual display
-    if (discount !== null && discount >= 0 && discount <= 100) {
-      if (discountDisplay) {
-        discountDisplay.style.width = discount + '%';
-        discountValue.textContent = discount + '%';
-      }
+    if (discount !== null && discount >= 0 && discount <= 100 && discountDisplay && discountValue) {
+      discountDisplay.style.width = discount + '%';
+      discountValue.textContent = discount + '%';
     }
     
     // # Special case: If cost is 0 and value is positive, set discount to 100%
@@ -1365,17 +1650,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (discount === 100) {
           costInput.value = "0.00";
         } else {
-          discountInput.value = ((1 - cost / value) * 100).toFixed(2);
+          costInput.value = (value * (1 - discount / 100)).toFixed(2);
         }
       }
     }
     
     // # Update discount display after calculations
-    if (discountInput.value) {
-      const discountValue = parseFloat(discountInput.value);
-      if (discountDisplay && !isNaN(discountValue)) {
-        discountDisplay.style.width = Math.min(100, discountValue) + '%';
-        document.querySelector('.discount-value').textContent = discountValue.toFixed(2) + '%';
+    if (discountInput.value && discountDisplay && discountValue) {
+      const discountVal = parseFloat(discountInput.value);
+      if (!isNaN(discountVal)) {
+        discountDisplay.style.width = Math.min(100, discountVal) + '%';
+        discountValue.textContent = discountVal.toFixed(2) + '%';
       }
     }
     
@@ -1385,6 +1670,13 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // # Final validation for form submission
   function validateFormForSubmission() {
+    debug('Validating form for submission');
+    
+    if (!codeInput || !costInput || !valueInput || !discountInput || !companySelect || !submitButton || !validationMessage) {
+      debug('Missing required form elements');
+      return false;
+    }
+    
     const cost = toFloat(costInput.value);
     const value = toFloat(valueInput.value);
     const discount = toFloat(discountInput.value);
@@ -1421,6 +1713,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // # Initial validation call
     updateFields(null);
+    debug('Price field event listeners attached');
   }
   
   // # Set up navigation event listeners
@@ -1440,7 +1733,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // # Enable navigation via dots
+  // # Navigation via dots
   dots.forEach(dot => {
     dot.addEventListener('click', function() {
       const targetStep = parseInt(this.dataset.step);
@@ -1450,12 +1743,13 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
+  debug('Navigation event listeners attached');
   
   // # Touch swipe functionality for mobile
   let touchStartX = 0;
   let touchEndX = 0;
   
-  const swipeContainer = document.querySelector('.swipe-container');
+  const swipeContainer = document.querySelector('#quickAddModal .swipe-container');
   if (swipeContainer) {
     swipeContainer.addEventListener('touchstart', function(e) {
       touchStartX = e.changedTouches[0].screenX;
@@ -1465,6 +1759,8 @@ document.addEventListener('DOMContentLoaded', function() {
       touchEndX = e.changedTouches[0].screenX;
       handleSwipe();
     }, false);
+    
+    debug('Touch swipe event listeners attached');
   }
   
   // # Handle swipe gestures
@@ -1483,269 +1779,413 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
   }
-
-  // # Enable next button on step 1 if company is already selected
-  if (companySelect && companySelect.value !== '') {
-    const stepOneNextButton = document.querySelector('.card[data-step="1"] .next-button');
-    if (stepOneNextButton) {
-      stepOneNextButton.disabled = false;
-    }
-  }
   
-  // # Enable/disable next button based on coupon code input in step 2
-  if (codeInput) {
-    codeInput.addEventListener('input', function() {
-      const stepTwoNextButton = document.querySelector('.card[data-step="2"] .next-button');
-      if (stepTwoNextButton) {
-        stepTwoNextButton.disabled = this.value.trim() === '';
-      }
-    });
-  }
-  
-  // # Function to initialize the modal UI elements after scripts are loaded
-  function initializeModalUI() {
-      // # Add delay to ensure DOM is fully processed
-      setTimeout(() => {
-          // # Get the actual modal in our document
-          const modal = document.querySelector('#quickAddCouponModal #quickAddModal');
-          if (!modal) {
-              console.error('Modal not found in document');
-              return;
-          }
-          
-          // # Get UI elements
-          const cards = modal.querySelectorAll('.card');
-          const dots = modal.querySelectorAll('.dot');
-          const progressBar = modal.querySelector('.progress-bar');
-          const currentStepEl = modal.querySelector('.current-step');
-          
-          // # Company selection related elements
-          const companySelect = modal.querySelector('#quick_company_id');
-          const otherCompanyGroup = modal.querySelector('#quick_other_company_group');
-          const otherCompanyInput = modal.querySelector('#quick_other_company');
-          const buymeCouponLinkGroup = modal.querySelector('#quick_buyme_coupon_link_group');
-          const buymeCouponLinkInput = modal.querySelector('#quick_buyme_coupon_link');
-          const companyLogoContainer = modal.querySelector('#quick_company_logo_container');
-          const companyLogo = modal.querySelector('#quick_company_logo');
-          
-          console.log(`Found ${cards.length} cards, ${dots.length} dots, company select: ${companySelect ? 'Yes' : 'No'}`);
-          
-          // # Function to toggle other company field visibility
-          function toggleOtherCompanyField() {
-              if (companySelect && companySelect.value === 'other') {
-                  otherCompanyGroup.style.display = 'block';
-                  otherCompanyInput.setAttribute('required', 'required');
-                  // # Hide logo when 'other' is selected
-                  companyLogoContainer.style.display = 'none';
-              } else {
-                  otherCompanyGroup.style.display = 'none';
-                  otherCompanyInput.removeAttribute('required');
-                  if (otherCompanyInput) otherCompanyInput.value = '';
-              }
-          }          
-
-          // # Function to toggle BuyMe coupon link field and update company logo
-          function toggleBuymeCouponLinkField() {
-              if (companySelect && companySelect.value === '54') { // # BuyMe company ID
-                  buymeCouponLinkGroup.style.display = 'block';
-              } else {
-                  buymeCouponLinkGroup.style.display = 'none';
-                  if (buymeCouponLinkInput) {
-                      buymeCouponLinkInput.value = '';
-                  }
-              }
-              
-              // # Update company logo
-              updateCompanyLogo();
-          }
-
-          // # Global function to update company logo
-          function updateCompanyLogo() {
-              // # Get company select and logo elements
-              const companySelect = document.getElementById('quick_company_id');
-              const companyLogoContainer = document.getElementById('quick_company_logo_container');
-              const companyLogo = document.getElementById('quick_company_logo');
-              
-              // # Ensure elements exist
-              if (!companySelect || !companyLogoContainer || !companyLogo) {
-                  console.error('Missing company logo elements');
-                  return;
-              }
-              
-              if (companySelect.value && companySelect.value !== 'other') {
-                  // # Get selected option
-                  const selectedOption = companySelect.options[companySelect.selectedIndex];
-                  
-                  console.log('Selected company:', selectedOption.textContent);
-                  console.log('Image path:', selectedOption.getAttribute('data-image-path'));
-                  
-                  // # Get image path from data attribute
-                  const imagePath = selectedOption.getAttribute('data-image-path');
-                  
-                  if (imagePath) {
-                      // # Update image source and display container
-                      companyLogo.src = imagePath;
-                      companyLogoContainer.style.display = 'block';
-                      console.log('Updated logo to:', imagePath);
-                  } else {
-                      companyLogoContainer.style.display = 'none';
-                      console.log('No image path available');
-                  }
-              } else {
-                  companyLogoContainer.style.display = 'none';
-                  console.log('No company selected or "other" selected');
-              }
-          }
-
-          // # Add event listeners for company selection
-          if (companySelect) {
-              companySelect.addEventListener('change', function() {
-                  toggleOtherCompanyField();
-                  toggleBuymeCouponLinkField();
-                  
-                  if (companySelect && companySelect.value && companySelect.value !== 'other') {
-                      const selectedOption = companySelect.options[companySelect.selectedIndex];
-                      console.log('Selected company:', selectedOption.textContent);
-                      console.log('Image path:', selectedOption.getAttribute('data-image-path'));
-                      
-                      const imagePath = selectedOption.getAttribute('data-image-path');
-                      
-                      if (imagePath) {
-                          companyLogo.src = imagePath;
-                          companyLogoContainer.style.display = 'block';
-                          console.log('Logo updated to:', imagePath);
-                      } else {
-                          companyLogoContainer.style.display = 'none';
-                          console.log('No image path found');
-                      }
-                  } else {
-                      companyLogoContainer.style.display = 'none';
-                      console.log('No company or "other" selected');
-                  }
-                  
-                  const stepOneNextButton = modal.querySelector('.card[data-step="1"] .next-button');
-                  if (stepOneNextButton) {
-                      stepOneNextButton.disabled = this.value === '';
-                  }
-              });
-              
-              // # Initial state setup
-              toggleOtherCompanyField();
-              toggleBuymeCouponLinkField();
-              
-              const stepOneNextButton = modal.querySelector('.card[data-step="1"] .next-button');
-              if (stepOneNextButton) {
-                  stepOneNextButton.disabled = companySelect.value === '';
-              }
-              
-              // # Initial logo update
-              setTimeout(function() {
-                  if (companySelect && companySelect.value && companySelect.value !== 'other') {
-                      const selectedOption = companySelect.options[companySelect.selectedIndex];
-                      const imagePath = selectedOption.getAttribute('data-image-path');
-                      
-                      if (imagePath) {
-                          companyLogo.src = imagePath;
-                          companyLogoContainer.style.display = 'block';
-                          console.log('Initial logo set to:', imagePath);
-                      }
-                  }
-              }, 500);
-              // # Define setupCardNavigation if not defined
-              function setupCardNavigation(modal) {
-                  console.log('Setting up card navigation');
-                  // # Add card navigation logic if missing
-              }
-          }
-          
-          // # Reset cards state - only first card active
-          cards.forEach((card, index) => {
-              if (index === 0) {
-                  card.classList.add('active');
-              } else {
-                  card.classList.remove('active');
-              }
-          });
-          
-          // # Update navigation dots
-          dots.forEach((dot, index) => {
-              dot.classList.toggle('active', index === 0);
-          });
-          
-          // # Reset progress bar
-          if (progressBar) {
-              progressBar.style.width = "16.66%"; // # 1/6 of total width
-          }
-          
-          // # Update step counter
-          if (currentStepEl) {
-              currentStepEl.textContent = "1";
-          }
-          
-          // # Re-initialize card navigation
-          setupCardNavigation(modal);
-          
-      }, 200); // # Delay to ensure DOM is ready
-    setTimeout(function() {
-        if (typeof initializeModalUI === 'function') {
-            initializeModalUI();
-            console.log('initializeModalUI executed');
-        } else {
-            console.error('initializeModalUI function not found');
+  // # AJAX form submission handler
+  if (quickAddForm) {
+    quickAddForm.addEventListener('submit', function(event) {
+      event.preventDefault(); // # Prevent default form submission
+      debug('Form submission initiated');
+      
+      // # Check if the form submission is from SMS detect button
+      const isSmsSubmission = event.submitter && event.submitter.id === 'submit_sms';
+      
+      // # Perform validation only for regular submissions
+      if (!isSmsSubmission) {
+        if (!validateCurrentStep()) {
+          debug('Form validation failed');
+          return false;
         }
-    }, 500);
-  }
-  
-  // -----------------------------------------
-  // # New unified AJAX submission function for Quick Add Coupon
-  // -----------------------------------------
-  // # This event listener replaces the duplicate submission handlers.
-  const quickAddCouponFormUnified = document.getElementById('quickAddCouponForm');
-  if (quickAddCouponFormUnified) {
-    quickAddCouponFormUnified.addEventListener('submit', function(event) {
-      event.preventDefault(); // Prevent default submission
+      }
       
       // # Create FormData from the form
-      const formData = new FormData(quickAddCouponFormUnified);
-      // # Append parameter indicating an AJAX request
+      const formData = new FormData(quickAddForm);
       formData.append('is_ajax', 'true');
       
-      // # Send data via fetch
+      // # Include SMS flag if needed
+      if (isSmsSubmission) {
+        formData.append('submit_sms', 'true');
+        debug('SMS detection submission');
+      }
+      
+      // # Send form data via AJAX
       fetch('/add_coupon', {
         method: 'POST',
         headers: {
-          'X-Requested-With': 'XMLHttpRequest' // Mark as AJAX request
+          'X-Requested-With': 'XMLHttpRequest' // # Mark as AJAX request
         },
         body: formData
       })
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          // # Close the modal (assuming modal is in the parent window)
-          window.parent.document.getElementById('quickAddCouponModal').classList.remove('active');
+          debug('Form submitted successfully: ' + data.message);
           
-          // # Dispatch a custom flash message event for success
-          const flashEvent = new CustomEvent('showFlashMessage', {
-            detail: { message: data.message, type: 'success' }
-          });
-          window.parent.document.dispatchEvent(flashEvent);
-          
-          // # Refresh the page after a short delay
-          setTimeout(() => {
-            window.parent.location.reload();
-          }, 500);
+          if (isSmsSubmission) {
+            // # For SMS detection, update the form fields with the detected data
+            // # alert('הקופון זוהה בהצלחה!');
+            
+            // # Populate form fields with the detected data
+            if (data.data) {
+              debug('Received coupon data to populate form fields');
+              
+              // # Handle company selection
+              const companyName = data.data['חברה'];
+              if (companyName) {
+                debug('Processing company: ' + companyName);
+                // # Look for a match in the company dropdown
+                let companyFound = false;
+                if (companySelect) {
+                  // # First try to find an exact match in the dropdown
+                  for (let i = 0; i < companySelect.options.length; i++) {
+                    if (companySelect.options[i].text.trim().toLowerCase() === companyName.toLowerCase()) {
+                      companySelect.value = companySelect.options[i].value;
+                      companyFound = true;
+                      debug('Company match found in dropdown: ' + companySelect.options[i].value);
+                      break;
+                    }
+                  }
+                  
+                  // # If no exact match, use "other" and set the name
+                  if (!companyFound) {
+                    companySelect.value = 'other';
+                    if (otherCompanyInput) {
+                      otherCompanyInput.value = companyName;
+                      debug('Company not found in dropdown, using "other" option with: ' + companyName);
+                    }
+                  }
+                  
+                  // # Trigger change event to update UI
+                  const changeEvent = new Event('change');
+                  companySelect.dispatchEvent(changeEvent);
+                }
+              }
+              
+              // # Fill in the coupon code
+              if (data.data['קוד קופון'] && codeInput) {
+                codeInput.value = data.data['קוד קופון'];
+                debug('Set coupon code: ' + data.data['קוד קופון']);
+              }
+              
+              // # Fill in cost
+              if (data.data['עלות'] !== undefined && costInput) {
+                costInput.value = data.data['עלות'];
+                debug('Set cost: ' + data.data['עלות']);
+              }
+              
+              // # Fill in value
+              if (data.data['ערך מקורי'] !== undefined && valueInput) {
+                valueInput.value = data.data['ערך מקורי'];
+                debug('Set value: ' + data.data['ערך מקורי']);
+              }
+              
+              // # Fill in expiration date if available
+              if (data.data['תאריך תפוגה'] && expirationInput) {
+                expirationInput.value = data.data['תאריך תפוגה'];
+                debug('Set expiration date: ' + data.data['תאריך תפוגה']);
+              }
+              
+              // # Handle one-time coupon
+              if (data.data['קוד לשימוש חד פעמי'] !== undefined && isOneTimeCheckbox) {
+                isOneTimeCheckbox.checked = Boolean(data.data['קוד לשימוש חד פעמי']);
+                debug('Set one-time flag: ' + isOneTimeCheckbox.checked);
+                
+                // # Trigger change event to show/hide related fields
+                const changeEvent = new Event('change');
+                isOneTimeCheckbox.dispatchEvent(changeEvent);
+                
+                // # Fill in purpose if it's a one-time coupon
+                if (purposeInput && data.data['מטרת הקופון']) {
+                  purposeInput.value = data.data['מטרת הקופון'];
+                  debug('Set purpose: ' + data.data['מטרת הקופון']);
+                }
+              }
+              
+              // # Fill in description if available
+              if (data.data['תיאור'] && descriptionInput) {
+                descriptionInput.value = data.data['תיאור'];
+                debug('Set description: ' + data.data['תיאור']);
+              }
+              
+              // # Fill in source if available
+              if (data.data['מאיפה קיבלת את הקופון'] && sourceInput) {
+                sourceInput.value = data.data['מאיפה קיבלת את הקופון'];
+                debug('Set source: ' + data.data['מאיפה קיבלת את הקופון']);
+              }
+              
+              // # Calculate discount percentage if not provided but we have cost and value
+              if (discountInput) {
+                if (data.data['אחוז הנחה']) {
+                  discountInput.value = data.data['אחוז הנחה'];
+                  debug('Set discount percentage from data: ' + data.data['אחוז הנחה']);
+                } else {
+                  const cost = parseFloat(costInput.value);
+                  const value = parseFloat(valueInput.value);
+                  if (!isNaN(cost) && !isNaN(value) && value > 0) {
+                    const discount = ((value - cost) / value * 100).toFixed(2);
+                    discountInput.value = discount;
+                    debug('Calculated discount percentage: ' + discount);
+                    
+                    // # Update the visual discount display
+                    if (discountDisplay && discountValue) {
+                      discountDisplay.style.width = Math.min(100, discount) + '%';
+                      discountValue.textContent = discount + '%';
+                    }
+                  }
+                }
+              }
+              
+              // # Update fields to ensure validation
+              updateFields(null);
+              debug('Updated fields and validation');
+              
+              // # Move to step 2 after a short delay to allow UI to update
+              setTimeout(() => {
+                debug('Moving to step 2');
+                goToStep(2);
+              }, 500);
+            }
+          } else {
+            // # For regular submission, close modal and show success message
+            
+            // # Close modal in parent window
+            closeQuickAddModal();
+            
+            // # Dispatch custom flash message event
+            const flashEvent = new CustomEvent('showFlashMessage', {
+              detail: { message: data.message, type: 'success' }
+            });
+            window.dispatchEvent(flashEvent);
+            
+            // # If we're in an iframe, notify the parent
+            if (window.parent && window.parent !== window) {
+              try {
+                window.parent.postMessage({
+                  action: 'couponAdded',
+                  message: data.message
+                }, '*');
+                
+                // # Reload the parent page
+                setTimeout(() => {
+                  window.parent.location.reload();
+                }, 500);
+              } catch (e) {
+                debug('Error posting message to parent: ' + e);
+              }
+            }
+          }
         } else {
-          alert(data.message || 'אירעה שגיאה בעת הוספת הקופון');
+          debug('Error from server: ' + (data.message || 'Unknown error'));
+          alert(data.message || 'שגיאה בהוספת הקופון. אנא נסה שנית.');
         }
       })
       .catch(error => {
-        console.error('Error:', error);
-        alert('אירעה שגיאה בעת הוספת הקופון. אנא נסה שוב מאוחר יותר.');
+        debug('AJAX error: ' + error);
+        alert('שגיאה בלתי צפויה. אנא נסה שנית מאוחר יותר.');
       });
     });
+    
+    debug('Form submission handler attached');
   }
   
-  // Note: The previous duplicate event listeners for form submission have been removed.
+  // Find the submit_sms button and add a direct click handler to it
+  if (submitSmsButton) {
+    submitSmsButton.addEventListener('click', function() {
+      debug('SMS detect button clicked');
+      
+      // Get the SMS text value
+      const smsText = document.getElementById('sms_text')?.value || '';
+      if (!smsText.trim()) {
+        alert('יש להזין תוכן להודעה');
+        return;
+      }
+      
+      // Show loading indicator
+      submitSmsButton.disabled = true;
+      submitSmsButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> מזהה...';
+      
+      // Create FormData object directly
+      const formData = new FormData();
+      formData.append('sms_text', smsText);
+      formData.append('submit_sms', 'true');
+      formData.append('is_ajax', 'true');
+      
+      // Check if we need CSRF token (it might be required for your Flask app)
+      const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+      if (csrfToken) {
+        formData.append('csrf_token', csrfToken);
+      }
+      
+      // Get the current URL path for the form submission
+      // This ensures we're using the correct endpoint regardless of environment
+      const currentPath = window.location.pathname;
+      const submitUrl = currentPath.includes('/add_coupon') ? currentPath : '/add_coupon';
+      
+      debug('Submitting to: ' + submitUrl);
+      debug('SMS text: ' + smsText.substring(0, 30) + '...');
+      
+      // Send request to server
+      fetch(submitUrl, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+      })
+      .then(response => {
+        if (!response.ok) {
+          debug('Server response not OK: ' + response.status + ' ' + response.statusText);
+          throw new Error('Server responded with status: ' + response.status);
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Reset button state
+        submitSmsButton.disabled = false;
+        submitSmsButton.innerHTML = 'זהה קופון';
+        
+        if (data.success) {
+          debug('Coupon detected successfully: ' + data.message);
+          alert('הקופון זוהה בהצלחה!');
+          
+          // Populate form fields with the detected data
+          if (data.data) {
+            debug('Received coupon data to populate form fields');
+            
+            // Handle company selection
+            const companyName = data.data['חברה'];
+            if (companyName) {
+              debug('Processing company: ' + companyName);
+              // Look for a match in the company dropdown
+              let companyFound = false;
+              if (companySelect) {
+                // First try to find an exact match in the dropdown
+                for (let i = 0; i < companySelect.options.length; i++) {
+                  if (companySelect.options[i].text.trim().toLowerCase() === companyName.toLowerCase()) {
+                    companySelect.value = companySelect.options[i].value;
+                    companyFound = true;
+                    debug('Company match found in dropdown: ' + companySelect.options[i].value);
+                    break;
+                  }
+                }
+                
+                // If no exact match, use "other" and set the name
+                if (!companyFound) {
+                  companySelect.value = 'other';
+                  if (otherCompanyInput) {
+                    otherCompanyInput.value = companyName;
+                    debug('Company not found in dropdown, using "other" option with: ' + companyName);
+                  }
+                }
+                
+                // Trigger change event to update UI
+                const changeEvent = new Event('change');
+                companySelect.dispatchEvent(changeEvent);
+              }
+            }
+            
+            // Fill in the coupon code
+            if (data.data['קוד קופון'] && codeInput) {
+              codeInput.value = data.data['קוד קופון'];
+              debug('Set coupon code: ' + data.data['קוד קופון']);
+            }
+            
+            // Fill in cost
+            if (data.data['עלות'] !== undefined && costInput) {
+              costInput.value = data.data['עלות'];
+              debug('Set cost: ' + data.data['עלות']);
+            }
+            
+            // Fill in value
+            if (data.data['ערך מקורי'] !== undefined && valueInput) {
+              valueInput.value = data.data['ערך מקורי'];
+              debug('Set value: ' + data.data['ערך מקורי']);
+            }
+            
+            // Fill in expiration date if available
+            if (data.data['תאריך תפוגה'] && expirationInput) {
+              expirationInput.value = data.data['תאריך תפוגה'];
+              debug('Set expiration date: ' + data.data['תאריך תפוגה']);
+            }
+            
+            // Handle one-time coupon
+            if (data.data['קוד לשימוש חד פעמי'] !== undefined && isOneTimeCheckbox) {
+              isOneTimeCheckbox.checked = Boolean(data.data['קוד לשימוש חד פעמי']);
+              debug('Set one-time flag: ' + isOneTimeCheckbox.checked);
+              
+              // Trigger change event to show/hide related fields
+              const changeEvent = new Event('change');
+              isOneTimeCheckbox.dispatchEvent(changeEvent);
+              
+              // Fill in purpose if it's a one-time coupon
+              if (purposeInput && data.data['מטרת הקופון']) {
+                purposeInput.value = data.data['מטרת הקופון'];
+                debug('Set purpose: ' + data.data['מטרת הקופון']);
+              }
+            }
+            
+            // Fill in description if available
+            if (data.data['תיאור'] && descriptionInput) {
+              descriptionInput.value = data.data['תיאור'];
+              debug('Set description: ' + data.data['תיאור']);
+            }
+            
+            // Fill in source if available
+            if (data.data['מאיפה קיבלת את הקופון'] && sourceInput) {
+              sourceInput.value = data.data['מאיפה קיבלת את הקופון'];
+              debug('Set source: ' + data.data['מאיפה קיבלת את הקופון']);
+            }
+            
+            // Calculate discount percentage if not provided but we have cost and value
+            if (discountInput) {
+              if (data.data['אחוז הנחה']) {
+                discountInput.value = data.data['אחוז הנחה'];
+                debug('Set discount percentage from data: ' + data.data['אחוז הנחה']);
+              } else {
+                const cost = parseFloat(costInput.value);
+                const value = parseFloat(valueInput.value);
+                if (!isNaN(cost) && !isNaN(value) && value > 0) {
+                  const discount = ((value - cost) / value * 100).toFixed(2);
+                  discountInput.value = discount;
+                  debug('Calculated discount percentage: ' + discount);
+                  
+                  // Update the visual discount display
+                  if (discountDisplay && discountValue) {
+                    discountDisplay.style.width = Math.min(100, discount) + '%';
+                    discountValue.textContent = discount + '%';
+                  }
+                }
+              }
+            }
+            
+            // Update fields to ensure validation
+            updateFields(null);
+            debug('Updated fields and validation');
+            
+            // Move to step 2 after a short delay to allow UI to update
+            setTimeout(() => {
+              debug('Moving to step 2');
+              goToStep(2);
+            }, 500);
+          }
+        } else {
+          debug('Error from server: ' + (data.message || 'Unknown error'));
+          alert(data.message || 'שגיאה בזיהוי הקופון. אנא נסה שנית.');
+        }
+      })
+      .catch(error => {
+        // Reset button state
+        submitSmsButton.disabled = false;
+        submitSmsButton.innerHTML = 'זהה קופון';
+        
+        debug('AJAX error: ' + error);
+        console.error('Error details:', error);
+        alert('שגיאה בתקשורת עם השרת. אנא ודא שהשרת פעיל ונסה שנית.');
+      });
+    });
+    
+    debug('SMS detection button direct handler attached');
+  }
+  debug('Modal initialization complete');
 });
 </script>
 </body>
