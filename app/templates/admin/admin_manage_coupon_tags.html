@@ -1,76 +1,502 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container my-4">
-  <div class="card shadow-sm">
-    <div class="card-header bg-primary text-white">
-      <h4 class="mb-0">ניהול קופונים - עדכון תגיות והורדה אוטומטית</h4>
-    </div>
-    <div class="card-body">
-      <!-- הודעות מערכת -->
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-              {{ message }}
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
+{% block title %}ניהול קופונים - עדכון תגיות והורדה אוטומטית{% endblock %}
 
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead class="table-light">
-            <tr>
-              <th>מספר קופון</th>
-              <th>חברה</th>
-              <th>תגית נוכחית</th>
-              <th>הורדה אוטומטית</th>
-              <th>עדכון תגית</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for coupon in coupons %}
-            <tr>
-              <td>{{ coupon.id }}</td>
-              <td>{{ coupon.company }}</td>
-              <td>{{ coupon.tag_name if coupon.tag_name else "לא הוגדרה" }}</td>
-              <td>
-                <!-- טופס לעדכון הורדה אוטומטית -->
-                <form method="POST" class="d-flex align-items-center">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
-                  <select class="form-select form-select-sm me-2" name="auto_download_details">
-                    <option value="">בחר ערך</option>
-                    <option value="Max" {% if coupon.auto_download_details == "Max" %}selected{% endif %}>Max</option>
-                    <option value="Multipass" {% if coupon.auto_download_details == "Multipass" %}selected{% endif %}>Multipass</option>
-                    <option value="BuyMe" {% if coupon.auto_download_details == "BuyMe" %}selected{% endif %}>BuyMe</option>
-                  </select>
-                  <button type="submit" name="update_auto" class="btn btn-sm btn-secondary">עדכן הורדה</button>
-                </form>
-              </td>
-              <td>
-                <!-- טופס לעדכון תגית -->
-                <form method="POST" class="d-flex align-items-center">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
-                  <select class="form-select form-select-sm me-2" name="tag_id" required>
-                    {% for tag in tags %}
-                      <option value="{{ tag.id }}" {% if coupon.tag_id == tag.id %}selected{% endif %}>
-                        {{ tag.name }}
-                      </option>
-                    {% endfor %}
-                  </select>
-                  <button type="submit" name="update_tag" class="btn btn-sm btn-primary">עדכן תגית</button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div><!-- /.table-responsive -->
-    </div><!-- /.card-body -->
-  </div><!-- /.card -->
-</div><!-- /.container -->
+{% block styles %}
+<!-- סגנונות ספציפיים לעמוד ניהול הקופונים -->
+<style>
+    /* עיצוב ספציפי לדף הנוכחי */
+    .dashboard-container {
+        max-width: var(--max-width);
+        margin: 20px auto;
+        padding: 0 20px;
+    }
+
+    .stats-card {
+        transition: transform 0.2s;
+        background-color: var(--white);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stats-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .stats-label {
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .custom-tabs {
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .custom-tabs .nav-link {
+        color: #6b7280;
+        border: none;
+        padding: 10px 15px;
+        border-bottom: 3px solid transparent;
+        font-weight: 500;
+    }
+
+    .custom-tabs .nav-link.active {
+        color: var(--primary-color);
+        background: transparent;
+        border-bottom: 3px solid var(--primary-color);
+    }
+
+    .custom-tabs .nav-link:hover:not(.active) {
+        border-bottom: 3px solid #e5e7eb;
+    }
+
+    .card-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 15px 20px;
+        font-weight: 600;
+    }
+
+    .tag-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        background-color: #e5e7eb;
+        color: #374151;
+    }
+
+    .tag-badge.primary {
+        background-color: var(--secondary-color);
+        color: var(--primary-color);
+    }
+
+    .action-btn {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    /* דו-שימושיות בין עמוד נוכחי ובסיס */
+    .card {
+        background-color: var(--white);
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: none;
+    }
+
+    .table-card {
+        overflow: hidden;
+    }
+
+    .coupon-table tr {
+        transition: background-color 0.15s;
+    }
+
+    .coupon-table tr:hover {
+        background-color: #f3f4f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- כותרת הדף עם כפתורי פעולה -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="fw-bold">ניהול קופונים</h1>
+        <div>
+            <button class="button">
+                <i class="fas fa-file-export me-1"></i> ייצוא נתונים
+            </button>
+            <button class="button" style="margin-right: 10px;">
+                <i class="fas fa-plus me-1"></i> הוסף קופון חדש
+            </button>
+        </div>
+    </div>
+
+    <!-- כרטיסיות סטטיסטיקה -->
+    <div class="row row-cols-1 row-cols-md-3 g-4 mb-4 stats-row">
+        <div class="col">
+            <div class="card stats-card h-100">
+                <div class="card-body text-center p-4">
+                    <h2 class="stats-value mb-1">{{ coupons|length }}</h2>
+                    <div class="stats-label">סה"כ קופונים</div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card stats-card h-100">
+                <div class="card-body text-center p-4">
+                    <h2 class="stats-value mb-1">{{ coupons|selectattr('tag_name')|list|length }}</h2>
+                    <div class="stats-label">קופונים עם תגית</div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card stats-card h-100">
+                <div class="card-body text-center p-4">
+                    <h2 class="stats-value mb-1">{{ coupons|selectattr('auto_download_details')|list|length }}</h2>
+                    <div class="stats-label">הורדה אוטומטית</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- תפריט לשוניות -->
+    <ul class="nav nav-tabs custom-tabs mb-4" id="couponsTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-pane" type="button" role="tab" aria-controls="all-pane" aria-selected="true">
+                <i class="fas fa-list me-1"></i> כל הקופונים
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tagged-tab" data-bs-toggle="tab" data-bs-target="#tagged-pane" type="button" role="tab" aria-controls="tagged-pane" aria-selected="false">
+                <i class="fas fa-tag me-1"></i> קופונים עם תגיות
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="auto-tab" data-bs-toggle="tab" data-bs-target="#auto-pane" type="button" role="tab" aria-controls="auto-pane" aria-selected="false">
+                <i class="fas fa-download me-1"></i> הורדה אוטומטית
+            </button>
+        </li>
+    </ul>
+
+    <!-- תוכן הלשוניות -->
+    <div class="tab-content" id="couponsTabContent">
+        <!-- לשונית כל הקופונים -->
+        <div class="tab-pane fade show active" id="all-pane" role="tabpanel" aria-labelledby="all-tab" tabindex="0">
+            <div class="card table-card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">רשימת כל הקופונים</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary me-2" id="refreshBtn">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" id="filterToggleBtn">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- פאנל סינון -->
+                <div id="filterPanel" class="card-body border-bottom" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <label for="companyFilter" class="form-label">חברה:</label>
+                            <select id="companyFilter" class="form-select form-select-sm">
+                                <option value="">הכל</option>
+                                <option value="max">Max</option>
+                                <option value="multipass">Multipass</option>
+                                <option value="buyme">BuyMe</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="tagFilter" class="form-label">תגית:</label>
+                            <select id="tagFilter" class="form-select form-select-sm">
+                                <option value="">הכל</option>
+                                {% for tag in tags %}
+                                <option value="{{ tag.id }}">{{ tag.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="autoDownloadFilter" class="form-label">הורדה אוטומטית:</label>
+                            <select id="autoDownloadFilter" class="form-select form-select-sm">
+                                <option value="">הכל</option>
+                                <option value="yes">כן</option>
+                                <option value="no">לא</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button id="applyFilterBtn" class="button me-2">החל</button>
+                            <button id="resetFilterBtn" class="button secondary-button">אפס</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- טבלת הקופונים -->
+                <div class="table-responsive">
+                    <table class="table table-hover coupon-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>מספר קופון</th>
+                                <th>חברה</th>
+                                <th>תגית</th>
+                                <th>הורדה אוטומטית</th>
+                                <th>פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for coupon in coupons %}
+                            <tr>
+                                <td class="fw-medium">{{ coupon.id }}</td>
+                                <td>{{ coupon.company }}</td>
+                                <td>
+                                    {% if coupon.tag_name %}
+                                    <span class="tag-badge primary">{{ coupon.tag_name }}</span>
+                                    {% else %}
+                                    <span class="text-muted">לא הוגדרה</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if coupon.auto_download_details %}
+                                    <span class="badge bg-success">כן</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">לא</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="action-btn btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editCouponModal-{{ coupon.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="action-btn btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- כותרת תחתונה עם דפדוף -->
+                <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                    <div>מציג {{ coupons|length }} מתוך {{ coupons|length }} קופונים</div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <!-- לשונית קופונים עם תגיות -->
+        <div class="tab-pane fade" id="tagged-pane" role="tabpanel" aria-labelledby="tagged-tab" tabindex="0">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">קופונים עם תגיות</h5>
+                </div>
+                <div class="card-body">
+                    <p>כאן תוכל לנהל את כל הקופונים שהוגדרו להם תגיות.</p>
+
+                    <!-- טבלת קופונים עם תגיות -->
+                    <div class="table-responsive">
+                        <table class="table table-hover coupon-table">
+                            <thead>
+                                <tr>
+                                    <th>מספר קופון</th>
+                                    <th>חברה</th>
+                                    <th>תגית נוכחית</th>
+                                    <th>עדכון תגית</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for coupon in coupons if coupon.tag_name %}
+                                <tr>
+                                    <td class="fw-medium">{{ coupon.id }}</td>
+                                    <td>{{ coupon.company }}</td>
+                                    <td>
+                                        <span class="tag-badge primary">{{ coupon.tag_name }}</span>
+                                    </td>
+                                    <td>
+                                        <!-- טופס לעדכון תגית -->
+                                        <form method="POST" class="d-flex align-items-center">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
+                                            <select class="form-select form-select-sm me-2" name="tag_id" required>
+                                                {% for tag in tags %}
+                                                <option value="{{ tag.id }}" {% if coupon.tag_id == tag.id %}selected{% endif %}>
+                                                    {{ tag.name }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" name="update_tag" class="action-btn btn btn-sm btn-primary">עדכן תגית</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- לשונית הורדה אוטומטית -->
+        <div class="tab-pane fade" id="auto-pane" role="tabpanel" aria-labelledby="auto-tab" tabindex="0">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">קופונים עם הורדה אוטומטית</h5>
+                </div>
+                <div class="card-body">
+                    <p>כאן תוכל לנהל את כל הקופונים שהוגדרו להם הורדה אוטומטית.</p>
+
+                    <!-- טבלת קופונים עם הורדה אוטומטית -->
+                    <div class="table-responsive">
+                        <table class="table table-hover coupon-table">
+                            <thead>
+                                <tr>
+                                    <th>מספר קופון</th>
+                                    <th>חברה</th>
+                                    <th>הורדה אוטומטית</th>
+                                    <th>עדכון הורדה</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for coupon in coupons if coupon.auto_download_details %}
+                                <tr>
+                                    <td class="fw-medium">{{ coupon.id }}</td>
+                                    <td>{{ coupon.company }}</td>
+                                    <td>
+                                        <span class="badge bg-success">{{ coupon.auto_download_details }}</span>
+                                    </td>
+                                    <td>
+                                        <!-- טופס לעדכון הורדה אוטומטית -->
+                                        <form method="POST" class="d-flex align-items-center">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
+                                            <select class="form-select form-select-sm me-2" name="auto_download_details">
+                                                <option value="">בחר ערך</option>
+                                                <option value="Max" {% if coupon.auto_download_details == "Max" %}selected{% endif %}>Max</option>
+                                                <option value="Multipass" {% if coupon.auto_download_details == "Multipass" %}selected{% endif %}>Multipass</option>
+                                                <option value="BuyMe" {% if coupon.auto_download_details == "BuyMe" %}selected{% endif %}>BuyMe</option>
+                                            </select>
+                                            <button type="submit" name="update_auto" class="action-btn btn btn-sm btn-secondary">עדכן הורדה</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- חלוניות מודאליות לעריכת קופון -->
+    {% for coupon in coupons %}
+    <div class="modal fade" id="editCouponModal-{{ coupon.id }}" tabindex="-1" aria-labelledby="editCouponModalLabel-{{ coupon.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCouponModalLabel-{{ coupon.id }}">עריכת קופון</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editCouponForm-{{ coupon.id }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
+                        <div class="mb-3">
+                            <label for="couponId-{{ coupon.id }}" class="form-label">מספר קופון</label>
+                            <input type="text" class="form-control input-field" id="couponId-{{ coupon.id }}" value="{{ coupon.id }}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="company-{{ coupon.id }}" class="form-label">חברה</label>
+                            <input type="text" class="form-control input-field" id="company-{{ coupon.id }}" value="{{ coupon.company }}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tagId-{{ coupon.id }}" class="form-label">תגית</label>
+                            <select class="form-select input-field" id="tagId-{{ coupon.id }}" name="tag_id">
+                                <option value="">בחר תגית</option>
+                                {% for tag in tags %}
+                                <option value="{{ tag.id }}" {% if coupon.tag_id == tag.id %}selected{% endif %}>{{ tag.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="autoDownload-{{ coupon.id }}" class="form-label">הורדה אוטומטית</label>
+                            <select class="form-select input-field" id="autoDownload-{{ coupon.id }}" name="auto_download_details">
+                                <option value="">בחר ערך</option>
+                                <option value="Max" {% if coupon.auto_download_details == "Max" %}selected{% endif %}>Max</option>
+                                <option value="Multipass" {% if coupon.auto_download_details == "Multipass" %}selected{% endif %}>Multipass</option>
+                                <option value="BuyMe" {% if coupon.auto_download_details == "BuyMe" %}selected{% endif %}>BuyMe</option>
+                            </select>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="button secondary-button" data-bs-dismiss="modal">ביטול</button>
+                            <button type="submit" class="button" name="update_all">שמור שינויים</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // פתיחה וסגירה של פאנל הסינון
+    document.addEventListener('DOMContentLoaded', function() {
+        // טוען את פונקציונליות הסינון
+        const filterToggleBtn = document.getElementById('filterToggleBtn');
+        const filterPanel = document.getElementById('filterPanel');
+        const applyFilterBtn = document.getElementById('applyFilterBtn');
+        const resetFilterBtn = document.getElementById('resetFilterBtn');
+
+        // אירוע לכפתור ההחלפה של פאנל הסינון
+        if (filterToggleBtn) {
+            filterToggleBtn.addEventListener('click', function() {
+                if (filterPanel.style.display === 'none') {
+                    filterPanel.style.display = 'block';
+                } else {
+                    filterPanel.style.display = 'none';
+                }
+            });
+        }
+
+        // אירוע לכפתור החלת הסינון
+        if (applyFilterBtn) {
+            applyFilterBtn.addEventListener('click', function() {
+                // הוסף כאן לוגיקת סינון
+                alert('פילטרים הוחלו בהצלחה');
+            });
+        }
+
+        // אירוע לכפתור איפוס הסינון
+        if (resetFilterBtn) {
+            resetFilterBtn.addEventListener('click', function() {
+                const companyFilter = document.getElementById('companyFilter');
+                const tagFilter = document.getElementById('tagFilter');
+                const autoDownloadFilter = document.getElementById('autoDownloadFilter');
+
+                if (companyFilter) companyFilter.value = '';
+                if (tagFilter) tagFilter.value = '';
+                if (autoDownloadFilter) autoDownloadFilter.value = '';
+            });
+        }
+
+        // אירוע לכפתור הרענון
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                location.reload();
+            });
+        }
+    });
+</script>
 {% endblock %}

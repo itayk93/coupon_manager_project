@@ -1,0 +1,866 @@
+<!-- /app/templates/index_modals/usage_report_modal.html -->
+<div id="usageReportModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        
+        {% if review_mode %}
+        <!-- Review mode - display detected usages for confirmation -->
+        <h2>אישור שימושים שאותרו</h2>
+        
+        <form id="reviewUsageForm" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="table-wrapper">
+                <table class="usage-table">
+                    <thead>
+                        <tr>
+                            <th>סימון</th>
+                            <th>חברה שזוהתה</th>
+                            <th>קופון</th>
+                            <th>כמה השתמשת</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for row in usage_list %}
+                        <tr>
+                            <!-- Column 1: Checkbox -->
+                            <td>
+                                <input type="checkbox"
+                                       name="row-{{ loop.index0 }}-checked"
+                                       value="yes"
+                                       checked
+                                       class="usage-checkbox">
+                            </td>
+                            <!-- Column 2: Company name as identified by GPT -->
+                            <td>{{ row.company }}</td>
+                            <!-- Column 3: User's coupon selection -->
+                            <td>
+                                <select name="row-{{ loop.index0 }}-company" class="coupon-select">
+                                    {% for cpn in row.matched_coupons %}
+                                        <option value="{{ cpn.id }}"
+                                                data-remaining="{{ '%.2f' | format(cpn.remaining_balance) }}"
+                                                {% if loop.first %}selected{% endif %}>
+                                            {{ cpn.company }} ({{ cpn.code }}) - נותר: {{ '%.2f' | format(cpn.remaining_balance) }} ₪
+                                        </option>
+                                    {% endfor %}
+                                    <option value="other">📌 בחר קופון אחר...</option>
+                                </select>
+                            </td>
+                            <!-- Column 4: Usage amount and "Use All" button -->
+                            <td>
+                                <div class="amount-wrapper">
+                                    <input type="text"
+                                           name="row-{{ loop.index0 }}-amount"
+                                           value="{{ '%.2f' | format(row.amount_used or 0) }}"
+                                           class="amount-input">
+                                    <button type="button" class="btn-used">ניצול מלא</button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+  
+            <div class="actions-container">
+                <button type="button" id="backToInput" class="btn-secondary">חזרה</button>
+                <button type="submit" class="btn-primary">אישור</button>
+            </div>
+        </form>
+        
+        {% else %}
+        <!-- Input mode - allow user to enter usage text -->
+        <h2>דיווח אוטומטי על שימוש בקופונים</h2>
+        
+        <form id="usageReportForm" method="POST" action="{{ url_for('coupons.parse_usage_text') }}">
+          {{ usage_form.hidden_tag() }}
+                <div class="input-wrapper">
+                <label for="usage_explanation">תיאור השימוש</label>
+                <textarea id="usage_explanation" name="usage_explanation" rows="4" 
+                          class="input-field" placeholder="{% if current_user.gender == 'male' %}תפרט כאן באלו קופונים השתמשת ובכמה{% else %}תפרטי כאן באלו קופונים השתמשת ובכמה{% endif %}"></textarea>
+            </div>
+            
+            <div class="slots-info">
+                <div class="slots-info-content">
+                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטית.
+                </div>
+            </div>
+            
+            <div class="actions-container">
+                <button type="button" class="btn-secondary cancel-button">ביטול</button>
+                <button type="submit" class="btn-primary submit-button">שלח דיווח</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+  </div>
+  
+  <style>
+  /* ===== Modal Base Styles ===== */
+  .modal {
+      display: none; /* Hidden by default */
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.5); /* Dark background with opacity */
+  }
+  
+  /* When the modal is active */
+  .modal.active {
+      display: block;
+  }
+  
+  /* ===== Modal Content Styles ===== */
+  .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      border-radius: 12px;
+      padding: 25px;
+      width: 800px;
+      max-width: 90%;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      position: relative;
+      direction: rtl;
+      max-height: 85vh;
+      overflow-y: auto;
+  }
+  
+  /* Close button */
+  .close-modal {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+      transition: color 0.2s ease;
+  }
+  
+  .close-modal:hover {
+      color: #555;
+  }
+  
+  /* Modal header */
+  .modal-content h2 {
+      font-size: 1.5em;
+      color: #3498db; /* Primary blue color */
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+      border-bottom: 2px solid #f2f2f2;
+      padding-bottom: 10px;
+  }
+  
+  /* ===== Form Elements ===== */
+  .input-wrapper {
+      margin-bottom: 15px;
+  }
+  
+  .input-wrapper label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+  }
+  
+  textarea.input-field {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      resize: vertical;
+      font-family: inherit;
+      direction: rtl;
+      min-height: 120px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+      transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  
+  textarea.input-field:focus {
+      border-color: #3498db;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+  }
+  
+  /* ===== Slots Info Card ===== */
+  .slots-info {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      padding: 2px; /* Thin padding for the container */
+      border: 1px solid #eee;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .slots-info-content {
+      padding: 12px;
+      text-align: center;
+      font-size: 0.95em;
+      color: #333;
+  }
+  
+  /* ===== Table Styles ===== */
+  .table-wrapper {
+      margin: 20px 0;
+      overflow-x: auto;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  
+  .usage-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+      table-layout: fixed;
+  }
+  
+  .usage-table th,
+  .usage-table td {
+      padding: 12px;
+      text-align: center;
+      vertical-align: middle;
+  }
+  
+  .usage-table thead th {
+      background-color: #f2f2f2;
+      color: #333;
+      font-weight: bold;
+      border-bottom: 2px solid #ddd;
+      position: sticky;
+      top: 0;
+  }
+  
+  .usage-table tbody tr {
+      border-bottom: 1px solid #eee;
+      transition: background-color 0.2s;
+  }
+  
+  .usage-table tbody tr:hover {
+      background-color: #f9f9f9;
+  }
+  
+  .usage-table tbody tr:last-child {
+      border-bottom: none;
+  }
+  
+  /* Checkbox styling */
+  .usage-checkbox {
+      transform: scale(1.3);
+      accent-color: #3498db;
+      cursor: pointer;
+  }
+  
+  /* Select dropdown styling */
+  .coupon-select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background-color: #fff;
+      font-size: 0.9em;
+      transition: border-color 0.2s;
+  }
+  
+  .coupon-select:focus {
+      border-color: #3498db;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+  }
+  
+  /* Amount input and button container */
+  .amount-wrapper {
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+  }
+  
+  .amount-input {
+      width: 100px;
+      padding: 8px;
+      text-align: center;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.9em;
+      transition: border-color 0.2s;
+  }
+  
+  .amount-input:focus {
+      border-color: #3498db;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+  }
+  
+  /* "Use All" button */
+  .btn-used {
+      background-color: #f39c12; /* Orange accent color */
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.85em;
+      white-space: nowrap;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .btn-used:hover {
+      background-color: #e67e22;
+      transform: translateY(-1px);
+  }
+  
+  .btn-used:active {
+      transform: scale(0.98);
+  }
+  
+  /* ===== Action Buttons ===== */
+  .actions-container {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+  }
+  
+  .btn-primary {
+      background-color: #3498db; /* Primary blue */
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s, transform 0.1s;
+      min-width: 120px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .btn-secondary {
+      background-color: #f2f2f2;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s, transform 0.1s;
+      min-width: 120px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .btn-primary:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  
+  .btn-secondary:hover {
+      background-color: #e6e6e6;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  
+  .btn-primary:active,
+  .btn-secondary:active {
+      transform: scale(0.98);
+  }
+  
+  /* ===== Mobile Responsive Styles ===== */
+  @media (max-width: 768px) {
+      /* Modal content adjustments */
+      .modal-content {
+          margin: 5% auto;
+          padding: 15px;
+          width: 95%;
+      }
+      
+      .modal-content h2 {
+          font-size: 1.2em;
+          margin-bottom: 15px;
+      }
+      
+      /* Close button */
+      .close-modal {
+          top: 10px;
+          right: 10px;
+          font-size: 20px;
+      }
+      
+      /* Table adjustments */
+      .usage-table th,
+      .usage-table td {
+          padding: 8px 6px;
+          font-size: 0.9em;
+      }
+      
+      /* Simplify the amount input area */
+      .amount-wrapper {
+          flex-direction: column;
+          gap: 5px;
+      }
+      
+      .amount-input {
+          width: 90px;
+      }
+      
+      .btn-used {
+          width: 100%;
+          padding: 6px 8px;
+          font-size: 0.8em;
+      }
+      
+      /* Button adjustments */
+      .actions-container {
+          flex-direction: column-reverse;
+          gap: 10px;
+      }
+      
+      .btn-primary,
+      .btn-secondary {
+          width: 100%;
+          padding: 12px 10px;
+      }
+      
+      /* Form adjustments */
+      textarea.input-field {
+          min-height: 100px;
+          padding: 10px;
+      }
+      
+      /* Adjust coupon select */
+      .coupon-select {
+          padding: 6px 8px;
+          font-size: 0.85em;
+      }
+  }
+  
+  /* ===== Small Mobile Devices ===== */
+  @media (max-width: 480px) {
+      /* Further reduce padding */
+      .modal-content {
+          padding: 12px;
+      }
+      
+      /* Make table scroll horizontally */
+      .table-wrapper {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+      }
+      
+      .usage-table {
+          min-width: 400px; /* Force minimum width to ensure readability */
+      }
+      
+      /* Smaller text */
+      .modal-content h2 {
+          font-size: 1.1em;
+      }
+      
+      .usage-table th,
+      .usage-table td {
+          padding: 6px 4px;
+          font-size: 0.85em;
+      }
+      
+      /* Additional optimizations */
+      .slots-info-content {
+          padding: 8px;
+          font-size: 0.85em;
+      }
+  }
+  
+  /* ===== RTL Specific Adjustments ===== */
+  .modal-content,
+  .input-field,
+  .usage-table,
+  .slots-info,
+  .coupon-select {
+      direction: rtl;
+  }
+  
+  /* Ensure proper alignment of form elements */
+  .input-wrapper label {
+      text-align: right;
+  }
+  
+  /* Reset direction for number inputs */
+  input[type="number"],
+  .amount-input {
+      direction: ltr;
+      text-align: right;
+  }
+  </style>
+  
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // ==========================================
+    // Global reusable function for closing modal
+    // ==========================================
+    function closeModal() {
+        const modal = document.getElementById('usageReportModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+    
+    // ==========================================
+    // Initialize modal elements
+    // ==========================================
+    const modal = document.getElementById('usageReportModal');
+    
+    // Only set up event listeners if modal exists on the page
+    if (modal) {
+        const closeBtn = modal.querySelector('.close-modal');
+        const cancelBtn = modal.querySelector('.cancel-button');
+        
+        // Close modal when X button is clicked
+        if (closeBtn) {
+            // Make sure we remove any existing handlers first
+            closeBtn.removeEventListener('click', closeModal);
+            closeBtn.addEventListener('click', closeModal);
+        }
+        
+        // Close modal when Cancel button is clicked
+        if (cancelBtn) {
+            cancelBtn.removeEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+        }
+        
+        // Close modal when clicking on the backdrop
+        modal.removeEventListener('click', function(e) {
+            if (e.target === modal) closeModal();
+        });
+        
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeModal();
+        });
+        
+        // Add escape key handler
+        document.removeEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+        });
+    }
+    
+    {% if review_mode %}
+    // ==========================================
+    // Logic for review mode
+    // ==========================================
+    
+    // Fill the amount input with remaining balance when "Use All" button is clicked
+    document.querySelectorAll(".btn-used").forEach(function(button) {
+        button.addEventListener("click", function () {
+            let row = this.closest("tr");
+            let selectElem = row.querySelector(".coupon-select");
+            let selectedOption = selectElem.options[selectElem.selectedIndex];
+            let remainingAmount = parseFloat(selectedOption.getAttribute("data-remaining")).toFixed(2);
+            let amountInput = row.querySelector(".amount-input");
+  
+            if (remainingAmount !== null) {
+                amountInput.value = remainingAmount;
+            }
+        });
+    });
+    
+    // Handle coupon selection change - populate with all coupons when "other" is selected
+    document.querySelectorAll(".coupon-select").forEach(function(selectElem) {
+        selectElem.addEventListener("change", function () {
+            if (this.value === "other") {
+                let newOptions = `<option value="" disabled selected>בחר קופון...</option>`;
+  
+                // Fetch all active coupons via AJAX
+                fetch('{{ url_for("coupons.get_active_coupons") }}')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.coupons && data.coupons.length > 0) {
+                            data.coupons.forEach(cpn => {
+                                newOptions += `<option value="${cpn.id}" 
+                                                    data-remaining="${cpn.remaining_balance}">
+                                                ${cpn.company} (${cpn.code}) - נותר: ${cpn.remaining_balance} ₪
+                                              </option>`;
+                            });
+                        }
+                        this.innerHTML = newOptions;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching coupons:', error);
+                    });
+            }
+        });
+    });
+    
+    // Handle Back button to return to input mode
+    const backBtn = document.getElementById('backToInput');
+    if (backBtn) {
+        backBtn.addEventListener('click', function() {
+            // Ask server to clear the session and reload modal in input mode
+            fetch('{{ url_for("coupons.clear_usage_session") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload modal in input mode
+                    loadUsageReportModal();
+                }
+            });
+        });
+    }
+    
+    // Handle form submission for the review form
+    const reviewForm = document.getElementById('reviewUsageForm');
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Prepare data from the form
+            const rows = [];
+            const tableRows = document.querySelectorAll('.usage-table tbody tr');
+            
+            tableRows.forEach((row, index) => {
+                const checkbox = row.querySelector('.usage-checkbox');
+                if (checkbox && checkbox.checked) {
+                    const selectElem = row.querySelector('.coupon-select');
+                    const amountInput = row.querySelector('.amount-input');
+                    
+                    rows.push({
+                        checked: true,
+                        coupon_id: selectElem.value,
+                        amount: amountInput.value
+                    });
+                }
+            });
+            
+            // Submit data to server
+            fetch('{{ url_for("coupons.confirm_usage_update") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ usages: rows })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close the modal
+                    closeModal();
+                    
+                    // Display success messages
+                    if (data.successes && data.successes.length > 0) {
+                        showFlashMessage(data.successes.join('<br>'), 'success');
+                    }
+                    
+                    // Display error messages if any
+                    if (data.errors && data.errors.length > 0) {
+                        showFlashMessage(data.errors.join('<br>'), 'error');
+                    }
+                } else {
+                    showFlashMessage(data.message || 'אירעה שגיאה בעדכון השימושים', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showFlashMessage('אירעה שגיאה בעדכון השימושים', 'error');
+            });
+        });
+    }
+      
+    {% else %}
+    // ==========================================
+    // Logic for text input mode
+    // ==========================================
+    
+    // Handle form submission with AJAX
+    const form = document.getElementById('usageReportForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            
+            // Show loading state
+            const submitBtn = form.querySelector('.submit-button');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'מעבד...';
+            submitBtn.disabled = true;
+            
+            // Add explicit AJAX header to ensure server handles it as an AJAX request
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                // Check if the response is successful
+                if (!response.ok) {
+                    throw new Error('שגיאת רשת: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Restore submit button state
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                
+                // Process successful response
+                if (data.success) {
+                    if (data.reload_modal) {
+                        // Reload modal in review mode if needed
+                        loadUsageReportModal(data.show_review);
+                    } else if (data.redirect) {
+                        // Handle redirect if needed
+                        window.location.href = data.redirect;
+                    } else {
+                        // Close modal and show success message
+                        closeModal();
+                        
+                        // Display success message using the site's flash message system
+                        if (typeof showFlashMessage === 'function') {
+                            showFlashMessage(data.message || 'הדיווח נשלח בהצלחה', 'success');
+                        } else {
+                            alert(data.message || 'הדיווח נשלח בהצלחה');
+                        }
+                        
+                        // Reset the form
+                        form.reset();
+                    }
+                } else {
+                    // Handle error response
+                    if (typeof showFlashMessage === 'function') {
+                        showFlashMessage(data.message || 'אירעה שגיאה בשליחת הדיווח', 'error');
+                    } else {
+                        alert(data.message || 'אירעה שגיאה בשליחת הדיווח');
+                    }
+                }
+            })
+            .catch(error => {
+                // Handle network errors or JSON parsing errors
+                console.error('Error:', error);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                
+                // Display error message
+                if (typeof showFlashMessage === 'function') {
+                    showFlashMessage('אירעה שגיאה בשליחת הדיווח', 'error');
+                } else {
+                    alert('אירעה שגיאה בשליחת הדיווח');
+                }
+            });
+        });
+    }
+    {% endif %}
+  });
+  
+  // ==========================================
+  // Improved modal loading and opening functions
+  // ==========================================
+  
+  // Function to reload the modal with optional review mode
+  function loadUsageReportModal(showReview = false) {
+      // Build URL with or without review parameter
+      let url = '{{ url_for("coupons.load_usage_report_modal") }}';
+      if (showReview) {
+          url += '?show_review=true';
+      }
+      
+      fetch(url)
+          .then(response => response.text())
+          .then(html => {
+              // Replace modal content in the container
+              const modalContainer = document.getElementById('usageModalContainer');
+              if (modalContainer) {
+                  modalContainer.innerHTML = html;
+                  
+                  // Execute scripts from the loaded content
+                  // This is necessary because innerHTML doesn't execute scripts
+                  const scriptTags = modalContainer.querySelectorAll('script');
+                  scriptTags.forEach(oldScript => {
+                      const newScript = document.createElement('script');
+                      Array.from(oldScript.attributes).forEach(attr => {
+                          newScript.setAttribute(attr.name, attr.value);
+                      });
+                      newScript.textContent = oldScript.textContent;
+                      oldScript.parentNode.replaceChild(newScript, oldScript);
+                  });
+                  
+                  // Open the modal properly with all event listeners
+                  openUsageReportModal();
+              }
+          })
+          .catch(error => {
+              console.error('Error loading modal:', error);
+              if (typeof showFlashMessage === 'function') {
+                  showFlashMessage('אירעה שגיאה בטעינת המודל', 'error');
+              } else {
+                  alert('אירעה שגיאה בטעינת המודל');
+              }
+          });
+  }
+  
+  // Function to open the modal and ensure all event listeners are attached properly
+  function openUsageReportModal() {
+      const modal = document.getElementById('usageReportModal');
+      if (modal) {
+          // Open the modal
+          modal.classList.add('active');
+          
+          // Centralized function for closing the modal
+          const closeModal = function() {
+              modal.classList.remove('active');
+          };
+          
+          // Add event listeners (after removing any existing ones)
+          const closeBtn = modal.querySelector('.close-modal');
+          const cancelBtn = modal.querySelector('.cancel-button');
+          
+          // Close on X button click
+          if (closeBtn) {
+              // Important: We need to add a named function for proper cleanup
+              closeBtn.removeEventListener('click', closeModal);
+              closeBtn.addEventListener('click', closeModal);
+          }
+          
+          // Close on Cancel button click
+          if (cancelBtn) {
+              cancelBtn.removeEventListener('click', closeModal);
+              cancelBtn.addEventListener('click', closeModal);
+          }
+          
+          // Close on backdrop click
+          const backdropClickHandler = function(e) {
+              if (e.target === modal) {
+                  closeModal();
+              }
+          };
+          
+          modal.removeEventListener('click', backdropClickHandler);
+          modal.addEventListener('click', backdropClickHandler);
+          
+          // Add escape key handler
+          const escKeyHandler = function(e) {
+              if (e.key === 'Escape' && modal.classList.contains('active')) {
+                  closeModal();
+              }
+          };
+          
+          document.removeEventListener('keydown', escKeyHandler);
+          document.addEventListener('keydown', escKeyHandler);
+      }
+  }
+  </script>

@@ -480,9 +480,16 @@ def index():
     if latest_message:
         if (current_user.dismissed_message_id is None) or (current_user.dismissed_message_id < latest_message.id):
             show_admin_message = True
+    
+    # --------------------------------------------------------------------------------
+    # 12. Check if we need to show the review modal
+    # --------------------------------------------------------------------------------
+    # Check the request parameter to determine if we should show the usage review modal
+    # This is used when redirected from review_usage_findings function
+    show_review_modal = request.args.get('show_review_modal', '0') == '1'
             
     # --------------------------------------------------------------------------------
-    # 12. Return the completed template with all data
+    # 13. Return the completed template with all data
     # --------------------------------------------------------------------------------
     return render_template(
         'index.html',
@@ -525,9 +532,11 @@ def index():
 
         # Admin messages
         show_admin_message=show_admin_message,
-        admin_message=latest_message if show_admin_message else None
+        admin_message=latest_message if show_admin_message else None,
+        
+        # Flag to show review modal
+        show_review_modal=show_review_modal
     )
-
 
 @profile_bp.route('/load_stats_modal')
 @login_required

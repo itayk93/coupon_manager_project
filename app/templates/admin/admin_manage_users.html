@@ -2,97 +2,390 @@
 
 {% block styles %}
 <style>
-  /* עיצוב לטאב והכפתורים */
-  .tabs {
-    margin-bottom: 20px;
+  /* ###### VARIABLES ###### */
+  :root {
+    --primary-color: #4361ee;
+    --success-color: #4CAF50;
+    --warning-color: #ff9800;
+    --danger-color: #f44336;
+    --info-color: #2196F3;
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #343a40;
+    --border-color: #dee2e6;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --transition-speed: 0.3s;
+    --border-radius: 6px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --icon-spacing: 8px; /* Added specific spacing for icons */
   }
 
-  /* עיצוב לטבלה במידה ורוצים */
+  /* ###### GENERAL LAYOUT STYLES ###### */
+  .admin-users {
+    background-color: #fff;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px var(--shadow-color);
+    padding: var(--spacing-lg);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-title {
+    color: var(--dark-gray);
+    margin-bottom: var(--spacing-lg);
+    font-size: 1.8rem;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: var(--spacing-sm);
+    position: relative;
+  }
+
+  .section-title {
+    font-size: 1.3rem;
+    margin-bottom: var(--spacing-md);
+    color: var(--dark-gray);
+  }
+
+  /* ###### TABS STYLING ###### */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-lg);
+    position: relative;
+  }
+
+  .tab-button {
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all var(--transition-speed);
+    color: var(--dark-gray);
+    font-size: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tab-button:hover {
+    color: var(--primary-color);
+  }
+
+  .tab-button::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary-color);
+    transform: translateX(-100%);
+    transition: transform var(--transition-speed);
+  }
+
+  .tab-button.active::after {
+    transform: translateX(0);
+  }
+
+  .tab-button.active {
+    color: var(--primary-color);
+    font-weight: 600;
+  }
+
+  /* Tab button icon spacing */
+  .tab-button i {
+    margin-left: var(--icon-spacing);
+  }
+
+  /* ###### TABLE STYLING ###### */
+  .table-responsive {
+    overflow-x: auto;
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 4px var(--shadow-color);
+  }
+
   .user-management-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: white;
   }
 
-  .user-management-table th,
-  .user-management-table td {
-    padding: 10px;
+  .user-management-table th {
+    background-color: var(--light-gray);
+    color: var(--dark-gray);
+    padding: 12px 15px;
     text-align: center;
-    border: 1px solid #ddd;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
-  /* עיצוב לקונטיינר של הכפתורים */
+  .user-management-table td {
+    padding: 12px 15px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    vertical-align: middle;
+    transition: background-color var(--transition-speed);
+  }
+
+  .user-management-table tr:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  .user-management-table tr:hover td {
+    background-color: rgba(67, 97, 238, 0.05);
+  }
+
+  /* ###### FORM CONTROLS ###### */
+  .slots-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .slots-input {
+    width: 80px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    text-align: center;
+    transition: all var(--transition-speed);
+  }
+
+  .slots-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+  }
+
+  /* ###### ACTION BUTTONS ###### */
   .action-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px; /* מרווח של 10px בין הכפתורים */
+    gap: 8px;
     justify-content: center;
     align-items: center;
   }
 
-  /* עיצוב לכפתורים עצמם */
+  /* Improved button styling with better icon spacing */
   .action-button {
-    padding: 5px 10px;
+    padding: 8px 14px;
     border: none;
+    border-radius: var(--border-radius);
     cursor: pointer;
+    transition: all var(--transition-speed);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    min-width: 110px; /* Set minimum width to ensure consistent button sizes */
+  }
+
+  /* Improved icon spacing */
+  .action-button i {
+    margin-left: var(--icon-spacing); /* RTL support - icon on the left of text in RTL */
+  }
+
+  .action-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .action-button:active {
+    transform: translateY(0);
   }
 
   .save-button {
-    background-color: #4CAF50;
-    color: #fff;
+    background-color: var(--success-color);
+    color: white;
+  }
+
+  .save-button:hover {
+    background-color: #3d8b40;
   }
 
   .warning {
-    background-color: #ff9800;
-    color: #fff;
+    background-color: var(--warning-color);
+    color: white;
+  }
+
+  .warning:hover {
+    background-color: #e68a00;
   }
 
   .danger {
-    background-color: #f44336;
-    color: #fff;
+    background-color: var(--danger-color);
+    color: white;
+  }
+
+  .danger:hover {
+    background-color: #d32f2f;
   }
 
   .info {
-    background-color: #2196F3;
+    background-color: var(--info-color);
+    color: white;
+  }
+
+  .info:hover {
+    background-color: #0b7dda;
+  }
+
+  .email-button {
+    background-color: #3498db;
+    color: white;
+  }
+
+  .email-button:hover {
+    background-color: #2980b9;
+  }
+
+  /* ###### STATUS BADGES ###### */
+  .status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .status-confirmed {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(76, 175, 80, 0.2);
+  }
+
+  .status-unconfirmed {
+    background-color: rgba(255, 152, 0, 0.1);
+    color: var(--warning-color);
+    border: 1px solid rgba(255, 152, 0, 0.2);
+  }
+
+  /* ###### TOOLTIP ###### */
+  .tooltip {
+    position: relative;
+    display: inline-block;
+  }
+
+  .tooltip .tooltip-text {
+    visibility: hidden;
+    width: 120px;
+    background-color: #333;
     color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -60px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.8rem;
   }
 
-  .small-button {
-    font-size: 0.9em;
+  .tooltip .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
   }
 
-  /* קונטיינר עבור תיבת הקלט והכפתור - שימוש ב-CSS Grid */
-  .slots-container {
-    display: grid;
-    grid-template-columns: auto auto; /* שתי עמודות */
-    gap: 10px; /* מרווח אחיד בין העמודות */
-    align-items: center; /* מיקום אנכי במרכז */
+  .tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  /* ###### NOTIFICATION ###### */
+  .notification {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    background-color: var(--success-color);
+    color: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 1000;
+    animation: fadeIn 0.3s;
+  }
+
+  /* ###### ANIMATIONS ###### */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.5s;
+  }
+
+  /* ###### RESPONSIVE ADJUSTMENTS ###### */
+  @media (max-width: 768px) {
+    .admin-users {
+      padding: var(--spacing-sm);
+    }
+
+    .action-buttons {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .user-management-table th,
+    .user-management-table td {
+      padding: 8px;
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+    }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="admin-users">
+<section class="admin-users fade-in">
   <h2 class="page-title">ניהול משתמשים (Admin)</h2>
 
-  <!-- לשונית אחת: "רשימת משתמשים" -->
+  <!-- Tabs navigation -->
   <div class="tabs">
     <button class="tab-button active" onclick="openTab(event, 'users-list')">
-      רשימת משתמשים
+      <i class="fas fa-users"></i> רשימת משתמשים
     </button>
   </div>
 
-  <!-- תוכן הלשונית -->
+  <!-- Tab content -->
   <div id="users-list" class="tab-content active">
     <h3 class="section-title">רשימת משתמשים קיימים</h3>
 
+    <!-- Table container -->
     <div class="table-responsive">
-      <table class="table user-management-table">
+      <table class="user-management-table" id="usersTable">
         <thead>
           <tr>
             <th>ID</th>
             <th>אימייל</th>
             <th>שם פרטי</th>
             <th>סלוטים לאוטומציה</th>
+            <th>סטטוס</th>
             <th>פעולות</th>
           </tr>
         </thead>
@@ -102,7 +395,7 @@
               <td>{{ user.id }}</td>
               <td>{{ user.email }}</td>
               <td>{{ user.first_name }}</td>
-              <!-- טופס לעדכון כמות הסלוטים -->
+              <!-- Slots update form -->
               <td>
                 <form method="POST"
                       action="{{ url_for('admin_bp.admin_users_bp.update_slots_automatic_coupons') }}"
@@ -110,7 +403,6 @@
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="user_id" value="{{ user.id }}">
 
-                  <!-- עטיפת השדה והכפתור בקונטיינר Grid -->
                   <div class="slots-container">
                     <input type="number"
                            name="slots_automatic_coupons"
@@ -118,48 +410,56 @@
                            min="0"
                            class="slots-input"
                            required>
-                    <button type="submit" class="action-button save-button small-button">
-                      שמור
+                    <button type="submit" class="action-button save-button">
+                      <i class="fas fa-save"></i> שמור
                     </button>
                   </div>
                 </form>
               </td>
-              <!-- טור פעולות -->
+              <!-- User status -->
+              <td>
+                {% if user.is_confirmed %}
+                  <span class="status-badge status-confirmed">מאושר</span>
+                {% else %}
+                  <span class="status-badge status-unconfirmed">לא מאושר</span>
+                {% endif %}
+              </td>
+              <!-- Actions -->
               <td>
                 <div class="action-buttons">
-                  <!-- טופס לשחזור סיסמה -->
+                  <!-- Reset password form -->
                   <form method="POST"
                         action="{{ url_for('admin_bp.admin_users_bp.reset_user_password') }}"
                         onsubmit="return confirm('לשחזר סיסמה למשתמש זה?');"
                         class="action-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="user_id" value="{{ user.id }}">
-                    <button type="submit" class="action-button warning small-button">
-                      שחזור סיסמה
+                    <button type="submit" class="action-button warning">
+                      <i class="fas fa-key"></i> שחזור סיסמה
                     </button>
                   </form>
 
-                  <!-- טופס למחיקת משתמש -->
+                  <!-- Delete user form -->
                   <form method="POST"
                         action="{{ url_for('admin_bp.admin_users_bp.initiate_delete_user') }}"
                         onsubmit="return confirm('האם אתה בטוח שברצונך למחוק משתמש זה?');"
                         class="action-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="user_id" value="{{ user.id }}">
-                    <button type="submit" class="action-button danger small-button">
-                      מחיקת משתמש
+                    <button type="submit" class="action-button danger">
+                      <i class="fas fa-trash-alt"></i> מחיקת משתמש
                     </button>
                   </form>
 
-                  <!-- טופס לשליחת מייל אישור מחדש (אם המשתמש לא מאושר) -->
+                  <!-- Resend confirmation email (if user is not confirmed) -->
                   {% if not user.is_confirmed %}
                     <form method="POST"
                           action="{{ url_for('admin_bp.admin_users_bp.resend_confirmation_email') }}"
                           class="action-form">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="user_id" value="{{ user.id }}">
-                      <button type="submit" class="action-button info small-button">
-                        שלח מייל אישור
+                      <button type="submit" class="action-button info">
+                        <i class="fas fa-envelope"></i> שלח מייל אישור
                       </button>
                     </form>
                   {% endif %}
@@ -170,35 +470,99 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Notification system -->
+    <div id="notification" class="notification">
+      <span id="notificationMessage"></span>
+      <button onclick="closeNotification()" style="background: none; border: none; color: white; margin-right: 10px; cursor: pointer;">×</button>
+    </div>
   </div>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  /*
-    פונקציה לפתיחת טאב (אם תרצה להרחיב ללשוניות נוספות).
-    כאן טאב יחיד: רשימת משתמשים, כך שמראש מסומן 'active'.
-  */
+  /**
+   * ################################
+   * # Tab Management
+   * ################################
+   */
   function openTab(evt, tabName) {
+    // Hide all tab contents
     var tabContents = document.getElementsByClassName("tab-content");
     for (var i = 0; i < tabContents.length; i++) {
       tabContents[i].classList.remove("active");
     }
+
+    // Deactivate all tab buttons
     var tabButtons = document.getElementsByClassName("tab-button");
     for (var i = 0; i < tabButtons.length; i++) {
       tabButtons[i].classList.remove("active");
     }
+
+    // Show the specific tab content
     document.getElementById(tabName).classList.add("active");
+
+    // Activate the button that opened the tab
     evt.currentTarget.classList.add("active");
   }
 
-  // בעת טעינת הדף, וודא שהטאב הנכון מסומן כ-active
+  /**
+   * ################################
+   * # Notification System
+   * ################################
+   */
+  function showNotification(message, type = "success") {
+    var notification = document.getElementById("notification");
+    var notificationMessage = document.getElementById("notificationMessage");
+
+    // Set message
+    notificationMessage.textContent = message;
+
+    // Set color based on type
+    if (type === "success") {
+      notification.style.backgroundColor = "var(--success-color)";
+    } else if (type === "error") {
+      notification.style.backgroundColor = "var(--danger-color)";
+    } else if (type === "warning") {
+      notification.style.backgroundColor = "var(--warning-color)";
+    } else if (type === "info") {
+      notification.style.backgroundColor = "var(--info-color)";
+    }
+
+    // Show notification
+    notification.style.display = "block";
+
+    // Auto-hide after 3 seconds
+    setTimeout(function() {
+      notification.style.display = "none";
+    }, 3000);
+  }
+
+  function closeNotification() {
+    var notification = document.getElementById("notification");
+    notification.style.display = "none";
+  }
+
+  /**
+   * ################################
+   * # Document Ready
+   * ################################
+   */
   document.addEventListener("DOMContentLoaded", function() {
+    // Ensure the active tab is correctly displayed
     var defaultTab = document.querySelector(".tab-button.active");
     if (defaultTab) {
       var tabName = defaultTab.getAttribute("onclick").split("'")[1];
       document.getElementById(tabName).classList.add("active");
+    }
+
+    // Check if Font Awesome is available, if not, load it
+    if (!document.querySelector('link[href*="font-awesome"]')) {
+      var fontAwesome = document.createElement('link');
+      fontAwesome.rel = 'stylesheet';
+      fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
+      document.head.appendChild(fontAwesome);
     }
   });
 </script>

@@ -1,0 +1,141 @@
+<!-- review_usage_modal.html - תוכן למודל הסקירה בלבד (ללא base.html) -->
+<span class="close-modal">&times;</span>
+<h2>אישור שימושים שאותרו</h2>
+
+<form id="reviewUsageForm" method="POST" action="{{ url_for('coupons.process_review_form') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <table class="usage-table">
+        <thead>
+            <tr>
+                <th>סימון</th>
+                <th>חברה שזוהתה</th>
+                <th>קופון</th>
+                <th>כמה השתמשת</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in usage_list %}
+            <tr>
+                <!-- עמודה 1: סימון -->
+                <td>
+                    <input type="checkbox"
+                           name="row-{{ loop.index0 }}-checked"
+                           value="yes"
+                           checked
+                           class="usage-checkbox">
+                </td>
+                <!-- עמודה 2: שם החברה כפי שה-GPT זיהה -->
+                <td>{{ row.company }}</td>
+                <!-- עמודה 3: בחירת הקופון של המשתמש -->
+                <td>
+                    <select name="row-{{ loop.index0 }}-company" class="coupon-select">
+                        {% for cpn in row.matched_coupons %}
+                            <option value="{{ cpn.id }}"
+                                    data-remaining="{{ '%.2f' | format(cpn.remaining_balance) }}"
+                                    {% if loop.first %}selected{% endif %}>
+                                {{ cpn.company }} ({{ cpn.code }}) - נותר: {{ '%.2f' | format(cpn.remaining_balance) }} ₪
+                            </option>
+                        {% endfor %}
+                        <option value="other">📌 בחר קופון אחר...</option>
+                    </select>
+                </td>
+                <!-- עמודה 4: סכום השימוש והכפתור "נוצל" בתוך הקלט -->
+                <td>
+                    <div class="amount-wrapper">
+                        <input type="text"
+                               name="row-{{ loop.index0 }}-amount"
+                               value="{{ '%.2f' | format(row.amount_used or 0) }}"
+                               class="amount-input">
+                        <button type="button" class="btn-used">ניצול מלא</button>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- כפתורי פעולה -->
+    <div class="modal-actions">
+        <button type="button" class="cancel-button">ביטול</button>
+        <button type="submit" class="submit-button">אישור</button>
+    </div>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // האזנה לכפתור "נוצל מלא"
+    document.querySelectorAll(".btn-used").forEach(function(button) {
+        button.addEventListener("click", function() {
+            const row = this.closest("tr");
+            const selectElem = row.querySelector(".coupon-select");
+            const selectedOption = selectElem.options[selectElem.selectedIndex];
+            const remainingAmount = parseFloat(selectedOption.getAttribute("data-remaining")).toFixed(2);
+            const amountInput = row.querySelector(".amount-input");
+
+            if (remainingAmount !== null) {
+                amountInput.value = remainingAmount;
+            }
+        });
+    });
+
+    // האזנה לכפתור סגירה
+    document.querySelector(".close-modal").addEventListener("click", function() {
+        const modal = document.getElementById("usageReportModal");
+        if (modal) modal.classList.remove("active");
+    });
+
+    // האזנה לכפתור ביטול
+    document.querySelector(".cancel-button").addEventListener("click", function() {
+        const modal = document.getElementById("usageReportModal");
+        if (modal) modal.classList.remove("active");
+    });
+
+    // הגשת הטופס עם AJAX
+    document.getElementById("reviewUsageForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+        
+        // איסוף נתונים מהטופס
+        const formData = new FormData(this);
+        
+        // שליחת הנתונים ב-AJAX
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // סגירת המודל
+            const modal = document.getElementById("usageReportModal");
+            if (modal) modal.classList.remove("active");
+            
+            // הצגת הודעת הצלחה
+            if (data.success) {
+                // שימוש בפונקציה הגלובלית להצגת הודעה
+                if (typeof showFlashMessage === 'function') {
+                    showFlashMessage(data.message, 'success');
+                } else {
+                    alert(data.message);
+                }
+            } else {
+                if (typeof showFlashMessage === 'function') {
+                    showFlashMessage(data.message || 'אירעה שגיאה בעת עדכון השימושים', 'error');
+                } else {
+                    alert(data.message || 'אירעה שגיאה בעת עדכון השימושים');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            if (typeof showFlashMessage === 'function') {
+                showFlashMessage('אירעה שגיאה בעת שליחת הטופס', 'error');
+            } else {
+                alert('אירעה שגיאה בעת שליחת הטופס');
+            }
+        });
+    });
+});
+</script>

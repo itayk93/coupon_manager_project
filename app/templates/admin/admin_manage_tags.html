@@ -1,1871 +1,1545 @@
-{% extends 'base.html' %}
-
-{% block title %}קופונים והנחות אונליין - Coupon Master{% endblock %}
+{% extends "base.html" %}
 
 {% block content %}
-<!-- Admin flash message -->
-{% if show_admin_message and admin_message %}
-<div class="admin-flash-message">
-    <p>{{ admin_message.message_text | replace("\n", "<br>") | safe }}</p>
-    {% if admin_message.link_url %}
-        <a href="{{ admin_message.link_url }}" target="_blank" class="admin-message-button">
-            {{ admin_message.link_text if admin_message.link_text else "למידע נוסף" }}
-        </a>
-    {% endif %}
-    <form method="post" action="{{ url_for('admin_messages_bp.dismiss_admin_message') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="close-button">×</button>
-    </form>
-</div>
-{% endif %}
+<section class="tm-admin-tags">
+    <h2 class="tm-page-title">ניהול תגיות (Admin)</h2>
 
-<section class="hero">
-    <!-- Hidden H1 for SEO keywords -->
-    <h1 style="display:none;">קופונים והנחות בלעדיות בישראל - חסוך כסף עכשיו!</h1>
-    <h2>{{ greeting }}, {{ current_user.first_name }}!</h2>
-
-    {% if show_expiring_alert %}
-    <!-- Alert for expiring coupons -->
-    <div class="expiring-coupons-alert">
-        <!-- Close alert button -->
-        <a class="close-expiring-alert" href="{{ url_for('profile.dismiss_expiring_alert') }}">×</a>
-        <p><strong>שים לב!</strong> יש לך {{ expiring_coupons|length }} קופונים שעומדים לפוג תוקפם בשבוע הקרוב:</p>
-        <ul class="expiring-coupons-list">
-            {% for c in expiring_coupons %}
-            <li>
-                <strong>{{ c.company }}</strong> -
-                {% set expiration_date = c.expiration.strftime('%d/%m/%Y') %}
-                {% set today_date = current_date.strftime('%d/%m/%Y') %}
-                {% set tomorrow_date = (current_date + timedelta(days=1)).strftime('%d/%m/%Y') %}
-                {% if expiration_date == today_date %}
-                    התוקף יפוג היום בלילה
-                {% elif expiration_date == tomorrow_date %}
-                    התוקף יפוג מחר
-                {% else %}
-                    התוקף יפוג ב-<strong>{{ expiration_date }}</strong>
-                {% endif %}
-                <span class="coupon-button-wrapper">
-                    <a class="view-coupon-button" href="{{ url_for('coupons.coupon_detail', id=c.id) }}">
-                        צפה בקופון
-                    </a>
-                </span>
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
-
-    <div class="total-value">
-        <p>נשאר לך בארנק:</p>
-        <h1>{{ '%.2f'|format(total_value) }} ₪</h1>
-    </div>
-
-    <!-- Hidden text for SEO keywords -->
-    <p class="hidden-text">
-      מצא את כל הקופונים וההנחות במקום אחד! אפליקציית <strong>Coupon Master</strong> עוזרת לך
-      <strong>לחסוך כסף בקניות</strong> בכל החנויות הגדולות בישראל.
-    </p>
-
-    <!-- CHANGED: Replaced savings text with centered statistics button -->
-    <div style="display: flex; justify-content: center;">
-      <button id="open-stats-modal" class="stats-button">
-          <i class="fas fa-chart-bar"></i> סטטיסטיקות חיסכון
-      </button>
-    </div>
-</section>
-
-<!-- Company cards row -->
-<div id="company-cards-row" class="company-cards-row"></div>
-
-<div class="usage-forms-container">
-    <!-- Form for automatic coupon usage report -->
-    <section class="usage-form-wrapper">
-        <form method="POST" action="{{ url_for('coupons.parse_usage_text') }}">
-            {{ usage_form.hidden_tag() }}
-            <div class="input-wrapper">
-                <label for="usage_explanation">דיווח אוטומטי על שימוש בקופונים</label>
-                <textarea id="usage_explanation"
-                          name="usage_explanation"
-                          rows="2"
-                          class="input-field_centered"
-                          placeholder="{% if current_user.gender == 'male' %}תפרט כאן באלו קופונים השתמשת ובכמה{% else %}תפרטי כאן באלו קופונים השתמשת ובכמה{% endif %}"></textarea>
-            </div>
-            <div class="button-with-explanation">
-                <button type="submit" class="submit-button">שלח</button>
-                <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
-                <div class="tooltip">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטית.
-                    <span class="close-tooltip">×</span>
-                </div>
-            </div>
-        </form>
-    </section>
-
-    <!-- Form for automatic coupon addition -->
-    <section class="usage-form-wrapper">
-        <form method="POST" action="{{ url_for('coupons.add_coupon') }}">
-            {{ sms_form.hidden_tag() }}
-            <div class="input-wrapper">
-                <label for="sms_text">זיהוי והוספה אוטומטית של קופון</label>
-                <textarea class="input-field_centered"
-                          id="sms_text"
-                          name="sms_text"
-                          rows="2"
-                          placeholder="{% if current_user.gender == 'male' %}תפרט כאן את הפרטים של הקופון שקנית להוספה אוטומטית שלו{% else %}תפרטי כאן את הפרטים של הקופון שקנית להוספה אוטומטית שלו{% endif %}"></textarea>
-            </div>
-            <div class="button-with-explanation">
-                <input class="submit-button" id="submit_sms" name="submit_sms" type="submit" value="הבא">
-                <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
-                <div class="tooltip">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטית.
-                    <span class="close-tooltip">×</span>
-                </div>
-            </div>
-        </form>
-    </section>
-</div>
-
-<!-- Coupon list section -->
-<section class="coupon-list">
-    {% macro get_company_logo(coupon) %}
-        {% set company_lower = coupon.company.lower() %}
-        <img src="{{ url_for('static', filename=company_logo_mapping.get(company_lower, 'images/default.png')) }}"
-             alt="{{ coupon.company }} Logo" class="company-logo">
-    {% endmacro %}
-
-    {% set coupon_categories = [
-        (active_coupons, "קופונים פעילים"),
-        (active_one_time_coupons, "קופונים חד פעמיים"),
-        (coupons_for_sale, "קופונים למכירה")
-    ] %}
-    {% for coupons, title in coupon_categories %}
-        {% if coupons %}
-            <h3 class="coupon-section-title">{{ title }}</h3>
-            <div class="coupon-container">
-                {% for coupon in coupons %}
-                <a href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}"
-                   class="coupon-card"
-                   data-company="{{ coupon.company }}"
-                   data-coupon-code="{{ coupon.code }}"
-                   data-coupon-id="{{ coupon.id }}"
-                   data-remaining="{{ '%.2f'|format(coupon.remaining_value) }}"
-                   data-logo-src="{{ url_for('static', filename=company_logo_mapping.get(coupon.company|lower, 'images/default.png')) }}"
-                   {% if coupon.is_one_time %}
-                       data-is-one-time="true" data-purpose="{{ coupon.purpose }}"
-                   {% else %}
-                       data-is-one-time="false"
-                   {% endif %}
-                   {% if coupon.cvv %}
-                       data-coupon-cvv="{{ coupon.cvv }}"
-                   {% endif %}
-                   {% if coupon.card_exp %}
-                       data-coupon-card-exp="{{ coupon.card_exp }}"
-                   {% endif %}>
-                    {{ get_company_logo(coupon) }}
-                    <p class="company-name">{{ coupon.company }}</p>
-                    <p>קוד קופון: {{ coupon.code }}</p>
-                    {% if coupon.is_one_time %}
-                        <p>מטרה: {{ coupon.purpose }}</p>
-                    {% else %}
-                        <p class="remaining-value">
-                            נשאר לך: {{ '%.2f'|format(coupon.remaining_value) }} ש"ח
-                        </p>
-                        <p class="discount-percentage">
-                            כבר השתמשת ב:
-                            {% if coupon.value > 0 %}
-                                {{ (coupon.used_value / coupon.value * 100)|round(2) }}%
-                            {% else %}
-                                0%
-                            {% endif %}
-                        </p>
-                    {% endif %}
-                    {% if title == "קופונים למכירה" %}
-                    <p style="color: var(--accent-color); font-weight: bold;">
-                        למכירה במחיר {{ '%.2f'|format(coupon.cost) }} ש"ח
-                    </p>
-                    {% endif %}
-                </a>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p style="text-align: center; color: var(--gray);">אין לך {{ title }} כרגע.</p>
-        {% endif %}
-    {% endfor %}
-</section>
-
-<!-- Modal for displaying company coupons with animation -->
-<div id="companyModal" class="modal">
-  <div class="modal-content">
-    <!-- Close modal button -->
-    <span class="close-modal">×</span>
-    <!-- Company title -->
-    <h2 id="modal-company-name">קופונים מחברת ...</h2>
-    <!-- Company logo -->
-    <img id="modal-company-logo" alt="Company Logo" style="display: block;" src="/static/images/carrefour.png">
-    <!-- Total remaining value -->
-    <p id="modal-total-remaining" style="font-size: 1.2em; font-weight: bold; margin: 5px 0;"></p>
-    <ul id="modal-coupons-list"></ul>
-  </div>
-</div>
-
-<!-- Modal for updating coupon usage with animation -->
-<div id="usageModal" class="modal">
-  <div class="modal-content usage-modal-content" style="max-width: 600px;">
-    <span class="close-usage-modal">×</span>
-    <h3>עדכון סכום שימוש</h3>
-    <!-- Dynamic content will be filled here -->
-    <h2 id="usage-modal-company" style="color: #00bfff; font-size: 1.8em; margin-bottom: 5px;"></h2>
-    <img id="usage-modal-logo" alt="Company Logo" style="display: block; margin: 10px auto 0 auto; width: 80px; height: 80px;" src="/static/images/carrefour.png">
-    <p id="usage-modal-code" style="margin-bottom:10px;"><strong></strong></p>
-    <p id="usage-modal-remaining" style="margin-bottom:10px;"><strong>יתרה נוכחית: <span id="remainingValue">70.30</span> ש"ח</strong></p>
-    <input type="number" id="usageAmount" step="0.01" placeholder="בכמה השתמשת?" style="padding:8px; width:200px;">
-    <br>
-    <button id="usageConfirmButton" style="margin-top:10px; padding:8px 16px; background-color:#3498db; color:#fff; border:none; border-radius:5px; cursor:pointer;">
-      אישור
-    </button>
-    <button id="updateFullAmountButton" style="margin-top:10px; padding:8px 16px; background-color:#2ecc71; color:#fff; border:none; border-radius:5px; cursor:pointer;">
-      עדכון כל היתרה
-    </button>
-    <div id="usageErrorMsg" style="color:red; margin-top:10px; display:none;"></div>
-  </div>
-</div>
-
-<!-- Modal for large display with animation -->
-<div id="bigDisplayModal" class="modal">
-  <div class="modal-content">
-    <span class="close-big-modal">×</span>
-    <h2 id="bigModalCompanyName">Be שופרסל</h2>
-    <img id="bigModalLogo" alt="Logo" style="width:120px;height:120px;object-fit:cover;margin:10px auto;border-radius:8px;" src="/static/images/be_shufersal.png">
-    <h1 id="bigModalCouponCode" style="margin-top:20px;">91381000401555109674</h1>
-    <!-- Block for displaying CVV and card expiration -->
-    <div id="bigModalExtraDetails" style="margin-top:20px; display:none;">
-      <h1 id="bigModalCouponCVV" style="margin:0; font-weight: bold;"></h1>
-      <h1 id="bigModalCardExp" style="margin:0; font-weight: bold;"></h1>
-    </div>
-  </div>
-</div>
-
-<!-- Modal for statistics with charts, filters and scrolling -->
-<div id="statsModal" class="modal">
-  <div class="modal-content stats-modal-content">
-    <span class="close-stats-modal">×</span>
-    <h2>סטטיסטיקות החיסכון שלך</h2>
-
-    <!-- CHANGED: Compact company filters with scrollable container for mobile -->
-    <div class="filters-container">
-      <span>סינון לפי חברות:</span>
-      <div class="company-filters-wrapper">
-        <div class="company-filters" id="company-filters">
-          <!-- Dynamic filter controls will be added here -->
+    <div class="tm-tabs-container">
+        <div class="tm-tabs">
+            <button class="tm-tab-button tm-active" data-tab="manage-tags">
+                <i class="fas fa-plus-circle"></i> הוספת תגית
+            </button>
+            <button class="tm-tab-button" data-tab="tags-list">
+                <i class="fas fa-tags"></i> רשימת תגיות
+                <span class="tm-tag-count-badge">{{ tags|length }}</span>
+            </button>
         </div>
-      </div>
+        <div class="tm-tabs-slider">
+            <div class="tm-tabs-slider-indicator"></div>
+        </div>
     </div>
 
-    <!-- UPDATED: Statistics cards with proper descriptions -->
-    <div class="stats-summary">
-      <div class="stats-card" id="total-savings-card">
-        <h3>סך החיסכון שלך</h3>
-        <div class="big-number">{{ '%.0f'|format(total_savings) }} ₪</div>
-        <p>מתוך {{ '%.0f'|format(total_coupons_value) }} ₪ אפשריים</p>
-      </div>
-      <div class="stats-card" id="savings-percentage-card">
-        <h3>אחוז החיסכון</h3>
-        <div class="big-number">{{ '%.0f'|format(percentage_savings) }}%</div>
-        <p>מכלל הקופונים</p>
-      </div>
-      <!-- ADD: New statistics cards for total coupons and usage rate -->
-      <div class="stats-card" id="total-coupons-card">
-        <h3>מספר קופונים</h3>
-        <div class="big-number">{{ total_coupons_count }}</div>
-        <p>{{ active_coupons_count if active_coupons_count is defined else "0" }} מתוכם פעילים</p>
-      </div>
-      <div class="stats-card" id="average-usage-card">
-        <h3>אחוז ניצול ממוצע</h3>
-        <div class="big-number">{{ '%.0f'|format(average_usage_percentage) }}%</div>
-        <p>ממוצע ניצול לכל הקופונים</p>
-      </div>
+    <div id="manage-tags" class="tm-tab-content tm-active">
+        <div class="tm-content-card">
+            <h3 class="tm-section-title">
+                <i class="fas fa-plus"></i> הוספת תגית חדשה
+            </h3>
+            <div class="tm-form-container">
+                <form method="POST" class="tm-animated-form">
+                    {{ form.hidden_tag() }}
+                    <div class="tm-form-group">
+                        {{ form.name.label(class="tm-form-label") }}
+                        <div class="tm-input-with-icon">
+                            <i class="fas fa-tag tm-input-icon"></i>
+                            {{ form.name(class="tm-input-field", placeholder="הקלד שם תגית...", autocomplete="off") }}
+                        </div>
+                        {% for error in form.name.errors %}
+                            <div class="tm-error-message">
+                                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="tm-form-actions">
+                        {{ form.submit(class="tm-action-button tm-pulse-button") }}
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
-    <div class="stats-charts">
-      <div class="chart-container">
-        <h3>התפלגות החיסכון לפי חברות</h3>
-        <div id="companySavingsChart" class="chart"></div>
-      </div>
-      <div class="chart-container">
-        <h3>שימוש לאורך זמן</h3>
-        <div id="timelineChart" class="chart"></div>
-      </div>
-    </div>
+    <div id="tags-list" class="tm-tab-content">
+        <div class="tm-content-card">
+            <h3 class="tm-section-title">
+                <i class="fas fa-list"></i> רשימת תגיות קיימות
+            </h3>
+            <div class="tm-search-container">
+                <div class="tm-input-with-icon">
+                    <i class="fas fa-search tm-input-icon"></i>
+                    <input type="text" id="tagSearchInput" class="tm-input-field" placeholder="חיפוש תגיות...">
+                </div>
+            </div>
+            <div class="tm-table-responsive">
+                <table class="tm-tag-management-table">
+                    <thead>
+                        <tr>
+                            <th class="tm-sortable" data-sort="id">
+                                <span>מזהה</span>
+                                <i class="fas fa-sort"></i>
+                            </th>
+                            <th class="tm-sortable" data-sort="name">
+                                <span>שם תגית</span>
+                                <i class="fas fa-sort"></i>
+                            </th>
+                            <th class="tm-sortable" data-sort="count">
+                                <span>ספירת שימוש</span>
+                                <i class="fas fa-sort"></i>
+                            </th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tagsTableBody">
+                    {% for tag in tags %}
+                        <tr data-tag-id="{{ tag.id }}" class="tm-table-row-fade">
+                            <td>{{ tag.id }}</td>
+                            <td>{{ tag.name }}</td>
+                            <td>
+                                <div class="tm-count-badge" data-count="{{ tag.count }}">
+                                    {{ tag.count }}
+                                </div>
+                            </td>
+                            <td class="tm-actions-column">
+                                <div class="tm-action-buttons">
+                                    <!-- עריכה -->
+                                    <button type="button" class="tm-action-button tm-edit-button tm-tooltip"
+                                            onclick="openEditModal({{ tag.id }}, '{{ tag.name }}')">
+                                        <i class="fas fa-edit"></i>
+                                        <span class="tm-tooltip-text">עריכת שם תגית</span>
+                                    </button>
 
-    <div class="stats-details">
-      <h3>פירוט החיסכון לפי חברות</h3>
-      <div class="savings-table-wrapper">
-        <table id="savingsTable" class="savings-table">
-          <thead>
-            <tr>
-              <th>חברה</th>
-              <th>סך חיסכון</th>
-              <th>% מהחברה</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Table will be populated via JavaScript -->
-          </tbody>
-        </table>
-      </div>
+                                    <!-- העברת קופונים -->
+                                    {% if tag.count > 0 %}
+                                    <button type="button" class="tm-action-button tm-transfer-button tm-tooltip"
+                                            onclick="openTransferModal({{ tag.id }}, '{{ tag.name }}')">
+                                        <i class="fas fa-exchange-alt"></i>
+                                        <span class="tm-tooltip-text">העברת קופונים</span>
+                                    </button>
+                                    {% else %}
+                                    <button type="button" class="tm-action-button tm-transfer-button tm-tooltip tm-disabled">
+                                        <i class="fas fa-exchange-alt"></i>
+                                        <span class="tm-tooltip-text">אין קופונים להעברה</span>
+                                    </button>
+                                    {% endif %}
+
+                                    <!-- מחיקה -->
+                                    <form method="POST" action="{{ url_for('admin_tags_bp.delete_tag', tag_id=tag.id) }}"
+                                          onsubmit="return confirmDelete(event, '{{ tag.name }}');"
+                                          style="display: inline;">
+                                        {{ delete_form.hidden_tag() }}
+                                        <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                                        <button type="submit" class="tm-action-button tm-delete-button tm-tooltip">
+                                            <i class="fas fa-trash-alt"></i>
+                                            <span class="tm-tooltip-text">מחיקת תגית</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <div id="noTagsMessage" class="tm-no-data-message" style="display: none;">
+                    <i class="fas fa-search"></i>
+                    <p>לא נמצאו תגיות התואמות לחיפוש</p>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
+</section>
+
+<!-- Modal Container -->
+<div class="tm-modal-backdrop" id="modalBackdrop"></div>
+
+<!-- מודל לעריכת שם תגית -->
+<div id="editTagModal" class="tm-modal">
+    <div class="tm-modal-content">
+        <div class="tm-modal-header">
+            <h3>
+                <i class="fas fa-edit"></i> עריכת שם תגית
+            </h3>
+            <button class="tm-close-button" onclick="closeEditModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="tm-modal-body">
+            <form id="editTagForm" method="POST" action="" class="tm-animated-form">
+                {{ edit_form.hidden_tag() }}
+                <div class="tm-form-group">
+                    {{ edit_form.name.label(class="tm-form-label") }}
+                    <div class="tm-input-with-icon">
+                        <i class="fas fa-tag tm-input-icon"></i>
+                        {{ edit_form.name(class="tm-input-field", autocomplete="off") }}
+                    </div>
+                </div>
+                <div class="tm-form-actions">
+                    {{ edit_form.submit(class="tm-action-button") }}
+                    <button type="button" class="tm-action-button tm-secondary" onclick="closeEditModal()">
+                        <i class="fas fa-times"></i> ביטול
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
-<div class="export-buttons">
-    <a href="{{ url_for('export.export_excel') }}" class="export-button">
-        <i class="fas fa-file-excel" aria-hidden="true"></i> ייצא ל-Excel
-    </a>
-    <a href="{{ url_for('export.export_pdf') }}" class="export-button">
-        <i class="fas fa-file-pdf" aria-hidden="true"></i> ייצא ל-PDF
-    </a>
+<!-- מודל להעברת קופונים -->
+<div id="transferModal" class="tm-modal">
+    <div class="tm-modal-content">
+        <div class="tm-modal-header">
+            <h3>
+                <i class="fas fa-exchange-alt"></i> העברת קופונים לתגית אחרת
+            </h3>
+            <button class="tm-close-button" onclick="closeTransferModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="tm-modal-body">
+            <p id="transferDescription" class="tm-transfer-description"></p>
+            <form id="transferForm" method="POST" action="" class="tm-animated-form">
+                {{ transfer_form.hidden_tag() }}
+                {{ transfer_form.source_tag_id }}
+                <div class="tm-form-group">
+                    {{ transfer_form.target_tag_id.label(class="tm-form-label") }}
+                    <div class="tm-select-wrapper">
+                        <i class="fas fa-tag tm-input-icon"></i>
+                        {{ transfer_form.target_tag_id(class="tm-select-field") }}
+                        <i class="fas fa-chevron-down tm-select-arrow"></i>
+                    </div>
+                </div>
+                <div class="tm-form-actions">
+                    {{ transfer_form.submit(class="tm-action-button") }}
+                    <button type="button" class="tm-action-button tm-secondary" onclick="closeTransferModal()">
+                        <i class="fas fa-times"></i> ביטול
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
-{% if current_user.is_admin %}
-<form action="{{ url_for('coupons.update_all_active_coupons') }}" method="post"
-      style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
-    {{ usage_form.hidden_tag() }}
-    <button type="submit" class="action-button small-button">
-        <i class="fa fa-refresh"></i> עדכן את כל הקופונים הפעילים מ-Multipass
-    </button>
-</form>
-{% endif %}
+<!-- מודל לאישור מחיקה -->
+<div id="deleteConfirmModal" class="tm-modal">
+    <div class="tm-modal-content">
+        <div class="tm-modal-header">
+            <h3>
+                <i class="fas fa-exclamation-triangle"></i> אישור מחיקה
+            </h3>
+            <button class="tm-close-button" onclick="closeDeleteConfirmModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="tm-modal-body">
+            <p id="deleteConfirmMessage" class="tm-confirm-message"></p>
+            <div class="tm-form-actions tm-centered">
+                <button id="confirmDeleteButton" class="tm-action-button tm-danger">
+                    <i class="fas fa-trash-alt"></i> כן, מחק
+                </button>
+                <button class="tm-action-button tm-secondary" onclick="closeDeleteConfirmModal()">
+                    <i class="fas fa-times"></i> ביטול
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Container -->
+<div class="tm-notification-container"></div>
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/tooltip.css') }}">
+<script>
+    // ====== Tab Management ======
+    document.addEventListener("DOMContentLoaded", function() {
+        // Initialize tabs
+        initTabs();
 
-<!-- ADDED: Chart.js library for statistics -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+        // Initialize table sorting
+        initTableSorting();
 
+        // Initialize search functionality
+        initSearch();
+
+        // Initialize count badge coloring
+        initCountBadges();
+
+        // Fade in table rows with delay
+        animateTableRows();
+
+        // Add form animations
+        initFormAnimations();
+
+        // Add notifications system
+        initNotifications();
+    });
+
+    function initTabs() {
+        const tabButtons = document.querySelectorAll('.tm-tab-button');
+        const slider = document.querySelector('.tm-tabs-slider-indicator');
+        const activeTab = document.querySelector('.tm-tab-button.tm-active');
+
+        // Position the slider under the active tab on load
+        if (activeTab) {
+            updateSliderPosition(activeTab);
+        }
+
+        // Add click events to tab buttons
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                // Remove active class from all tabs
+                tabButtons.forEach(btn => btn.classList.remove('tm-active'));
+
+                // Add active class to clicked tab
+                this.classList.add('tm-active');
+
+                // Update the slider position
+                updateSliderPosition(this);
+
+                // Show the corresponding tab content
+                const tabName = this.getAttribute('data-tab');
+                const tabContents = document.querySelectorAll('.tm-tab-content');
+
+                tabContents.forEach(content => {
+                    content.classList.remove('tm-active');
+                });
+
+                document.getElementById(tabName).classList.add('tm-active');
+            });
+        });
+    }
+
+    function updateSliderPosition(activeTab) {
+        const slider = document.querySelector('.tm-tabs-slider-indicator');
+
+        // Position the slider under the active tab with a smooth animation
+        slider.style.width = `${activeTab.offsetWidth}px`;
+        slider.style.right = `${activeTab.offsetLeft}px`; // שינוי מ-left ל-right לתמיכה ב-RTL
+    }
+
+    // ====== Table Functions ======
+    function initTableSorting() {
+        const sortableHeaders = document.querySelectorAll('.tm-sortable');
+
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const sortField = this.getAttribute('data-sort');
+                const sortDirection = this.classList.contains('tm-asc') ? 'tm-desc' : 'tm-asc';
+
+                // Remove sort classes from all headers
+                sortableHeaders.forEach(h => {
+                    h.classList.remove('tm-asc', 'tm-desc');
+                    h.querySelector('i.fas').className = 'fas fa-sort';
+                });
+
+                // Add sort class to current header
+                this.classList.add(sortDirection);
+                this.querySelector('i.fas').className = `fas fa-sort-${sortDirection === 'tm-asc' ? 'up' : 'down'}`;
+
+                // Sort the table
+                sortTable(sortField, sortDirection);
+            });
+        });
+    }
+
+    function sortTable(field, direction) {
+        const tableBody = document.getElementById('tagsTableBody');
+        const rows = Array.from(tableBody.querySelectorAll('tr'));
+
+        // Sort rows
+        rows.sort((a, b) => {
+            let aValue, bValue;
+
+            if (field === 'id' || field === 'count') {
+                // Numeric sort
+                aValue = parseInt(a.cells[field === 'id' ? 0 : 2].textContent.trim());
+                bValue = parseInt(b.cells[field === 'id' ? 0 : 2].textContent.trim());
+            } else {
+                // Text sort
+                aValue = a.cells[1].textContent.trim();
+                bValue = b.cells[1].textContent.trim();
+            }
+
+            return direction === 'tm-asc' ?
+                   (aValue > bValue ? 1 : -1) :
+                   (aValue < bValue ? 1 : -1);
+        });
+
+        // Remove existing rows
+        while (tableBody.firstChild) {
+            tableBody.removeChild(tableBody.firstChild);
+        }
+
+        // Add sorted rows
+        rows.forEach(row => {
+            tableBody.appendChild(row);
+        });
+
+        // Re-apply animation
+        animateTableRows();
+    }
+
+    function initSearch() {
+        const searchInput = document.getElementById('tagSearchInput');
+
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#tagsTableBody tr');
+            let visibleRows = 0;
+
+            rows.forEach(row => {
+                const tagName = row.cells[1].textContent.toLowerCase();
+                const tagId = row.cells[0].textContent;
+
+                if (tagName.includes(searchTerm) || tagId.includes(searchTerm)) {
+                    row.style.display = '';
+                    visibleRows++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Show or hide the "no results" message
+            document.getElementById('noTagsMessage').style.display =
+                visibleRows === 0 ? 'flex' : 'none';
+        });
+    }
+
+    function initCountBadges() {
+        const countBadges = document.querySelectorAll('.tm-count-badge');
+
+        countBadges.forEach(badge => {
+            const count = parseInt(badge.getAttribute('data-count'));
+
+            if (count === 0) {
+                badge.classList.add('tm-empty');
+            } else if (count < 5) {
+                badge.classList.add('tm-low');
+            } else if (count < 10) {
+                badge.classList.add('tm-medium');
+            } else {
+                badge.classList.add('tm-high');
+            }
+        });
+    }
+
+    function animateTableRows() {
+        const rows = document.querySelectorAll('#tagsTableBody tr');
+
+        rows.forEach((row, index) => {
+            // Reset animation
+            row.style.opacity = 0;
+
+            // Apply animation with delay based on index
+            setTimeout(() => {
+                row.style.opacity = 1;
+            }, 50 * index);
+        });
+    }
+
+    // ====== Modal Functions ======
+    function openEditModal(tagId, tagName) {
+        document.getElementById("editTagForm").action = "/admin/tags/edit/" + tagId;
+        document.getElementById("editTagForm").querySelector("input[name='name']").value = tagName;
+
+        document.getElementById("editTagModal").classList.add('tm-active');
+        document.getElementById("modalBackdrop").classList.add('tm-active');
+
+        // Add animation class
+        setTimeout(() => {
+            document.getElementById("editTagModal").classList.add('tm-visible');
+        }, 10);
+    }
+
+    function closeEditModal() {
+        const modal = document.getElementById("editTagModal");
+        modal.classList.remove('tm-visible');
+
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+            modal.classList.remove('tm-active');
+            document.getElementById("modalBackdrop").classList.remove('tm-active');
+        }, 300);
+    }
+
+    function openTransferModal(tagId, tagName) {
+        document.getElementById("transferForm").action = "/admin/tags/transfer/" + tagId;
+        document.getElementById("transferForm").querySelector("input[name='source_tag_id']").value = tagId;
+
+        // Filter out the current tag from the dropdown
+        const dropdown = document.getElementById("transferForm").querySelector("select[name='target_tag_id']");
+        for (let i = 0; i < dropdown.options.length; i++) {
+            if (dropdown.options[i].value == tagId) {
+                dropdown.options[i].disabled = true;
+            } else {
+                dropdown.options[i].disabled = false;
+            }
+        }
+
+        document.getElementById("transferDescription").innerHTML =
+            `<i class="fas fa-info-circle"></i> העברת כל הקופונים מהתגית '<strong>${tagName}</strong>' לתגית אחרת`;
+
+        document.getElementById("transferModal").classList.add('tm-active');
+        document.getElementById("modalBackdrop").classList.add('tm-active');
+
+        // Add animation class
+        setTimeout(() => {
+            document.getElementById("transferModal").classList.add('tm-visible');
+        }, 10);
+    }
+
+    function closeTransferModal() {
+        const modal = document.getElementById("transferModal");
+        modal.classList.remove('tm-visible');
+
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+            modal.classList.remove('tm-active');
+            document.getElementById("modalBackdrop").classList.remove('tm-active');
+        }, 300);
+    }
+
+    function confirmDelete(event, tagName) {
+        event.preventDefault();
+        const form = event.target;
+
+        // Setup delete confirmation modal
+        document.getElementById("deleteConfirmMessage").innerHTML =
+            `האם אתה בטוח שברצונך למחוק את התגית '<strong>${tagName}</strong>'?<br>
+            <small class="tm-warning-text">פעולה זו אינה ניתנת לביטול.</small>`;
+
+        // Set up the confirm button to submit the form
+        document.getElementById("confirmDeleteButton").onclick = function() {
+            form.submit();
+        };
+
+        // Show the modal
+        document.getElementById("deleteConfirmModal").classList.add('tm-active');
+        document.getElementById("modalBackdrop").classList.add('tm-active');
+
+        setTimeout(() => {
+            document.getElementById("deleteConfirmModal").classList.add('tm-visible');
+        }, 10);
+
+        return false;
+    }
+
+    function closeDeleteConfirmModal() {
+        const modal = document.getElementById("deleteConfirmModal");
+        modal.classList.remove('tm-visible');
+
+        setTimeout(() => {
+            modal.classList.remove('tm-active');
+            document.getElementById("modalBackdrop").classList.remove('tm-active');
+        }, 300);
+    }
+
+    // Additional Functions
+    function initFormAnimations() {
+        // Add focus effects for inputs
+        const inputs = document.querySelectorAll('.tm-input-field, .tm-select-field');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('tm-focused');
+            });
+
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('tm-focused');
+            });
+        });
+
+        // Animate form submission
+        const forms = document.querySelectorAll('form.tm-animated-form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(event) {
+                // Prevent immediate submission
+                if (!this.classList.contains('tm-submitted')) {
+                    event.preventDefault();
+                    this.classList.add('tm-submitted');
+
+                    // Create a loading animation
+                    const submitBtn = this.querySelector('input[type="submit"], button[type="submit"]');
+                    const originalText = submitBtn.value || submitBtn.textContent;
+                    const loadingSpinner = document.createElement('span');
+                    loadingSpinner.className = 'tm-loading-spinner';
+
+                    if (submitBtn.tagName === 'INPUT') {
+                        submitBtn.value = 'מעבד...';
+                    } else {
+                        submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> מעבד...';
+                    }
+
+                    // Submit the form after a short delay
+                    setTimeout(() => {
+                        this.submit();
+                    }, 500);
+                }
+            });
+        });
+    }
+
+    function initNotifications() {
+        // Create notification container if it doesn't exist
+        if (!document.querySelector('.tm-notification-container')) {
+            const notificationContainer = document.createElement('div');
+            notificationContainer.className = 'tm-notification-container';
+            document.body.appendChild(notificationContainer);
+        }
+
+        // Check for flash messages and display as notifications
+        const flashMessages = [
+            // Example flash messages for testing, remove in production
+            // { type: 'success', message: 'תגית נוצרה בהצלחה!' },
+            // { type: 'warning', message: 'שם תגית כבר קיים.' },
+            // { type: 'danger', message: 'שגיאה בשמירת התגית.' }
+        ];
+
+        // Display any existing flash messages
+        flashMessages.forEach(message => {
+            showNotification(message.type, message.message);
+        });
+    }
+
+    function showNotification(type, message, title = '') {
+        const container = document.querySelector('.tm-notification-container');
+
+        // Set default titles based on type
+        if (!title) {
+            switch (type) {
+                case 'success':
+                    title = 'הצלחה!';
+                    break;
+                case 'warning':
+                    title = 'אזהרה';
+                    break;
+                case 'danger':
+                    title = 'שגיאה';
+                    break;
+                case 'info':
+                    title = 'הודעה';
+                    break;
+            }
+        }
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `tm-notification tm-notification-${type}`;
+
+        // Set icon based on type
+        let icon;
+        switch (type) {
+            case 'success':
+                icon = 'check-circle';
+                break;
+            case 'warning':
+                icon = 'exclamation-triangle';
+                break;
+            case 'danger':
+                icon = 'times-circle';
+                break;
+            case 'info':
+                icon = 'info-circle';
+                break;
+        }
+
+        notification.innerHTML = `
+            <div class="tm-notification-icon">
+                <i class="fas fa-${icon}"></i>
+            </div>
+            <div class="tm-notification-content">
+                <div class="tm-notification-title">${title}</div>
+                <div class="tm-notification-message">${message}</div>
+            </div>
+            <button class="tm-notification-close">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="tm-notification-progress">
+                <div class="tm-notification-progress-bar"></div>
+            </div>
+        `;
+
+        // Add to container
+        container.appendChild(notification);
+
+        // Show notification with animation
+        setTimeout(() => {
+            notification.classList.add('tm-show');
+        }, 10);
+
+        // Add click listener to close button
+        notification.querySelector('.tm-notification-close').addEventListener('click', () => {
+            closeNotification(notification);
+        });
+
+        // Auto close after 5 seconds
+        setTimeout(() => {
+            closeNotification(notification);
+        }, 5000);
+    }
+
+    function closeNotification(notification) {
+        notification.classList.remove('tm-show');
+
+        // Remove from DOM after animation completes
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.parentElement.removeChild(notification);
+            }
+        }, 500);
+    }
+
+    // Close modals when clicking outside of them
+    document.getElementById("modalBackdrop").addEventListener("click", function() {
+        closeEditModal();
+        closeTransferModal();
+        closeDeleteConfirmModal();
+    });
+
+    // Add keyboard support for modals (Escape key)
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeEditModal();
+            closeTransferModal();
+            closeDeleteConfirmModal();
+        }
+    });
+</script>
+{% endblock %}
+
+{% block styles %}
 <style>
-/* ===== General Styles and Notifications ===== */
-.admin-flash-message {
-    background-color: #fff8e1;
-    color: #856404;
-    border: 1px solid #ffeeba;
-    padding: 10px 15px;
-    border-radius: 6px;
-    font-size: 1em;
-    text-align: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    margin: 15px auto;
-    max-width: 800px;
-    width: 90%;
-    position: relative;
-}
-.admin-flash-message .close-button {
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    background: none;
-    border: none;
-    font-size: 1.1em;
-    cursor: pointer;
-    color: inherit;
-}
-.admin-message-button {
-    display: inline-block;
-    background-color: #3498db;
-    color: white;
-    padding: 6px 10px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-size: 0.85em;
-    font-weight: bold;
-    transition: background 0.3s ease-in-out;
-    margin-top: 2px;
-}
-.admin-message-button:hover {
-    background-color: #2980b9;
-}
+    /* Font Awesome import if not already included in base.html */
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
 
-/* Expiring coupons alert */
-.expiring-coupons-alert {
-    background-color: #fff8e1;
-    color: #000;
-    padding: 15px 20px;
-    border-radius: 8px;
-    font-size: 1.1em;
-    position: relative;
-    margin-top: 15px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    text-align: center;
-}
-.close-expiring-alert {
-    position: absolute;
-    top: 5px;
-    right: 10px;
-    font-size: 1.2em;
-    text-decoration: none;
-    color: #ff9800;
-    font-weight: bold;
-}
-.expiring-coupons-list {
-    list-style: none;
-    margin: 10px 0 0;
-    padding: 0;
-}
-.expiring-coupons-list li {
-    margin-bottom: 5px;
-}
-.coupon-button-wrapper {
-    display: inline;
-}
+    /* ====== RTL Direction Setup ====== */
+    .tm-admin-tags {
+        direction: rtl;
+        text-align: right;
+        font-family: 'Rubik', Arial, sans-serif;
+    }
 
-/* Coupon view button */
-.view-coupon-button {
-    display: inline-block;
-    margin-right: 5px;
-    background-color: #3498db;
-    color: #fff;
-    text-decoration: none;
-    padding: 3px 8px;
-    border-radius: 5px;
-    font-size: 0.9em;
-    font-weight: normal;
-}
-.view-coupon-button:hover {
-    background-color: #2980b9;
-}
+    /* ====== Main Layout ====== */
+    .tm-admin-tags {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
 
-/* ===== Titles and Amounts ===== */
-.total-value p {
-    font-size: 1.25em;
-    font-weight: bold;
-}
-.hidden-text {
-    display: none;
-}
+    .tm-page-title {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+        color: #333;
+        text-align: center;
+        position: relative;
+        padding-bottom: 0.5rem;
+    }
 
-/* ===== Company Cards Row ===== */
-.company-cards-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
-    margin: 20px auto 30px auto;
-    max-width: 1000px;
-}
-.company-card-box {
-    background-color: #fff;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    width: 200px;
-    text-align: center;
-    padding: 15px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.company-card-box:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-.company-card-box img {
-    width: 60px;
-    height: 60px;
-    object-fit: cover;
-    margin-bottom: 10px;
-}
-.company-card-box h3 {
-    margin: 0;
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #333;
-}
-.company-card-box p {
-    margin: 5px 0;
-    font-size: 0.9em;
-    color: #666;
-}
-@media (max-width: 450px) {
-    .company-cards-row {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-        padding: 0 10px;
+    .tm-page-title:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100px;
+        height: 3px;
+        background: linear-gradient(to right, #6b7af7, #4b59f7);
+        border-radius: 3px;
     }
-    .company-card-box {
-        width: 100%;
-    }
-    .company-card-box:nth-child(odd):last-child {
-        grid-column: 1 / -1;
-        justify-self: center;
-        width: 50%;
-    }
-}
 
-/* ===== Forms (Usage Report / Add Coupon) ===== */
-.usage-forms-container {
-    display: flex;
-    gap: 5px;
-    justify-content: center;
-    align-items: stretch;
-    margin: 20px auto;
-    max-width: 800px;
-    border-radius: 10px;
-}
-.usage-form-wrapper {
-    flex: 1;
-    max-width: 360px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-}
-.usage-form-wrapper form {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-.input-wrapper {
-    margin-bottom: 10px;
-}
-.button-with-explanation {
-    position: relative;
-    display: inline-block;
-    margin-top: auto;
-}
-.button-with-explanation:hover .tooltip,
-.tooltip-trigger:hover .tooltip {
-    display: block;
-}
-.tooltip-button-mobile {
-    margin-left: 10px;
-}
+    .tm-content-card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+        padding: 2rem;
+        transition: all 0.3s ease;
+    }
 
-/* ===== Coupon List ===== */
-.coupon-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-}
-.coupon-card {
-    flex: 1 1 calc(25% - 20px);
-    max-width: calc(25% - 20px);
-    box-sizing: border-box;
-    padding: 15px 20px;
-    border: 1px solid var(--light-gray);
-    border-radius: 8px;
-    background-color: var(--white);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    color: inherit;
-    text-decoration: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-.coupon-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-.company-logo {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-.coupon-section-title {
-    text-align: center;
-    margin-top: 30px;
-}
+    .tm-content-card:hover {
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.12);
+    }
 
-/* ===== Export Buttons ===== */
-.export-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin: 20px 0;
-}
-.export-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background-color: #2ecc71;
-    color: #fff;
-    text-decoration: none;
-    padding: 6px 12px;
-    border-radius: 5px;
-}
-.export-button:hover {
-    background-color: #27ae60;
-}
-
-/* ===== Responsiveness ===== */
-@media (max-width: 1200px) {
-    .coupon-card {
-        flex: 1 1 calc(33.333% - 20px);
-        max-width: calc(33.333% - 20px);
-    }
-}
-@media (max-width: 992px) {
-    .coupon-card {
-        flex: 1 1 calc(50% - 20px);
-        max-width: calc(50% - 20px);
-    }
-}
-@media (max-width: 600px) {
-    .coupon-card {
-        flex: 1 1 calc(50% - 20px);
-        max-width: calc(50% - 20px);
-    }
-    .usage-forms-container {
-        flex-direction: column;
-        gap: 10px;
-        margin: 5px auto;
-        padding: 0 15px;
-        max-width: 95%;
-    }
-    .usage-form-wrapper {
-        max-width: 100%;
-    }
-    .button-with-explanation {
+    .tm-section-title {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        color: #444;
         display: flex;
         align-items: center;
     }
-}
 
-/* ===== Tooltip ===== */
-.tooltip {
-    display: none;
-    position: absolute;
-    background-color: #333;
-    color: #fff;
-    padding: 8px 10px;
-    border-radius: 6px;
-    font-size: 0.9em;
-    max-width: 250px;
-    z-index: 9999;
-}
-.tooltip::after {
-    content: "";
-    position: absolute;
-    border-width: 5px;
-    border-style: solid;
-    border-color: #333 transparent transparent transparent;
-    top: 0;
-    left: 10px;
-    transform: translateY(-100%);
-}
-.close-tooltip {
-    float: right;
-    cursor: pointer;
-    margin-left: 8px;
-}
+    .tm-section-title i {
+        margin-left: 0.5rem;
+        color: #4b59f7;
+    }
 
-/* ===== Centering Statistics Button ===== */
-.stats-button {
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.9em;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  margin: 10px auto;
-  transition: background-color 0.2s ease;
-}
-.stats-button:hover {
-  background-color: #2980b9;
-}
+    /* ====== Tabs ====== */
+    .tm-tabs-container {
+        margin-bottom: 2rem;
+        position: relative;
+    }
 
-/* ===== Modal Styles with Animation ===== */
-.modal {
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0,0,0,0.4);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-.modal.active {
-  opacity: 1;
-  visibility: visible;
-}
-.modal-content {
-  background-color: #fff;
-  margin: 8% auto;
-  padding: 20px;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-sizing: border-box;
-  text-align: center;
-}
-.modal-content h2,
-.modal-content h3 {
-  margin: 10px 0;
-}
-.close-modal,
-.close-usage-modal,
-.close-big-modal,
-.close-stats-modal {
-  position: absolute;
-  top: 10px;
-  right: 20px;
-  font-size: 1.5em;
-  cursor: pointer;
-}
-#modal-company-logo {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin: 10px auto 0 auto;
-  display: block;
-}
-#modal-coupons-list {
-  margin-top: 20px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  align-items: center;
-  list-style: none;
-  padding: 0;
-}
-#modal-coupons-list li {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-#modal-coupons-list li a {
-  text-decoration: none;
-  color: #3498db;
-  margin-bottom: 5px;
-  text-align: center;
-}
-#modal-coupons-list li a:hover {
-  text-decoration: underline;
-}
-.coupon-info-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-.update-usage-btn,
-.show-big-btn {
-  border: none;
-  border-radius: 5px;
-  padding: 4px 8px;
-  cursor: pointer;
-  color: #fff;
-  font-size: 0.9em;
-}
-.update-usage-btn {
-  background-color: #27ae60;
-}
-.update-usage-btn:hover {
-  background-color: #229954;
-}
-.show-big-btn {
-  background-color: #8e44ad;
-}
-.show-big-btn:hover {
-  background-color: #7d3c98;
-}
+    .tm-tabs {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+    }
 
-/* Fix long text wrapping in modal */
-#bigModalCouponCode {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  white-space: normal;
-  text-align: center;
-  max-width: 100%;
-}
+    .tm-tab-button {
+        padding: 0.8rem 1.5rem;
+        background: none;
+        border: none;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        display: flex;
+        align-items: center;
+        border-radius: 30px;
+    }
 
-/* ===== Statistics Modal Specific Styles ===== */
-.stats-modal-content {
-  max-width: 800px;
-  padding: 25px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
+    .tm-tab-button i {
+        margin-left: 0.5rem;
+        font-size: 0.9rem;
+    }
 
-/* Original desktop styling for stats cards */
-.stats-summary {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  margin: 20px 0;
-  gap: 20px;
-}
-.stats-card {
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  padding: 15px;
-  flex: 1;
-  min-width: 200px;
-  text-align: center;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-.big-number {
-  font-size: 2.5em;
-  font-weight: bold;
-  color: #3498db;
-  margin: 10px 0;
-}
+    .tm-tag-count-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(75, 89, 247, 0.1);
+        color: #4b59f7;
+        border-radius: 50px;
+        min-width: 20px;
+        height: 20px;
+        font-size: 0.75rem;
+        padding: 0 6px;
+        margin-right: 8px;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
 
-/* Original desktop styling for charts */
-.stats-charts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin: 20px 0;
-}
-.chart-container {
-  flex: 1 1 300px;
-  min-height: 300px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  padding: 15px;
-}
-.chart {
-  width: 100%;
-  height: 250px;
-}
+    .tm-tab-button:hover .tm-tag-count-badge {
+        background-color: rgba(75, 89, 247, 0.2);
+    }
 
-/* Table styling with wrapper for scrolling if needed */
-.savings-table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.savings-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 20px 0;
-  min-width: 300px; /* Ensures table doesn't get too narrow */
-}
-.savings-table th,
-.savings-table td {
-  padding: 10px;
-  text-align: right;
-  border-bottom: 1px solid #ddd;
-}
-.savings-table th {
-  background-color: #f2f2f2;
-  position: sticky;
-  top: 0;
-}
+    .tm-tab-button.tm-active .tm-tag-count-badge {
+        background-color: #4b59f7;
+        color: white;
+    }
 
-/* Filters container with proper wrapping */
-.filters-container {
-  margin: 10px 0;
-  padding: 10px 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.filters-container span {
-  font-weight: bold;
-  margin-right: 10px;
-}
-.company-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin: 0 auto;
-  width: 100%;
-  text-align: center;
-}
-.company-filter-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 4px 8px;
-  background-color: #fff;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-  cursor: pointer;
-  font-size: 0.85em;
-  text-align: center;
-  min-width: 90px;
-  margin: 0 auto;
-  user-select: none;
-}
-.company-filter-item span {
-  display: block;
-  width: 100%;
-  text-align: center;
-  margin: 0 auto;
-  pointer-events: none;
-}
-.company-filter-item.active {
-  background-color: #e3f2fd;
-  border-color: #2196F3;
-}
+    .tm-tab-button:hover {
+        color: #4b59f7;
+        background-color: rgba(75, 89, 247, 0.05);
+    }
 
-/* Custom tooltips for charts */
-#tooltipEl {
-  direction: rtl !important;
-  text-align: right !important;
-}
-.chartjs-tooltip {
-  direction: rtl !important;
-  text-align: right !important;
-}
+    .tm-tab-button.tm-active {
+        color: #4b59f7;
+    }
 
-/* Mobile-specific styles */
-@media (max-width: 767px) {
-  .stats-modal-content {
-    padding: 15px;
-    margin: 5% auto;
-    width: 95%;
-  }
+    .tm-tabs-slider {
+        position: relative;
+        height: 3px;
+        margin-top: 5px;
+    }
 
-  /* Mobile optimized cards - 2 per row */
-  .stats-summary {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
+    .tm-tabs-slider-indicator {
+        position: absolute;
+        height: 3px;
+        background: linear-gradient(to right, #6b7af7, #4b59f7);
+        transition: all 0.3s ease;
+        border-radius: 3px;
+    }
 
-  .stats-card {
-    min-width: unset;
-    padding: 10px;
-  }
+    .tm-tab-content {
+        display: none;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.3s ease;
+    }
 
-  .stats-card h3 {
-    font-size: 0.9em;
-  }
+    .tm-tab-content.tm-active {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+    }
 
-  .big-number {
-    font-size: 1.8em;
-    margin: 5px 0;
-  }
+    /* ====== Forms ====== */
+    .tm-form-container {
+        max-width: 500px;
+        margin: 0 auto;
+    }
 
-  .stats-card p {
-    font-size: 0.8em;
-    margin: 5px 0;
-  }
+    .tm-animated-form .tm-form-group {
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
 
-  /* Mobile optimized charts - stacked */
-  .stats-charts {
-    flex-direction: column;
-  }
+    .tm-form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #555;
+        font-size: 1rem;
+    }
 
-  .chart-container {
-    flex: none;
-    min-height: 250px;
-    padding: 10px;
-  }
+    .tm-input-with-icon, .tm-select-wrapper {
+        position: relative;
+        transition: all 0.3s;
+    }
 
-  .chart {
-    height: 200px;
-  }
+    .tm-input-with-icon.tm-focused, .tm-select-wrapper.tm-focused {
+        transform: translateY(-2px);
+    }
 
-  .stats-details h3 {
-    font-size: 1.1em;
-  }
+    .tm-input-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #aaa;
+        transition: all 0.3s;
+    }
 
-  .savings-table th,
-  .savings-table td {
-    padding: 8px 5px;
-    font-size: 0.9em;
-  }
+    .tm-select-arrow {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #aaa;
+        transition: all 0.3s;
+        pointer-events: none;
+    }
 
-  .close-stats-modal {
-    top: 5px;
-    right: 10px;
-  }
+    .tm-input-field, .tm-select-field {
+        width: 100%;
+        padding: 0.8rem 2.5rem 0.8rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        text-align: right;
+    }
 
-  .coupon-info-buttons {
-    flex-direction: column;
-    gap: 5px;
-    width: 100%;
-  }
+    .tm-input-field:focus, .tm-select-field:focus {
+        border-color: #4b59f7;
+        box-shadow: 0 0 0 3px rgba(75, 89, 247, 0.15);
+    }
 
-  .update-usage-btn,
-  .show-big-btn {
-    width: 100%;
-    padding: 6px 0;
-  }
-}
+    .tm-input-field:focus + .tm-input-icon {
+        color: #4b59f7;
+    }
 
-/* For very small devices */
-@media (max-width: 400px) {
-  .stats-card {
-    padding: 8px 5px;
-  }
+    .tm-error-message {
+        color: #dc3545;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+    }
 
-  .big-number {
-    font-size: 1.5em;
-  }
+    .tm-error-message i {
+        margin-left: 0.4rem;
+    }
 
-  .company-filter-item {
-    min-width: 70px;
-    padding: 3px 6px;
-    font-size: 0.8em;
-  }
-}
+    .tm-form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .tm-action-button {
+        padding: 0.7rem 1.5rem;
+        background-color: #4b59f7;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tm-action-button i {
+        margin-left: 0.5rem;
+    }
+
+    .tm-action-button:hover {
+        background-color: #3a47d5;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(75, 89, 247, 0.3);
+    }
+
+    .tm-action-button:active {
+        transform: translateY(0);
+    }
+
+    .tm-action-button.tm-secondary {
+        background-color: #6c757d;
+    }
+
+    .tm-action-button.tm-secondary:hover {
+        background-color: #5a6268;
+        box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+    }
+
+    .tm-action-button.tm-danger {
+        background-color: #dc3545;
+    }
+
+    .tm-action-button.tm-danger:hover {
+        background-color: #c82333;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .tm-pulse-button {
+        animation: tm-pulse 2s infinite;
+    }
+
+    @keyframes tm-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(75, 89, 247, 0.6);
+        }
+        70% {
+            box-shadow: 0 0 0 8px rgba(75, 89, 247, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(75, 89, 247, 0);
+        }
+    }
+
+    /* ====== Search ====== */
+    .tm-search-container {
+        margin-bottom: 1.5rem;
+        max-width: 400px;
+    }
+
+    /* ====== Table ====== */
+    .tm-table-responsive {
+        overflow-x: auto;
+    }
+
+    .tm-tag-management-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .tm-tag-management-table th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        padding: 0.8rem;
+        font-weight: 600;
+        text-align: right;
+        color: #495057;
+    }
+
+    .tm-tag-management-table th.tm-sortable {
+        cursor: pointer;
+        position: relative;
+        user-select: none;
+    }
+
+    .tm-tag-management-table th.tm-sortable:hover {
+        background-color: #e9ecef;
+    }
+
+    .tm-tag-management-table th.tm-sortable span {
+        display: inline-block;
+        margin-left: 0.5rem;
+    }
+
+    .tm-tag-management-table th.tm-sortable i {
+        margin-right: 0.5rem;
+        color: #aaa;
+    }
+
+    .tm-tag-management-table th.tm-asc i, .tm-tag-management-table th.tm-desc i {
+        color: #4b59f7;
+    }
+
+    .tm-tag-management-table td {
+        padding: 0.8rem;
+        border-bottom: 1px solid #dee2e6;
+        transition: all 0.3s;
+        text-align: right;
+    }
+
+    .tm-tag-management-table tr:hover td {
+        background-color: #f8f9fa;
+    }
+
+    .tm-tag-management-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .tm-table-row-fade {
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    .tm-count-badge {
+        display: inline-block;
+        padding: 0.25rem 0.6rem;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-align: center;
+        min-width: 30px;
+    }
+
+    .tm-count-badge.tm-empty {
+        background-color: #f8f9fa;
+        color: #adb5bd;
+    }
+
+    .tm-count-badge.tm-low {
+        background-color: #ffe5e5;
+        color: #dc3545;
+    }
+
+    .tm-count-badge.tm-medium {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .tm-count-badge.tm-high {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .tm-actions-column {
+        white-space: nowrap;
+    }
+
+    .tm-action-buttons {
+        display: flex;
+        gap: 5px;
+    }
+
+    .tm-edit-button {
+        background-color: #17a2b8;
+    }
+
+    .tm-edit-button:hover {
+        background-color: #138496;
+        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+    }
+
+    .tm-transfer-button {
+        background-color: #fd7e14;
+    }
+
+    .tm-transfer-button:hover {
+        background-color: #e36c09;
+        box-shadow: 0 4px 12px rgba(253, 126, 20, 0.3);
+    }
+
+    .tm-delete-button {
+        background-color: #dc3545;
+    }
+
+    .tm-delete-button:hover {
+        background-color: #c82333;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .tm-action-button.tm-disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .tm-tooltip {
+        position: relative;
+        padding: 0.5rem;
+        min-width: 40px;
+    }
+
+    .tm-tooltip-text {
+        visibility: hidden;
+        background-color: #333;
+        color: white;
+        text-align: center;
+        border-radius: 4px;
+        padding: 6px 8px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: max-content;
+        font-size: 0.8rem;
+        transition: opacity 0.3s;
+        opacity: 0;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .tm-tooltip-text::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #333 transparent transparent transparent;
+    }
+
+    .tm-tooltip:hover .tm-tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .tm-no-data-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        color: #6c757d;
+        text-align: center;
+    }
+
+    .tm-no-data-message i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        opacity: 0.6;
+    }
+
+    /* ====== Modals ====== */
+    .tm-modal-backdrop {
+        display: none;
+        position: fixed;
+        z-index: 998;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0);
+        transition: background-color 0.3s ease;
+    }
+
+    .tm-modal-backdrop.tm-active {
+        display: block;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .tm-modal {
+        display: none;
+        position: fixed;
+        z-index: 999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .tm-modal.tm-active {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .tm-modal.tm-visible {
+        opacity: 1;
+    }
+
+    .tm-modal-content {
+        background-color: #fff;
+        margin: auto;
+        width: 90%;
+        max-width: 500px;
+        border-radius: 8px;
+        box-shadow: 0 5px 30px rgba(0, 0, 0, 0.15);
+        transform: translateY(20px);
+        transition: transform 0.3s ease;
+        overflow: hidden;
+        direction: rtl;
+        text-align: right;
+    }
+
+    .tm-modal.tm-visible .tm-modal-content {
+        transform: translateY(0);
+    }
+
+    .tm-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.2rem 1.5rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .tm-modal-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: #333;
+        display: flex;
+        align-items: center;
+    }
+
+    .tm-modal-header h3 i {
+        margin-left: 0.5rem;
+        color: #4b59f7;
+    }
+
+    .tm-close-button {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        color: #aaa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        transition: all 0.2s;
+        margin-right: auto;
+        margin-left: 0;
+    }
+
+    .tm-close-button:hover {
+        background-color: #e9ecef;
+        color: #333;
+    }
+
+    .tm-modal-body {
+        padding: 1.5rem;
+    }
+
+    .tm-transfer-description, .tm-confirm-message {
+        margin-bottom: 1.5rem;
+        padding: 0.8rem;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        border-right: 3px solid #4b59f7;
+        color: #555;
+    }
+
+    .tm-transfer-description i, .tm-confirm-message i {
+        color: #4b59f7;
+        margin-left: 0.5rem;
+    }
+
+    .tm-warning-text {
+        color: #dc3545;
+        display: block;
+        margin-top: 0.5rem;
+    }
+
+    .tm-centered {
+        justify-content: center;
+    }
+
+    /* ====== Notification System ====== */
+    .tm-notification-container {
+        position: fixed;
+        top: 20px;
+        right: 20px; /* שינוי צד התצוגה */
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 350px;
+    }
+
+    .tm-notification {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        transform: translateX(120%); /* שינוי כיוון התזוזה */
+        opacity: 0;
+        transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        direction: rtl;
+        text-align: right;
+    }
+
+    .tm-notification.tm-show {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .tm-notification-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 15px;
+        margin-right: 0;
+        flex-shrink: 0;
+    }
+
+    .tm-notification-success .tm-notification-icon {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .tm-notification-warning .tm-notification-icon {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .tm-notification-danger .tm-notification-icon {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .tm-notification-info .tm-notification-icon {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .tm-notification-content {
+        flex-grow: 1;
+    }
+
+    .tm-notification-title {
+        font-weight: 600;
+        margin-bottom: 3px;
+        font-size: 0.95rem;
+    }
+
+    .tm-notification-message {
+        color: #666;
+        font-size: 0.85rem;
+    }
+
+    .tm-notification-close {
+        color: #aaa;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        margin-left: 5px;
+        margin-right: 0;
+        transition: all 0.2s;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tm-notification-close:hover {
+        background-color: #f1f1f1;
+        color: #333;
+    }
+
+    .tm-notification-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        width: 100%;
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .tm-notification-progress-bar {
+        height: 100%;
+        width: 100%;
+        transform-origin: right; /* שינוי כיוון ההתקדמות */
+        animation: tm-progress-rtl 5s linear;
+    }
+
+    .tm-notification-success .tm-notification-progress-bar {
+        background-color: #28a745;
+    }
+
+    .tm-notification-warning .tm-notification-progress-bar {
+        background-color: #ffc107;
+    }
+
+    .tm-notification-danger .tm-notification-progress-bar {
+        background-color: #dc3545;
+    }
+
+    .tm-notification-info .tm-notification-progress-bar {
+        background-color: #17a2b8;
+    }
+
+    @keyframes tm-progress-rtl {
+        from {
+            transform: scaleX(1);
+        }
+        to {
+            transform: scaleX(0);
+        }
+    }
+
+    /* ====== Responsive Styles ====== */
+    @media (max-width: 768px) {
+        .tm-modal-content {
+            width: 95%;
+            margin: 20px auto;
+        }
+
+        .tm-tab-button {
+            padding: 0.7rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .tm-action-buttons {
+            flex-wrap: wrap;
+        }
+
+        .tm-tag-management-table th,
+        .tm-tag-management-table td {
+            padding: 0.6rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .tm-admin-tags {
+            padding: 1rem 0.5rem;
+        }
+
+        .tm-content-card {
+            padding: 1.5rem 1rem;
+        }
+
+        .tm-page-title {
+            font-size: 1.75rem;
+        }
+
+        .tm-section-title {
+            font-size: 1.25rem;
+        }
+
+        .tm-form-actions {
+            flex-direction: column;
+        }
+
+        .tm-form-actions button {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    /* ====== Animations ====== */
+    @keyframes tm-fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes tm-slideIn {
+        from {
+            transform: translateX(-20px); /* שינוי כיוון האנימציה */
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
 </style>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-  // Variable to track if usage has been updated
-  let usageUpdated = false;
-
-  // Global variables for statistics
-  let companiesData = [];
-  let originalTimelineData = [];
-  let selectedCompanies = new Set(['all']);
-  let pieChart = null;
-  let timelineChart = null;
-  let lastClickedIndex = -1;
-  let isShiftKeyPressed = false;
-
-  // Shift key tracking
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Shift') {
-      isShiftKeyPressed = true;
-    }
-  });
-
-  document.addEventListener('keyup', function(e) {
-    if (e.key === 'Shift') {
-      isShiftKeyPressed = false;
-    }
-  });
-
-  // 1) Collect active coupons based on "קופונים פעילים" section
-  const activeHeading = Array.from(document.querySelectorAll(".coupon-section-title"))
-    .find(h => h.textContent.trim() === "קופונים פעילים");
-  const activeContainer = activeHeading ? activeHeading.nextElementSibling : null;
-  const activeCoupons = activeContainer ? activeContainer.querySelectorAll(".coupon-card") : [];
-
-  // 1.1) Collect one-time coupons
-  const oneTimeHeading = Array.from(document.querySelectorAll(".coupon-section-title"))
-    .find(h => h.textContent.trim() === "קופונים חד פעמיים");
-  const oneTimeContainer = oneTimeHeading ? oneTimeHeading.nextElementSibling : null;
-  const oneTimeCoupons = oneTimeContainer ? oneTimeContainer.querySelectorAll(".coupon-card") : [];
-
-  // 2) Group coupons by company
-  const companyMap = {};
-  activeCoupons.forEach(card => {
-    const company = card.getAttribute("data-company") || "אחר";
-    if (!companyMap[company]) {
-      companyMap[company] = [];
-    }
-    companyMap[company].push(card);
-  });
-
-  // 2.1) Add one-time coupons to the group
-  oneTimeCoupons.forEach(card => {
-    const company = card.getAttribute("data-company") || "אחר";
-    if (!companyMap[company]) {
-      companyMap[company] = [];
-    }
-    companyMap[company].push(card);
-  });
-
-  // 3) Create company cards in the filter row
-  const companyCardsRow = document.getElementById("company-cards-row");
-  Object.keys(companyMap).forEach(company => {
-    const cards = companyMap[company];
-    const firstCard = cards[0];
-    const logoSrc = firstCard.getAttribute("data-logo-src") || "";
-    const count = cards.length;
-
-    const cardBox = document.createElement("div");
-    cardBox.classList.add("company-card-box");
-    cardBox.setAttribute("data-company", company);
-
-    const imgEl = document.createElement("img");
-    imgEl.src = logoSrc;
-    imgEl.alt = company;
-    cardBox.appendChild(imgEl);
-
-    const titleEl = document.createElement("h3");
-    titleEl.textContent = company;
-    cardBox.appendChild(titleEl);
-
-    const pEl = document.createElement("p");
-    pEl.textContent = count + " קופונים פעילים";
-    cardBox.appendChild(pEl);
-
-    cardBox.addEventListener("click", function() {
-      openCompanyModal(company, cards);
-    });
-
-    companyCardsRow.appendChild(cardBox);
-  });
-
-  // 4) Modal for displaying company's coupons
-  const modal = document.getElementById("companyModal");
-  const modalCompanyName = document.getElementById("modal-company-name");
-  const modalCompanyLogo = document.getElementById("modal-company-logo");
-  const modalTotalRemaining = document.getElementById("modal-total-remaining");
-  const modalCouponsList = document.getElementById("modal-coupons-list");
-  const closeModal = document.querySelector(".close-modal");
-
-  function openCompanyModal(companyName, cardList) {
-    const firstCard = cardList[0];
-    const logoSrc = firstCard.getAttribute("data-logo-src") || "";
-
-    modalCompanyLogo.src = logoSrc;
-    modalCompanyLogo.style.display = logoSrc ? "block" : "none";
-    modalCompanyName.textContent = "קופונים מחברת " + companyName;
-
-    let totalRemaining = 0;
-    cardList.forEach(card => {
-      const remainingVal = parseFloat(card.getAttribute("data-remaining")) || 0;
-      totalRemaining += remainingVal;
-    });
-    modalTotalRemaining.textContent = "סה\"כ נותר: " + totalRemaining.toFixed(2) + " ₪";
-
-    modalCouponsList.innerHTML = "";
-    cardList.forEach(card => {
-      const couponCode = card.getAttribute("data-coupon-code");
-      const couponId = card.getAttribute("data-coupon-id");
-      const remaining = parseFloat(card.getAttribute("data-remaining") || "0").toFixed(2);
-      const couponLink = card.getAttribute("href");
-      const logoSrcItem = card.getAttribute("data-logo-src") || "";
-      const isOneTime = card.getAttribute("data-is-one-time") === "true";
-      const cvv = card.getAttribute("data-coupon-cvv") || "";
-      const cardExp = card.getAttribute("data-coupon-card-exp") || "";
-
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center;">
-          <a href="${couponLink}">
-            קוד: ${couponCode} - ${isOneTime ? 'מטרה: ' + card.getAttribute("data-purpose") : 'נותר: ' + remaining + ' ₪'}
-          </a>
-          <div class="coupon-info-buttons">
-            <button
-              class="update-usage-btn"
-              data-coupon-id="${couponId}"
-              data-coupon-code="${couponCode}"
-              data-company="${companyName}"
-              data-remaining="${remaining}"
-              data-logo-src="${logoSrcItem}"
-            >
-              עדכון שימוש
-            </button>
-            <button
-              class="show-big-btn"
-              data-company="${companyName}"
-              data-coupon-code="${couponCode}"
-              data-logo-src="${logoSrcItem}"
-              data-coupon-cvv="${cvv}"
-              data-coupon-card-exp="${cardExp}"
-            >
-              הצגת קוד הקופון
-            </button>
-          </div>
-        </div>
-      `;
-      modalCouponsList.appendChild(li);
-    });
-
-    modal.classList.add("active");
-  }
-
-  closeModal.addEventListener("click", function() {
-    modal.classList.remove("active");
-    if (usageUpdated) {
-      window.location.reload();
-    }
-  });
-  window.addEventListener("click", function(e) {
-    if (e.target === modal) {
-      modal.classList.remove("active");
-      if (usageUpdated) {
-        window.location.reload();
-      }
-    }
-  });
-
-  // 5) Modal for updating coupon usage
-  const usageModal = document.getElementById("usageModal");
-  const closeUsageModal = document.querySelector(".close-usage-modal");
-  const usageCompany = document.getElementById("usage-modal-company");
-  const usageCode = document.getElementById("usage-modal-code");
-  const usageAmountInput = document.getElementById("usageAmount");
-  const usageErrorMsg = document.getElementById("usageErrorMsg");
-  const usageConfirmBtn = document.getElementById("usageConfirmButton");
-  const updateFullAmountBtn = document.getElementById("updateFullAmountButton");
-
-  let currentCouponId = null;
-  let currentRemaining = 0;
-
-  document.addEventListener("click", function(e) {
-    if (e.target && e.target.classList.contains("update-usage-btn")) {
-      const btn = e.target;
-      currentCouponId = btn.getAttribute("data-coupon-id");
-      const cName = btn.getAttribute("data-company");
-      const cCode = btn.getAttribute("data-coupon-code");
-      currentRemaining = parseFloat(btn.getAttribute("data-remaining"));
-      const logoSrc = btn.getAttribute("data-logo-src") || "";
-
-      usageCompany.textContent = "חברה: " + cName;
-      usageCode.innerHTML = "<strong>קוד קופון: " + cCode + "</strong>";
-      usageAmountInput.value = "";
-      usageErrorMsg.style.display = "none";
-      document.getElementById("remainingValue").textContent = currentRemaining.toFixed(2);
-      document.getElementById("usage-modal-logo").src = logoSrc;
-      usageModal.classList.add("active");
-    }
-  });
-
-  closeUsageModal.addEventListener("click", function() {
-    usageModal.classList.remove("active");
-    if (usageUpdated) {
-      window.location.reload();
-    }
-  });
-  window.addEventListener("click", function(e) {
-    if (e.target === usageModal) {
-      usageModal.classList.remove("active");
-      if (usageUpdated) {
-        window.location.reload();
-      }
-    }
-  });
-
-  // Update full amount button handler
-  updateFullAmountBtn.addEventListener("click", function() {
-    usageAmountInput.value = currentRemaining;
-  });
-
-  usageConfirmBtn.addEventListener("click", function() {
-    const usedAmount = parseFloat(usageAmountInput.value);
-    if (isNaN(usedAmount) || usedAmount <= 0) {
-      usageErrorMsg.textContent = "אנא הזן סכום חוקי (> 0).";
-      usageErrorMsg.style.display = "block";
-      return;
-    }
-    if (usedAmount > currentRemaining) {
-      usageErrorMsg.textContent = "הסכום שהוזן חורג מהיתרה הקיימת (" + currentRemaining.toFixed(2) + " ש\"ח).";
-      usageErrorMsg.style.display = "block";
-      return;
-    }
-    usageErrorMsg.style.display = "none";
-
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
-    fetch(`/update_coupon_usage/${currentCouponId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: `csrf_token=${csrfToken}&used_amount=${usedAmount}`
-    })
-    .then(async response => {
-      if (!response.ok) {
-        const text = await response.text();
-        usageErrorMsg.textContent = text || "שגיאה בעדכון השימוש.";
-        usageErrorMsg.style.display = "block";
-        return;
-      }
-      usageUpdated = true;
-      usageModal.classList.remove("active");
-      const theButton = document.querySelector(`.update-usage-btn[data-coupon-id="${currentCouponId}"]`);
-      if (theButton) {
-        const oldRemaining = parseFloat(theButton.getAttribute("data-remaining")) || 0;
-        const newRemaining = Math.max(0, oldRemaining - usedAmount).toFixed(2);
-        theButton.setAttribute("data-remaining", newRemaining);
-        const linkEl = theButton.parentElement.parentElement.querySelector("a");
-        if (linkEl) {
-          const codeText = linkEl.textContent.split("- נותר:");
-          if (codeText.length === 2) {
-            linkEl.textContent = codeText[0] + "- נותר: " + newRemaining + " ₪";
-          }
-        }
-      }
-    })
-    .catch(err => {
-      usageErrorMsg.textContent = "שגיאה בלתי צפויה: " + err;
-      usageErrorMsg.style.display = "block";
-    });
-  });
-
-  // 6) Modal for large display of coupon code
-  const bigModal = document.getElementById("bigDisplayModal");
-  const closeBigModal = document.querySelector(".close-big-modal");
-  const bigModalCompanyName = document.getElementById("bigModalCompanyName");
-  const bigModalLogo = document.getElementById("bigModalLogo");
-  const bigModalCouponCode = document.getElementById("bigModalCouponCode");
-  const bigModalExtraDetails = document.getElementById("bigModalExtraDetails");
-  const bigModalCouponCVV = document.getElementById("bigModalCouponCVV");
-  const bigModalCardExp = document.getElementById("bigModalCardExp");
-
-  document.addEventListener("click", function(e) {
-    if (e.target && e.target.classList.contains("show-big-btn")) {
-      const btn = e.target;
-      const companyName = btn.getAttribute("data-company");
-      const couponCode = btn.getAttribute("data-coupon-code");
-      const logoSrc = btn.getAttribute("data-logo-src") || "";
-      const couponCVV = btn.getAttribute("data-coupon-cvv");
-      const couponCardExp = btn.getAttribute("data-coupon-card-exp");
-
-      bigModalCompanyName.textContent = companyName;
-      bigModalLogo.src = logoSrc;
-      bigModalCouponCode.textContent = couponCode;
-
-      if (couponCVV || couponCardExp) {
-        bigModalExtraDetails.style.display = "block";
-        bigModalCouponCVV.textContent = couponCVV ? `${couponCVV} :CVV` : "";
-        bigModalCardExp.textContent = couponCardExp ? `תוקף: ${couponCardExp}` : "";
-      } else {
-        bigModalExtraDetails.style.display = "none";
-      }
-
-      bigModal.classList.add("active");
-    }
-  });
-
-  closeBigModal.addEventListener("click", function() {
-    bigModal.classList.remove("active");
-  });
-  window.addEventListener("click", function(e) {
-    if (e.target === bigModal) {
-      bigModal.classList.remove("active");
-    }
-  });
-
-  // 7) Close admin message
-  document.querySelectorAll(".close-button").forEach(button => {
-    button.addEventListener("click", function (event) {
-        event.preventDefault();
-        let form = this.closest("form");
-        let url = form.action;
-        let csrfToken = form.querySelector("input[name='csrf_token']").value;
-        fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: `csrf_token=${csrfToken}`
-        }).then(response => {
-            if (response.ok) {
-                form.closest(".admin-flash-message").remove();
-            } else {
-                alert("שגיאה בעת סגירת ההודעה");
-            }
-        });
-    });
-  });
-
-  // 8) Statistics modal functionality with real data
-  // Function to render charts and initialize filtering
-  function renderSavingsCharts() {
-    try {
-      // קרא את הנתונים שהועברו מהשרת
-      companiesData = JSON.parse('{{ companies_stats|safe }}');
-      originalTimelineData = JSON.parse('{{ timeline_data|safe }}');
-
-      // בדיקה שהנתונים קיימים וחוקיים
-      if (!Array.isArray(companiesData) || companiesData.length === 0) {
-        console.error("Error: companies_stats is empty or not an array");
-        companiesData = [];
-      }
-
-      // ארגון הנתונים לפי פורמט התרשים
-      const pieData = companiesData.map(item => ({
-        company: item.company,
-        value: item.savings || 0
-      }));
-
-      // מיון החברות לפי סכום החיסכון (מהגבוה לנמוך)
-      const sortedCompanies = companiesData
-        .sort((a, b) => (b.savings || 0) - (a.savings || 0))
-        .map(item => item.company);
-
-      createCompanyFilters(sortedCompanies);
-      updateStatisticsCards(companiesData);
-      updateSavingsTable(companiesData);
-      createPieChart(pieData);
-      createTimelineChart(originalTimelineData);
-
-      // Add resize event listener for better mobile responsiveness
-      window.addEventListener('resize', function() {
-        if (pieChart) pieChart.resize();
-        if (timelineChart) timelineChart.resize();
-      });
-    } catch (e) {
-      console.error("Error parsing statistics data:", e);
-      companiesData = [];
-    }
-  }
-
-  // Update statistics cards based on filtered data
-  function updateStatisticsCards(data) {
-    let totalSavings = 0;
-    let totalPossibleValue = 0;
-    let totalCoupons = 0;
-    let activeCoupons = 0;
-    let totalUsagePercentage = 0;
-
-    data.forEach(company => {
-      totalSavings += company.savings || 0;
-      totalPossibleValue += company.total_value || 0;
-      totalCoupons += company.coupons_count || 0;
-      activeCoupons += company.active_coupons || 0;
-      totalUsagePercentage += ((company.usage_percentage || 0) * (company.coupons_count || 0));
-    });
-
-    const avgUsagePercentage = totalCoupons > 0 ? totalUsagePercentage / totalCoupons : 0;
-    const savingsPercentage = totalPossibleValue > 0 ? (totalSavings / totalPossibleValue) * 100 : 0;
-
-    // עדכון הכרטיסיות
-    document.querySelector('#total-savings-card .big-number').textContent = Math.round(totalSavings).toString() + ' ₪';
-    document.querySelector('#total-savings-card p').textContent = 'מתוך ' + Math.round(totalPossibleValue).toString() + ' ₪ אפשריים';
-
-    document.querySelector('#savings-percentage-card .big-number').textContent = Math.round(savingsPercentage).toString() + '%';
-
-    document.querySelector('#total-coupons-card .big-number').textContent = totalCoupons.toString();
-    document.querySelector('#total-coupons-card p').textContent = activeCoupons.toString() + ' מתוכם פעילים';
-
-    document.querySelector('#average-usage-card .big-number').textContent = Math.round(avgUsagePercentage).toString() + '%';
-  }
-
-  // Create filter controls for companies - UPDATED to support multiple selections and shift+click
-  function createCompanyFilters(companies) {
-    const filtersContainer = document.getElementById('company-filters');
-    filtersContainer.innerHTML = '';
-
-    const allFilter = document.createElement('div');
-    allFilter.className = 'company-filter-item active';
-    allFilter.dataset.company = 'all';
-    allFilter.dataset.index = -1;
-    allFilter.innerHTML = '<span>הכל</span>';
-    filtersContainer.appendChild(allFilter);
-
-    companies.forEach((company, index) => {
-      const filterItem = document.createElement('div');
-      filterItem.className = 'company-filter-item';
-      filterItem.dataset.company = company;
-      filterItem.dataset.index = index;
-      filterItem.innerHTML = `<span>${company}</span>`;
-      filtersContainer.appendChild(filterItem);
-    });
-
-    // מניעת סימון טקסט בעת שימוש ב-Shift+Click
-    document.querySelectorAll('.company-filter-item').forEach(item => {
-      item.addEventListener('mousedown', function(e) {
-        if (isShiftKeyPressed) {
-          e.preventDefault();
-        }
-      });
-    });
-
-    // הוספת אירוע לחיצה עם תמיכה בבחירה מרובה
-    document.querySelectorAll('.company-filter-item').forEach(item => {
-      item.addEventListener('click', function(e) {
-        const companyName = this.dataset.company;
-        const currentIndex = parseInt(this.dataset.index);
-
-        // טיפול בלחיצה על "הכל"
-        if (companyName === 'all') {
-          document.querySelectorAll('.company-filter-item').forEach(i => {
-            i.classList.remove('active');
-          });
-          this.classList.add('active');
-          selectedCompanies.clear();
-          selectedCompanies.add('all');
-          lastClickedIndex = -1;
-        } else {
-          // טיפול בלחיצת Shift לבחירה מרובה
-          if (isShiftKeyPressed && lastClickedIndex !== -1 && lastClickedIndex !== currentIndex) {
-            // הסרת "הכל" אם נבחר
-            const allItem = document.querySelector('.company-filter-item[data-company="all"]');
-            allItem.classList.remove('active');
-            selectedCompanies.delete('all');
-
-            // קביעת הטווח לבחירה
-            const start = Math.min(lastClickedIndex, currentIndex);
-            const end = Math.max(lastClickedIndex, currentIndex);
-
-            // איסוף כל האלמנטים בסדר הטבעי שלהם בדף
-            const allItems = Array.from(document.querySelectorAll('.company-filter-item'));
-            const allIndices = allItems.map(item => parseInt(item.dataset.index));
-            const itemsInRange = allItems.filter(item => {
-              const idx = parseInt(item.dataset.index);
-              return idx >= start && idx <= end && idx !== -1; // לא לכלול את אפשרות "הכל"
-            });
-
-            // בחירת כל החברות בטווח
-            itemsInRange.forEach(item => {
-              if (!item.classList.contains('active')) {
-                item.classList.add('active');
-                selectedCompanies.add(item.dataset.company);
-              }
-            });
-          } else {
-            // החלפת מצב פעיל/לא פעיל לחברה הנוכחית (ללא Shift)
-            // הסרת "הכל" אם נבחר חברה ספציפית
-            const allItem = document.querySelector('.company-filter-item[data-company="all"]');
-            allItem.classList.remove('active');
-            selectedCompanies.delete('all');
-
-            // החלפת מצב פעיל/לא פעיל לחברה הנוכחית
-            if (this.classList.contains('active')) {
-              this.classList.remove('active');
-              selectedCompanies.delete(companyName);
-
-              // אם אין חברות נבחרות, החזר ל"הכל"
-              if (document.querySelectorAll('.company-filter-item.active').length === 0) {
-                allItem.classList.add('active');
-                selectedCompanies.add('all');
-                lastClickedIndex = -1;
-              }
-            } else {
-              this.classList.add('active');
-              selectedCompanies.add(companyName);
-            }
-          }
-
-          // שמירת האינדקס האחרון שנלחץ (לשימוש ב-Shift+Click)
-          if (currentIndex >= 0) {
-            lastClickedIndex = currentIndex;
-          }
-        }
-
-        filterAndUpdateCharts();
-      });
-    });
-  }
-
-  // Filter data and update charts/table based on selected companies
-  function filterAndUpdateCharts() {
-    let filteredData;
-
-    if (selectedCompanies.has('all')) {
-      filteredData = companiesData;
-
-      // עדכון כל הגרפים והטבלאות
-      const pieData = companiesData.map(item => ({
-        company: item.company,
-        value: item.savings || 0
-      }));
-
-      updatePieChart(pieData);
-      updateTimelineChart(originalTimelineData);
-    } else {
-      // סינון הנתונים לפי החברות שנבחרו
-      filteredData = companiesData.filter(item => selectedCompanies.has(item.company));
-
-      // עדכון גרף העוגה
-      const filteredPieData = filteredData.map(item => ({
-        company: item.company,
-        value: item.savings || 0
-      }));
-
-      updatePieChart(filteredPieData);
-
-      // סינון נתוני ציר הזמן לפי החברות שנבחרו
-      if (originalTimelineData && originalTimelineData.length) {
-        // Filter timeline data based on selected companies
-        const filteredTimelineData = originalTimelineData.filter(item => {
-          // If the timeline data has company information
-          if (item.company) {
-            return selectedCompanies.has(item.company);
-          }
-          // If there's no company info, keep the data point
-          return true;
-        });
-
-        updateTimelineChart(filteredTimelineData.length > 0 ? filteredTimelineData : originalTimelineData);
-      }
-    }
-
-    updateStatisticsCards(filteredData);
-    updateSavingsTable(filteredData);
-  }
-
-  // Update the savings table with company-specific savings percentages
-  function updateSavingsTable(data) {
-    const tableBody = document.querySelector("#savingsTable tbody");
-    tableBody.innerHTML = '';
-
-    data.forEach(item => {
-      // החיסכון באחוזים מתוך ערך הקופונים של החברה
-      const percentOfCompany = item.total_value > 0 ?
-        (item.savings / item.total_value * 100).toFixed(1) : "0.0";
-
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${item.company}</td>
-        <td>${(item.savings || 0).toFixed(2)} ₪</td>
-        <td>${percentOfCompany}%</td>
-      `;
-      tableBody.appendChild(row);
-    });
-  }
-
-  // Create pie chart for company savings distribution
-  function createPieChart(pieData) {
-    if (typeof Chart !== 'undefined') {
-      document.getElementById('companySavingsChart').innerHTML = '';
-      const canvas = document.createElement('canvas');
-      document.getElementById('companySavingsChart').appendChild(canvas);
-      const ctx = canvas.getContext('2d');
-
-      // Standard colors for the pie chart
-      const colors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-        '#FF9F40', '#50AF95', '#7E57C2', '#2196F3', '#F44336',
-        '#4CAF50', '#FF5722', '#9C27B0', '#673AB7', '#3F51B5'
-      ];
-
-      // Create enough colors for all data points
-      const backgroundColors = [];
-      for (let i = 0; i < pieData.length; i++) {
-        backgroundColors.push(colors[i % colors.length]);
-      }
-
-      // ייצור מיפוי של נתוני החברות המלאים להצגת פרטים בטולטיפ
-      const companyDetailsMap = {};
-      pieData.forEach((item, index) => {
-        // מוצא את הנתונים המלאים של החברה
-        const fullCompanyData = companiesData.find(c => c.company === item.company);
-        if (fullCompanyData) {
-          companyDetailsMap[item.company] = fullCompanyData;
-        }
-      });
-
-      // UPDATED: Improved mobile responsiveness for pie chart
-      pieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: pieData.map(d => d.company),
-          datasets: [{
-            data: pieData.map(d => d.value),
-            backgroundColor: backgroundColors
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: window.innerWidth < 768 ? 'bottom' : 'right',
-              labels: {
-                font: { size: window.innerWidth < 768 ? 10 : 12 },
-                boxWidth: window.innerWidth < 768 ? 10 : 15
-              }
-            },
-            tooltip: {
-              rtl: true, // הגדרת כיוון הטקסט לימין-לשמאל
-              textDirection: 'rtl',
-              // עיצוב מותאם לטולטיפ
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleFont: {
-                size: 14
-              },
-              bodyFont: {
-                size: 14
-              },
-              padding: 12,
-              titleAlign: 'right',
-              bodyAlign: 'right',
-              callbacks: {
-                // טיפול בשורות הטקסט להצגה מימין לשמאל
-                label: function(context) {
-                  const company = context.label;
-                  const value = context.raw;
-                  const companyData = companiesData.find(c => c.company === company);
-
-                  if (!companyData) return [`${value.toFixed(2)} :${company}`];
-
-                  // בניית שורות הטקסט עם סימן הנקודתיים מהצד השמאלי
-                  // כדי שבתצוגה RTL הטקסט יראה כאילו הנקודתיים בצד ימין
-                  const lines = [
-                    `${value.toFixed(2)} :${company}`
-                  ];
-
-                  // חישוב אחוז מסך החיסכון
-                  const totalSavings = companiesData.reduce((sum, c) => sum + (c.savings || 0), 0);
-                  const savingsPercentage = totalSavings > 0 ? ((value / totalSavings) * 100).toFixed(1) : "0.0";
-                  lines.push(`${savingsPercentage}% :אחוז מסך החיסכון`);
-
-                  // מספר קופונים אם קיים
-                  if (companyData.coupons_count !== undefined) {
-                    lines.push(`${companyData.coupons_count} :מספר קופונים`);
-                  }
-
-                  // אחוז ניצול אם קיים
-                  if (companyData.usage_percentage !== undefined) {
-                    lines.push(`${companyData.usage_percentage.toFixed(1)}% :אחוז ניצול`);
-                  }
-
-                  // יתרה אם קיימת
-                  if (companyData.remaining_value !== undefined) {
-                    lines.push(`₪ ${companyData.remaining_value.toFixed(2)} :יתרה`);
-                  }
-
-                  return lines;
-                },
-                // התאמת הסדר של כותרת הטולטיפ
-                title: function(tooltipItems) {
-                  return ''; // אופציונלי: להסיר את הכותרת המקורית
-                }
-              }
-            }
-          }
-        }
-      });
-
-      // Add helper method for responsive resizing
-      pieChart.resize = function() {
-        if (this.options && this.options.plugins && this.options.plugins.legend) {
-          this.options.plugins.legend.position = window.innerWidth < 768 ? 'bottom' : 'right';
-          this.options.plugins.legend.labels.font.size = window.innerWidth < 768 ? 10 : 12;
-          this.options.plugins.legend.labels.boxWidth = window.innerWidth < 768 ? 10 : 15;
-        }
-        this.update();
-      };
-    } else {
-      document.getElementById('companySavingsChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
-    }
-  }
-
-  // Update pie chart data
-  function updatePieChart(pieData) {
-    if (pieChart) {
-      pieChart.data.labels = pieData.map(d => d.company);
-      pieChart.data.datasets[0].data = pieData.map(d => d.value);
-      pieChart.update();
-    }
-  }
-
-  // Create timeline (line) chart with real data - UPDATED for mobile
-  function createTimelineChart(timelineData) {
-    if (typeof Chart !== 'undefined') {
-      document.getElementById('timelineChart').innerHTML = '';
-      const canvas = document.createElement('canvas');
-      document.getElementById('timelineChart').appendChild(canvas);
-      const ctx = canvas.getContext('2d');
-
-      // UPDATED: Improved mobile responsiveness
-      timelineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: timelineData.map(d => d.month),
-          datasets: [{
-            label: 'חיסכון חודשי (ש"ח)',
-            data: timelineData.map(d => d.value),
-            borderColor: '#3498db',
-            backgroundColor: 'rgba(52, 152, 219, 0.2)',
-            borderWidth: 2,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                font: {
-                  size: window.innerWidth < 768 ? 10 : 12
-                }
-              }
-            },
-            x: {
-              ticks: {
-                font: {
-                  size: window.innerWidth < 768 ? 10 : 12
-                },
-                maxRotation: window.innerWidth < 768 ? 45 : 0
-              }
-            }
-          },
-          plugins: {
-            legend: {
-              labels: {
-                font: {
-                  size: window.innerWidth < 768 ? 10 : 12
-                }
-              }
-            }
-          }
-        }
-      });
-
-      // Add helper method for responsive resizing
-      timelineChart.resize = function() {
-        const fontSize = window.innerWidth < 768 ? 10 : 12;
-        if (this.options && this.options.scales) {
-          if (this.options.scales.x && this.options.scales.x.ticks) {
-            this.options.scales.x.ticks.font.size = fontSize;
-            this.options.scales.x.ticks.maxRotation = window.innerWidth < 768 ? 45 : 0;
-          }
-          if (this.options.scales.y && this.options.scales.y.ticks) {
-            this.options.scales.y.ticks.font.size = fontSize;
-          }
-        }
-        if (this.options && this.options.plugins && this.options.plugins.legend) {
-          this.options.plugins.legend.labels.font.size = fontSize;
-        }
-        this.update();
-      };
-    } else {
-      document.getElementById('timelineChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
-    }
-  }
-
-  // Update timeline chart data
-  function updateTimelineChart(timelineData) {
-    if (timelineChart) {
-      timelineChart.data.labels = timelineData.map(d => d.month);
-      timelineChart.data.datasets[0].data = timelineData.map(d => d.value);
-      timelineChart.update();
-    }
-  }
-
-  // Open statistics modal and render charts
-  const statsModal = document.getElementById("statsModal");
-  const openStatsModalBtn = document.getElementById("open-stats-modal");
-  const closeStatsModal = document.querySelector(".close-stats-modal");
-
-  if (openStatsModalBtn) {
-    openStatsModalBtn.addEventListener("click", function() {
-      statsModal.classList.add("active");
-      renderSavingsCharts();
-    });
-  }
-
-  if (closeStatsModal) {
-    closeStatsModal.addEventListener("click", function() {
-      statsModal.classList.remove("active");
-    });
-  }
-
-  window.addEventListener("click", function(e) {
-    if (e.target === statsModal) {
-      statsModal.classList.remove("active");
-    }
-  });
-});
-</script>
-<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
 {% endblock %}

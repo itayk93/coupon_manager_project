@@ -1,3 +1,4 @@
+<!-- /app/templates/index_modals/quick_add_coupon_modal.html -->
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
@@ -299,7 +300,7 @@
 </div>
 
 <style>
-  /* # === Reset & Base Styles === */
+  /* # === Base styles and resets === */
   * {
     box-sizing: border-box;
     margin: 0;
@@ -307,7 +308,7 @@
   }
   
   body {
-    /* # Background styling for standalone page view */
+    /* # Background for standalone view */
     background-color: rgba(0,0,0,0.5);
     min-height: 100vh;
     display: flex;
@@ -315,32 +316,27 @@
     align-items: center;
     padding: 20px;
     font-family: Arial, sans-serif;
+    -webkit-overflow-scrolling: touch; /* # Improve scrolling on iOS */
   }
   
-  #quickAddModal * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+  /* # === Color variables and theme settings === */
+  :root {
+    --primary-color: #3498db;       /* # Main blue color */
+    --primary-hover: #2980b9;       /* # Darker blue for hover states */
+    --secondary-color: #e74c3c;     /* # Error/warning red */
+    --success-color: #2ecc71;       /* # Success green */
+    --warning-color: #f39c12;       /* # Warning orange */
+    --light-bg: #f8f9fa;            /* # Light background color */
+    --dark-bg: #2c3e50;             /* # Dark background for tooltips */
+    --text-color: #333;             /* # Main text color */
+    --border-color: #ddd;           /* # Border color */
+    --light-text: #f8f9fa;          /* # Light text color */
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.1); /* # Subtle shadow */
+    --modal-shadow: 0 4px 16px rgba(0,0,0,0.2); /* # More prominent shadow */
+    --transition: all 0.3s ease;    /* # Standard transition */
   }
   
-  #quickAddModal {
-    --primary-color: #3498db;
-    --primary-hover: #2980b9;
-    --secondary-color: #e74c3c;
-    --success-color: #2ecc71;
-    --warning-color: #f39c12;
-    --light-bg: #f8f9fa;
-    --dark-bg: #2c3e50;
-    --text-color: #333;
-    --border-color: #ddd;
-    --light-text: #f8f9fa;
-    --shadow: 0 2px 10px rgba(0,0,0,0.1);
-    --transition: all 0.3s ease;
-    --accent-color: var(--primary-color); /* Default blue color */
-    --accent-hover: var(--primary-hover);
-  }
-  
-  /* # === Modal Container Styles === */
+  /* # === Modal container styling === */
   #quickAddModal.modal {
     position: relative;
     width: 100%;
@@ -349,6 +345,7 @@
     overflow-y: auto;
     opacity: 1;
     transition: opacity 0.3s ease;
+    max-height: 85vh; /* # Match stats modal max height */
   }
   
   #quickAddModal.modal.active {
@@ -356,23 +353,19 @@
     opacity: 1;
   }
   
-  /* # === Modal Content Styles === */
+  /* # === Modal content styling === */
   #quickAddModal .modal-content {
     direction: rtl;
     background-color: white;
     width: 100%;
-    border-radius: 15px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    border-radius: 10px; /* # Rounded corners matching stats modal */
+    box-shadow: var(--modal-shadow); /* # Consistent shadow */
     position: relative;
     transform: translateY(0);
     opacity: 1;
     transition: transform 0.3s ease, opacity 0.3s ease;
     overflow: hidden;
-  }
-  
-  #quickAddModal.modal.active .modal-content {
-    transform: translateY(0);
-    opacity: 1;
+    padding: 0;
   }
   
   #quickAddModal .modal-header {
@@ -389,6 +382,8 @@
     color: var(--primary-color);
     font-size: 1.4em;
     font-weight: 600;
+    text-align: center; /* # Center title like stats modal */
+    flex: 1; /* # Help with centering */
   }
   
   #quickAddModal .close-modal {
@@ -398,6 +393,8 @@
     cursor: pointer;
     color: #999;
     transition: color 0.2s ease;
+    position: absolute;
+    right: 15px;
   }
   
   #quickAddModal .close-modal:hover {
@@ -410,7 +407,7 @@
     overflow: hidden;
   }
   
-  /* # === Swipe Container Styles === */
+  /* # === Swipe container styles === */
   #quickAddModal .swipe-container {
     position: relative;
     width: 100%;
@@ -443,12 +440,12 @@
   
   #quickAddModal .progress-bar {
     height: 100%;
-    width: 20%; /* 1/5 of total width */
+    width: 20%; /* # 1/5 of total width */
     background-color: var(--primary-color);
     transition: width 0.3s ease;
   }
   
-  /* # === Card Stack Styles === */
+  /* # === Card stack styles === */
   #quickAddModal .card-stack {
     position: relative;
     width: 100%;
@@ -496,17 +493,17 @@
   #quickAddModal .card-content {
     flex: 1;
     overflow-y: auto;
-    padding-bottom: 70px; /* Add padding to prevent content from being hidden by buttons */
+    padding-bottom: 70px; /* # Prevent content from being hidden by buttons */
   }
   
   #quickAddModal .card-content h4 {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     color: var(--primary-color);
     font-size: 1.2em;
     text-align: center;
   }
   
-  /* # This is the key style for button positioning */
+  /* # Button positioning */
   #quickAddModal .card-actions {
     position: absolute;
     bottom: 20px;
@@ -521,7 +518,7 @@
     z-index: 50;
   }
   
-  /* # === Form Elements === */
+  /* # === Form element styles === */
   #quickAddModal .form-group {
     margin-bottom: 15px;
   }
@@ -537,7 +534,7 @@
     width: 100%;
     padding: 10px 12px;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 6px; /* # Slightly reduced from 8px */
     font-size: 1em;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
     background-color: var(--light-bg);
@@ -550,7 +547,7 @@
   }
   
   #quickAddModal .input-large {
-    font-size: 1.2em;
+    font-size: 1.1em; /* # Slightly reduced from 1.2em */
     padding: 12px 15px;
   }
   
@@ -571,6 +568,7 @@
     height: 18px;
   }
   
+  /* # === Tooltip styles === */
   #quickAddModal .tooltip-container {
     position: relative;
   }
@@ -609,7 +607,7 @@
     top: -5px;
     right: 35px;
     transform: translateY(-100%);
-    box-shadow: var(--shadow);
+    box-shadow: var(--card-shadow);
   }
   
   #quickAddModal .tooltip::after, 
@@ -629,12 +627,12 @@
     margin-right: 8px;
   }
   
-  /* # === Button Styles === */
+  /* # === Button styles === */
   #quickAddModal .swipe-button {
-    padding: 10px 16px;
+    padding: 8px 16px; /* # Slightly reduced padding */
     border: none;
     border-radius: 6px;
-    font-size: 1em;
+    font-size: 0.95em; /* # Slightly reduced from 1em */
     font-weight: 500;
     cursor: pointer;
     transition: var(--transition);
@@ -682,7 +680,7 @@
     color: white;
     border: none;
     border-radius: 6px;
-    padding: 12px;
+    padding: 10px 12px; /* # Slightly reduced from 12px */
     font-size: 1em;
     font-weight: bold;
     cursor: pointer;
@@ -705,7 +703,7 @@
     margin-right: 8px;
   }
   
-  /* # === Navigation Dots === */
+  /* # === Navigation dots === */
   #quickAddModal .swipe-dots {
     position: absolute;
     bottom: 5px;
@@ -732,12 +730,13 @@
     transform: scale(1.2);
   }
   
-  /* # === Summary Styles === */
+  /* # === Summary styles === */
   #quickAddModal .coupon-summary {
     background-color: var(--light-bg);
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 15px;
+    box-shadow: var(--card-shadow); /* # Add subtle shadow like stats cards */
   }
   
   #quickAddModal .summary-item {
@@ -763,7 +762,7 @@
     color: #777;
   }
   
-  /* # === Discount Display === */
+  /* # === Discount display === */
   #quickAddModal .discount-display-container {
     margin-top: 5px;
     width: 100%;
@@ -792,7 +791,7 @@
     text-shadow: 0 0 2px white;
   }
   
-  /* # === Error Messages === */
+  /* # === Error messages === */
   #quickAddModal .error {
     color: var(--secondary-color);
     font-size: 0.85em;
@@ -800,14 +799,14 @@
     margin-bottom: 10px;
   }
   
-  /* # === Automatic Coupon Detection Section - UPGRADED === */
+  /* # === Automatic coupon detection section === */
   #quickAddModal .auto-detect-section {
     margin: 15px 0;
-    padding: 20px;
+    padding: 15px; /* # Reduced from 20px */
     background: linear-gradient(to bottom, #f9f9ff, #eef1f7);
-    border-radius: 12px;
+    border-radius: 8px; /* # Reduced from 12px */
     border: 1px solid #e0e7ff;
-    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.1);
+    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.1); /* # Reduced shadow */
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -819,8 +818,8 @@
     top: 0;
     right: 0;
     width: 30%;
-    height: 5px;
-    background: linear-gradient(to right, transparent, var(--accent-color));
+    height: 4px; /* # Reduced from 5px */
+    background: linear-gradient(to right, transparent, var(--primary-color));
     border-radius: 0 5px 0 0;
   }
   
@@ -842,12 +841,12 @@
     padding: 0 12px;
     font-weight: bold;
     color: #666;
-    font-size: 1.1em;
+    font-size: 1em; /* # Reduced from 1.1em */
   }
   
   #quickAddModal .auto-detect-section h4 {
-    color: var(--accent-color);
-    font-size: 1.2em;
+    color: var(--primary-color);
+    font-size: 1.1em; /* # Reduced from 1.2em */
     margin-bottom: 15px;
     position: relative;
     display: inline-block;
@@ -858,11 +857,11 @@
     position: absolute;
     bottom: -5px;
     left: 50%;
-    width: 50px;
-    height: 3px;
-    background-color: var(--accent-color);
+    width: 40px; /* # Reduced from 50px */
+    height: 2px; /* # Reduced from 3px */
+    background-color: var(--primary-color);
     transform: translateX(-50%);
-    border-radius: 3px;
+    border-radius: 2px;
   }
   
   #quickAddModal .auto-detect-section .form-group {
@@ -872,13 +871,13 @@
   #quickAddModal .auto-detect-section .input-field {
     border: 1px solid #d1d9e6;
     background-color: #fff;
-    padding: 12px 15px;
+    padding: 10px 12px; /* # Reduced from 12px 15px */
     transition: all 0.3s ease;
     box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
   }
   
   #quickAddModal .auto-detect-section .input-field:focus {
-    border-color: var(--accent-color);
+    border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.2);
   }
   
@@ -894,24 +893,24 @@
   }
   
   #quickAddModal .auto-detect-button {
-    background-color: var(--accent-color);
+    background-color: var(--primary-color);
     color: white;
     border: none;
-    border-radius: 50px;
-    padding: 10px 25px;
-    font-size: 1em;
+    border-radius: 30px; /* # Reduced from 50px */
+    padding: 8px 20px; /* # Reduced from 10px 25px */
+    font-size: 0.95em; /* # Reduced from 1em */
     font-weight: bold;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 10px rgba(155, 89, 182, 0.3);
+    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3); /* # Reduced shadow */
   }
   
   #quickAddModal .auto-detect-button:hover {
-    background-color: var(--accent-hover);
-    box-shadow: 0 6px 15px rgba(155, 89, 182, 0.4);
+    background-color: var(--primary-hover);
+    box-shadow: 0 4px 10px rgba(155, 89, 182, 0.4); /* # Reduced shadow */
     transform: translateY(-2px);
   }
   
@@ -922,21 +921,32 @@
   
   /* # Add icon to auto-detect button */
   #quickAddModal .auto-detect-button::before {
-    content: '\f002';  /* Magnifying glass icon */
+    content: '\f002';  /* # Magnifying glass icon */
     font-family: 'Font Awesome 5 Free';
     font-weight: 900;
     margin-right: 8px;
     font-size: 0.9em;
   }
   
-  /* # === Responsive Styles === */
+  /* # === Responsive styles === */
   @media (max-width: 768px) {
+    /* # Modal styling for mobile */
     #quickAddModal .modal-content {
       width: 95%;
       max-width: 550px;
       margin: auto;
+      padding: 0;
     }
     
+    #quickAddModal .modal-header h3 {
+      font-size: 1.2em; /* # Smaller title on mobile */
+    }
+    
+    #quickAddModal .card-content h4 {
+      font-size: 1rem; /* # Smaller heading on mobile */
+    }
+    
+    /* # Tooltip handling for mobile */
     #quickAddModal .tooltip {
       display: none !important; /* # Hide desktop tooltip on mobile */
     }
@@ -968,15 +978,15 @@
       font-size: 1.5em;
     }
     
+    /* # Navigation elements on mobile */
     #quickAddModal .swipe-dots {
-      bottom: 15px;
+      bottom: 12px; /* # Move up slightly */
     }
     
     /* # Card actions for mobile */
     #quickAddModal .card-actions {
-      position: absolute;
-      bottom: 50px;
-      width: calc(100% - 40px);
+      bottom: 40px; /* # Move up to make room for dots */
+      width: calc(100% - 30px); /* # Slightly wider */
     }
     
     /* # Add extra space for content on mobile so buttons don't cover it */
@@ -984,19 +994,94 @@
       padding-bottom: 100px;
     }
     
+    /* # Form elements on mobile */
+    #quickAddModal label {
+      font-size: 0.9em;
+    }
+    
+    #quickAddModal .input-field {
+      padding: 8px 10px;
+      font-size: 0.95em;
+    }
+    
     /* # Mobile adjustments for auto-detect section */
     #quickAddModal .auto-detect-section {
-      padding: 15px;
-      margin-bottom: 20px;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    
+    #quickAddModal .auto-detect-section h4 {
+      font-size: 1em;
     }
     
     #quickAddModal .auto-detect-button {
       width: 80%;
-      padding: 12px 20px;
+      padding: 10px 18px;
+    }
+    
+    /* # Adjust swipe container height for mobile */
+    #quickAddModal .swipe-container {
+      height: 520px; /* # Slightly reduced height */
+    }
+    
+    /* # Button sizes on mobile */
+    #quickAddModal .swipe-button {
+      min-width: 90px;
+      padding: 8px 12px;
+      font-size: 0.9em;
+    }
+    
+    #quickAddModal .submit-button {
+      padding: 10px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    /* # Further adjustments for very small screens */
+    #quickAddModal .swipe-container {
+      height: 500px; /* # Further reduced height */
+    }
+    
+    #quickAddModal .card-content {
+      padding-bottom: 120px; /* # More space for buttons */
+    }
+    
+    #quickAddModal .card-actions {
+      bottom: 45px;
+    }
+    
+    #quickAddModal .auto-detect-button {
+      width: 100%;
+      font-size: 0.85em;
+    }
+    
+    /* # Adjust form elements for very small screens */
+    #quickAddModal .form-group {
+      margin-bottom: 12px;
+    }
+    
+    #quickAddModal label {
+      font-size: 0.85em;
+      margin-bottom: 4px;
+    }
+    
+    #quickAddModal .input-field {
+      padding: 8px;
+    }
+    
+    /* # Summary styles on very small screens */
+    #quickAddModal .summary-label {
+      min-width: 70px;
+      font-size: 0.9em;
+    }
+    
+    #quickAddModal .summary-value {
+      font-size: 0.9em;
     }
   }
   
   @media (min-width: 769px) {
+    /* # Desktop-specific styles */
     #quickAddModal .mobile-tooltip {
       display: none !important; /* # Hide mobile tooltip on desktop */
     }
@@ -1005,6 +1090,11 @@
     #quickAddModal .tooltip-button:focus + .tooltip,
     #quickAddModal .tooltip:hover {
       display: block;
+    }
+    
+    /* # Slightly reduce height on desktop */
+    #quickAddModal .swipe-container {
+      height: 520px;
     }
   }
 </style>
@@ -2185,6 +2275,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     debug('SMS detection button direct handler attached');
   }
+  
+  // # Add escape key handler for closing modal
+  document.addEventListener('keydown', function(event) {
+    // # Check if the key is Escape (keyCode 27 or key='Escape')
+    if (event.key === 'Escape' || event.keyCode === 27) {
+      // # Close the modal if it's open
+      if (quickAddModal && quickAddModal.classList.contains('active')) {
+        closeQuickAddModal();
+      }
+    }
+  });
+  
   debug('Modal initialization complete');
 });
 </script>

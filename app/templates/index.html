@@ -72,6 +72,9 @@
         <button id="open-stats-modal" class="stats-button">
             <i class="fas fa-chart-bar"></i> על מה חסכת?
         </button>
+        <button id="openUsageModalBtn" class="stats-button report-usage-button">
+            <i class="fas fa-plus-circle"></i> דיווח מהיר על שימוש
+        </button>
         <button id="quick-add-coupon-btn" class="stats-button quick-add-button">
             <i class="fas fa-plus"></i> הוספת קופון מהירה
         </button>
@@ -81,30 +84,8 @@
 <!-- Company cards row -->
 <div id="company-cards-row" class="company-cards-row"></div>
 
-<div class="usage-forms-container">
-    <!-- Form for automatic coupon usage report -->
-    <section class="usage-form-wrapper">
-        <form method="POST" action="{{ url_for('coupons.parse_usage_text') }}">
-            {{ usage_form.hidden_tag() }}
-            <div class="input-wrapper">
-                <label for="usage_explanation">דיווח אוטומטי על שימוש בקופונים</label>
-                <textarea id="usage_explanation"
-                          name="usage_explanation"
-                          rows="2"
-                          class="input-field_centered"
-                          placeholder="{% if current_user.gender == 'male' %}תפרט כאן באלו קופונים השתמשת ובכמה{% else %}תפרטי כאן באלו קופונים השתמשת ובכמה{% endif %}"></textarea>
-            </div>
-            <div class="button-with-explanation">
-                <button type="submit" class="submit-button">שלח</button>
-                <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
-                <div class="tooltip">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטית.
-                    <span class="close-tooltip">×</span>
-                </div>
-            </div>
-        </form>
-    </section>
-</div>
+<!-- מכיל את המודל - ייטען דינמית -->
+<div id="usageModalContainer"></div>
 
 <!-- Coupon list section -->
 <section class="coupon-list">
@@ -1239,18 +1220,104 @@
 .flash-message .close-flash:hover {
   color: #333;
 }
+/* עיצוב כרטיס הדיווח החדש */
+.report-usage-card {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.report-usage-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+.report-icon {
+    background-color: var(--primary-color);
+    color: white;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.report-icon i {
+    font-size: 30px;
+}
+
+.report-usage-card h3 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.report-usage-card p {
+    color: var(--text-color);
+    margin-bottom: 20px;
+    font-size: 0.9em;
+}
+
+.open-modal-btn {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 15px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: auto;
+    transition: background-color 0.2s ease;
+}
+
+.open-modal-btn:hover {
+    background-color: #e67e22;
+}
+
+@media (max-width: 768px) {
+    .report-usage-card {
+        padding: 15px;
+    }
+    
+    .report-icon {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .report-icon i {
+        font-size: 20px;
+    }
+}
+/* # Style for the report usage button */
+.report-usage-button {
+  background-color: var(--accent-color, #e67e22);
+}
+.report-usage-button:hover {
+  background-color: #d35400; /* Darker shade for hover */
+}
 </style>
 
 <script>
 // Main JavaScript for index.html
 document.addEventListener("DOMContentLoaded", function() {
-  // Load the coupon modals
+  // # Load the coupon modals
   loadCouponModals();
   
-  // Variable to track if usage has been updated
+  // # Variable to track if usage has been updated
   let usageUpdated = false;
   
-  // Shift key tracking
+  // # Shift key tracking
   let isShiftKeyPressed = false;
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Shift') {
@@ -1264,19 +1331,19 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // 1) Collect active coupons based on "קופונים פעילים" section
+  // # 1) Collect active coupons based on "קופונים פעילים" section
   const activeHeading = Array.from(document.querySelectorAll(".coupon-section-title"))
     .find(h => h.textContent.trim() === "קופונים פעילים");
   const activeContainer = activeHeading ? activeHeading.nextElementSibling : null;
   const activeCoupons = activeContainer ? activeContainer.querySelectorAll(".coupon-card-index-wrapper") : [];
 
-  // 1.1) Collect one-time coupons
+  // # 1.1) Collect one-time coupons
   const oneTimeHeading = Array.from(document.querySelectorAll(".coupon-section-title"))
     .find(h => h.textContent.trim() === "קופונים חד פעמיים");
   const oneTimeContainer = oneTimeHeading ? oneTimeHeading.nextElementSibling : null;
   const oneTimeCoupons = oneTimeContainer ? oneTimeContainer.querySelectorAll(".coupon-card-index-wrapper") : [];
 
-  // 2) Group coupons by company
+  // # 2) Group coupons by company
   const companyMap = {};
   activeCoupons.forEach(card => {
     const company = card.getAttribute("data-company") || "אחר";
@@ -1286,7 +1353,7 @@ document.addEventListener("DOMContentLoaded", function() {
     companyMap[company].push(card);
   });
 
-  // 2.1) Add one-time coupons to the group
+  // # 2.1) Add one-time coupons to the group
   oneTimeCoupons.forEach(card => {
     const company = card.getAttribute("data-company") || "אחר";
     if (!companyMap[company]) {
@@ -1295,7 +1362,7 @@ document.addEventListener("DOMContentLoaded", function() {
     companyMap[company].push(card);
   });
 
-  // 3) Create company cards in the filter row
+  // # 3) Create company cards in the filter row
   const companyCardsRow = document.getElementById("company-cards-row");
   Object.keys(companyMap).forEach(company => {
     const cards = companyMap[company];
@@ -1327,7 +1394,7 @@ document.addEventListener("DOMContentLoaded", function() {
     companyCardsRow.appendChild(cardBox);
   });
 
-  // Function to load coupon modals
+  // # Function to load coupon modals
   function loadCouponModals() {
     fetch('{{ url_for("coupons.load_coupon_modals") }}')
       .then(response => {
@@ -1337,10 +1404,10 @@ document.addEventListener("DOMContentLoaded", function() {
         return response.text();
       })
       .then(html => {
-        // Insert the modal HTML
+        // # Insert the modal HTML
         document.getElementById('couponModalsContainer').innerHTML = html;
         
-        // Execute scripts from the loaded content
+        // # Execute scripts from the loaded content
         const scriptTags = document.getElementById('couponModalsContainer').getElementsByTagName('script');
         for (let i = 0; i < scriptTags.length; i++) {
           const newScript = document.createElement('script');
@@ -1356,9 +1423,9 @@ document.addEventListener("DOMContentLoaded", function() {
       });
   }
 
-  // Function to open company modal (will be handled by the loaded modal script)
+  // # Function to open company modal (will be handled by the loaded modal script)
   function openCompanyModal(company, cardList) {
-    // This function will be replaced by the one loaded from coupon_modals.html
+    // # This function will be replaced by the one loaded from coupon_modals.html
     if (window.openCompanyModal) {
       window.openCompanyModal(company, cardList);
     } else {
@@ -1366,7 +1433,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  // 7) Close admin message
+  // # 7) Close admin message
   document.querySelectorAll(".close-button").forEach(button => {
     button.addEventListener("click", function (event) {
         event.preventDefault();
@@ -1389,7 +1456,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   });
 
-  // 8) Load statistics modal dynamically
+  // # 8) Load statistics modal dynamically
   const openStatsModalBtn = document.getElementById("open-stats-modal");
   const statsModal = document.getElementById("statsModal");
   
@@ -1399,7 +1466,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
   
-  // Function to load stats modal content dynamically
+  // # Function to load stats modal content dynamically
   function loadStatsModal() {
     fetch('{{ url_for("profile.load_stats_modal") }}')
       .then(response => {
@@ -1409,10 +1476,10 @@ document.addEventListener("DOMContentLoaded", function() {
         return response.text();
       })
       .then(html => {
-        // Insert the modal HTML
+        // # Insert the modal HTML
         statsModal.innerHTML = html;
         
-        // חשוב - בצע הוצאה והרצה ידנית של סקריפטים
+        // # Important - manually extract and execute scripts
         const scriptTags = statsModal.getElementsByTagName('script');
         for (let i = 0; i < scriptTags.length; i++) {
           const newScript = document.createElement('script');
@@ -1423,10 +1490,10 @@ document.addEventListener("DOMContentLoaded", function() {
           document.head.appendChild(newScript);
         }
         
-        // Show the modal
+        // # Show the modal
         statsModal.classList.add("active");
         
-        // Add event listeners for modal close
+        // # Add event listeners for modal close
         const closeStatsModal = document.querySelector(".close-stats-modal");
         if (closeStatsModal) {
           closeStatsModal.addEventListener("click", function() {
@@ -1440,9 +1507,9 @@ document.addEventListener("DOMContentLoaded", function() {
           }
         });
         
-        // המתן זמן קצר לסיום טעינת הסקריפטים
+        // # Short delay to ensure scripts are loaded
         setTimeout(() => {
-          // Get the stats data from the hidden div
+          // # Get the stats data from the hidden div
           const statsData = document.getElementById('stats-data');
           const companiesStats = JSON.parse(statsData.getAttribute('data-companies-stats'));
           const timelineData = JSON.parse(statsData.getAttribute('data-timeline-data'));
@@ -1453,7 +1520,7 @@ document.addEventListener("DOMContentLoaded", function() {
           const activeCouponsCount = parseInt(statsData.getAttribute('data-active-coupons-count') || '0');
           const averageUsagePercentage = parseFloat(statsData.getAttribute('data-average-usage-percentage'));
           
-          // בדוק אם הפונקציה זמינה אחרי הרצת הסקריפט
+          // # Check if function is available after script execution
           if (typeof window.renderSavingsCharts === 'function') {
             window.renderSavingsCharts({
               companiesStats,
@@ -1469,162 +1536,163 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error('Error: renderSavingsCharts function not found after script execution');
             alert('שגיאה באתחול נתוני הסטטיסטיקות. אנא רענן את הדף ונסה שוב.');
           }
-        }, 50);  // השהייה קצרה כדי לוודא שהסקריפטים הוטענו
+        }, 50);  // # Short delay to ensure scripts are loaded
       })
       .catch(error => {
         console.error('Error loading stats modal:', error);
         alert('שגיאה בטעינת חלון הסטטיסטיקות. אנא נסה שוב מאוחר יותר.');
       });
   }
-  // Quick Add Coupon Modal functionality
-    const quickAddCouponBtn = document.getElementById("quick-add-coupon-btn");
-    const quickAddCouponModal = document.getElementById("quickAddCouponModal");
+  
+  // # Quick Add Coupon Modal functionality
+  const quickAddCouponBtn = document.getElementById("quick-add-coupon-btn");
+  const quickAddCouponModal = document.getElementById("quickAddCouponModal");
 
-    if (quickAddCouponBtn) {
+  if (quickAddCouponBtn) {
     quickAddCouponBtn.addEventListener("click", function() {
-        loadQuickAddCouponModal();
+      loadQuickAddCouponModal();
     });
-    }
+  }
 
-    // Function to load quick add coupon modal
-    function loadQuickAddCouponModal() {
-        // # First, clear any previous content and add active class
-        quickAddCouponModal.innerHTML = '';
-        quickAddCouponModal.className = 'modal active';
-        
-        // # Set up container styles directly - dark semi-transparent background
-        quickAddCouponModal.style.position = 'fixed';
-        quickAddCouponModal.style.zIndex = '9999';
-        quickAddCouponModal.style.left = '0';
-        quickAddCouponModal.style.top = '0';
-        quickAddCouponModal.style.width = '100%';
-        quickAddCouponModal.style.height = '100%';
-        quickAddCouponModal.style.backgroundColor = 'rgba(0,0,0,0.7)'; // # Semi-transparent dark background
-        quickAddCouponModal.style.display = 'flex';
-        quickAddCouponModal.style.justifyContent = 'center';
-        quickAddCouponModal.style.alignItems = 'center';
-        
-        // # Fetch the modal content from the server
-        fetch('{{ url_for("coupons.load_quick_add_coupon_modal") }}')
-            .then(response => response.text())
-            .then(html => {
-                // # Create an iframe with height that fills most of the screen
-                const iframe = document.createElement('iframe');
-                iframe.style.width = '90%'; // # 90% of screen width
-                iframe.style.maxWidth = '550px'; // # Maximum width
-                iframe.style.height = '90vh'; // # 90% of viewport height
-                iframe.style.maxHeight = '90vh'; // # Maximum 90% of viewport height
-                iframe.style.border = 'none';
-                iframe.style.borderRadius = '15px';
-                iframe.style.backgroundColor = 'white'; // # White background for modal
-                iframe.style.boxShadow = '0 5px 15px rgba(0,0,0,0.5)'; // # Strong shadow
-                
-                // # Check if device is mobile
-                const isMobile = window.innerWidth <= 768;
-                
-                // # Adjust height for mobile - almost full screen
-                if (isMobile) {
-                    iframe.style.height = '85vh';
-                    iframe.style.maxHeight = '85vh';
-                }
-                
-                // # Add to modal container
-                quickAddCouponModal.appendChild(iframe);
-                
-                // # Add close button on top of iframe
-                const closeButton = document.createElement('button');
-                closeButton.textContent = '×';
-                closeButton.style.position = 'absolute';
-                closeButton.style.top = '10px';
-                closeButton.style.right = '10px';
-                closeButton.style.width = '30px';
-                closeButton.style.height = '30px';
-                closeButton.style.backgroundColor = 'white';
-                closeButton.style.border = 'none';
-                closeButton.style.borderRadius = '50%';
-                closeButton.style.fontSize = '24px';
-                closeButton.style.cursor = 'pointer';
-                closeButton.style.zIndex = '10000';
-                closeButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-                closeButton.style.display = 'flex';
-                closeButton.style.justifyContent = 'center';
-                closeButton.style.alignItems = 'center';
-                
-                // # Add click event to close button
-                closeButton.addEventListener('click', function() {
-                    quickAddCouponModal.classList.remove('active');
-                });
-                
-                // # Add backdrop click to close
-                quickAddCouponModal.addEventListener('click', function(e) {
-                    if (e.target === quickAddCouponModal) {
-                        quickAddCouponModal.classList.remove('active');
-                    }
-                });
-                
-                // # Add close button to modal
-                quickAddCouponModal.appendChild(closeButton);
-                
-                // # Write the HTML content to the iframe
-                setTimeout(() => {
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    iframeDoc.open();
-                    iframeDoc.write(html);
-                    iframeDoc.close();
-                    
-                    // # After iframe content is loaded, adjust internal styling
-                    iframe.onload = function() {
-                        try {
-                            const style = iframe.contentDocument.createElement('style');
-                            style.textContent = `
-                                body, html {
-                                    background-color: white !important;
-                                    margin: 0 !important;
-                                    padding: 0 !important;
-                                    height: 100% !important;
-                                }
-                                
-                                #quickAddModal {
-                                    height: 100% !important;
-                                    max-height: 100% !important;
-                                }
-                                
-                                .modal-content {
-                                    border-radius: 15px !important;
-                                    height: 100% !important;
-                                }
-                            `;
-                            iframe.contentDocument.head.appendChild(style);
-                            
-                            // # Process iframe content elements
-                            const modalElement = iframe.contentDocument.querySelector('#quickAddModal');
-                            
-                            // # Make sure the modal is active within the iframe
-                            if (modalElement) {
-                                modalElement.classList.add('active');
-                                
-                                // # Override the close function inside the iframe
-                                const innerCloseBtn = modalElement.querySelector('.close-modal');
-                                if (innerCloseBtn) {
-                                    innerCloseBtn.addEventListener('click', function() {
-                                        quickAddCouponModal.classList.remove('active');
-                                    });
-                                }
-                            }
-                        } catch (error) {
-                            console.error('Error adjusting iframe content:', error);
-                        }
-                    };
-                }, 100);
-            })
-            .catch(error => {
-                console.error('Error loading modal:', error);
-                quickAddCouponModal.innerHTML = '<div style="background:white; padding:20px; border-radius:10px; text-align:center;">שגיאה בטעינת המודל. אנא נסה שוב.</div>';
-            });
-    }
-    // Add this to the main JS in index.html
-    // This creates a function to show flash messages programmatically
-    function showFlashMessage(message, type = 'success') {
+  // # Function to load quick add coupon modal
+  function loadQuickAddCouponModal() {
+      // # First, clear any previous content and add active class
+      quickAddCouponModal.innerHTML = '';
+      quickAddCouponModal.className = 'modal active';
+      
+      // # Set up container styles directly - dark semi-transparent background
+      quickAddCouponModal.style.position = 'fixed';
+      quickAddCouponModal.style.zIndex = '9999';
+      quickAddCouponModal.style.left = '0';
+      quickAddCouponModal.style.top = '0';
+      quickAddCouponModal.style.width = '100%';
+      quickAddCouponModal.style.height = '100%';
+      quickAddCouponModal.style.backgroundColor = 'rgba(0,0,0,0.7)'; // # Semi-transparent dark background
+      quickAddCouponModal.style.display = 'flex';
+      quickAddCouponModal.style.justifyContent = 'center';
+      quickAddCouponModal.style.alignItems = 'center';
+      
+      // # Fetch the modal content from the server
+      fetch('{{ url_for("coupons.load_quick_add_coupon_modal") }}')
+          .then(response => response.text())
+          .then(html => {
+              // # Create an iframe with height that fills most of the screen
+              const iframe = document.createElement('iframe');
+              iframe.style.width = '90%'; // # 90% of screen width
+              iframe.style.maxWidth = '550px'; // # Maximum width
+              iframe.style.height = '90vh'; // # 90% of viewport height
+              iframe.style.maxHeight = '90vh'; // # Maximum 90% of viewport height
+              iframe.style.border = 'none';
+              iframe.style.borderRadius = '15px';
+              iframe.style.backgroundColor = 'white'; // # White background for modal
+              iframe.style.boxShadow = '0 5px 15px rgba(0,0,0,0.5)'; // # Strong shadow
+              
+              // # Check if device is mobile
+              const isMobile = window.innerWidth <= 768;
+              
+              // # Adjust height for mobile - almost full screen
+              if (isMobile) {
+                  iframe.style.height = '85vh';
+                  iframe.style.maxHeight = '85vh';
+              }
+              
+              // # Add to modal container
+              quickAddCouponModal.appendChild(iframe);
+              
+              // # Add close button on top of iframe
+              const closeButton = document.createElement('button');
+              closeButton.textContent = '×';
+              closeButton.style.position = 'absolute';
+              closeButton.style.top = '10px';
+              closeButton.style.right = '10px';
+              closeButton.style.width = '30px';
+              closeButton.style.height = '30px';
+              closeButton.style.backgroundColor = 'white';
+              closeButton.style.border = 'none';
+              closeButton.style.borderRadius = '50%';
+              closeButton.style.fontSize = '24px';
+              closeButton.style.cursor = 'pointer';
+              closeButton.style.zIndex = '10000';
+              closeButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+              closeButton.style.display = 'flex';
+              closeButton.style.justifyContent = 'center';
+              closeButton.style.alignItems = 'center';
+              
+              // # Add click event to close button
+              closeButton.addEventListener('click', function() {
+                  quickAddCouponModal.classList.remove('active');
+              });
+              
+              // # Add backdrop click to close
+              quickAddCouponModal.addEventListener('click', function(e) {
+                  if (e.target === quickAddCouponModal) {
+                      quickAddCouponModal.classList.remove('active');
+                  }
+              });
+              
+              // # Add close button to modal
+              quickAddCouponModal.appendChild(closeButton);
+              
+              // # Write the HTML content to the iframe
+              setTimeout(() => {
+                  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                  iframeDoc.open();
+                  iframeDoc.write(html);
+                  iframeDoc.close();
+                  
+                  // # After iframe content is loaded, adjust internal styling
+                  iframe.onload = function() {
+                      try {
+                          const style = iframe.contentDocument.createElement('style');
+                          style.textContent = `
+                              body, html {
+                                  background-color: white !important;
+                                  margin: 0 !important;
+                                  padding: 0 !important;
+                                  height: 100% !important;
+                              }
+                              
+                              #quickAddModal {
+                                  height: 100% !important;
+                                  max-height: 100% !important;
+                              }
+                              
+                              .modal-content {
+                                  border-radius: 15px !important;
+                                  height: 100% !important;
+                              }
+                          `;
+                          iframe.contentDocument.head.appendChild(style);
+                          
+                          // # Process iframe content elements
+                          const modalElement = iframe.contentDocument.querySelector('#quickAddModal');
+                          
+                          // # Make sure the modal is active within the iframe
+                          if (modalElement) {
+                              modalElement.classList.add('active');
+                              
+                              // # Override the close function inside the iframe
+                              const innerCloseBtn = modalElement.querySelector('.close-modal');
+                              if (innerCloseBtn) {
+                                  innerCloseBtn.addEventListener('click', function() {
+                                      quickAddCouponModal.classList.remove('active');
+                                  });
+                              }
+                          }
+                      } catch (error) {
+                          console.error('Error adjusting iframe content:', error);
+                      }
+                  };
+              }, 100);
+          })
+          .catch(error => {
+              console.error('Error loading modal:', error);
+              quickAddCouponModal.innerHTML = '<div style="background:white; padding:20px; border-radius:10px; text-align:center;">שגיאה בטעינת המודל. אנא נסה שוב.</div>';
+          });
+  }
+  
+  // # Function to show flash messages programmatically
+  function showFlashMessage(message, type = 'success') {
     const flashContainer = document.createElement('div');
     flashContainer.className = `flash-message ${type}`;
     flashContainer.innerHTML = `
@@ -1633,12 +1701,12 @@ document.addEventListener("DOMContentLoaded", function() {
     `;
     document.body.appendChild(flashContainer);
     
-    // Add animation class after a short delay
+    // # Add animation class after a short delay
     setTimeout(() => {
         flashContainer.classList.add('show');
     }, 10);
     
-    // Remove the message after 5 seconds
+    // # Remove the message after 5 seconds
     setTimeout(() => {
         flashContainer.classList.remove('show');
         setTimeout(() => {
@@ -1646,7 +1714,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }, 300);
     }, 5000);
     
-    // Add click handler to close button
+    // # Add click handler to close button
     const closeButton = flashContainer.querySelector('.close-flash');
     closeButton.addEventListener('click', () => {
         flashContainer.classList.remove('show');
@@ -1654,13 +1722,269 @@ document.addEventListener("DOMContentLoaded", function() {
         flashContainer.remove();
         }, 300);
     });
-    }
+  }
 
-    // Listen for custom events from the iframe
-    document.addEventListener('showFlashMessage', function(e) {
+  // # Listen for custom events from the iframe
+  document.addEventListener('showFlashMessage', function(e) {
     showFlashMessage(e.detail.message, e.detail.type);
+  });
+  
+  // # Load usage report modal handler function
+  const openUsageModalBtn = document.getElementById("openUsageModalBtn");
+  if (openUsageModalBtn) {
+    openUsageModalBtn.addEventListener("click", function() {
+      loadUsageReportModal();
     });
+  }
+  
+  // # Function to handle usage report modal  
+  function loadUsageReportModal() {
+    fetch('{{ url_for("coupons.load_usage_report_modal") }}')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load usage report modal');
+        }
+        return response.text();
+      })
+      .then(html => {
+        // # Insert the modal HTML
+        const usageModalContainer = document.getElementById("usageModalContainer");
+        if (usageModalContainer) {
+          usageModalContainer.innerHTML = html;
+          
+          // # Execute scripts from the loaded content
+          const scriptTags = usageModalContainer.getElementsByTagName('script');
+          for (let i = 0; i < scriptTags.length; i++) {
+            const newScript = document.createElement('script');
+            Array.from(scriptTags[i].attributes).forEach(attr => {
+              newScript.setAttribute(attr.name, attr.value);
+            });
+            newScript.appendChild(document.createTextNode(scriptTags[i].innerHTML));
+            document.head.appendChild(newScript);
+          }
+          
+          // # Show the modal
+          const usageReportModal = document.getElementById("usageReportModal");
+          if (usageReportModal) {
+            usageReportModal.classList.add("active");
+            
+            // # Add event handlers for closing the modal
+            const closeModal = function() {
+              usageReportModal.classList.remove("active");
+            };
+            
+            // # Ensure the close button has a listener
+            const closeBtn = usageReportModal.querySelector(".close-modal");
+            if (closeBtn) {
+              closeBtn.addEventListener("click", closeModal);
+            }
+            
+            // # Add event listener for backdrop clicks
+            usageReportModal.addEventListener("click", function(e) {
+              if (e.target === usageReportModal) {
+                closeModal();
+              }
+            });
+            
+            // # Add event handlers for the usage report form
+            setupUsageReportFormHandlers();
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error loading usage report modal:', error);
+        showFlashMessage('שגיאה בטעינת טופס הדיווח. אנא נסה שוב.', 'error');
+      });
+  }
+  
+  // # Setup handlers for the usage report form
+  function setupUsageReportFormHandlers() {
+    const usageReportForm = document.getElementById("usageReportForm");
+    if (!usageReportForm) return;
+    
+    usageReportForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      
+      // # Show loading state
+      const submitBtn = this.querySelector('.submit-button');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'מעבד...';
+      submitBtn.disabled = true;
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        
+        if (data.success) {
+          // # Special handling for review modal URL
+          if (data.modal_url) {
+            fetch(data.modal_url)
+              .then(response => response.text())
+              .then(html => {
+                // # Replace modal content with review form
+                const modalContent = document.querySelector("#usageReportModal .modal-content");
+                if (modalContent) {
+                  modalContent.innerHTML = html;
+                  
+                  // # Initialize handlers for the review form
+                  setupReviewFormHandlers();
+                }
+              })
+              .catch(error => {
+                console.error('Error loading review modal:', error);
+                showFlashMessage('שגיאה בטעינת מסך הסקירה', 'error');
+              });
+          } else if (data.redirect) {
+            window.location.href = data.redirect;
+          } else {
+            // # Close modal and show success message
+            const modal = document.getElementById("usageReportModal");
+            if (modal) modal.classList.remove("active");
+            
+            showFlashMessage(data.message || 'הדיווח נשלח בהצלחה', 'success');
+            this.reset();
+          }
+        } else {
+          showFlashMessage(data.message || 'אירעה שגיאה בשליחת הדיווח', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        
+        showFlashMessage('אירעה שגיאה בשליחת הדיווח', 'error');
+      });
+    });
+  }
+  
+  // # Setup handlers for the review form
+  function setupReviewFormHandlers() {
+    const reviewForm = document.getElementById("reviewUsageForm");
+    if (!reviewForm) return;
+    
+    // # Handle "Use All" button clicks
+    document.querySelectorAll(".btn-used").forEach(function(button) {
+      button.addEventListener("click", function() {
+        const row = this.closest("tr");
+        const selectElem = row.querySelector(".coupon-select");
+        const selectedOption = selectElem.options[selectElem.selectedIndex];
+        const remainingAmount = parseFloat(selectedOption.getAttribute("data-remaining")).toFixed(2);
+        const amountInput = row.querySelector(".amount-input");
+
+        if (remainingAmount !== null) {
+          amountInput.value = remainingAmount;
+        }
+      });
+    });
+    
+    // # Handle form submission
+    reviewForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        // # Close the modal
+        const modal = document.getElementById("usageReportModal");
+        if (modal) modal.classList.remove("active");
+        
+        // # Show success/error messages
+        if (data.success) {
+          showFlashMessage(data.message, 'success');
+          
+          // # Display individual success messages with delay
+          if (data.successes && data.successes.length > 0) {
+            data.successes.forEach((msg, index) => {
+              setTimeout(() => {
+                showFlashMessage(msg, 'success');
+              }, 500 + (index * 300));
+            });
+          }
+        } else {
+          showFlashMessage(data.message || 'אירעה שגיאה בעדכון השימושים', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showFlashMessage('אירעה שגיאה בעת שליחת הטופס', 'error');
+      });
+    });
+    
+    // # Handle cancel button
+    const cancelBtn = reviewForm.querySelector(".cancel-button");
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", function() {
+        const modal = document.getElementById("usageReportModal");
+        if (modal) modal.classList.remove("active");
+      });
+    }
+    
+    // # Handle close button
+    const closeBtn = document.querySelector(".close-modal");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", function() {
+        const modal = document.getElementById("usageReportModal");
+        if (modal) modal.classList.remove("active");
+      });
+    }
+  }
+  
+  // # Check if we need to show the review modal based on URL parameter
+  {% if show_review_modal %}
+  // # Automatically load the review modal on page load if URL parameter is present
+  fetch('{{ url_for("coupons.load_review_modal") }}')
+    .then(response => response.text())
+    .then(html => {
+      // # Replace modal content
+      const usageReportModal = document.getElementById("usageReportModal");
+      if (usageReportModal) {
+        const modalContent = usageReportModal.querySelector(".modal-content");
+        modalContent.innerHTML = html;
+          
+        // # Show the modal
+        usageReportModal.classList.add("active");
+          
+        // # Initialize handlers for the review form
+        setupReviewFormHandlers();
+          
+        // # Clean up URL parameter (optional)
+        const url = new URL(window.location.href);
+        url.searchParams.delete('show_review_modal');
+        window.history.replaceState({}, '', url);
+      }
+    })
+    .catch(error => {
+      console.error('Error loading review modal:', error);
+      if (typeof showFlashMessage === 'function') {
+        showFlashMessage('שגיאה בטעינת מסך הסקירה', 'error');
+      }
+    });
+  {% endif %}
 });
+
+// # הסרת פונקציית loadUsageReportModal כפולה 
+// # הפונקציה הזו הוסרה בכוונה כדי למנוע התנגשויות
+// # במקומה נשתמש בפונקציה שהוגדרה בתוך אירוע DOMContentLoaded
+
 </script>
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
 {% endblock %}

@@ -5,221 +5,987 @@
 {% endblock %}
 
 {% block content %}
-<section class="admin-dashboard">
-    <h2>ניהול קופונים אוטומטיים</h2>
-
-    <!-- חלק עליון: טפסים וכפתורי עדכון -->
-    <div class="forms-section">
-
-        <!-- טופס לעדכון auto_download_details בקופון בודד -->
-        <form method="POST" action="{{ url_for('admin_bp.admin_coupons_bp.update_auto_download_details') }}">
-            <!-- ה-CSRF כ-hidden input כדי שלא יוצג כטקסט ארוך על המסך -->
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-            <div class="form-group">
-                <label for="coupon_id">בחר קופון</label>
-                <select name="coupon_id" id="coupon_id" required>
-                    <option value="">-- בחר קופון --</option>
-                    {% for coupon in coupons %}
-                    <option value="{{ coupon.id }}">
-                        {{ coupon.id }} - {{ coupon.company }}
-                        {% if coupon.auto_download_details %}
-                            ({{ coupon.auto_download_details }})
-                        {% else %}
-                            (אין ערך)
-                        {% endif %}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="auto_value">בחר ערך auto_download_details</label>
-                <select name="auto_value" id="auto_value">
-                    <option value="">-- בחר ערך --</option>
-                    {% for ad in auto_download_values %}
-                    <option value="{{ ad }}">
-                        {{ ad }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <button type="submit" class="btn btn-primary">עדכן לקופון הנבחר</button>
-        </form>
-
-        <hr>
-
-        <!-- כפתור לעדכון מרוכז: רק פעילים -->
-        <form method="POST" action="{{ url_for('admin_bp.admin_coupons_bp.update_all_active_coupons') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-warning">
-                עדכן קופונים אוטומטיים פעילים בלבד
+<div class="admin-dashboard">
+    <div class="dashboard-header">
+        <h2>ניהול קופונים אוטומטיים</h2>
+        <div class="dashboard-actions">
+            <button id="refreshData" class="btn btn-outline-secondary">
+                <i class="fas fa-sync-alt"></i> רענן נתונים
             </button>
-        </form>
-
-        <!-- כפתור לעדכון מרוכז: כולם -->
-        <form method="POST" action="{{ url_for('admin_bp.admin_coupons_bp.update_all_any_coupons') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-danger">
-                עדכן את כל הקופונים האוטומטיים (כולם)
-            </button>
-        </form>
-
-    </div> <!-- /forms-section -->
-
-    <hr>
-
-    <!-- חלק תחתון: טבלה של כל הקופונים שיש להם auto_download_details (בלי קשר לסטטוס) -->
-    <div class="coupons-list">
-        <h3>קופונים (עם auto_download_details)</h3>
-        <div class="table-scroll">
-            <table class="active-coupons-table">
-                <thead>
-                    <tr>
-                        <th>Coupon ID</th>
-                        <th>User ID</th>
-                        <th>Company</th>
-                        <th>Auto Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for c in table_coupons %}
-                    <tr>
-                        <td>{{ c.id }}</td>
-                        <td>{{ c.user_id }}</td>
-                        <td>{{ c.company }}</td>
-                        <td>{{ c.auto_download_details }}</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
         </div>
     </div>
 
-</section>
+    <!-- toast notification container -->
+    <div class="toast-container">
+        <div id="actionToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong class="me-auto">הודעת מערכת</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="סגור"></button>
+            </div>
+            <div class="toast-body">
+                פעולה בוצעה בהצלחה
+            </div>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <!-- Left side: forms and controls -->
+        <div class="controls-panel">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h3>עדכון ערך auto_download_details לקופון בודד</h3>
+                </div>
+                <div class="card-body">
+                    <form id="singleCouponForm" method="POST" action="{{ url_for('admin_bp.admin_coupons_bp.update_auto_download_details') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="form-group mb-3">
+                            <label for="coupon_id" class="form-label">בחר קופון</label>
+                            <div class="select-wrapper">
+                                <select name="coupon_id" id="coupon_id" class="form-select form-select-lg" required>
+                                    <option value="">-- בחר קופון --</option>
+                                    {% for coupon in coupons %}
+                                    <option value="{{ coupon.id }}">
+                                        {{ coupon.id }} - {{ coupon.company }}
+                                        {% if coupon.auto_download_details %}
+                                            ({{ coupon.auto_download_details }})
+                                        {% else %}
+                                            (אין ערך)
+                                        {% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="select-icon">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                            <div class="form-text">בחר את הקופון שברצונך לעדכן</div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="auto_value" class="form-label">בחר ערך auto_download_details</label>
+                            <div class="select-wrapper">
+                                <select name="auto_value" id="auto_value" class="form-select form-select-lg">
+                                    <option value="">-- בחר ערך --</option>
+                                    {% for ad in auto_download_values %}
+                                    <option value="{{ ad }}">
+                                        {{ ad }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="select-icon">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                            <div class="form-text">השאר ריק כדי להסיר את הערך הקיים</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i> עדכן קופון
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Bulk operations card -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h3>עדכון קופונים מרוכז</h3>
+                </div>
+                <div class="card-body">
+                    <div class="bulk-actions">
+                        <!-- Update active coupons -->
+                        <form id="updateActiveForm" method="POST" action="{{ url_for('admin_bp.admin_coupons_bp.update_all_active_coupons') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="button" class="btn btn-warning btn-lg w-100 mb-2 confirm-action" data-confirm="עדכון רק קופונים פעילים">
+                                <i class="fas fa-bolt"></i> עדכן קופונים פעילים בלבד
+                            </button>
+                        </form>
+
+                        <!-- Update all coupons -->
+                        <form id="updateAllForm" method="POST" action="{{ url_for('admin_bp.admin_coupons_bp.update_all_any_coupons') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="button" class="btn btn-danger btn-lg w-100 confirm-action" data-confirm="עדכון כל הקופונים">
+                                <i class="fas fa-exclamation-triangle"></i> עדכן את כל הקופונים
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right side: coupons table -->
+        <div class="data-panel">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>קופונים עם auto_download_details</h3>
+                    <div class="header-actions">
+                        <div class="input-group">
+                            <input type="text" id="couponSearch" class="form-control" placeholder="חיפוש בטבלה...">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table id="couponsTable" class="table table-hover table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th data-sort="id">Coupon ID <i class="fas fa-sort"></i></th>
+                                    <th data-sort="user">User ID <i class="fas fa-sort"></i></th>
+                                    <th data-sort="company">Company <i class="fas fa-sort"></i></th>
+                                    <th data-sort="auto">Auto Value <i class="fas fa-sort"></i></th>
+                                    <th>פעולות</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for c in table_coupons %}
+                                <tr data-coupon-id="{{ c.id }}">
+                                    <td>{{ c.id }}</td>
+                                    <td>{{ c.user_id }}</td>
+                                    <td>{{ c.company }}</td>
+                                    <td>{{ c.auto_download_details }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary quick-edit" title="ערוך"
+                                                data-coupon-id="{{ c.id }}"
+                                                data-company="{{ c.company }}"
+                                                data-auto-value="{{ c.auto_download_details }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="table-info">מציג <span id="displayedCount">{{ table_coupons|length }}</span> מתוך <span id="totalCount">{{ table_coupons|length }}</span> קופונים</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for confirm dialog -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmModalLabel">אישור פעולה</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="סגור"></button>
+                </div>
+                <div class="modal-body">
+                    האם אתה בטוח שברצונך לבצע פעולה זו?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">בטל</button>
+                    <button type="button" class="btn btn-primary" id="confirmAction">אישור</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick edit modal -->
+    <div class="modal fade" id="quickEditModal" tabindex="-1" aria-labelledby="quickEditModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quickEditModalLabel">עריכה מהירה</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="סגור"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="quickEditForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" id="quickEditCouponId" name="coupon_id">
+
+                        <div class="mb-3">
+                            <label class="form-label">מזהה קופון:</label>
+                            <div class="form-control-static" id="displayCouponId"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">חברה:</label>
+                            <div class="form-control-static" id="displayCompany"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="quickEditAutoValue" class="form-label">ערך auto_download_details:</label>
+                            <select name="auto_value" id="quickEditAutoValue" class="form-select">
+                                <option value="">-- הסר ערך --</option>
+                                {% for ad in auto_download_values %}
+                                <option value="{{ ad }}">{{ ad }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">בטל</button>
+                    <button type="button" class="btn btn-primary" id="saveQuickEdit">שמור שינויים</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">טוען...</span>
+            </div>
+            <div class="mt-2">מעבד נתונים, אנא המתן...</div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<!-- Include necessary libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+<!-- Make sure Bootstrap JS is loaded properly -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
 <style>
-/* מראה כללי */
+/* ======= Global ======= */
+:root {
+    --primary-color: #3f51b5;
+    --primary-dark: #303f9f;
+    --secondary-color: #ff9800;
+    --secondary-dark: #f57c00;
+    --danger-color: #f44336;
+    --danger-dark: #d32f2f;
+    --success-color: #4caf50;
+    --success-dark: #388e3c;
+    --text-color: #333;
+    --text-light: #757575;
+    --background-light: #f5f5f5;
+    --border-color: #e0e0e0;
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    --transition-speed: 0.3s;
+}
+
+/* Right-to-left direction setup for Hebrew */
+body {
+    direction: rtl;
+    text-align: right;
+    font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-color);
+    background-color: var(--background-light);
+}
+
 .admin-dashboard {
-    max-width: 1200px;
-    margin: 40px auto;
-    padding: 20px;
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    max-width: 1600px;
+    margin: 20px auto;
+    padding: 0 15px;
 }
 
-.admin-dashboard h2 {
-    font-size: 2rem;
-    margin-bottom: 20px;
-    text-align: center;
-    color: #343a40;
-}
-
-/* החלק של הטפסים */
-.forms-section {
-    background-color: #f9f9f9;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    margin-bottom: 20px;
-}
-
-/* עיצוב טופס ואלמנטים */
-.form-group {
-    margin-bottom: 20px;
+.dashboard-header {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
-.form-group label {
-    margin-bottom: 5px;
+.dashboard-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 20px;
+}
+
+/* ======= Cards ======= */
+.card {
+    background: white;
+    border-radius: 10px;
+    border: none;
+    overflow: hidden;
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid var(--border-color);
+    padding: 15px 20px;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
     font-weight: 600;
+    color: var(--primary-color);
 }
 
-.form-group select {
-    padding: 8px;
+.card-body {
+    padding: 20px;
+}
+
+.card-footer {
+    background-color: white;
+    border-top: 1px solid var(--border-color);
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+/* ======= Forms ======= */
+.form-label {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.form-select, .form-control {
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
     font-size: 1rem;
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
 }
 
-/* כפתורים */
+.form-select:focus, .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(63, 81, 181, 0.25);
+}
+
+.form-text {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-top: 5px;
+}
+
+.select-wrapper {
+    position: relative;
+}
+
+.select-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    pointer-events: none;
+}
+
+/* ======= Buttons ======= */
 .btn {
     padding: 10px 20px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-size: 1.1rem;
-    transition: background-color 0.3s ease, transform 0.3s ease;
-    display: inline-block;
-    cursor: pointer;
-    color: #fff;
-    border: none;
-    margin-right: 10px;
-    margin-top: 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn:active {
+    transform: scale(0.97);
 }
 
 .btn-primary {
-    background-color: #007bff;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
 }
 
-.btn-primary:hover {
-    background-color: #0056b3;
-    transform: scale(1.03);
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    box-shadow: 0 2px 8px rgba(63, 81, 181, 0.4);
 }
 
 .btn-warning {
-    background-color: #ffc107;
-    color: #000;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
 }
 
-.btn-warning:hover {
-    background-color: #e0a800;
-    transform: scale(1.03);
+.btn-warning:hover, .btn-warning:focus {
+    background-color: var(--secondary-dark);
+    border-color: var(--secondary-dark);
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.4);
+    color: white;
 }
 
 .btn-danger {
-    background-color: #dc3545;
-    color: #fff;
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
 }
 
-.btn-danger:hover {
-    background-color: #bd2130;
-    transform: scale(1.03);
+.btn-danger:hover, .btn-danger:focus {
+    background-color: var(--danger-dark);
+    border-color: var(--danger-dark);
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4);
 }
 
-/* החלק התחתון - טבלה */
-.coupons-list {
-    margin-top: 20px;
+.btn-outline-secondary {
+    border-color: var(--border-color);
+    color: var(--text-light);
 }
 
-.table-scroll {
-    overflow-x: auto;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 5px;
+.btn-outline-secondary:hover {
+    background-color: var(--background-light);
+    color: var(--text-color);
 }
 
-.active-coupons-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
 }
 
-.active-coupons-table thead {
-    background-color: #f0f0f0;
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: white;
 }
 
-.active-coupons-table th,
-.active-coupons-table td {
-    padding: 8px 12px;
-    border: 1px solid #ccc;
+/* ======= Table ======= */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.table th[data-sort]:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+.table th i {
+    margin-right: 5px;
+    opacity: 0.5;
+}
+
+.table th.sort-asc i, .table th.sort-desc i {
+    opacity: 1;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(63, 81, 181, 0.05);
+}
+
+/* ======= Toast notifications ======= */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1050;
+}
+
+.toast {
+    min-width: 250px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    border-right: 4px solid var(--primary-color);
+}
+
+.toast.success {
+    border-right-color: var(--success-color);
+}
+
+.toast.error {
+    border-right-color: var(--danger-color);
+}
+
+.toast.warning {
+    border-right-color: var(--secondary-color);
+}
+
+/* ======= Loading overlay ======= */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.loading-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.spinner-container {
     text-align: center;
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
 }
 
-.active-coupons-table th {
-    font-weight: bold;
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* ======= Modal styles ======= */
+.modal {
+    direction: rtl;
+}
+
+.modal-backdrop {
+    opacity: 0.5;
+}
+
+.modal-dialog {
+    margin: 1.75rem auto;
+}
+
+.modal-content {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    padding: 15px 20px;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 15px 20px;
+}
+
+/* ======= Responsive ======= */
+@media (max-width: 992px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dashboard-actions {
+        margin-top: 10px;
+        align-self: stretch;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .header-actions {
+        margin-top: 10px;
+        width: 100%;
+    }
+}
+
+/* ======= Animation effects ======= */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Custom Bootstrap table striping for RTL */
+.table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Form control static for displaying values in modals */
+.form-control-static {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    background-color: #f8f9fa;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
 }
 </style>
+
+<script>
+// Wait until DOM is fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    'use strict';
+
+    // ======= DOM Elements =======
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmAction = document.getElementById('confirmAction');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const couponSearch = document.getElementById('couponSearch');
+    const couponsTable = document.getElementById('couponsTable');
+    const displayedCount = document.getElementById('displayedCount');
+    const totalCount = document.getElementById('totalCount');
+    const quickEditModal = document.getElementById('quickEditModal');
+    const quickEditForm = document.getElementById('quickEditForm');
+    const saveQuickEdit = document.getElementById('saveQuickEdit');
+    const actionToast = document.getElementById('actionToast');
+
+    // Check if Bootstrap is loaded
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded! Loading it dynamically...');
+        const bootstrapScript = document.createElement('script');
+        bootstrapScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js';
+        bootstrapScript.integrity = 'sha512-VK2zcvntEufaimc+efOYi622VN5ZacdnufnmX7zIhCPmjhKnOi9ZDMtg1/ug5l183f19gG1/cBstPO4D8N/Img==';
+        bootstrapScript.crossOrigin = 'anonymous';
+        document.head.appendChild(bootstrapScript);
+
+        // Wait for bootstrap to load
+        bootstrapScript.onload = function() {
+            console.log('Bootstrap loaded successfully');
+            initializeComponents();
+        };
+    } else {
+        initializeComponents();
+    }
+
+    // Initialize all components
+    function initializeComponents() {
+        // ======= Helper Functions =======
+
+        /**
+         * Show loading overlay
+         */
+        function showLoading() {
+            loadingOverlay.classList.add('active');
+        }
+
+        /**
+         * Hide loading overlay
+         */
+        function hideLoading() {
+            loadingOverlay.classList.remove('active');
+        }
+
+        /**
+         * Display a toast notification
+         * @param {string} message - Message to display
+         * @param {string} type - Type of notification (success, error, warning)
+         */
+        function showToast(message, type = 'success') {
+            // Make sure toast is instantiated
+            const toastInstance = new bootstrap.Toast(actionToast, {
+                autohide: true,
+                delay: 3000
+            });
+
+            // Set message and notification type
+            actionToast.querySelector('.toast-body').textContent = message;
+
+            // Remove existing classes and add the new one
+            actionToast.classList.remove('success', 'error', 'warning');
+            actionToast.classList.add(type);
+
+            toastInstance.show();
+        }
+
+        /**
+         * Filter table rows based on search input
+         * @param {string} query - Search query
+         */
+        function filterTable(query) {
+            const tbody = couponsTable.querySelector('tbody');
+            const rows = tbody.querySelectorAll('tr');
+
+            let visibleCount = 0;
+
+            // Convert query to lowercase for case-insensitive search
+            query = query.toLowerCase();
+
+            rows.forEach(row => {
+                // Get all cell text
+                const text = Array.from(row.querySelectorAll('td'))
+                    .slice(0, 4) // Only search the first 4 columns (exclude actions)
+                    .map(cell => cell.textContent.toLowerCase())
+                    .join(' ');
+
+                // Show/hide row based on match
+                if (text.includes(query)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Update counter
+            displayedCount.textContent = visibleCount;
+        }
+
+        /**
+         * Sort table by column
+         * @param {Element} th - Table header element
+         */
+        function sortTable(th) {
+            const tbody = couponsTable.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // Get sort property and direction
+            const property = th.dataset.sort;
+            let direction = 'asc';
+
+            // Toggle sort direction
+            if (th.classList.contains('sort-asc')) {
+                direction = 'desc';
+                th.classList.remove('sort-asc');
+                th.classList.add('sort-desc');
+            } else {
+                th.classList.remove('sort-desc');
+                th.classList.add('sort-asc');
+            }
+
+            // Remove sort classes from other headers
+            couponsTable.querySelectorAll('th').forEach(header => {
+                if (header !== th) {
+                    header.classList.remove('sort-asc', 'sort-desc');
+                }
+            });
+
+            // Sort rows
+            rows.sort((a, b) => {
+                const cellA = a.querySelector(`td:nth-child(${Array.from(th.parentNode.children).indexOf(th) + 1})`).textContent;
+                const cellB = b.querySelector(`td:nth-child(${Array.from(th.parentNode.children).indexOf(th) + 1})`).textContent;
+
+                // For ID columns, sort numerically
+                if (property === 'id' || property === 'user') {
+                    return direction === 'asc'
+                        ? parseInt(cellA) - parseInt(cellB)
+                        : parseInt(cellB) - parseInt(cellA);
+                }
+
+                // For text columns, sort alphabetically
+                return direction === 'asc'
+                    ? cellA.localeCompare(cellB)
+                    : cellB.localeCompare(cellA);
+            });
+
+            // Reorder rows in the DOM
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Initialize Bootstrap modals
+        const confirmModalElement = new bootstrap.Modal(confirmModal);
+
+        // ======= Event Listeners =======
+
+        // Search functionality
+        if (couponSearch) {
+            couponSearch.addEventListener('input', function() {
+                filterTable(this.value);
+            });
+        }
+
+        // Sort table when clicking column headers
+        couponsTable.querySelectorAll('th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => sortTable(th));
+        });
+
+        // Handle confirmation dialog for bulk actions
+        document.querySelectorAll('.confirm-action').forEach(button => {
+            button.addEventListener('click', function(e) {
+                // Prevent the default form submission
+                e.preventDefault();
+
+                const formElement = this.closest('form');
+                const actionText = this.dataset.confirm;
+
+                // Update modal content
+                const modalTitle = document.getElementById('confirmModalLabel');
+                const modalBody = document.querySelector('#confirmModal .modal-body');
+
+                modalTitle.textContent = 'אישור פעולה';
+                modalBody.textContent = `האם אתה בטוח שברצונך לבצע ${actionText}?`;
+
+                // Remove any existing click handlers from confirm button
+                const newConfirmAction = confirmAction.cloneNode(true);
+                confirmAction.parentNode.replaceChild(newConfirmAction, confirmAction);
+
+                // Add event listener to confirm button
+                newConfirmAction.addEventListener('click', function() {
+                    confirmModalElement.hide();
+                    showLoading();
+                    formElement.submit();
+                });
+
+                // Show the modal
+                confirmModalElement.show();
+            });
+        });
+
+        // Quick edit buttons
+        document.querySelectorAll('.quick-edit').forEach(button => {
+            button.addEventListener('click', function() {
+                const couponId = this.dataset.couponId;
+                const company = this.dataset.company;
+                const autoValue = this.dataset.autoValue;
+
+                // Populate the quick edit form
+                document.getElementById('quickEditCouponId').value = couponId;
+                document.getElementById('displayCouponId').textContent = couponId;
+                document.getElementById('displayCompany').textContent = company;
+
+                // Set the current auto value
+                const autoValueSelect = document.getElementById('quickEditAutoValue');
+
+                // Find the option with the matching value
+                let found = false;
+                for (let i = 0; i < autoValueSelect.options.length; i++) {
+                    if (autoValueSelect.options[i].value === autoValue) {
+                        autoValueSelect.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+
+                // If not found, select the empty option
+                if (!found) {
+                    autoValueSelect.selectedIndex = 0;
+                }
+
+                // Show the modal
+                const quickEditModalElement = new bootstrap.Modal(quickEditModal);
+                quickEditModalElement.show();
+            });
+        });
+
+        // Save quick edit
+        if (saveQuickEdit) {
+            saveQuickEdit.addEventListener('click', function() {
+                showLoading();
+
+                // Get form data
+                const couponId = document.getElementById('quickEditCouponId').value;
+                const autoValue = document.getElementById('quickEditAutoValue').value;
+                const csrf = document.querySelector('[name="csrf_token"]').value;
+
+                // Create form data
+                const formData = new FormData();
+                formData.append('coupon_id', couponId);
+                formData.append('auto_value', autoValue);
+                formData.append('csrf_token', csrf);
+
+                // Submit via AJAX
+                fetch("{{ url_for('admin_bp.admin_coupons_bp.update_auto_download_details') }}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('שגיאה בעדכון הקופון');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Close modal
+                    bootstrap.Modal.getInstance(quickEditModal).hide();
+
+                    // Update table row
+                    const row = document.querySelector(`tr[data-coupon-id="${couponId}"]`);
+                    if (row) {
+                        row.querySelector('td:nth-child(4)').textContent = autoValue;
+                        row.querySelector('.quick-edit').dataset.autoValue = autoValue;
+                    }
+
+                    // Show success message
+                    showToast('הקופון עודכן בהצלחה', 'success');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast(error.message, 'error');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+            });
+        }
+
+        // Handle regular form submissions
+        document.querySelectorAll('form').forEach(form => {
+            // Skip forms with buttons that have confirm-action class
+            if (form.querySelector('.confirm-action')) return;
+
+            form.addEventListener('submit', function(e) {
+                // Skip if the form is the quick edit form
+                if (form.id === 'quickEditForm') return;
+
+                // Show loading overlay when form is submitted
+                showLoading();
+            });
+        });
+
+        // Refresh data button
+        const refreshButton = document.getElementById('refreshData');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', function() {
+                showLoading();
+                location.reload();
+            });
+        }
+
+        // ======= Enhance select inputs =======
+        document.querySelectorAll('.form-select').forEach(select => {
+            // Add focus event to remove placeholder when selected
+            select.addEventListener('change', function() {
+                if (this.selectedIndex === 0) {
+                    this.classList.add('empty');
+                } else {
+                    this.classList.remove('empty');
+                }
+            });
+
+            // Trigger the event on load
+            if (select.selectedIndex === 0) {
+                select.classList.add('empty');
+            }
+        });
+
+        // Check URL for success/error messages
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('success')) {
+            showToast(urlParams.get('success'), 'success');
+
+            // Clear the URL parameter without refreshing
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('success');
+            window.history.replaceState({}, document.title, newUrl.href);
+        }
+
+        if (urlParams.has('error')) {
+            showToast(urlParams.get('error'), 'error');
+
+            // Clear the URL parameter without refreshing
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('error');
+            window.history.replaceState({}, document.title, newUrl.href);
+        }
+    }
+});
+</script>
 {% endblock %}
