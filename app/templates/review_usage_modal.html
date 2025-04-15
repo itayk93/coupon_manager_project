@@ -62,80 +62,436 @@
     </div>
 </form>
 
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    // האזנה לכפתור "נוצל מלא"
-    document.querySelectorAll(".btn-used").forEach(function(button) {
-        button.addEventListener("click", function() {
-            const row = this.closest("tr");
-            const selectElem = row.querySelector(".coupon-select");
-            const selectedOption = selectElem.options[selectElem.selectedIndex];
-            const remainingAmount = parseFloat(selectedOption.getAttribute("data-remaining")).toFixed(2);
-            const amountInput = row.querySelector(".amount-input");
+<!-- Usage Report Modal - Complete code with styling -->
+<style>
+    /* Modal container styling */
+    #usageReportModal {
+        display: none; /* Hidden by default */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+        z-index: 1000;
+        overflow-y: auto; /* Enable scrolling if content is too long */
+    }
+    
+    /* Modal is active/visible */
+    #usageReportModal.active {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    /* הוסף את זה לקובץ ה-CSS שלך */
+    .modal-content {
+        width: 98% !important; 
+        max-width: 1000px !important;
+        min-height: 350px !important;
+    }
+    
+    /* Modal header */
+    .modal-content h2 {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        text-align: center;
+    }
+    
+    /* Close button (X) */
+    .close-modal {
+        position: absolute;
+        top: 15px;
+        right: 15px; /* שינוי מ-left: 15px ל-right: 15px */
+        font-size: 24px;
+        cursor: pointer;
+        color: #666;
+        transition: color 0.2s;
+    }
+    
+    .close-modal:hover {
+        color: #000;
+    }
+    
+    /* Usage table styling */
+    .usage-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 25px;
+    }
+    
+    .usage-table th, 
+    .usage-table td {
+        padding: 12px 15px;
+        text-align: right;
+        border-bottom: 1px solid #eee;
+        border-left: 1px solid #e0e0e0; /* קו אפור בהיר בין העמודות */
+    }
 
-            if (remainingAmount !== null) {
-                amountInput.value = remainingAmount;
-            }
-        });
-    });
+    /* מסיר את הגבול משמאל מהתא הראשון בכל שורה (תא ימני בעברית) */
+    .usage-table th:first-child,
+    .usage-table td:first-child {
+        border-left: none;
+    }
 
-    // האזנה לכפתור סגירה
-    document.querySelector(".close-modal").addEventListener("click", function() {
-        const modal = document.getElementById("usageReportModal");
-        if (modal) modal.classList.remove("active");
-    });
+    /* מוסיף מסגרת חיצונית לטבלה */
+    .usage-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 25px;
+        table-layout: fixed;
+        border: 1px solid #e0e0e0; /* מסגרת חיצונית לטבלה */
+    }
 
-    // האזנה לכפתור ביטול
-    document.querySelector(".cancel-button").addEventListener("click", function() {
-        const modal = document.getElementById("usageReportModal");
-        if (modal) modal.classList.remove("active");
-    });
+    /* רוחב עמודות ספציפיות */
+    .usage-table th:nth-child(1),
+    .usage-table td:nth-child(1) {
+        width: 60px; /* רוחב עמודת סימון */
+    }
 
-    // הגשת הטופס עם AJAX
-    document.getElementById("reviewUsageForm").addEventListener("submit", function(e) {
-        e.preventDefault();
+    .usage-table th:nth-child(2),
+    .usage-table td:nth-child(2) {
+        width: 120px; /* רוחב עמודת חברה שזוהתה */
+    }
+
+    /* הגדרת טבלה עם רוחב קבוע */
+    .usage-table {
+        table-layout: fixed;
+    }
+    
+    .usage-table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .usage-table tr:hover {
+        background-color: #f5f5f5;
+    }
+    
+    /* Checkbox styling */
+    .usage-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    
+    /* Dropdown select styling */
+    .coupon-select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #fff;
+        font-size: 14px;
+    }
+    
+    /* Amount input container */
+    .amount-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    /* Amount input field */
+    .amount-input {
+        width: 100px;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 14px;
+    }
+    
+    /* "Use Full Amount" button */
+    .btn-used {
+        padding: 6px 12px;
+        background-color: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: background-color 0.2s;
+    }
+    
+    .btn-used:hover {
+        background-color: #e0e0e0;
+    }
+    
+    /* כפתורי פעולה - מוקטנים */
+    .modal-actions {
+        display: flex;
+        justify-content: center;
+        gap: 10px; /* מרווח קטן יותר בין הכפתורים */
+        margin-top: 15px;
+    }
+
+    /* כפתור ביטול - מוקטן */
+    .cancel-button {
+        padding: 6px 12px; /* פדינג קטן יותר */
+        background-color: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        color: #555;
+        font-size: 12px; /* פונט קטן יותר */
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    /* כפתור אישור - מוקטן */
+    .submit-button {
+        padding: 6px 15px; /* פדינג קטן יותר */
+        background-color: #4CAF50;
+        border: none;
+        border-radius: 4px;
+        color: white;
+        font-size: 12px; /* פונט קטן יותר */
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }    
+    .cancel-button:hover {
+        background-color: #e5e5e5;
+    }
         
-        // איסוף נתונים מהטופס
-        const formData = new FormData(this);
-        
-        // שליחת הנתונים ב-AJAX
-        fetch(this.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // סגירת המודל
-            const modal = document.getElementById("usageReportModal");
-            if (modal) modal.classList.remove("active");
+    .submit-button:hover {
+        background-color: #45a049;
+    }
+    </style>
+    
+    <div id="usageReportModal">
+        <div class="modal-content">
+            <!-- Close button (X) -->
+            <span class="close-modal">&times;</span>
+            <h2>אישור שימושים שאותרו</h2>
+            <form id="reviewUsageForm" method="POST" action="{{ url_for('coupons.process_review_form') }}">
+                <!-- CSRF Token for security -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+                <table class="usage-table">
+                    <thead>
+                        <tr>
+                            <th>סימון</th>
+                            <th>חברה שזוהתה</th>
+                            <th>קופון</th>
+                            <th>כמה השתמשת</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for row in usage_list %}
+                        <tr>
+                            <!-- Column 1: Checkbox for selecting this row -->
+                            <td>
+                                <input type="checkbox"
+                                       name="row-{{ loop.index0 }}-checked"
+                                       value="yes"
+                                       checked
+                                       class="usage-checkbox">
+                            </td>
+                            <!-- Column 2: Company name as identified -->
+                            <td>{{ row.company }}</td>
+                            <!-- Column 3: Coupon selection dropdown -->
+                            <td>
+                                <select name="row-{{ loop.index0 }}-company" class="coupon-select">
+                                    {% for cpn in row.matched_coupons %}
+                                        <option value="{{ cpn.id }}"
+                                                data-remaining="{{ '%.2f' | format(cpn.remaining_balance) }}"
+                                                {% if loop.first %}selected{% endif %}>
+                                            {{ cpn.company }} ({{ cpn.code }}) - נותר: {{ '%.2f' | format(cpn.remaining_balance) }} ₪
+                                        </option>
+                                    {% endfor %}
+                                    <option value="other">📌 בחר קופון אחר...</option>
+                                </select>
+                            </td>
+                            <!-- Column 4: Usage amount input and "Use Full" button -->
+                            <td>
+                                <div class="amount-wrapper">
+                                    <input type="text"
+                                           name="row-{{ loop.index0 }}-amount"
+                                           value="{{ '%.2f' | format(row.amount_used or 0) }}"
+                                           class="amount-input">
+                                    <button type="button" class="btn-used">ניצול מלא</button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+    
+                <!-- Action buttons -->
+                <div class="modal-actions">
+                    <button type="button" class="cancel-button">ביטול</button>
+                    <button type="submit" class="submit-button">אישור</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        /**
+         * Usage Report Modal JavaScript
+         * This script handles all interactions with the usage report modal
+         * including coupon selection, amount calculation, and form submission
+         */
+        document.addEventListener("DOMContentLoaded", function() {
+            // ===================================================
+            // "Use Full Amount" Button Handler
+            // ===================================================
             
-            // הצגת הודעת הצלחה
-            if (data.success) {
-                // שימוש בפונקציה הגלובלית להצגת הודעה
-                if (typeof showFlashMessage === 'function') {
-                    showFlashMessage(data.message, 'success');
-                } else {
-                    alert(data.message);
-                }
-            } else {
-                if (typeof showFlashMessage === 'function') {
-                    showFlashMessage(data.message || 'אירעה שגיאה בעת עדכון השימושים', 'error');
-                } else {
-                    alert(data.message || 'אירעה שגיאה בעת עדכון השימושים');
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            if (typeof showFlashMessage === 'function') {
-                showFlashMessage('אירעה שגיאה בעת שליחת הטופס', 'error');
-            } else {
-                alert('אירעה שגיאה בעת שליחת הטופס');
-            }
+            /**
+             * Listens for clicks on the "Use Full" button and sets the input value
+             * to the remaining amount of the selected coupon
+             */
+            document.querySelectorAll(".btn-used").forEach(function(button) {
+                button.addEventListener("click", function() {
+                    const row = this.closest("tr");
+                    const selectElem = row.querySelector(".coupon-select");
+                    const selectedOption = selectElem.options[selectElem.selectedIndex];
+                    const remainingAmount = parseFloat(selectedOption.getAttribute("data-remaining")).toFixed(2);
+                    const amountInput = row.querySelector(".amount-input");
+            
+                    if (remainingAmount !== null) {
+                        amountInput.value = remainingAmount;
+                    }
+                });
+            });
+            
+            // ===================================================
+            // Coupon Dropdown Change Event Handler
+            // ===================================================
+            
+            /**
+             * Listens for changes in the coupon select dropdowns
+             * When "Choose another coupon" is selected, fetches all active coupons
+             * and refreshes the dropdown options
+             */
+            document.querySelectorAll('.coupon-select').forEach(function(select) {
+                select.addEventListener('change', function() {
+                    if (this.value === 'other') {
+                        // Request all active coupons from the server
+                        fetch('/get_active_coupons')
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Create new coupon list
+                                    const selectElement = this;
+                                    
+                                    // Save the "Choose another coupon" option
+                                    const otherOption = this.querySelector('option[value="other"]');
+                                    
+                                    // Clear current options
+                                    selectElement.innerHTML = '';
+                                    
+                                    // Add active coupons received from server
+                                    data.coupons.forEach(function(coupon) {
+                                        const option = document.createElement('option');
+                                        option.value = coupon.id;
+                                        option.dataset.remaining = coupon.remaining_balance;
+                                        option.textContent = `${coupon.company} (${coupon.code}) - Remaining: ${coupon.remaining_balance} ₪`;
+                                        selectElement.appendChild(option);
+                                    });
+                                    
+                                    // Add "Choose another coupon" option at the end
+                                    selectElement.appendChild(otherOption);
+                                    
+                                    // Select the first option
+                                    selectElement.selectedIndex = 0;
+                                } else {
+                                    console.error('Failed to retrieve active coupons list');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error retrieving coupon list:', error);
+                            });
+                    }
+                });
+            });
+
+            // ===================================================
+            // Modal Close Handlers
+            // ===================================================
+            
+            /**
+             * Handles close button (X) clicks to hide the modal
+             */
+            document.querySelector(".close-modal").addEventListener("click", function() {
+                const modal = document.getElementById("usageReportModal");
+                if (modal) modal.classList.remove("active");
+            });
+
+            /**
+             * Handles cancel button clicks to hide the modal
+             */
+            document.querySelector(".cancel-button").addEventListener("click", function() {
+                const modal = document.getElementById("usageReportModal");
+                if (modal) modal.classList.remove("active");
+            });
+
+            // ===================================================
+            // Form Submission
+            // ===================================================
+            
+            /**
+             * Handles form submission via AJAX
+             * Prevents default form submission, collects data and sends via fetch
+             */
+            document.getElementById("reviewUsageForm").addEventListener("submit", function(e) {
+                e.preventDefault();
+                
+                // Collect form data
+                const formData = new FormData(this);
+                
+                // Send data using AJAX
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Close the modal
+                    const modal = document.getElementById("usageReportModal");
+                    if (modal) modal.classList.remove("active");
+                    
+                    // Display success or error message
+                    if (data.success) {
+                        // Use global flash message function if available
+                        if (typeof showFlashMessage === 'function') {
+                            showFlashMessage(data.message, 'success');
+                        } else {
+                            alert(data.message);
+                        }
+                    } else {
+                        if (typeof showFlashMessage === 'function') {
+                            showFlashMessage(data.message || 'Error occurred while updating usages', 'error');
+                        } else {
+                            alert(data.message || 'Error occurred while updating usages');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    if (typeof showFlashMessage === 'function') {
+                        showFlashMessage('Error occurred while submitting the form', 'error');
+                    } else {
+                        alert('Error occurred while submitting the form');
+                    }
+                });
+            });
+            
+            // ===================================================
+            // Public Functions
+            // ===================================================
+            
+            /**
+             * Function to show the modal (can be called from external code)
+             * Exposed as a global function on the window object
+             */
+            window.showUsageReportModal = function() {
+                const modal = document.getElementById("usageReportModal");
+                if (modal) modal.classList.add("active");
+            };
         });
-    });
-});
-</script>
+    </script>

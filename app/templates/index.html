@@ -1599,39 +1599,12 @@ document.addEventListener("DOMContentLoaded", function() {
               // # Add to modal container
               quickAddCouponModal.appendChild(iframe);
               
-              // # Add close button on top of iframe
-              const closeButton = document.createElement('button');
-              closeButton.textContent = '×';
-              closeButton.style.position = 'absolute';
-              closeButton.style.top = '10px';
-              closeButton.style.right = '10px';
-              closeButton.style.width = '30px';
-              closeButton.style.height = '30px';
-              closeButton.style.backgroundColor = 'white';
-              closeButton.style.border = 'none';
-              closeButton.style.borderRadius = '50%';
-              closeButton.style.fontSize = '24px';
-              closeButton.style.cursor = 'pointer';
-              closeButton.style.zIndex = '10000';
-              closeButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-              closeButton.style.display = 'flex';
-              closeButton.style.justifyContent = 'center';
-              closeButton.style.alignItems = 'center';
-              
-              // # Add click event to close button
-              closeButton.addEventListener('click', function() {
-                  quickAddCouponModal.classList.remove('active');
-              });
-              
               // # Add backdrop click to close
               quickAddCouponModal.addEventListener('click', function(e) {
                   if (e.target === quickAddCouponModal) {
                       quickAddCouponModal.classList.remove('active');
                   }
               });
-              
-              // # Add close button to modal
-              quickAddCouponModal.appendChild(closeButton);
               
               // # Write the HTML content to the iframe
               setTimeout(() => {
@@ -1690,7 +1663,7 @@ document.addEventListener("DOMContentLoaded", function() {
               quickAddCouponModal.innerHTML = '<div style="background:white; padding:20px; border-radius:10px; text-align:center;">שגיאה בטעינת המודל. אנא נסה שוב.</div>';
           });
   }
-  
+
   // # Function to show flash messages programmatically
   function showFlashMessage(message, type = 'success') {
     const flashContainer = document.createElement('div');

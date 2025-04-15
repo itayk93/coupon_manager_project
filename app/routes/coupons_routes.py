@@ -3752,65 +3752,37 @@ def parse_usage_text():
 @coupons_bp.route('/load_review_modal')
 @login_required
 def load_review_modal():
-    """Returns the content of the usage review modal"""
-    # Get data from session
+    """מחזיר את תוכן המודל לסקירת השימושים המזוהים"""
+    # מקבל נתונים מהסשן
     usage_list = session.get('parsed_usages', [])
     
     if not usage_list:
         return jsonify({"success": False, "message": "לא נמצאו נתוני שימוש"})
     
-    # Filter out rows with zero amount
-    filtered_usage_list = []
-    for row in usage_list:
-        # Check for different possible field names for amount
-        amount = row.get('amount', 0)
-        if amount == 0:  # Try alternative field names if amount is zero
-            amount = row.get('amount_used', 0)
-            
-        # Convert to float if it's not already
-        try:
-            amount_float = float(amount)
-            if amount_float > 0:
-                # Make sure the 'amount' field exists for consistency
-                row['amount'] = amount_float
-                filtered_usage_list.append(row)
-                print(f"Added row with amount: {amount_float}, company: {row.get('company', 'unknown')}")
-            else:
-                print(f"Skipped row with zero amount: {row}")
-        except (ValueError, TypeError):
-            print(f"Skipped row with invalid amount: {row}")
-            continue
-    
-    # Update session with filtered list
-    session['parsed_usages'] = filtered_usage_list
-    usage_list = filtered_usage_list
-    
-    # If no valid rows remain after filtering
-    if not usage_list:
-        return jsonify({"success": False, "message": "לא נמצאו שימושים בסכום חיובי"})
-    
-    # Get all active coupons for the user
+    # שולפים את כל הקופונים הפעילים של המשתמש
     all_user_coupons = [cpn for cpn in current_user.coupons if cpn.status == "פעיל"]
     
     if not all_user_coupons:
         return jsonify({"success": False, "message": "אין לך קופונים פעילים שניתן להשתמש בהם"})
     
-    # Find matching coupons by similarity for each identified usage
+    # מחפשים קופונים מתאימים לפי דמיון לכל שימוש שזוהה
     for row in usage_list:
         row_company = row.get('company', '').lower()
         matched_coupons = []
         
         for cpn in all_user_coupons:
-            # Use multiple text similarity algorithms
+            # משתמשים בכמה אלגוריתמים לזיהוי דמיון טקסט
             ratio = fuzz.ratio(row_company, cpn.company.lower())
             partial_ratio = fuzz.partial_ratio(row_company, cpn.company.lower())
             token_sort_ratio = fuzz.token_sort_ratio(row_company, cpn.company.lower())
             
-            # Take the highest score from all algorithms
+            # לוקחים את הציון הגבוה ביותר מכל האלגוריתמים
             similarity = max(ratio, partial_ratio, token_sort_ratio)
             remaining_balance = cpn.value - cpn.used_value
             
-            if similarity >= 60:  # Lower threshold for more matches
+            print(f"Similarity between '{row_company}' and '{cpn.company.lower()}': {similarity}")
+            
+            if similarity >= 60:  # רף מופחת לקבלת יותר התאמות
                 matched_coupons.append({
                     'id': cpn.id,
                     'company': cpn.company,
@@ -3818,8 +3790,9 @@ def load_review_modal():
                     'remaining_balance': remaining_balance
                 })
         
-        # If no good matches, include all active coupons
+        # אם אין התאמות טובות, נחזיר את כל הקופונים הפעילים
         if not matched_coupons:
+            print(f"No good matches found for '{row_company}', including all active coupons")
             matched_coupons = [{
                 'id': cpn.id,
                 'company': cpn.company,
@@ -3829,12 +3802,13 @@ def load_review_modal():
         
         row['matched_coupons'] = matched_coupons
     
-    # Return only the modal content (not a full page)
+    # מחזירים את תוכן המודל בלבד (לא עמוד שלם)
     form = UsageExplanationForm()
     return render_template('review_usage_modal.html',
                           usage_list=usage_list,
                           current_user=current_user,
                           form=form)
+
 
 @coupons_bp.route('/process_review_form', methods=['POST'])
 @login_required
@@ -4015,25 +3989,65 @@ from app.forms import UsageExplanationForm
 @login_required
 def review_usage_findings():
     """
-    Display the usage review screen within a modal.
-    Instead of showing a separate page, redirects back to the home page with a parameter to show the modal.
+    מציג את מסך סקירת השימושים שזוהו (עמוד נפרד, לא מודל).
+    בעדיפות להשתמש במודל באמצעות load_review_modal, אבל שומרים פונקציה זו כגיבוי.
     """
-    # For POST requests - process the form
-    if request.method == 'POST':
-        return process_review_form()
-    
-    # For GET requests - redirect to the home page with a parameter to show the modal
-    else:
-        # Check if there is data in the session
+    # עבור בקשות GET - מציג את מסך הסקירה
+    if request.method == 'GET':
+        # מקבל נתונים מהסשן
         usage_list = session.get('parsed_usages', [])
+        
         if not usage_list:
             flash("לא נמצאו נתוני שימוש. הזן טקסט תחילה.", "danger")
             return redirect(url_for('profile.index'))
+        
+        # שולפים את כל הקופונים הפעילים של המשתמש
+        all_user_coupons = [cpn for cpn in current_user.coupons if cpn.status == "פעיל"]
+        
+        # מחפשים קופונים מתאימים לפי דמיון
+        for row in usage_list:
+            row_company = row.get('company', '').lower()
+            matched_coupons = []
             
-        # Redirect to the home page with a parameter to show the review modal
-        # The modal will be loaded with data from the session via load_review_modal endpoint
-        return redirect(url_for('profile.index', show_review_modal=1))
+            for cpn in all_user_coupons:
+                # אלגוריתמי התאמה
+                ratio = fuzz.ratio(row_company, cpn.company.lower())
+                partial_ratio = fuzz.partial_ratio(row_company, cpn.company.lower())
+                token_sort_ratio = fuzz.token_sort_ratio(row_company, cpn.company.lower())
+                
+                # לוקחים את הציון הגבוה ביותר
+                similarity = max(ratio, partial_ratio, token_sort_ratio)
+                remaining_balance = cpn.value - cpn.used_value
+                
+                if similarity >= 60:  # סף נמוך יותר להתאמות
+                    matched_coupons.append({
+                        'id': cpn.id,
+                        'company': cpn.company,
+                        'code': cpn.code,
+                        'remaining_balance': remaining_balance
+                    })
+            
+            # אם אין התאמות טובות, נכלול את כל הקופונים הפעילים
+            if not matched_coupons:
+                matched_coupons = [{
+                    'id': cpn.id,
+                    'company': cpn.company,
+                    'code': cpn.code,
+                    'remaining_balance': cpn.value - cpn.used_value
+                } for cpn in all_user_coupons]
+                
+            row['matched_coupons'] = matched_coupons
+            
+        # מציג את תבנית הסקירה (עמוד מלא)
+        form = UsageExplanationForm()
+        return render_template('review_usage.html',
+                              usage_list=usage_list,
+                              current_user=current_user,
+                              form=form)
     
+    # עבור בקשות POST - מעבד את הטופס (פתרון פשוט: העברה ל-process_review_form)
+    elif request.method == 'POST':
+        return process_review_form()
 
 @coupons_bp.route('/clear_usage_session', methods=['POST'])
 @login_required

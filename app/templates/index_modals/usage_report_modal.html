@@ -117,16 +117,49 @@
   /* ===== Modal Content Styles ===== */
   .modal-content {
       background-color: #fff;
-      margin: 10% auto;
+      margin: 5% auto; /* Reduced from 10% to 5% to allow more space */
       border-radius: 12px;
       padding: 25px;
-      width: 800px;
-      max-width: 90%;
+      width: 90%;
+      max-width: 1000px; /* Increased from 800px for more space */
       box-shadow: 0 4px 16px rgba(0,0,0,0.2);
       position: relative;
       direction: rtl;
-      max-height: 85vh;
+      max-height: 90vh; /* Increased from 85vh to use more screen space */
       overflow-y: auto;
+      transition: all 0.3s ease-in-out; /* Smooth transition for size changes */
+  }
+  
+  /* Special class for review mode - larger modal */
+  .modal.review-mode .modal-content {
+      max-width: 1200px; /* Even larger in review mode */
+      max-height: 90vh;
+      width: 95%; /* Wider in review mode */
+      margin: 3vh auto; /* Smaller top margin */
+      transition: all 0.3s ease-in-out; /* Smooth transition */
+  }
+  
+  /* Enhanced review mode styles */
+  #usageReportModal.review-mode .modal-content {
+      width: 95%; /* Wider in review mode */
+      max-width: 1200px; /* Maximum width increased */
+      max-height: 94vh; /* More vertical space */
+      margin: 3vh auto; /* Smaller top margin */
+  }
+  
+  /* Animation for modal expansion in review mode */
+  @keyframes modalExpand {
+      from { transform: scale(0.95); opacity: 0.8; }
+      to { transform: scale(1); opacity: 1; }
+  }
+  
+  .modal-content.expanding {
+      animation: modalExpand 0.3s ease-out forwards;
+  }
+  
+  /* Additional animation class for review mode */
+  .review-mode-animation {
+      animation: modalExpand 0.4s ease-out forwards;
   }
   
   /* Close button */
@@ -498,369 +531,681 @@
   </style>
   
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // ==========================================
-    // Global reusable function for closing modal
-    // ==========================================
-    function closeModal() {
-        const modal = document.getElementById('usageReportModal');
-        if (modal) {
-            modal.classList.remove('active');
-        }
-    }
-    
-    // ==========================================
-    // Initialize modal elements
-    // ==========================================
-    const modal = document.getElementById('usageReportModal');
-    
-    // Only set up event listeners if modal exists on the page
-    if (modal) {
-        const closeBtn = modal.querySelector('.close-modal');
-        const cancelBtn = modal.querySelector('.cancel-button');
-        
-        // Close modal when X button is clicked
-        if (closeBtn) {
-            // Make sure we remove any existing handlers first
-            closeBtn.removeEventListener('click', closeModal);
-            closeBtn.addEventListener('click', closeModal);
-        }
-        
-        // Close modal when Cancel button is clicked
-        if (cancelBtn) {
-            cancelBtn.removeEventListener('click', closeModal);
-            cancelBtn.addEventListener('click', closeModal);
-        }
-        
-        // Close modal when clicking on the backdrop
-        modal.removeEventListener('click', function(e) {
-            if (e.target === modal) closeModal();
-        });
-        
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) closeModal();
-        });
-        
-        // Add escape key handler
-        document.removeEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
-        });
-        
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
-        });
-    }
-    
-    {% if review_mode %}
-    // ==========================================
-    // Logic for review mode
-    // ==========================================
-    
-    // Fill the amount input with remaining balance when "Use All" button is clicked
-    document.querySelectorAll(".btn-used").forEach(function(button) {
-        button.addEventListener("click", function () {
-            let row = this.closest("tr");
-            let selectElem = row.querySelector(".coupon-select");
-            let selectedOption = selectElem.options[selectElem.selectedIndex];
-            let remainingAmount = parseFloat(selectedOption.getAttribute("data-remaining")).toFixed(2);
-            let amountInput = row.querySelector(".amount-input");
-  
-            if (remainingAmount !== null) {
-                amountInput.value = remainingAmount;
+    // Modal management functions
+    document.addEventListener('DOMContentLoaded', function() {
+        // ==========================================
+        // Global reusable function for closing modal
+        // ==========================================
+        function closeModal() {
+            const modal = document.getElementById('usageReportModal');
+            if (modal) {
+                modal.classList.remove('active');
+                modal.classList.remove('review-mode'); // Remove review mode class when closing
             }
-        });
-    });
-    
-    // Handle coupon selection change - populate with all coupons when "other" is selected
-    document.querySelectorAll(".coupon-select").forEach(function(selectElem) {
-        selectElem.addEventListener("change", function () {
-            if (this.value === "other") {
-                let newOptions = `<option value="" disabled selected>בחר קופון...</option>`;
-  
-                // Fetch all active coupons via AJAX
-                fetch('{{ url_for("coupons.get_active_coupons") }}')
+        }
+        
+        // ==========================================
+        // Function to switch to review mode with animation
+        // ==========================================
+        function switchToReviewMode() {
+            const modal = document.getElementById('usageReportModal');
+            
+            // Mark modal as being in review mode
+            modal.classList.add('review-mode');
+            
+            // Add expansion animation
+            const modalContent = modal.querySelector('.modal-content');
+            modalContent.classList.add('review-mode-animation');
+            
+            // Remove animation class after it completes
+            setTimeout(() => {
+                modalContent.classList.remove('review-mode-animation');
+            }, 400);
+        }
+        
+        // ==========================================
+        // Initialize modal elements
+        // ==========================================
+        const modal = document.getElementById('usageReportModal');
+        
+        // Only set up event listeners if modal exists on the page
+        if (modal) {
+            const closeBtn = modal.querySelector('.close-modal');
+            const cancelBtn = modal.querySelector('.cancel-button');
+            
+            // Close modal when X button is clicked
+            if (closeBtn) {
+                // Make sure we remove any existing handlers first
+                closeBtn.removeEventListener('click', closeModal);
+                closeBtn.addEventListener('click', closeModal);
+            }
+            
+            // Close modal when Cancel button is clicked
+            if (cancelBtn) {
+                cancelBtn.removeEventListener('click', closeModal);
+                cancelBtn.addEventListener('click', closeModal);
+            }
+            
+            // Close modal when clicking on the backdrop
+            modal.removeEventListener('click', function(e) {
+                if (e.target === modal) closeModal();
+            });
+            
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) closeModal();
+            });
+            
+            // Add escape key handler
+            document.removeEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+            });
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+            });
+            
+            // Check if we're in review mode (based on form presence)
+            if (modal.querySelector('#reviewUsageForm')) {
+                switchToReviewMode();
+            }
+        }
+        
+        // ==========================================
+        // Review mode functionality
+        // ==========================================
+        if (modal && modal.querySelector('#reviewUsageForm')) {
+            // Fill the amount input with remaining balance when "Use All" button is clicked
+            document.querySelectorAll(".btn-used").forEach(function(button) {
+                button.addEventListener("click", function() {
+                    let row = this.closest("tr");
+                    let selectElem = row.querySelector(".coupon-select");
+                    let selectedOption = selectElem.options[selectElem.selectedIndex];
+                    let remainingAmount = parseFloat(selectedOption.getAttribute("data-remaining")).toFixed(2);
+                    let amountInput = row.querySelector(".amount-input");
+        
+                    if (remainingAmount !== null) {
+                        amountInput.value = remainingAmount;
+                    }
+                });
+            });
+            
+            // Handle coupon selection change - populate with all coupons when "other" is selected
+            document.querySelectorAll(".coupon-select").forEach(function(selectElem) {
+                selectElem.addEventListener("change", function() {
+                    if (this.value === "other") {
+                        let newOptions = `<option value="" disabled selected>בחר קופון...</option>`;
+        
+                        // Fetch all active coupons via AJAX
+                        fetch('/coupons/get_active_coupons')
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.coupons && data.coupons.length > 0) {
+                                    data.coupons.forEach(cpn => {
+                                        newOptions += `<option value="${cpn.id}" 
+                                                            data-remaining="${cpn.remaining_balance}">
+                                                        ${cpn.company} (${cpn.code}) - נותר: ${cpn.remaining_balance} ₪
+                                                    </option>`;
+                                    });
+                                }
+                                this.innerHTML = newOptions;
+                            })
+                            .catch(error => {
+                                console.error('Error fetching coupons:', error);
+                            });
+                    }
+                });
+            });
+            
+            // Handle Back button to return to input mode
+            const backBtn = document.getElementById('backToInput');
+            if (backBtn) {
+                backBtn.addEventListener('click', function() {
+                    // Ask server to clear the session and reload modal in input mode
+                    fetch('/coupons/clear_usage_session', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.coupons && data.coupons.length > 0) {
-                            data.coupons.forEach(cpn => {
-                                newOptions += `<option value="${cpn.id}" 
-                                                    data-remaining="${cpn.remaining_balance}">
-                                                ${cpn.company} (${cpn.code}) - נותר: ${cpn.remaining_balance} ₪
-                                              </option>`;
+                        if (data.success) {
+                            // Reload modal in input mode
+                            loadUsageReportModal(false);
+                        }
+                    });
+                });
+            }
+            
+            // Handle form submission for the review form
+            const reviewForm = document.getElementById('reviewUsageForm');
+            if (reviewForm) {
+                reviewForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Show loading state
+                    const submitBtn = reviewForm.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = 'מעבד...';
+                    submitBtn.disabled = true;
+                    
+                    // Prepare data from the form
+                    const rows = [];
+                    const tableRows = document.querySelectorAll('.usage-table tbody tr');
+                    
+                    tableRows.forEach((row, index) => {
+                        const checkbox = row.querySelector('.usage-checkbox');
+                        if (checkbox && checkbox.checked) {
+                            const selectElem = row.querySelector('.coupon-select');
+                            const amountInput = row.querySelector('.amount-input');
+                            
+                            rows.push({
+                                checked: true,
+                                coupon_id: selectElem.value,
+                                amount: amountInput.value
                             });
                         }
-                        this.innerHTML = newOptions;
+                    });
+                    
+                    // Submit data to server
+                    fetch('/coupons/confirm_usage_update', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({ usages: rows })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Restore submit button state
+                        submitBtn.textContent = originalText;
+                        submitBtn.disabled = false;
+                        
+                        if (data.success) {
+                            // Close the modal
+                            closeModal();
+                            
+                            // Display success messages
+                            if (data.successes && data.successes.length > 0) {
+                                showFlashMessage(data.successes.join('<br>'), 'success');
+                            }
+                            
+                            // Display error messages if any
+                            if (data.errors && data.errors.length > 0) {
+                                showFlashMessage(data.errors.join('<br>'), 'error');
+                            }
+                        } else {
+                            showFlashMessage(data.message || 'אירעה שגיאה בעדכון השימושים', 'error');
+                        }
                     })
                     .catch(error => {
-                        console.error('Error fetching coupons:', error);
+                        console.error('Error:', error);
+                        submitBtn.textContent = originalText;
+                        submitBtn.disabled = false;
+                        showFlashMessage('אירעה שגיאה בעדכון השימושים', 'error');
                     });
+                });
             }
-        });
-    });
-    
-    // Handle Back button to return to input mode
-    const backBtn = document.getElementById('backToInput');
-    if (backBtn) {
-        backBtn.addEventListener('click', function() {
-            // Ask server to clear the session and reload modal in input mode
-            fetch('{{ url_for("coupons.clear_usage_session") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Reload modal in input mode
-                    loadUsageReportModal();
-                }
-            });
-        });
-    }
-    
-    // Handle form submission for the review form
-    const reviewForm = document.getElementById('reviewUsageForm');
-    if (reviewForm) {
-        reviewForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Prepare data from the form
-            const rows = [];
-            const tableRows = document.querySelectorAll('.usage-table tbody tr');
-            
-            tableRows.forEach((row, index) => {
-                const checkbox = row.querySelector('.usage-checkbox');
-                if (checkbox && checkbox.checked) {
-                    const selectElem = row.querySelector('.coupon-select');
-                    const amountInput = row.querySelector('.amount-input');
+        }
+        
+        // ==========================================
+        // Input mode functionality (text input mode)
+        // ==========================================
+        if (modal && modal.querySelector('#usageReportForm')) {
+            // Handle form submission with AJAX
+            const form = document.getElementById('usageReportForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
                     
-                    rows.push({
-                        checked: true,
-                        coupon_id: selectElem.value,
-                        amount: amountInput.value
+                    const formData = new FormData(form);
+                    
+                    // Show loading state
+                    const submitBtn = form.querySelector('.submit-button');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = 'מעבד...';
+                    submitBtn.disabled = true;
+                    
+                    // Add explicit AJAX header to ensure server handles it as an AJAX request
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        // Check if the response is successful
+                        if (!response.ok) {
+                            throw new Error('שגיאת רשת: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Restore submit button state
+                        submitBtn.textContent = originalText;
+                        submitBtn.disabled = false;
+                        
+                        // Process successful response
+                        if (data.success) {
+                            if (data.reload_modal) {
+                                // Load the review content directly
+                                if (data.modal_url) {
+                                    loadReviewModalContent(data.modal_url);
+                                } else {
+                                    // Fallback to the old method
+                                    loadUsageReportModal(true);
+                                }
+                            } else if (data.redirect) {
+                                // Handle redirect if needed
+                                window.location.href = data.redirect;
+                            } else {
+                                // Close modal and show success message
+                                closeModal();
+                                
+                                // Display success message using the site's flash message system
+                                if (typeof showFlashMessage === 'function') {
+                                    showFlashMessage(data.message || 'הדיווח נשלח בהצלחה', 'success');
+                                } else {
+                                    alert(data.message || 'הדיווח נשלח בהצלחה');
+                                }
+                                
+                                // Reset the form
+                                form.reset();
+                            }
+                        } else {
+                            // Handle error response
+                            if (typeof showFlashMessage === 'function') {
+                                showFlashMessage(data.message || 'אירעה שגיאה בשליחת הדיווח', 'error');
+                            } else {
+                                alert(data.message || 'אירעה שגיאה בשליחת הדיווח');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        // Handle network errors or JSON parsing errors
+                        console.error('Error:', error);
+                        submitBtn.textContent = originalText;
+                        submitBtn.disabled = false;
+                        
+                        // Display error message
+                        if (typeof showFlashMessage === 'function') {
+                            showFlashMessage('אירעה שגיאה בשליחת הדיווח', 'error');
+                        } else {
+                            alert('אירעה שגיאה בשליחת הדיווח');
+                        }
                     });
-                }
-            });
-            
-            // Submit data to server
-            fetch('{{ url_for("coupons.confirm_usage_update") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ usages: rows })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Close the modal
-                    closeModal();
+                });
+            }
+        }
+    });
+
+    // ==========================================
+    // Improved modal loading and opening functions
+    // ==========================================
+
+    // Function to reload the modal with optional review mode
+    function loadUsageReportModal(showReview = false) {
+        // Build URL with or without review parameter
+        let url = '/coupons/load_usage_report_modal';
+        if (showReview) {
+            url += '?show_review=true';
+        }
+        
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                // Replace modal content in the container
+                const modalContainer = document.getElementById('usageModalContainer');
+                if (modalContainer) {
+                    modalContainer.innerHTML = html;
                     
-                    // Display success messages
-                    if (data.successes && data.successes.length > 0) {
-                        showFlashMessage(data.successes.join('<br>'), 'success');
-                    }
+                    // Execute scripts from the loaded content
+                    // This is necessary because innerHTML doesn't execute scripts
+                    const scriptTags = modalContainer.querySelectorAll('script');
+                    scriptTags.forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => {
+                            newScript.setAttribute(attr.name, attr.value);
+                        });
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
                     
-                    // Display error messages if any
-                    if (data.errors && data.errors.length > 0) {
-                        showFlashMessage(data.errors.join('<br>'), 'error');
-                    }
-                } else {
-                    showFlashMessage(data.message || 'אירעה שגיאה בעדכון השימושים', 'error');
+                    // Open the modal properly with all event listeners
+                    openUsageReportModal(showReview);
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                showFlashMessage('אירעה שגיאה בעדכון השימושים', 'error');
+                console.error('Error loading modal:', error);
+                if (typeof showFlashMessage === 'function') {
+                    showFlashMessage('אירעה שגיאה בטעינת המודל', 'error');
+                } else {
+                    alert('אירעה שגיאה בטעינת המודל');
+                }
+            });
+    }
+
+    // Function to load review modal content
+    function loadReviewModalContent(url) {
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                // Force display of modal first
+                const modal = document.getElementById('usageReportModal');
+                modal.style.display = 'block';
+                modal.classList.add('active');
+                modal.classList.add('review-mode');
+                
+                // Get the content container
+                const contentContainer = modal.querySelector('.modal-content');
+                
+                // Replace content with animation
+                contentContainer.classList.add('expanding');
+                contentContainer.innerHTML = html;
+                
+                // Setup handlers after content is loaded
+                setTimeout(() => {
+                    setupReviewFormHandlers();
+                    contentContainer.classList.remove('expanding');
+                }, 100);
+            })
+            .catch(error => {
+                console.error('Error loading review content:', error);
+                alert('אירעה שגיאה בטעינת תוכן הסקירה');
+            });
+    }
+    
+    // Set up event handlers for the review form
+    function setupReviewFormHandlers() {
+        // Fill amount input when "Use All" button is clicked
+        document.querySelectorAll(".btn-used").forEach(function(button) {
+            button.addEventListener("click", function() {
+                let row = this.closest("tr");
+                let selectElem = row.querySelector(".coupon-select");
+                let selectedOption = selectElem.options[selectElem.selectedIndex];
+                let remainingAmount = parseFloat(selectedOption.getAttribute("data-remaining")).toFixed(2);
+                let amountInput = row.querySelector(".amount-input");
+                
+                if (remainingAmount !== null) {
+                    amountInput.value = remainingAmount;
+                }
             });
         });
-    }
-      
-    {% else %}
-    // ==========================================
-    // Logic for text input mode
-    // ==========================================
+        
+        // Handle coupon selection change - populate with all coupons when "other" is selected
+        document.querySelectorAll(".coupon-select").forEach(function(selectElem) {
+            selectElem.addEventListener("change", function() {
+                if (this.value === "other") {
+                    let newOptions = `<option value="" disabled selected>בחר קופון...</option>`;
     
-    // Handle form submission with AJAX
-    const form = document.getElementById('usageReportForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(form);
-            
-            // Show loading state
-            const submitBtn = form.querySelector('.submit-button');
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'מעבד...';
-            submitBtn.disabled = true;
-            
-            // Add explicit AJAX header to ensure server handles it as an AJAX request
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    // Fetch all active coupons via AJAX
+                    fetch('/coupons/get_active_coupons')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.coupons && data.coupons.length > 0) {
+                                data.coupons.forEach(cpn => {
+                                    newOptions += `<option value="${cpn.id}" 
+                                                        data-remaining="${cpn.remaining_balance}">
+                                                    ${cpn.company} (${cpn.code}) - נותר: ${cpn.remaining_balance} ₪
+                                                </option>`;
+                                });
+                            }
+                            this.innerHTML = newOptions;
+                        })
+                        .catch(error => {
+                            console.error('Error fetching coupons:', error);
+                        });
                 }
-            })
-            .then(response => {
-                // Check if the response is successful
-                if (!response.ok) {
-                    throw new Error('שגיאת רשת: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Restore submit button state
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
+            });
+        });
+        
+        // Handle Back button
+        const backBtn = document.getElementById('backToInput');
+        if (backBtn) {
+            backBtn.addEventListener('click', function() {
+                // Ask server to clear the session and reload modal in input mode
+                fetch('/coupons/clear_usage_session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload modal in input mode
+                        loadUsageReportModal(false);
+                    }
+                });
+            });
+        }
+        
+        // Handle form submission
+        const reviewForm = document.getElementById('reviewUsageForm');
+        if (reviewForm) {
+            reviewForm.addEventListener('submit', function(e) {
+                e.preventDefault();
                 
-                // Process successful response
-                if (data.success) {
-                    if (data.reload_modal) {
-                        // Reload modal in review mode if needed
-                        loadUsageReportModal(data.show_review);
-                    } else if (data.redirect) {
-                        // Handle redirect if needed
-                        window.location.href = data.redirect;
-                    } else {
-                        // Close modal and show success message
-                        closeModal();
+                // Show loading state
+                const submitBtn = reviewForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'מעבד...';
+                submitBtn.disabled = true;
+                
+                // Prepare data from the form
+                const rows = [];
+                const tableRows = document.querySelectorAll('.usage-table tbody tr');
+                
+                tableRows.forEach((row, index) => {
+                    const checkbox = row.querySelector('.usage-checkbox');
+                    if (checkbox && checkbox.checked) {
+                        const selectElem = row.querySelector('.coupon-select');
+                        const amountInput = row.querySelector('.amount-input');
                         
-                        // Display success message using the site's flash message system
-                        if (typeof showFlashMessage === 'function') {
-                            showFlashMessage(data.message || 'הדיווח נשלח בהצלחה', 'success');
-                        } else {
-                            alert(data.message || 'הדיווח נשלח בהצלחה');
+                        rows.push({
+                            checked: true,
+                            coupon_id: selectElem.value,
+                            amount: amountInput.value
+                        });
+                    }
+                });
+                
+                // Submit data to server
+                fetch('/coupons/confirm_usage_update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ usages: rows })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Restore submit button state
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    
+                    if (data.success) {
+                        // Close the modal
+                        const modal = document.getElementById('usageReportModal');
+                        if (modal) {
+                            modal.classList.remove('active');
+                            modal.classList.remove('review-mode');
                         }
                         
-                        // Reset the form
-                        form.reset();
-                    }
-                } else {
-                    // Handle error response
-                    if (typeof showFlashMessage === 'function') {
-                        showFlashMessage(data.message || 'אירעה שגיאה בשליחת הדיווח', 'error');
+                        // Display success messages
+                        if (data.successes && data.successes.length > 0) {
+                            showFlashMessage(data.successes.join('<br>'), 'success');
+                        }
+                        
+                        // Display error messages if any
+                        if (data.errors && data.errors.length > 0) {
+                            showFlashMessage(data.errors.join('<br>'), 'error');
+                        }
                     } else {
-                        alert(data.message || 'אירעה שגיאה בשליחת הדיווח');
+                        showFlashMessage(data.message || 'אירעה שגיאה בעדכון השימושים', 'error');
                     }
-                }
-            })
-            .catch(error => {
-                // Handle network errors or JSON parsing errors
-                console.error('Error:', error);
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                
-                // Display error message
-                if (typeof showFlashMessage === 'function') {
-                    showFlashMessage('אירעה שגיאה בשליחת הדיווח', 'error');
-                } else {
-                    alert('אירעה שגיאה בשליחת הדיווח');
-                }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    showFlashMessage('אירעה שגיאה בעדכון השימושים', 'error');
+                });
             });
-        });
+        }
     }
-    {% endif %}
-  });
-  
-  // ==========================================
-  // Improved modal loading and opening functions
-  // ==========================================
-  
-  // Function to reload the modal with optional review mode
-  function loadUsageReportModal(showReview = false) {
-      // Build URL with or without review parameter
-      let url = '{{ url_for("coupons.load_usage_report_modal") }}';
-      if (showReview) {
-          url += '?show_review=true';
-      }
-      
-      fetch(url)
-          .then(response => response.text())
-          .then(html => {
-              // Replace modal content in the container
-              const modalContainer = document.getElementById('usageModalContainer');
-              if (modalContainer) {
-                  modalContainer.innerHTML = html;
-                  
-                  // Execute scripts from the loaded content
-                  // This is necessary because innerHTML doesn't execute scripts
-                  const scriptTags = modalContainer.querySelectorAll('script');
-                  scriptTags.forEach(oldScript => {
-                      const newScript = document.createElement('script');
-                      Array.from(oldScript.attributes).forEach(attr => {
-                          newScript.setAttribute(attr.name, attr.value);
-                      });
-                      newScript.textContent = oldScript.textContent;
-                      oldScript.parentNode.replaceChild(newScript, oldScript);
-                  });
-                  
-                  // Open the modal properly with all event listeners
-                  openUsageReportModal();
-              }
-          })
-          .catch(error => {
-              console.error('Error loading modal:', error);
-              if (typeof showFlashMessage === 'function') {
-                  showFlashMessage('אירעה שגיאה בטעינת המודל', 'error');
-              } else {
-                  alert('אירעה שגיאה בטעינת המודל');
-              }
-          });
-  }
-  
-  // Function to open the modal and ensure all event listeners are attached properly
-  function openUsageReportModal() {
-      const modal = document.getElementById('usageReportModal');
-      if (modal) {
-          // Open the modal
-          modal.classList.add('active');
-          
-          // Centralized function for closing the modal
-          const closeModal = function() {
-              modal.classList.remove('active');
-          };
-          
-          // Add event listeners (after removing any existing ones)
-          const closeBtn = modal.querySelector('.close-modal');
-          const cancelBtn = modal.querySelector('.cancel-button');
-          
-          // Close on X button click
-          if (closeBtn) {
-              // Important: We need to add a named function for proper cleanup
-              closeBtn.removeEventListener('click', closeModal);
-              closeBtn.addEventListener('click', closeModal);
-          }
-          
-          // Close on Cancel button click
-          if (cancelBtn) {
-              cancelBtn.removeEventListener('click', closeModal);
-              cancelBtn.addEventListener('click', closeModal);
-          }
-          
-          // Close on backdrop click
-          const backdropClickHandler = function(e) {
-              if (e.target === modal) {
-                  closeModal();
-              }
-          };
-          
-          modal.removeEventListener('click', backdropClickHandler);
-          modal.addEventListener('click', backdropClickHandler);
-          
-          // Add escape key handler
-          const escKeyHandler = function(e) {
-              if (e.key === 'Escape' && modal.classList.contains('active')) {
-                  closeModal();
-              }
-          };
-          
-          document.removeEventListener('keydown', escKeyHandler);
-          document.addEventListener('keydown', escKeyHandler);
-      }
-  }
-  </script>
+
+    // Function to open the modal and ensure all event listeners are attached properly
+    function openUsageReportModal(showReview = false) {
+        const modal = document.getElementById('usageReportModal');
+        if (modal) {
+            // Open the modal
+            modal.classList.add('active');
+            
+            // Add review mode class if needed
+            if (showReview) {
+                modal.classList.add('review-mode');
+                
+                // Get the modal content element
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    // Add expanding animation class
+                    modalContent.classList.add('expanding');
+                    
+                    // Remove the class after animation completes
+                    setTimeout(() => {
+                        modalContent.classList.remove('expanding');
+                    }, 300);
+                }
+            } else {
+                modal.classList.remove('review-mode');
+            }
+            
+            // Centralized function for closing the modal
+            const closeModal = function() {
+                modal.classList.remove('active');
+                modal.classList.remove('review-mode');
+            };
+            
+            // Add event listeners (after removing any existing ones)
+            const closeBtn = modal.querySelector('.close-modal');
+            const cancelBtn = modal.querySelector('.cancel-button');
+            
+            // Close on X button click
+            if (closeBtn) {
+                // Important: We need to add a named function for proper cleanup
+                closeBtn.removeEventListener('click', closeModal);
+                closeBtn.addEventListener('click', closeModal);
+            }
+            
+            // Close on Cancel button click
+            if (cancelBtn) {
+                cancelBtn.removeEventListener('click', closeModal);
+                cancelBtn.addEventListener('click', closeModal);
+            }
+            
+            // Close on backdrop click
+            const backdropClickHandler = function(e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            };
+            
+            modal.removeEventListener('click', backdropClickHandler);
+            modal.addEventListener('click', backdropClickHandler);
+            
+            // Add escape key handler
+            const escKeyHandler = function(e) {
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    closeModal();
+                }
+            };
+            
+            document.removeEventListener('keydown', escKeyHandler);
+            document.addEventListener('keydown', escKeyHandler);
+        }
+    }
+
+    // Generic flash message display function
+    function showFlashMessage(message, type) {
+        // Check if there's a custom flash message function
+        if (window.showCustomFlashMessage) {
+            window.showCustomFlashMessage(message, type);
+            return;
+        }
+        
+        // Fallback flash message implementation
+        const flashContainer = document.getElementById('flash-messages');
+        if (!flashContainer) {
+            // Create container if it doesn't exist
+            const newContainer = document.createElement('div');
+            newContainer.id = 'flash-messages';
+            newContainer.style.position = 'fixed';
+            newContainer.style.top = '20px';
+            newContainer.style.right = '20px';
+            newContainer.style.zIndex = '9999';
+            newContainer.style.direction = 'rtl';
+            document.body.appendChild(newContainer);
+            
+            // Use the new container
+            showFlashMessage(message, type);
+            return;
+        }
+        
+        // Create flash message element
+        const flash = document.createElement('div');
+        flash.className = `flash-message ${type}`;
+        flash.innerHTML = message;
+        
+        // Set styles based on type
+        flash.style.padding = '15px 20px';
+        flash.style.borderRadius = '5px';
+        flash.style.marginBottom = '10px';
+        flash.style.boxShadow = '0 3px 6px rgba(0,0,0,0.16)';
+        flash.style.position = 'relative';
+        flash.style.minWidth = '200px';
+        flash.style.maxWidth = '400px';
+        
+        if (type === 'success') {
+            flash.style.backgroundColor = '#4CAF50';
+            flash.style.color = 'white';
+        } else if (type === 'error' || type === 'danger') {
+            flash.style.backgroundColor = '#F44336';
+            flash.style.color = 'white';
+        } else if (type === 'warning') {
+            flash.style.backgroundColor = '#FF9800';
+            flash.style.color = 'white';
+        } else {
+            flash.style.backgroundColor = '#2196F3';
+            flash.style.color = 'white';
+        }
+        
+        // Add close button
+        const closeBtn = document.createElement('span');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.top = '5px';
+        closeBtn.style.left = '10px';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.fontSize = '20px';
+        closeBtn.onclick = function() {
+            flashContainer.removeChild(flash);
+        };
+        flash.appendChild(closeBtn);
+        
+        // Add to container
+        flashContainer.appendChild(flash);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (flash.parentNode === flashContainer) {
+                flashContainer.removeChild(flash);
+            }
+        }, 5000);
+    }
+    </script>

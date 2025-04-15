@@ -2123,8 +2123,41 @@ def parse_user_usage_text(usage_text, user):
       {{"company": "איקאה", "coupon_value": 50, "amount_paid": 25, "additional_info": "קניית כיסא"}},
       {{"company": "קסטרו", "coupon_value": "", "amount_paid": "", "additional_info": "חולצה במבצע"}}
     ]
+    שים לב שאם אתה מקבל שם באנגלית - תבדוק גם את הגרסה בעברית ואת הגרסה באנגלית. ואם אתה מקבל שם בעברית - תבדוק גם את הגרסה באנגלית וגם את הגרסה בעברית.
     """
 
+    prompt = f"""
+    Here is a text describing coupon usage:
+    \"\"\"{usage_text}\"\"\"
+
+    You must return only companies from the existing list:
+    {companies_str}
+
+    **VERY IMPORTANT**: Be flexible when identifying company names - users may enter names with spelling errors or different spellings. Examples:
+    - "קרפור" should be identified as "Carrefour"
+    - "סופר סל" should be identified as "שופרסל" 
+    - "גוד פארם" should be identified as "GoodPharm"
+    - "פרי פיט" should be identified as "FreeFit"
+    - "מקדונלד" or "מקדונלדז" should be identified as "מקדונלדס"
+    - "ביי מי" should be identified as "BuyMe"
+    - "וולט" should be identified as "Wolt"
+    - "רולדין" or "roladin" should be matched correctly regardless of language
+
+    In general, look for close matches even if spelling is incorrect, when comparing between English and Hebrew, or if letters are missing/extra.
+    If the name is written inaccurately, note this in additional_info and ensure you return the correct company name.
+
+    Each object in the output contains:
+    - company: The company name **as it appears** in the list (do not invent names!)
+    - amount_used: The amount used in NIS
+    - coupon_value: The full value of the coupon (if in the text, otherwise empty)
+    - additional_info: Additional description from the user
+
+    Example output:
+    [
+      {{"company": "איקאה", "amount_used": 50, "coupon_value": 100, "additional_info": "Bought a chair"}},
+      {{"company": "קרפור", "amount_used": 75, "coupon_value": null, "additional_info": "Grocery shopping"}}
+    ]
+    """
     # קריאה ל-GPT
     try:
         response = openai.ChatCompletion.create(

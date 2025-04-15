@@ -7,7 +7,7 @@
   <div class="filter-button-container">
     <button id="open-filters-modal" class="filter-button">
       <span class="filter-icon">⚙️</span>
-      <span>סינון לפי חברות וסוגי קופונים</span>
+      <span>סינון לפי חברות, קטגוריות וסוגי קופונים</span>
     </button>
   </div>
   
@@ -23,7 +23,7 @@
       <div class="big-number" id="percentage-savings-value">0%</div>
       <p>מכלל הקופונים</p>
     </div>
-    <!-- New statistics cards for total coupons and usage rate -->
+    <!-- Statistics cards for total coupons and usage rate -->
     <div class="stats-card" id="total-coupons-card">
       <h3>מספר קופונים</h3>
       <div class="big-number" id="total-coupons-count-value">0</div>
@@ -36,6 +36,7 @@
     </div>
   </div>
   
+  <!-- SECTION 1: Original Charts -->
   <div class="stats-charts">
     <div class="chart-container">
       <h3>התפלגות החיסכון לפי חברות</h3>
@@ -54,35 +55,142 @@
       <div id="timelineChart" class="chart" style="direction: rtl;"></div>
     </div>
     
-    <!-- New Chart: Savings Percentage by Company -->
+    <!-- Savings Percentage by Company -->
     <div class="chart-container">
       <h3>אחוז החיסכון לפי חברה</h3>
       <div class="chart-info-icon" data-tooltip="גרף זה מציג את אחוז החיסכון (כמה חסכת מתוך הערך המקורי של הקופונים) לכל חברה. מוצגות החברות בעלות אחוז החיסכון הגבוה ביותר.">ℹ️</div>
       <div id="savingsPercentageChart" class="chart"></div>
     </div>
     
-    <!-- New Chart: Cumulative Savings Over Time -->
+    <!-- Cumulative Savings Over Time -->
     <div class="chart-container">
       <h3>חיסכון מצטבר לאורך זמן</h3>
       <div class="chart-info-icon" data-tooltip="גרף זה מציג את החיסכון המצטבר שלך לאורך זמן - כלומר, כמה סך הכל חסכת נכון לכל נקודת זמן.">ℹ️</div>
       <div id="cumulativeSavingsChart" class="chart" style="direction: rtl;"></div>
     </div>
     
-    <!-- New Chart: Active vs Used Coupons by Company -->
+    <!-- Active vs Used Coupons by Company -->
     <div class="chart-container">
       <h3>קופונים פעילים ומנוצלים לפי חברה</h3>
       <div class="chart-info-icon" data-tooltip="גרף זה מציג את היחס בין קופונים פעילים לקופונים שכבר נוצלו בכל חברה. הגרף מציג את החברות בעלות מספר הקופונים הגבוה ביותר.">ℹ️</div>
       <div id="couponUsageChart" class="chart"></div>
     </div>
     
-    <!-- New Chart: One-Time vs Non-One-Time Coupons -->
+    <!-- One-Time vs Non-One-Time Coupons -->
     <div class="chart-container">
       <h3>קופונים חד פעמיים ורב פעמיים</h3>
       <div class="chart-info-icon" data-tooltip="גרף זה מציג את היחס בין קופונים חד פעמיים (שניתן לנצל פעם אחת בלבד) לבין קופונים רב פעמיים (שניתן לנצל מספר פעמים) בכל חברה.">ℹ️</div>
       <div id="couponTypeChart" class="chart"></div>
     </div>
   </div>
+
+  <!-- SECTION 2: Savings Analysis by Category -->
+  <div class="section-divider">
+    <h2>ניתוח חיסכון לפי קטגוריות</h2>
+    <p class="section-description">היכן אתה חוסך הכי הרבה כסף ואילו קטגוריות מספקות את התשואה הטובה ביותר</p>
+  </div>
   
+  <div class="stats-charts">
+    <!-- Total Savings by Category (Bar Chart) -->
+    <div class="chart-container">
+      <h3>סך החיסכון לפי קטגוריה</h3>
+      <div class="chart-info-icon" data-tooltip="גרף זה מציג את סך החיסכון שלך בכל קטגוריה. הקטגוריות מסודרות לפי סכום החיסכון מהגבוה לנמוך.">ℹ️</div>
+      <div id="categorySavingsChart" class="chart"></div>
+    </div>
+    
+    <!-- ROI Analysis by Category (Scatter Plot) -->
+    <div class="chart-container">
+      <h3>ניתוח ROI לפי קטגוריה</h3>
+      <div class="chart-info-icon" data-tooltip="גרף זה מציג את יחס התשואה להשקעה (ROI) עבור כל קטגוריה. ציר X מייצג את ההשקעה הממוצעת, ציר Y מייצג את אחוז החיסכון, וגודל הבועה מייצג את מספר הקופונים בקטגוריה.">ℹ️</div>
+      <div id="categoryROIChart" class="chart"></div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: Usage Trends Over Time -->
+  <div class="section-divider">
+    <h2>מגמות שימוש לאורך זמן</h2>
+    <p class="section-description">הבנת דפוסי השימוש בקופונים לאורך זמן</p>
+  </div>
+  
+  <div class="stats-charts">
+    <!-- Coupon Usage by Month (Line Chart) -->
+    <div class="chart-container">
+      <h3>שימוש בקופונים לפי חודש</h3>
+      <div class="chart-info-icon" data-tooltip="גרף זה מציג כמה קופונים נוצלו וכמה נרכשו בכל חודש, מה שמאפשר לך לזהות מגמות עונתיות ודפוסי שימוש.">ℹ️</div>
+      <div id="monthlyUsageChart" class="chart"></div>
+    </div>
+    
+    <!-- Day/Hour of Coupon Usage (Heat Map) -->
+    <div class="chart-container">
+      <h3>יום/שעה של שימוש בקופון</h3>
+      <div class="chart-info-icon" data-tooltip="מפת חום זו מציגה את תדירות השימוש בקופונים לפי יום בשבוע ושעה ביום, מה שעוזר לזהות מתי אתה נוטה להשתמש בקופונים שלך.">ℹ️</div>
+      <div id="usageHeatmapChart" class="chart"></div>
+    </div>
+    
+    <!-- Coupon Usage by Season/Quarter (Stacked Bar Chart) -->
+    <div class="chart-container">
+      <h3>חלוקת שימוש קופונים לפי עונה/רבעון</h3>
+      <div class="chart-info-icon" data-tooltip="גרף זה מציג כיצד השימוש בקופונים מתחלק לפי עונות או רבעונים, ומחולק לפי קטגוריות עיקריות.">ℹ️</div>
+      <div id="seasonalUsageChart" class="chart"></div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: Optimization Recommendations -->
+  <div class="section-divider">
+    <h2>המלצות לאופטימיזציה</h2>
+    <p class="section-description">תובנות והמלצות לשיפור השימוש בקופונים בעתיד</p>
+  </div>
+  
+  <div class="recommendations-grid">
+    <!-- Recommended Categories -->
+    <div class="recommendation-card">
+      <h3>קטגוריות מומלצות לרכישה</h3>
+      <div class="recommendation-content" id="recommendedCategories">
+        <div class="loader"></div>
+      </div>
+    </div>
+    
+    <!-- Recommended Companies -->
+    <div class="recommendation-card">
+      <h3>חברות מומלצות</h3>
+      <div class="recommendation-content" id="recommendedCompanies">
+        <div class="loader"></div>
+      </div>
+    </div>
+    
+    <!-- Smart Reminders -->
+    <div class="recommendation-card">
+      <h3>תזכורות חכמות</h3>
+      <div class="recommendation-content" id="smartReminders">
+        <div class="loader"></div>
+      </div>
+    </div>
+    
+    <!-- ROI Rating for Coupons -->
+    <div class="recommendation-card">
+      <h3>דירוג ROI לקופונים</h3>
+      <div class="recommendation-content" id="roiRatings">
+        <div class="loader"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: In-depth Analysis -->
+  <div class="section-divider">
+    <h2>ניתוח מעמיק לפי שימוש</h2>
+    <p class="section-description">הבנת דפוסי הצריכה העמוקים יותר</p>
+  </div>
+  
+  <div class="stats-charts">
+    <!-- Average Time from Purchase to Usage (Line Chart) -->
+    <div class="chart-container">
+      <h3>זמן ממוצע מרכישה עד ניצול</h3>
+      <div class="chart-info-icon" data-tooltip="גרף זה מציג את הזמן הממוצע (בימים) שלוקח לך לנצל קופון מרגע הרכישה, מחולק לפי קטגוריות.">ℹ️</div>
+      <div id="timeToUseChart" class="chart"></div>
+    </div>
+  </div>
+  
+  <!-- Original Table Section -->
   <div class="stats-details">
     <h3>פירוט החיסכון לפי חברות</h3>
     <div class="savings-table-wrapper">
@@ -107,7 +215,7 @@
   </div>
 </div>
 
-<!-- New Filters Modal -->
+<!-- Enhanced Filters Modal with Categories -->
 <div id="filters-modal" class="filters-modal">
   <div class="filters-modal-content">
     <span class="close-filters-modal">×</span>
@@ -118,6 +226,14 @@
       <span>סינון לפי חברות:</span>
       <div class="company-filters" id="company-filters">
         <!-- Dynamic filter controls will be added here -->
+      </div>
+    </div>
+    
+    <!-- New Category filters -->
+    <div class="filters-container">
+      <span>סינון לפי קטגוריות:</span>
+      <div class="category-filters" id="category-filters">
+        <!-- Dynamic category filter controls will be added here -->
       </div>
     </div>
     
@@ -138,24 +254,37 @@
 
 <script>
 /**
- * Statistics Modal JavaScript
- * This file contains the functionality for the statistics modal
- * that is loaded dynamically when the user clicks on the statistics button
+ * Enhanced Statistics Dashboard JavaScript
+ * This file contains the functionality for the comprehensive statistics dashboard
+ * that visualizes coupon usage, savings, and provides optimization recommendations
  */
 
 // Global variables for statistics
 let companiesData = [];
 let originalTimelineData = [];
+let categoriesData = []; // New: Category data
+let recommendationsData = {}; // New: Recommendations data
+let usagePatternData = {}; // New: Usage pattern data
 let selectedCompanies = new Set(['all']);
-let selectedCouponTypes = new Set(['all']); // Added for coupon type filtering
+let selectedCategories = new Set(['all']); // New: Selected categories
+let selectedCouponTypes = new Set(['all']); 
 let pieChart = null;
 let timelineChart = null;
 let savingsPercentageChart = null;
 let cumulativeSavingsChart = null;
 let couponUsageChart = null;
-let couponTypeChart = null; // New chart for coupon types
+let couponTypeChart = null;
+// New chart variables
+let categorySavingsChart = null;
+let categoryROIChart = null;
+let monthlyUsageChart = null;
+let usageHeatmapChart = null;
+let seasonalUsageChart = null;
+let timeToUseChart = null;
+
 let lastClickedIndex = -1;
-let lastClickedTypeIndex = -1; // For coupon type multi-selection
+let lastClickedCategoryIndex = -1; // New for category selection
+let lastClickedTypeIndex = -1;
 let isShiftKeyPressed = false;
 let visibleSeries = {
   savings: true,
@@ -176,7 +305,7 @@ document.addEventListener('keyup', function(e) {
 });
 
 /**
- * Main function to render statistics charts
+ * Main function to render statistics dashboard
  * @param {Object} data - Statistics data object containing all necessary data
  */
 window.renderSavingsCharts = function(data) {
@@ -184,6 +313,15 @@ window.renderSavingsCharts = function(data) {
     // Set the data from the parameters
     companiesData = data.companiesStats || [];
     originalTimelineData = data.timelineData || [];
+    
+    // New: Set category data if provided, otherwise create mock data for development
+    categoriesData = data.categoriesData || createMockCategoryData();
+    
+    // New: Set recommendations data if provided, otherwise create mock data
+    recommendationsData = data.recommendationsData || createMockRecommendationsData();
+    
+    // New: Set usage pattern data if provided, otherwise create mock data
+    usagePatternData = data.usagePatternData || createMockUsagePatternData();
     
     // Ensure originalTimelineData has the required properties
     originalTimelineData = normalizeTimelineData(originalTimelineData);
@@ -220,17 +358,36 @@ window.renderSavingsCharts = function(data) {
       .sort((a, b) => (b.savings || 0) - (a.savings || 0))
       .map(item => item.company);
     
+    // Sort categories by savings amount (highest to lowest)
+    const sortedCategories = categoriesData
+      .sort((a, b) => (b.savings || 0) - (a.savings || 0))
+      .map(item => item.category);
+    
     // Initialize the components
     createCompanyFilters(sortedCompanies);
-    createCouponTypeFilters(); // New function for coupon type filters
+    createCategoryFilters(sortedCategories); // New: Create category filters
+    createCouponTypeFilters();
     updateStatisticsCards(companiesData);
     updateSavingsTable(companiesData);
+    
+    // Original charts
     createPieChart(pieData);
     createTimelineChart(originalTimelineData);
     createSavingsPercentageChart(companiesData);
     createCumulativeSavingsChart(cumulativeSavingsData);
     createCouponUsageChart(companiesData);
-    createCouponTypeChart(companiesData); // New chart for coupon types
+    createCouponTypeChart(companiesData);
+    
+    // New charts
+    createCategorySavingsChart(categoriesData);
+    createCategoryROIChart(categoriesData);
+    createMonthlyUsageChart(usagePatternData.monthlyUsage || []);
+    createUsageHeatmapChart(usagePatternData.heatmapData || []);
+    createSeasonalUsageChart(usagePatternData.seasonalData || []);
+    createTimeToUseChart(usagePatternData.timeToUseData || []);
+    
+    // New: Populate recommendation sections
+    populateRecommendations(recommendationsData);
     
     // Set up listeners for timeline toggles
     setupTimelineToggles();
@@ -252,6 +409,459 @@ window.renderSavingsCharts = function(data) {
 };
 
 /**
+ * Create mock category data for development and testing
+ * @returns {Array} - Mock category data
+ */
+function createMockCategoryData() {
+  // Default categories for demo
+  return [
+    { 
+      category: "סופרמרקט", 
+      savings: 648, 
+      total_value: 1200, 
+      avg_investment: 150, 
+      savings_percentage: 54,
+      coupons_count: 12,
+      roi_score: 4.2
+    },
+    { 
+      category: "פארם", 
+      savings: 583, 
+      total_value: 900, 
+      avg_investment: 120, 
+      savings_percentage: 65,
+      coupons_count: 8,
+      roi_score: 4.8
+    },
+    { 
+      category: "חדר כושר", 
+      savings: 525, 
+      total_value: 1000, 
+      avg_investment: 200, 
+      savings_percentage: 52.5,
+      coupons_count: 4,
+      roi_score: 3.7
+    },
+    { 
+      category: "משלוחים", 
+      savings: 407, 
+      total_value: 700, 
+      avg_investment: 80, 
+      savings_percentage: 58,
+      coupons_count: 9,
+      roi_score: 4.5
+    },
+    { 
+      category: "מסעדות", 
+      savings: 320, 
+      total_value: 550, 
+      avg_investment: 100, 
+      savings_percentage: 58,
+      coupons_count: 6,
+      roi_score: 4.1
+    },
+    { 
+      category: "תרבות ופנאי", 
+      savings: 275, 
+      total_value: 600, 
+      avg_investment: 130, 
+      savings_percentage: 46,
+      coupons_count: 4,
+      roi_score: 3.5
+    },
+    { 
+      category: "אחר", 
+      savings: 255, 
+      total_value: 500, 
+      avg_investment: 90, 
+      savings_percentage: 51,
+      coupons_count: 5,
+      roi_score: 3.8
+    }
+  ];
+}
+
+/**
+ * Create mock recommendations data for development and testing
+ * @returns {Object} - Mock recommendations data
+ */
+function createMockRecommendationsData() {
+  return {
+    recommendedCategories: [
+      { 
+        category: "חדר כושר", 
+        reason: "תשואה ממוצעת של 42%", 
+        score: 4.2 
+      },
+      { 
+        category: "משלוחים", 
+        reason: "שימוש קבוע ותשואה של 28%", 
+        score: 3.8 
+      },
+      { 
+        category: "מוצרי חשמל", 
+        reason: "חיסכון גבוה בכל רכישה", 
+        score: 3.7 
+      }
+    ],
+    recommendedCompanies: [
+      { 
+        company: "FreeFit", 
+        reason: "ניצול מלא ותשואה גבוהה", 
+        score: 4.5 
+      },
+      { 
+        company: "Wolt", 
+        reason: "שימוש קבוע ותשואה של 28%", 
+        score: 4.2 
+      },
+      { 
+        company: "קפה עלית", 
+        reason: "תשואה גבוהה וניצול מלא", 
+        score: 4.0 
+      }
+    ],
+    smartReminders: [
+      {
+        title: "קופונים שפגים החודש",
+        count: 4,
+        potentialSavings: 320,
+        urgent: true
+      },
+      {
+        title: "קופונים שלא נוצלו למעלה מ-60 יום",
+        count: 7,
+        potentialSavings: 455,
+        urgent: false
+      },
+      {
+        title: "המלצה לניצול בסופ\"ש",
+        count: 5,
+        potentialSavings: 275,
+        urgent: false
+      }
+    ],
+    roiRatings: [
+      { 
+        type: "קופוני אוכל בהנחה של מעל 30%", 
+        roi: 78, 
+        recommendation: "להגדיל רכישות" 
+      },
+      { 
+        type: "קופוני חדר כושר חד פעמיים", 
+        roi: 62, 
+        recommendation: "להמשיך באותו היקף" 
+      },
+      { 
+        type: "קופוני סופרמרקט מעל 200₪", 
+        roi: 31, 
+        recommendation: "לצמצם רכישות" 
+      }
+    ]
+  };
+}
+
+/**
+ * Create mock usage pattern data for development and testing
+ * @returns {Object} - Mock usage pattern data
+ */
+function createMockUsagePatternData() {
+  // Generate monthly usage data for the past 12 months
+  const monthNames = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
+  const currentMonth = new Date().getMonth();
+  const monthlyUsage = [];
+  
+  for (let i = 0; i < 12; i++) {
+    const monthIndex = (currentMonth - 11 + i) % 12;
+    monthlyUsage.push({
+      month: monthNames[monthIndex],
+      used: Math.floor(Math.random() * 15) + 5, // 5-20 coupons used
+      purchased: Math.floor(Math.random() * 20) + 5, // 5-25 coupons purchased
+    });
+  }
+  
+  // Generate heatmap data for usage by day/hour
+  const heatmapData = [];
+  const daysOfWeek = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+  
+  for (let day = 0; day < 7; day++) {
+    for (let hour = 6; hour < 24; hour++) {
+      // More usage during lunch, evening, and weekends
+      let usageIntensity = 0;
+      
+      // Weekend boost
+      const weekendBoost = (day >= 5) ? 2 : 1;
+      
+      // Time of day patterns
+      if (hour >= 11 && hour <= 14) {
+        // Lunch time
+        usageIntensity = Math.random() * 8 + 2; // 2-10
+      } else if (hour >= 17 && hour <= 21) {
+        // Evening
+        usageIntensity = Math.random() * 9 + 3; // 3-12
+      } else {
+        // Other times
+        usageIntensity = Math.random() * 5 + 1; // 1-6
+      }
+      
+      heatmapData.push({
+        day: daysOfWeek[day],
+        hour: hour,
+        value: Math.round(usageIntensity * weekendBoost) // Adjust intensity and apply weekend boost
+      });
+    }
+  }
+  
+  // Generate seasonal data
+  const seasonalData = [
+    {
+      season: 'חורף',
+      categories: {
+        'סופרמרקט': 28,
+        'פארם': 24,
+        'חדר כושר': 18,
+        'משלוחים': 38,
+        'אחר': 12
+      }
+    },
+    {
+      season: 'אביב',
+      categories: {
+        'סופרמרקט': 23,
+        'פארם': 18,
+        'חדר כושר': 22,
+        'משלוחים': 25,
+        'אחר': 15
+      }
+    },
+    {
+      season: 'קיץ',
+      categories: {
+        'סופרמרקט': 20,
+        'פארם': 15,
+        'חדר כושר': 15,
+        'משלוחים': 20,
+        'אחר': 28
+      }
+    },
+    {
+      season: 'סתיו',
+      categories: {
+        'סופרמרקט': 25,
+        'פארם': 20,
+        'חדר כושר': 18,
+        'משלוחים': 30,
+        'אחר': 18
+      }
+    }
+  ];
+  
+  // Generate time to use data by category
+  const categories = ['סופרמרקט', 'פארם', 'חדר כושר', 'משלוחים', 'מסעדות', 'תרבות ופנאי', 'אחר'];
+  const timeToUseData = categories.map(category => {
+    // Different categories have different typical usage patterns
+    let baseValue;
+    
+    switch(category) {
+      case 'משלוחים':
+      case 'מסעדות':
+        baseValue = Math.random() * 3 + 1; // 1-4 days (fast usage)
+        break;
+      case 'סופרמרקט':
+      case 'פארם':
+        baseValue = Math.random() * 7 + 3; // 3-10 days (medium usage)
+        break;
+      case 'חדר כושר':
+      case 'תרבות ופנאי':
+        baseValue = Math.random() * 15 + 10; // 10-25 days (slower usage)
+        break;
+      default:
+        baseValue = Math.random() * 10 + 5; // 5-15 days
+    }
+    
+    return {
+      category: category,
+      time_to_use: Math.round(baseValue)
+    };
+  });
+  
+  // Sort by time_to_use for better visualization
+  timeToUseData.sort((a, b) => a.time_to_use - b.time_to_use);
+  
+  return {
+    monthlyUsage: monthlyUsage,
+    heatmapData: heatmapData,
+    seasonalData: seasonalData,
+    timeToUseData: timeToUseData
+  };
+}
+
+/**
+ * Populate recommendation sections with data
+ * @param {Object} data - Recommendations data
+ */
+function populateRecommendations(data) {
+  // Recommended Categories
+  const categoriesContainer = document.getElementById('recommendedCategories');
+  if (categoriesContainer) {
+    categoriesContainer.innerHTML = renderRecommendedCategories(data.recommendedCategories || []);
+  }
+  
+  // Recommended Companies
+  const companiesContainer = document.getElementById('recommendedCompanies');
+  if (companiesContainer) {
+    companiesContainer.innerHTML = renderRecommendedCompanies(data.recommendedCompanies || []);
+  }
+  
+  // Smart Reminders
+  const remindersContainer = document.getElementById('smartReminders');
+  if (remindersContainer) {
+    remindersContainer.innerHTML = renderSmartReminders(data.smartReminders || []);
+  }
+  
+  // ROI Ratings
+  const roiContainer = document.getElementById('roiRatings');
+  if (roiContainer) {
+    roiContainer.innerHTML = renderROIRatings(data.roiRatings || []);
+  }
+}
+
+/**
+ * Render recommended categories list
+ * @param {Array} categories - Recommended categories data
+ * @returns {string} - HTML content
+ */
+function renderRecommendedCategories(categories) {
+  if (!categories.length) {
+    return '<p class="no-data">אין מספיק נתונים להמלצות</p>';
+  }
+  
+  let html = '<ul class="recommendation-list">';
+  
+  categories.forEach(item => {
+    // Create star rating based on score
+    const score = item.score || 3;
+    const stars = '★'.repeat(Math.floor(score)) + '☆'.repeat(5 - Math.floor(score));
+    
+    html += `
+      <li class="recommendation-item">
+        <div class="recommendation-header">
+          <span class="recommendation-title">${item.category}</span>
+          <span class="recommendation-score">${stars}</span>
+        </div>
+        <p class="recommendation-reason">${item.reason}</p>
+      </li>
+    `;
+  });
+  
+  html += '</ul>';
+  return html;
+}
+
+/**
+ * Render recommended companies list
+ * @param {Array} companies - Recommended companies data
+ * @returns {string} - HTML content
+ */
+function renderRecommendedCompanies(companies) {
+  if (!companies.length) {
+    return '<p class="no-data">אין מספיק נתונים להמלצות</p>';
+  }
+  
+  let html = '<ul class="recommendation-list">';
+  
+  companies.forEach(item => {
+    // Create star rating based on score
+    const score = item.score || 3;
+    const stars = '★'.repeat(Math.floor(score)) + '☆'.repeat(5 - Math.floor(score));
+    
+    html += `
+      <li class="recommendation-item">
+        <div class="recommendation-header">
+          <span class="recommendation-title">${item.company}</span>
+          <span class="recommendation-score">${stars}</span>
+        </div>
+        <p class="recommendation-reason">${item.reason}</p>
+      </li>
+    `;
+  });
+  
+  html += '</ul>';
+  return html;
+}
+
+/**
+ * Render smart reminders list
+ * @param {Array} reminders - Smart reminders data
+ * @returns {string} - HTML content
+ */
+function renderSmartReminders(reminders) {
+  if (!reminders.length) {
+    return '<p class="no-data">אין תזכורות פעילות כרגע</p>';
+  }
+  
+  let html = '<ul class="reminder-list">';
+  
+  reminders.forEach(item => {
+    const urgentClass = item.urgent ? 'reminder-urgent' : '';
+    
+    html += `
+      <li class="reminder-item ${urgentClass}">
+        <div class="reminder-header">
+          <span class="reminder-title">${item.title}</span>
+          ${item.urgent ? '<span class="reminder-badge">דחוף</span>' : ''}
+        </div>
+        <div class="reminder-details">
+          <span class="reminder-count">${item.count} קופונים</span>
+          <span class="reminder-savings">${item.potentialSavings} ₪</span>
+        </div>
+      </li>
+    `;
+  });
+  
+  html += '</ul>';
+  return html;
+}
+
+/**
+ * Render ROI ratings list
+ * @param {Array} ratings - ROI ratings data
+ * @returns {string} - HTML content
+ */
+function renderROIRatings(ratings) {
+  if (!ratings.length) {
+    return '<p class="no-data">אין מספיק נתונים לדירוג ROI</p>';
+  }
+  
+  let html = '<ul class="roi-list">';
+  
+  ratings.forEach(item => {
+    // Determine color class based on ROI value
+    let colorClass = '';
+    if (item.roi >= 60) {
+      colorClass = 'roi-high';
+    } else if (item.roi >= 40) {
+      colorClass = 'roi-medium';
+    } else {
+      colorClass = 'roi-low';
+    }
+    
+    html += `
+      <li class="roi-item">
+        <div class="roi-header">
+          <span class="roi-title">${item.type}</span>
+          <span class="roi-value ${colorClass}">${item.roi}%</span>
+        </div>
+        <p class="roi-recommendation">${item.recommendation}</p>
+      </li>
+    `;
+  });
+  
+  html += '</ul>';
+  return html;
+}
+
+/**
  * Setup the filters modal functionality
  */
 function setupFiltersModal() {
@@ -264,12 +874,14 @@ function setupFiltersModal() {
   
   // Store original filter selections to restore if canceled
   let originalCompanySelection = new Set(selectedCompanies);
+  let originalCategorySelection = new Set(selectedCategories); // New
   let originalCouponTypeSelection = new Set(selectedCouponTypes);
   
   // Open filters modal
   openFiltersButton.addEventListener('click', function() {
     // Store current selections
     originalCompanySelection = new Set(selectedCompanies);
+    originalCategorySelection = new Set(selectedCategories); // New
     originalCouponTypeSelection = new Set(selectedCouponTypes);
     
     // Show modal
@@ -280,6 +892,7 @@ function setupFiltersModal() {
   closeFiltersButton.addEventListener('click', function() {
     // Restore original selections
     selectedCompanies = new Set(originalCompanySelection);
+    selectedCategories = new Set(originalCategorySelection); // New
     selectedCouponTypes = new Set(originalCouponTypeSelection);
     
     // Update UI to match restored selections
@@ -303,6 +916,8 @@ function setupFiltersModal() {
     // Reset to default
     selectedCompanies.clear();
     selectedCompanies.add('all');
+    selectedCategories.clear(); // New
+    selectedCategories.add('all');
     selectedCouponTypes.clear();
     selectedCouponTypes.add('all');
     
@@ -315,6 +930,7 @@ function setupFiltersModal() {
     if (event.target == filtersModal) {
       // Restore original selections
       selectedCompanies = new Set(originalCompanySelection);
+      selectedCategories = new Set(originalCategorySelection); // New
       selectedCouponTypes = new Set(originalCouponTypeSelection);
       
       // Update UI to match restored selections
@@ -330,6 +946,7 @@ function setupFiltersModal() {
     if (event.key === 'Escape' && filtersModal.style.display === 'block') {
       // Restore original selections
       selectedCompanies = new Set(originalCompanySelection);
+      selectedCategories = new Set(originalCategorySelection); // New
       selectedCouponTypes = new Set(originalCouponTypeSelection);
       
       // Update UI to match restored selections
@@ -349,6 +966,16 @@ function updateFilterUI() {
   document.querySelectorAll('.company-filter-item').forEach(item => {
     const company = item.dataset.company;
     if (selectedCompanies.has(company)) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
+  
+  // Update category filters (new)
+  document.querySelectorAll('.category-filter-item').forEach(item => {
+    const category = item.dataset.category;
+    if (selectedCategories.has(category)) {
       item.classList.add('active');
     } else {
       item.classList.remove('active');
@@ -385,9 +1012,6 @@ function generateCumulativeData(timelineData) {
   });
 }
 
-/**
- * Setup tooltips for chart information icons
- */
 /**
  * Setup tooltips for chart information icons
  * Support both desktop (hover) and mobile (touch)
@@ -629,11 +1253,6 @@ function setupChartInfoTooltips() {
   });
 }
 
-// Ensure we call the setup function on page load
-document.addEventListener('DOMContentLoaded', function() {
-  setupChartInfoTooltips();
-});
-
 /**
  * Handle resize event for responsive charts
  */
@@ -664,6 +1283,14 @@ function handleResize() {
   updateChartForMobile(cumulativeSavingsChart, isMobile);
   updateChartForMobile(couponUsageChart, isMobile);
   updateChartForMobile(couponTypeChart, isMobile);
+  
+  // Update new charts for mobile optimization
+  updateChartForMobile(categorySavingsChart, isMobile);
+  updateChartForMobile(categoryROIChart, isMobile);
+  updateChartForMobile(monthlyUsageChart, isMobile);
+  updateChartForMobile(usageHeatmapChart, isMobile);
+  updateChartForMobile(seasonalUsageChart, isMobile);
+  updateChartForMobile(timeToUseChart, isMobile);
   
   // Handle visibility of mobile-specific elements
   const mobileElements = document.querySelectorAll('.hide-on-mobile');
@@ -852,6 +1479,38 @@ function createCompanyFilters(companies) {
 }
 
 /**
+ * Create filter controls for categories (new)
+ * @param {Array} categories - Array of category names
+ */
+function createCategoryFilters(categories) {
+  const filtersContainer = document.getElementById('category-filters');
+  if (!filtersContainer) return;
+  
+  filtersContainer.innerHTML = '';
+  
+  // Create "All" filter
+  const allFilter = document.createElement('div');
+  allFilter.className = 'category-filter-item active';
+  allFilter.dataset.category = 'all';
+  allFilter.dataset.index = -1;
+  allFilter.innerHTML = '<span>הכל</span>';
+  filtersContainer.appendChild(allFilter);
+  
+  // Create filter for each category
+  categories.forEach((category, index) => {
+    const filterItem = document.createElement('div');
+    filterItem.className = 'category-filter-item';
+    filterItem.dataset.category = category;
+    filterItem.dataset.index = index;
+    filterItem.innerHTML = `<span>${category}</span>`;
+    filtersContainer.appendChild(filterItem);
+  });
+  
+  // Add touch-friendly event handling
+  addTouchFriendlyFilters('.category-filter-item', 'category');
+}
+
+/**
  * Create filter controls for coupon types
  */
 function createCouponTypeFilters() {
@@ -884,7 +1543,7 @@ function createCouponTypeFilters() {
 /**
  * Add touch-friendly event handling to filter items
  * @param {string} selector - CSS selector for filter items
- * @param {string} dataAttr - Data attribute name (company or type)
+ * @param {string} dataAttr - Data attribute name (company, category or type)
  */
 function addTouchFriendlyFilters(selector, dataAttr) {
   // Prevent text selection when using Shift+Click
@@ -903,16 +1562,23 @@ function addTouchFriendlyFilters(selector, dataAttr) {
   });
   
   // Add click event handler based on data attribute type
-  const isCompanyFilter = dataAttr === 'company';
-  const collection = isCompanyFilter ? selectedCompanies : selectedCouponTypes;
+  let collection, lastIndex;
+  
+  if (dataAttr === 'company') {
+    collection = selectedCompanies;
+    lastIndex = lastClickedIndex;
+  } else if (dataAttr === 'category') {
+    collection = selectedCategories;
+    lastIndex = lastClickedCategoryIndex;
+  } else {
+    collection = selectedCouponTypes;
+    lastIndex = lastClickedTypeIndex;
+  }
   
   document.querySelectorAll(selector).forEach(item => {
     item.addEventListener('click', function(e) {
-      const value = isCompanyFilter ? this.dataset.company : this.dataset.type;
+      const value = this.dataset[dataAttr];
       const currentIndex = parseInt(this.dataset.index);
-      
-      // Reference to the last clicked index
-      const lastIndex = isCompanyFilter ? lastClickedIndex : lastClickedTypeIndex;
       
       // Handle "All" click
       if (value === 'all') {
@@ -924,22 +1590,34 @@ function addTouchFriendlyFilters(selector, dataAttr) {
         collection.add('all');
         
         // Reset last clicked index
-        if (isCompanyFilter) {
+        if (dataAttr === 'company') {
           lastClickedIndex = -1;
+        } else if (dataAttr === 'category') {
+          lastClickedCategoryIndex = -1;
         } else {
           lastClickedTypeIndex = -1;
         }
       } else {
         // Handle Shift+Click for multi-selection
         if (isShiftKeyPressed && lastIndex !== -1 && lastIndex !== currentIndex) {
+          // Determine which lastIndex to use
+          let targetLastIndex;
+          if (dataAttr === 'company') {
+            targetLastIndex = lastClickedIndex;
+          } else if (dataAttr === 'category') {
+            targetLastIndex = lastClickedCategoryIndex;
+          } else {
+            targetLastIndex = lastClickedTypeIndex;
+          }
+          
           // Remove "All" if selected
           const allItem = document.querySelector(`${selector}[data-${dataAttr}="all"]`);
           allItem.classList.remove('active');
           collection.delete('all');
           
           // Determine range for selection
-          const start = Math.min(lastIndex, currentIndex);
-          const end = Math.max(lastIndex, currentIndex);
+          const start = Math.min(targetLastIndex, currentIndex);
+          const end = Math.max(targetLastIndex, currentIndex);
 
           // Collect all elements in natural order
           const allItems = Array.from(document.querySelectorAll(selector));
@@ -952,7 +1630,7 @@ function addTouchFriendlyFilters(selector, dataAttr) {
           itemsInRange.forEach(item => {
             if (!item.classList.contains('active')) {
               item.classList.add('active');
-              const itemValue = isCompanyFilter ? item.dataset.company : item.dataset.type;
+              const itemValue = item.dataset[dataAttr];
               collection.add(itemValue);
             }
           });
@@ -974,8 +1652,60 @@ function addTouchFriendlyFilters(selector, dataAttr) {
               collection.add('all');
               
               // Reset last clicked index
-              if (isCompanyFilter) {
+              if (dataAttr === 'company') {
                 lastClickedIndex = -1;
+            }
+          }
+        },
+        layout: {
+          padding: {
+            left: 10,
+            right: 10
+          }
+        }
+      }
+    });
+    
+    // Add styles directly to canvas and tooltips
+    canvas.style.direction = 'rtl';
+    container.style.direction = 'rtl';
+    
+    // Add global styles for tooltips
+    const tooltipStyles = document.createElement('style');
+    tooltipStyles.textContent = `
+      #timelineChart {
+        direction: rtl !important;
+        text-align: right !important;
+      }
+      #timelineChart canvas {
+        direction: rtl !important;
+      }
+      .chartjs-tooltip {
+        direction: rtl !important;
+        text-align: right !important;
+      }
+      .chartjs-tooltip-body {
+        direction: rtl !important;
+        text-align: right !important;
+      }
+      .chartjs-tooltip-title {
+        text-align: right !important;
+      }
+      #tooltip-el {
+        direction: rtl !important;
+        text-align: right !important;
+      }
+      .chartjs-tooltip p {
+        margin: 2px 0;
+        padding-right: 5px;
+        text-align: right;
+      }
+    `;
+    document.head.appendChild(tooltipStyles);
+  } else {
+    document.getElementById('timelineChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
+  } else if (dataAttr === 'category') {
+                lastClickedCategoryIndex = -1;
               } else {
                 lastClickedTypeIndex = -1;
               }
@@ -988,8 +1718,10 @@ function addTouchFriendlyFilters(selector, dataAttr) {
         
         // Save last clicked index
         if (currentIndex >= 0) {
-          if (isCompanyFilter) {
+          if (dataAttr === 'company') {
             lastClickedIndex = currentIndex;
+          } else if (dataAttr === 'category') {
+            lastClickedCategoryIndex = currentIndex;
           } else {
             lastClickedTypeIndex = currentIndex;
           }
@@ -1000,10 +1732,11 @@ function addTouchFriendlyFilters(selector, dataAttr) {
 }
 
 /**
- * Filter data and update charts/table based on selected companies and coupon types
+ * Filter data and update charts/table based on selected companies, categories, and coupon types
  */
 function filterAndUpdateCharts() {
   let filteredCompaniesData;
+  let filteredCategoriesData; // New
   let filteredTimelineData;
   
   // Apply company filtering
@@ -1014,6 +1747,17 @@ function filterAndUpdateCharts() {
     // Filter by selected companies
     filteredCompaniesData = companiesData.filter(item => 
       selectedCompanies.has(item.company)
+    );
+  }
+  
+  // Apply category filtering (new)
+  if (selectedCategories.has('all')) {
+    // Use all categories
+    filteredCategoriesData = [...categoriesData];
+  } else {
+    // Filter by selected categories
+    filteredCategoriesData = categoriesData.filter(item => 
+      selectedCategories.has(item.category)
     );
   }
   
@@ -1104,7 +1848,7 @@ function filterAndUpdateCharts() {
     });
   }
   
-  // Update charts with filtered data
+  // Update original charts with filtered data
   updatePieChart(filteredCompaniesData.map(item => ({
     company: item.company,
     value: item.savings || 0
@@ -1130,6 +1874,14 @@ function filterAndUpdateCharts() {
   updateCumulativeSavingsChart(recalculatedCumulativeData);
   updateCouponUsageChart(filteredCompaniesData);
   updateCouponTypeChart(filteredCompaniesData);
+  
+  // Update new charts with filtered data (new)
+  updateCategorySavingsChart(filteredCategoriesData);
+  updateCategoryROIChart(filteredCategoriesData);
+  
+  // Note: Usage pattern charts are not affected by company/category filters in this implementation
+  // If needed, they could be updated here with filtered data as well
+  
   updateStatisticsCards(filteredCompaniesData);
   updateSavingsTable(filteredCompaniesData);
 }
@@ -1217,7 +1969,7 @@ function updateSavingsTable(data) {
  * Create pie chart for company savings distribution
  * @param {Array} pieData - Data for pie chart
  */
- function createPieChart(pieData) {
+function createPieChart(pieData) {
   if (typeof Chart !== 'undefined') {
     const container = document.getElementById('companySavingsChart');
     if (!container) return;
@@ -1278,7 +2030,6 @@ function updateSavingsTable(data) {
             titleAlign: 'right',
             bodyAlign: 'right',
             callbacks: {
-              // החלק הזה הוא מה שצריך להחליף - הסדר החדש המבוקש של המידע בטולטיפ
               label: function(context) {
                 const company = context.label;
                 const value = context.raw;
@@ -1286,33 +2037,32 @@ function updateSavingsTable(data) {
                 
                 if (!companyData) return [company];
                 
-                // סדר חדש לפי הבקשה
                 const lines = [
-                  `${company}`, // שם החברה
-                  `סכום שנחסך: ${value.toFixed(2)} ₪` // כמות כסף שנחסכה
+                  `${company}`,
+                  `סכום שנחסך: ${value.toFixed(2)} ₪`
                 ];
                 
-                // אחוז מתוך סך החיסכון
+                // Percentage of total savings
                 const totalSavings = companiesData.reduce((sum, c) => sum + (c.savings || 0), 0);
                 const savingsPercentage = totalSavings > 0 ? ((value / totalSavings) * 100).toFixed(1) : "0.0";
                 lines.push(`אחוז מסך החיסכון: ${savingsPercentage}%`);
                 
-                // מספר קופונים
+                // Number of coupons
                 if (companyData.coupons_count !== undefined) {
                   lines.push(`מספר קופונים: ${companyData.coupons_count}`);
                 }
                 
-                // מספר קופונים פעילים
+                // Number of active coupons
                 if (companyData.active_coupons !== undefined) {
                   lines.push(`קופונים פעילים: ${companyData.active_coupons}`);
                 }
                 
-                // יתרה - כמה כסף נשאר לנצל
+                // Remaining value
                 if (companyData.remaining_value !== undefined) {
                   lines.push(`יתרה לניצול: ${companyData.remaining_value.toFixed(2)} ₪`);
                 }
                 
-                // מידע נוסף שימושי שכדאי להשאיר
+                // Additional useful info
                 if (companyData.one_time_count !== undefined) {
                   lines.push(`קופונים חד פעמיים: ${companyData.one_time_count}`);
                 }
@@ -1323,9 +2073,8 @@ function updateSavingsTable(data) {
                 
                 return lines;
               },
-              // הסרת הכותרת המקורית (שם החברה יופיע כשורה הראשונה ב-label)
               title: function(tooltipItems) {
-                return ''; // מסיר את הכותרת המקורית
+                return ''; // Remove original title
               }
             }
           }
@@ -1346,204 +2095,6 @@ function updatePieChart(pieData) {
     pieChart.data.labels = pieData.map(d => d.company);
     pieChart.data.datasets[0].data = pieData.map(d => d.value);
     pieChart.update();
-  }
-}
-
-/**
- * Create timeline chart for savings over time
- * @param {Array} timelineData - Data for timeline chart
- */
-function createTimelineChart(timelineData) {
-  if (typeof Chart !== 'undefined') {
-    const container = document.getElementById('timelineChart');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    const canvas = document.createElement('canvas');
-    container.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
-    
-    // Responsive font size based on screen size
-    const isMobile = window.innerWidth < 768;
-    const fontSize = isMobile ? 10 : 12;
-    
-    // Find the max value to set appropriate scale
-    const maxRemainingValue = Math.max(...timelineData.map(d => d.remaining_value || 0));
-    const maxSavingsValue = Math.max(...timelineData.map(d => d.value || 0));
-    const maxYValue = Math.max(maxRemainingValue, maxSavingsValue);
-    
-    // Create the chart with multiple datasets
-    timelineChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: timelineData.map(d => d.month),
-        datasets: [
-          {
-            label: 'חיסכון חודשי (ש"ח)',
-            data: timelineData.map(d => d.value || 0),
-            borderColor: '#3498db',
-            backgroundColor: 'rgba(52, 152, 219, 0.2)',
-            borderWidth: 2,
-            fill: true,
-            seriesType: 'savings',
-            hidden: !visibleSeries.savings
-          },
-          {
-            label: 'ערך שנותר (ש"ח)',
-            data: timelineData.map(d => d.remaining_value || 0),
-            borderColor: '#2ecc71',
-            backgroundColor: 'rgba(46, 204, 113, 0.1)',
-            borderWidth: 2,
-            fill: false,
-            seriesType: 'remaining',
-            hidden: !visibleSeries.remaining
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { 
-          y: { 
-            beginAtZero: true,
-            ticks: {
-              font: { size: fontSize }
-            },
-            // Add padding to make sure small values are visible
-            suggestedMax: maxYValue * 1.1
-          },
-          x: {
-            ticks: {
-              font: { size: fontSize },
-              maxRotation: isMobile ? 45 : 0
-            }
-          }
-        },
-        plugins: {
-          tooltip: {
-            rtl: true,
-            textDirection: 'rtl',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            titleFont: {
-              size: 14
-            },
-            bodyFont: {
-              size: 14
-            },
-            padding: 12,
-            titleAlign: 'right',
-            bodyAlign: 'right',
-            position: 'nearest',
-            caretSize: 6,
-            callbacks: {
-              label: function(context) {
-                let labels = [];
-                
-                // Get the original data point for this month
-                const monthData = timelineData[context.dataIndex];
-                if (!monthData) return [];
-                
-                // Customize display based on dataset
-                if (context.dataset.seriesType === 'savings') {
-                  labels.push(`סה"כ חיסכון בחודש זה: ${monthData.value.toFixed(2)} ₪`);
-                } else if (context.dataset.seriesType === 'remaining') {
-                  labels.push(`סה"כ ערך שנותר: ${monthData.remaining_value.toFixed(2)} ₪`);
-                }
-                
-                // Add common info
-                if (monthData.coupons_count !== undefined) {
-                  labels.push(`מספר קופונים שנקנו: ${monthData.coupons_count}`);
-                  
-                  // Add one-time and non-one-time counts
-                  if (monthData.one_time_count !== undefined) {
-                    labels.push(`קופונים חד פעמיים: ${monthData.one_time_count}`);
-                  }
-                  
-                  if (monthData.non_one_time_count !== undefined) {
-                    labels.push(`קופונים רב פעמיים: ${monthData.non_one_time_count}`);
-                  }
-                }
-              
-                if (monthData.discount_percentage !== undefined) {
-                  labels.push(`אחוז הנחה ממוצע: ${monthData.discount_percentage.toFixed(1)}%`);
-                }
-              
-                // Add companies detail to tooltip
-                if (monthData.companies && monthData.companies.length > 0) {
-                  labels.push(`חברות בחודש זה:`);
-                  monthData.companies.forEach(company => {
-                    labels.push(`• ${company}`);
-                  });
-                }
-                
-                return labels;
-              },
-              title: function(tooltipItems) {
-                return tooltipItems[0].label; // Month
-              },
-              // Avoid duplicate labels for multiline tooltips
-              beforeBody: function(tooltipItems) {
-                // If we have multiple datasets highlighted, add a separator
-                if (tooltipItems.length > 1) {
-                  return '───────────────';
-                }
-                return '';
-              }
-            }
-          },
-          legend: {
-            labels: { 
-              font: { size: fontSize }
-            }
-          }
-        },
-        layout: {
-          padding: {
-            left: 10,
-            right: 10
-          }
-        }
-      }
-    });
-    
-    // Add styles directly to canvas and tooltips
-    canvas.style.direction = 'rtl';
-    container.style.direction = 'rtl';
-    
-    // Add global styles for tooltips
-    const tooltipStyles = document.createElement('style');
-    tooltipStyles.textContent = `
-      #timelineChart {
-        direction: rtl !important;
-        text-align: right !important;
-      }
-      #timelineChart canvas {
-        direction: rtl !important;
-      }
-      .chartjs-tooltip {
-        direction: rtl !important;
-        text-align: right !important;
-      }
-      .chartjs-tooltip-body {
-        direction: rtl !important;
-        text-align: right !important;
-      }
-      .chartjs-tooltip-title {
-        text-align: right !important;
-      }
-      #tooltip-el {
-        direction: rtl !important;
-        text-align: right !important;
-      }
-      .chartjs-tooltip p {
-        margin: 2px 0;
-        padding-right: 5px;
-        text-align: right;
-      }
-    `;
-    document.head.appendChild(tooltipStyles);
-  } else {
-    document.getElementById('timelineChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
   }
 }
 
@@ -2181,981 +2732,153 @@ function createCouponTypeChart(companiesData) {
             labels: {
               font: { size: fontSize },
               boxWidth: isMobile ? 10 : 15
-              }
+            }
+          }
         }
       }
-    }
-  });
-} else {
-  document.getElementById('couponTypeChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
-}
+    });
+  } else {
+    document.getElementById('couponTypeChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
+  }
 }
 
 /**
-* Update coupon type chart with filtered data
-* @param {Array} companiesData - Array of company statistics data
-*/
-function updateCouponTypeChart(companiesData) {
-if (!couponTypeChart) return;
-
-// Prepare data for the chart - sort by total coupons
-const chartData = [...companiesData]
-  .sort((a, b) => (b.coupons_count || 0) - (a.coupons_count || 0));
-
-// Limit to fewer companies on mobile
-const isMobile = window.innerWidth < 768;
-const limit = isMobile ? 5 : 10;
-const displayData = chartData.slice(0, limit);
-
-// Update chart data
-couponTypeChart.data.labels = displayData.map(d => d.company);
-couponTypeChart.data.datasets[0].data = displayData.map(d => d.one_time_count ||0);
-couponTypeChart.data.datasets[1].data = displayData.map(d => d.non_one_time_count || 0);
-
-couponTypeChart.update();
-}
-
-// Add custom styles for timeline chart tooltips and controls
-(function() {
-const style = document.createElement('style');
-style.textContent = `
-  #timelineChart canvas,
-  #cumulativeSavingsChart canvas {
-    direction: rtl !important;
-  }
-  .chartjs-tooltip {
-    direction: rtl !important;
-    text-align: right !important;
-  }
-  #timelineChart,
-  #cumulativeSavingsChart {
-    direction: rtl !important;
-  }
-  .timeline-controls {
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: center;
-  }
-  .data-toggle {
-    display: flex;
-    gap: 15px;
-  }
-  .data-toggle label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    cursor: pointer;
-  }
-  .timeline-toggle {
-    cursor: pointer;
-  }
-  
-  /* Add styles for new table columns */
-  .savings-table th, .savings-table td {
-    padding: 8px 12px;
-    text-align: right;
-  }
-  
-  /* Responsive styles for charts container */
-  .stats-charts {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  
-  @media (min-width: 992px) {
-    .stats-charts {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-  
-  /* Fixed height for charts for better display */
-  .chart {
-    height: 300px;
-  }
-  
-  /* Cumulative chart specific fix */
-  #cumulativeSavingsChart {
-    min-height: 250px !important;
-    height: 300px !important;
-    display: block !important;
-  }
-
-  #cumulativeSavingsChart canvas {
-    height: 100% !important;
-    width: 100% !important;
-    display: block !important;
-  }
-
-  /* Coupon type filter styles */
-  .coupon-type-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin: 0 auto;
-    width: 100%;
-    text-align: center;
-  }
-  .coupon-type-filter-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: 4px 8px;
-    background-color: #fff;
-    border-radius: 4px;
-    border: 1px solid #ddd;
-    cursor: pointer;
-    font-size: 0.85em;
-    text-align: center;
-    min-width: 90px;
-    margin: 0 auto;
-    user-select: none;
-  }
-  .coupon-type-filter-item span {
-    display: block;
-    width: 100%;
-    text-align: center;
-    margin: 0 auto;
-    pointer-events: none;
-  }
-  .coupon-type-filter-item.active {
-    background-color: #e8f5e9;
-    border-color: #4CAF50;
-  }
-
-  /* Mobile table view */
-  .savings-table.mobile-view {
-    border-collapse: separate;
-    border-spacing: 0 10px;
-  }
-
-  .savings-table.mobile-view th {
-    display: none;
-  }
-
-  .savings-table.mobile-view tr.mobile-row {
-    display: block;
-    margin-bottom: 15px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-
-  .savings-table.mobile-view td {
-    display: block;
-    padding: 10px;
-    border: none;
-  }
-
-  .savings-table.mobile-view .company-name {
-    font-weight: bold;
-    font-size: 1.1em;
-    background-color: #f2f2f2;
-    padding: 8px;
-    margin: -10px -10px 10px -10px;
-    border-bottom: 1px solid #eee;
-  }
-
-  .savings-table.mobile-view .mobile-row-data {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .savings-table.mobile-view .mobile-row-data div {
-    padding: 4px 0;
-  }
-
-  /* Hide mobile-only on desktop */
-  @media (min-width: 768px) {
-    .hide-on-desktop {
-      display: none !important;
-    }
-  }
-
-  /* Hide desktop-only on mobile */
-  @media (max-width: 767px) {
-    .hide-on-mobile {
-      display: none !important;
-    }
-  }
-
-  /* Chart info icons and tooltips */
-  .chart-container {
-    position: relative;
-  }
-
-  .chart-info-icon {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    font-size: 16px;
-    cursor: pointer;
-    color: #3498db;
-    transition: opacity 0.2s;
-  }
-
-  .chart-info-icon:hover {
-    opacity: 0.8;
-  }
-
-  #chart-info-tooltip {
-    position: absolute;
-    z-index: 1000;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 14px;
-    max-width: 300px;
-    pointer-events: none;
-    display: none;
-    direction: rtl;
-    text-align: right;
-  }
-
-  /* Fix for cumulative savings chart on mobile */
-  @media (max-width: 767px) {
-    #cumulativeSavingsChart {
-      min-height: 200px !important;
-      height: 200px !important;
-    }
+ * Create timeline chart for savings over time
+ * @param {Array} timelineData - Data for timeline chart
+ */
+function createTimelineChart(timelineData) {
+  if (typeof Chart !== 'undefined') {
+    const container = document.getElementById('timelineChart');
+    if (!container) return;
     
-    #cumulativeSavingsChart canvas {
-      height: 100% !important;
-      width: 100% !important;
-    }
-  }
-  
-  /* New styles for filters modal */
-  .filter-button-container {
-    display: flex;
-    justify-content: center;
-    margin: 15px 0;
-  }
-  
-  .filter-button {
-    background-color: #f8f9fa;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 8px 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 14px;
-    transition: all 0.2s;
-  }
-  
-  .filter-button:hover {
-    background-color: #e9ecef;
-  }
-  
-  .filter-icon {
-    font-size: 16px;
-  }
-  
-  /* Filters Modal Styles */
-  .filters-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 2000;
-    overflow: auto;
-  }
-  
-  .filters-modal-content {
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 20px;
-    border-radius: 10px;
-    width: 80%;
-    max-width: 600px;
-    position: relative;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-    direction: rtl;
-  }
-  
-  .close-filters-modal {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 24px;
-    cursor: pointer;
-    color: #aaa;
-  }
-  
-  .close-filters-modal:hover {
-    color: #555;
-  }
-  
-  .filters-modal h3 {
-    text-align: center;
-    margin-top: 0;
-    margin-bottom: 20px;
-    font-size: 1.2rem;
-  }
-  
-  .filters-actions {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 25px;
-  }
-  
-  .filter-action-button {
-    padding: 8px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    border: none;
-    transition: background-color 0.2s;
-  }
-  
-  .apply-button {
-    background-color: #3498db;
-    color: white;
-  }
-  
-  .apply-button:hover {
-    background-color: #2980b9;
-  }
-  
-  .reset-button {
-    background-color: #e74c3c;
-    color: white;
-  }
-  
-  .reset-button:hover {
-    background-color: #c0392b;
-  }
-  
-  @media (max-width: 767px) {
-    .filters-modal-content {
-      width: 90%;
-      margin: 15% auto;
-      padding: 15px;
-    }
+    container.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
     
-    .filters-actions {
-      flex-direction: column;
-      gap: 10px;
-    }
+    // Responsive font size based on screen size
+    const isMobile = window.innerWidth < 768;
+    const fontSize = isMobile ? 10 : 12;
     
-    .filter-action-button {
-      width: 100%;
-      padding: 10px;
-    }
-  }
-`;
-document.head.appendChild(style);
-})();
-
-// Setup timeline toggles on document load
-document.addEventListener('DOMContentLoaded', function() {
-document.querySelectorAll('.timeline-toggle').forEach(checkbox => {
-  checkbox.addEventListener('change', function() {
-    const series = this.dataset.series;
-    if (series) {
-      visibleSeries[series] = this.checked;
-      updateTimelineVisibility();
-    }
-  });
-});
-
-// Initial resize handling
-handleResize();
-
-// Setup chart info tooltips
-setupChartInfoTooltips();
-});
-
-// Add an event listener to close the modal when the Escape key is pressed
-document.addEventListener('keydown', function(event) {
-// Check if the key is Escape (keyCode 27 or key='Escape')
-if (event.key === 'Escape' || event.keyCode === 27) {
-  // Check if the modal is open before attempting to close it
-  const modal = document.querySelector('.modal-content.stats-modal-content');
-  if (modal) {
-    // Verify if the modal is visible on the page
-    const modalStyle = window.getComputedStyle(modal);
-    if (modalStyle.display !== 'none') {
-      // Trigger the same function as the close button click
-      const closeButton = document.querySelector('.close-stats-modal');
-      if (closeButton) {
-        closeButton.click();
-      } else {
-        // If no close button exists, simply hide the modal
-        modal.style.display = 'none';
-        
-        // Hide the overlay if it exists
-        const overlay = document.querySelector('.modal-overlay');
-        if (overlay) {
-          overlay.style.display = 'none';
-        }
-      }
-    }
-  }
-  
-  // Check if filters modal is open
-  const filtersModal = document.getElementById('filters-modal');
-  if (filtersModal && filtersModal.style.display === 'block') {
-    const closeButton = document.querySelector('.close-filters-modal');
-    if (closeButton) {
-      closeButton.click();
-    } else {
-      filtersModal.style.display = 'none';
-    }
-  }
-}
-});
-
-// Ensure the Escape key handler works even when the modal is loaded dynamically
-document.addEventListener('DOMContentLoaded', function() {
-// This initializes the Escape key listener when the page loads
-console.log("Modal escape key handler initialized");
-});
-</script>
-
-<style>
-/* ===== Statistics Modal Specific Styles ===== */
-.stats-modal-content {
-max-width: 800px;
-padding: 25px;
-max-height: 85vh;
-overflow-y: auto;
-}
-
-/* Desktop styling for stats cards - SMALLER SIZE */
-.stats-summary {
-display: flex;
-flex-wrap: wrap;
-justify-content: space-between;
-margin: 10px 0; /* Reduced from 20px to 10px */
-gap: 10px; /* Reduced from 20px to 10px */
-}
-
-.stats-card {
-background-color: #f8f9fa;
-border-radius: 6px; /* Reduced from 8px to 6px */
-padding: 8px; /* Reduced from 15px to 8px */
-flex: 1;
-min-width: 150px; /* Reduced from 200px to 150px */
-text-align: center;
-box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Smaller shadow */
-}
-
-.big-number {
-font-size: 1.8em; /* Reduced from 2.5em to 1.8em */
-font-weight: bold;
-color: #3498db;
-margin: 5px 0; /* Reduced from 10px to 5px */
-}
-
-.stats-card h3 {
-font-size: 0.9rem; /* Reduced title size */
-margin: 0 0 3px 0; /* Reduced margin */
-}
-
-.stats-card p {
-font-size: 0.8rem; /* Reduced text size */
-margin: 2px 0 0 0; /* Reduced margin */
-}
-
-/* Desktop specific - ensure four smaller boxes per row */
-@media (min-width: 992px) {
-.stats-card {
-  max-width: calc(25% - 12px); /* Smaller width */
-  flex: 0 0 calc(25% - 12px); /* Prevent over-expanding */
-}
-}
-
-/* Medium screens - allow two boxes per row */
-@media (min-width: 768px) and (max-width: 991px) {
-.stats-card {
-  max-width: calc(50% - 10px); /* Smaller width */
-  flex: 0 0 calc(50% - 10px); /* Prevent over-expanding */
-}
-}
-
-/* Chart styles for all sizes */
-.stats-charts {
-display: flex;
-flex-direction: column;
-gap: 20px;
-margin: 20px 0;
-width: 100%;
-}
-
-.chart-container {
-width: 100%;
-min-height: 300px;
-background-color: #fff;
-border-radius: 8px;
-box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-padding: 15px;
-margin-bottom: 15px;
-}
-
-.chart {
-width: 100% !important;
-height: 250px !important;
-}
-
-/* Table styling with wrapper for scrolling if needed */
-.savings-table-wrapper {
-width: 100%;
-overflow-x: auto;
--webkit-overflow-scrolling: touch;
-}
-.savings-table {
-width: 100%;
-border-collapse: collapse;
-margin: 20px 0;
-min-width: 300px; /* Ensures table doesn't get too narrow */
-}
-.savings-table th,
-.savings-table td {
-padding: 10px;
-text-align: right;
-border-bottom: 1px solid #ddd;
-}
-.savings-table th {
-background-color: #f2f2f2;
-position: sticky;
-top: 0;
-}
-
-/* Filters container with proper wrapping */
-.filters-container {
-margin: 10px 0;
-padding: 10px 15px;
-background-color: #f8f9fa;
-border-radius: 8px;
-display: flex;
-align-items: center;
-flex-wrap: wrap;
-justify-content: center;
-}
-.filters-container span {
-font-weight: bold;
-margin-right: 10px;
-}
-.company-filters {
-display: flex;
-flex-wrap: wrap;
-gap: 8px;
-justify-content: center;
-margin: 0 auto;
-width: 100%;
-text-align: center;
-}
-.company-filter-item {
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 5px;
-padding: 4px 8px;
-background-color: #fff;
-border-radius: 4px;
-border: 1px solid #ddd;
-cursor: pointer;
-font-size: 0.85em;
-text-align: center;
-min-width: 90px;
-margin: 0 auto;
-user-select: none;
-}
-.company-filter-item span {
-display: block;
-width: 100%;
-text-align: center;
-margin: 0 auto;
-pointer-events: none;
-}
-.company-filter-item.active {
-background-color: #e3f2fd;
-border-color: #2196F3;
-}
-
-/* Desktop styles - larger charts */
-@media (min-width: 992px) {
-.stats-modal-content {
-  max-width: 90%;
-  width: 1000px;
-}
-
-.chart-container {
-  min-height: 250px;  /* Reduced from 450px/350px to 250px */
-}
-
-.chart {
-  height: 220px !important;  /* Reduced from 300px to 220px */
-}
-
-/* Canvas height updates in specific charts */
-#timelineChart canvas,
-#companySavingsChart canvas,
-#savingsPercentageChart canvas,
-#cumulativeSavingsChart canvas,
-#couponUsageChart canvas,
-#couponTypeChart canvas {
-  height: 100% !important;
-  width: 100% !important;
-  max-height: 220px !important;  /* Adjusted to new height */
-  margin: 0 auto !important;
-  display: block !important;
-}
-
-/* Optional: Reduced gap between charts */
-.stats-charts {
-  gap: 15px;
-}
-
-/* Optional: Reduced container padding */
-.chart-container {
-  padding: 12px;
-  margin-bottom: 10px;
-}
-}
-
-/* ===== Enhanced Mobile Styles ===== */
-@media (max-width: 767px) {
-.stats-modal-content {
-  padding: 12px;
-  margin: 5% auto;
-  width: 95%;
-  max-width: 95%;
-}
-
-/* Page title */
-.stats-modal-content h2 {
-  font-size: 1.2rem;
-  margin-top: 0;
-  margin-bottom: 12px;
-  text-align: center;
-}
-
-/* Filters styling for mobile */
-.filters-container {
-  padding: 8px;
-  margin: 8px 0;
-  border-radius: 6px;
-}
-
-.filters-container span {
-  margin-bottom: 5px;
-  display: block;
-  width: 100%;
-  text-align: center;
-  margin-right: 0;
-  font-size: 0.9rem;
-}
-
-.company-filters, 
-.coupon-type-filters {
-  gap: 6px;
-}
-
-.company-filter-item,
-.coupon-type-filter-item {
-  min-width: 70px;
-  padding: 8px 10px;
-  font-size: 0.8rem;
-  min-height: 36px; /* Larger touch target */
-  margin: 2px;
-}
-
-/* Mobile optimized cards - 2 per row - MUCH SMALLER */
-.stats-summary {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px; /* Reduced from 10px to 6px */
-  margin: 6px 0; /* Reduced margin */
-}
-
-.stats-card {
-  min-width: unset;
-  padding: 5px; /* Reduced padding for mobile */
-  margin: 0;
-}
-
-.stats-card h3 {
-  font-size: 0.75rem; /* Smaller title font size */
-  margin: 0 0 2px 0; /* Reduced margin */
-}
-
-.big-number {
-  font-size: 1.2rem; /* Smaller number font size */
-  margin: 2px 0; /* Reduced margin */
-}
-
-.stats-card p {
-  font-size: 0.65rem; /* Smaller text font size */
-  margin: 2px 0 0 0; /* Reduced margin */
-}
-
-/* Mobile optimized charts */
-.chart-container {
-  min-height: 250px;
-  padding: 10px;
-  margin-bottom: 15px;
-}
-
-.chart-container h3 {
-  font-size: 0.95rem;
-  margin-top: 0;
-  margin-bottom: 10px;
-  text-align: center;
-}
-
-.chart {
-  height: 200px !important;
-}
-
-/* Timeline controls for mobile */
-.timeline-controls {
-  margin-bottom: 10px;
-}
-
-.data-toggle {
-  gap: 10px;
-  flex-direction: column;
-  align-items: center;
-}
-
-.data-toggle label {
-  font-size: 0.8rem;
-}
-
-/* Table section for mobile */
-.stats-details h3 {
-  font-size: 1rem;
-  text-align: center;
-  margin: 15px 0 10px 0;
-}
-
-/* Close button positioning */
-.close-stats-modal {
-  top: 5px;
-  right: 10px;
-  font-size: 1.5rem;
-}
-
-/* Mobile cards - enhance readability */
-#total-savings-card .big-number,
-#savings-percentage-card .big-number {
-  color: #2196F3; /* Blue */
-}
-
-#total-coupons-card .big-number {
-  color: #FF5722; /* Orange */
-}
-
-#average-usage-card .big-number {
-  color: #4CAF50; /* Green */
-}
-
-/* Styling for filter button on mobile */
-.filter-button {
-  width: 90%;
-  padding: 12px;
-  font-size: 0.9rem;
-}
-}
-
-/* For very small devices - EVEN SMALLER */
-@media (max-width: 400px) {
-.stats-modal-content {
-  padding: 10px;
-}
-
-.stats-card {
-  padding: 4px; /* Further reduced padding */
-}
-
-.big-number {
-  font-size: 1.1rem; /* Even smaller number font */
-  margin: 1px 0; /* Minimal margin */
-}
-
-.stats-card h3 {
-  font-size: 0.7rem; /* Smaller title font */
-}
-
-.stats-card p {
-  font-size: 0.6rem; /* Smaller text font */
-}
-
-.company-filter-item,
-.coupon-type-filter-item {
-  min-width: 60px;
-  padding: 6px 8px;
-  font-size: 0.75rem;
-}
-
-.chart-container {
-  min-height: 220px;
-}
-
-.chart {
-  height: 180px !important;
-}
-
-.filter-button {
-  width: 100%;
-  font-size: 0.8rem;
-}
-}
-
-/* Enhance tooltips */
-#tooltipEl {
-direction: rtl !important;
-text-align: right !important;
-}
-
-/* For original Chart.js tooltips */
-.chartjs-tooltip {
-direction: rtl !important;
-text-align: right !important;
-}
-
-/* Improve scrolling and touch experience */
-* {
--webkit-overflow-scrolling: touch;
-}
-
-/* Fix table width on smaller devices */
-@media (max-width: 576px) {
-.savings-table-wrapper {
-  margin: 0 -8px;
-  width: calc(100% + 16px);
-}
-
-.savings-table th {
-  white-space: nowrap;
-}
-}
-
-/* Improve chart loading state */
-.chart:empty::before {
-content: "טוען נתונים...";
-display: flex;
-justify-content: center;
-align-items: center;
-height: 100%;
-color: #777;
-font-size: 0.9rem;
-}
-
-/* Changes for mobile screens only
-   This code applies only to screens up to 767px width
-   On desktop (screens over 767px) the table remains unchanged */
-@media (max-width: 767px) {
-/* Reduce table width on mobile only */
-.savings-table-wrapper {
-  width: 92%;
-  margin: 0 auto;
-}
-
-/* Maximum width for table cells on mobile only */
-.savings-table.mobile-view td {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* Improve table styling on mobile only */
-.savings-table.mobile-view tr.mobile-row {
-  width: 100%;
-  margin-bottom: 12px;
-}
-
-/* Adjust charts to screen width on mobile only */
-.chart-container {
-  width: 92%;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 10px;
-}
-
-/* Fix content overflow in table cells on mobile */
-.mobile-row-data {
-  word-break: break-word;
-}
-}
-
-/* Fix for very small screens - mobile only */
-@media (max-width: 400px) {
-.savings-table-wrapper,
-.chart-container {
-  width: 90%;
-}
-}
-
-/* Reduce table width on mobile screens only
-   Keep all other styling as it was */
-@media (max-width: 767px) {
-/* Reduce table wrapper width on mobile only */
-.savings-table-wrapper {
-  width: 92%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Reduce width for row boxes in the table */
-.savings-table.mobile-view tr.mobile-row {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Also for charts */
-.chart-container {
-  width: 92%;
-  margin-left: auto;
-  margin-right: auto;
-}
-}
-
-/* Smaller for very small screens */
-@media (max-width: 400px) {
-.savings-table-wrapper,
-.chart-container {
-  width: 90%;
-}
-}
-
-/* Override styles to ensure two-column layout for charts on desktop */
-@media (min-width: 992px) {
-/* This ensures the charts are displayed in two columns on desktop */
-.stats-charts {
-  display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
-  gap: 15px !important;
-}
-
-/* Additional fixes to ensure proper height and spacing */
-.chart-container {
-  min-height: 250px;
-  height: auto;
-}
-
-.chart {
-  height: 220px !important;
-}
-}
-
-/* Make sure mobile stays with single column layout */
-@media (max-width: 991px) {
-.stats-charts {
-  display: flex !important;
-  flex-direction: column !important;
-}
-}
-</style>
+    // Find the max value to set appropriate scale
+    const maxRemainingValue = Math.max(...timelineData.map(d => d.remaining_value || 0));
+    const maxSavingsValue = Math.max(...timelineData.map(d => d.value || 0));
+    const maxYValue = Math.max(maxRemainingValue, maxSavingsValue);
+    
+    // Create the chart with multiple datasets
+    timelineChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: timelineData.map(d => d.month),
+        datasets: [
+          {
+            label: 'חיסכון חודשי (ש"ח)',
+            data: timelineData.map(d => d.value || 0),
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.2)',
+            borderWidth: 2,
+            fill: true,
+            seriesType: 'savings',
+            hidden: !visibleSeries.savings
+          },
+          {
+            label: 'ערך שנותר (ש"ח)',
+            data: timelineData.map(d => d.remaining_value || 0),
+            borderColor: '#2ecc71',
+            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+            borderWidth: 2,
+            fill: false,
+            seriesType: 'remaining',
+            hidden: !visibleSeries.remaining
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { 
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              font: { size: fontSize }
+            },
+            // Add padding to make sure small values are visible
+            suggestedMax: maxYValue * 1.1
+          },
+          x: {
+            ticks: {
+              font: { size: fontSize },
+              maxRotation: isMobile ? 45 : 0
+            }
+          }
+        },
+        plugins: {
+          tooltip: {
+            rtl: true,
+            textDirection: 'rtl',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleFont: {
+              size: 14
+            },
+            bodyFont: {
+              size: 14
+            },
+            padding: 12,
+            titleAlign: 'right',
+            bodyAlign: 'right',
+            position: 'nearest',
+            caretSize: 6,
+            callbacks: {
+              label: function(context) {
+                let labels = [];
+                
+                // Get the original data point for this month
+                const monthData = timelineData[context.dataIndex];
+                if (!monthData) return [];
+                
+                // Customize display based on dataset
+                if (context.dataset.seriesType === 'savings') {
+                  labels.push(`סה"כ חיסכון בחודש זה: ${monthData.value.toFixed(2)} ₪`);
+                } else if (context.dataset.seriesType === 'remaining') {
+                  labels.push(`סה"כ ערך שנותר: ${monthData.remaining_value.toFixed(2)} ₪`);
+                }
+                
+                // Add common info
+                if (monthData.coupons_count !== undefined) {
+                  labels.push(`מספר קופונים שנקנו: ${monthData.coupons_count}`);
+                  
+                  // Add one-time and non-one-time counts
+                  if (monthData.one_time_count !== undefined) {
+                    labels.push(`קופונים חד פעמיים: ${monthData.one_time_count}`);
+                  }
+                  
+                  if (monthData.non_one_time_count !== undefined) {
+                    labels.push(`קופונים רב פעמיים: ${monthData.non_one_time_count}`);
+                  }
+                }
+              
+                if (monthData.discount_percentage !== undefined) {
+                  labels.push(`אחוז הנחה ממוצע: ${monthData.discount_percentage.toFixed(1)}%`);
+                }
+              
+                // Add companies detail to tooltip
+                if (monthData.companies && monthData.companies.length > 0) {
+                  labels.push(`חברות בחודש זה:`);
+                  monthData.companies.forEach(company => {
+                    labels.push(`• ${company}`);
+                  });
+                }
+                
+                return labels;
+              },
+              title: function(tooltipItems) {
+                return tooltipItems[0].label; // Month
+              },
+              // Avoid duplicate labels for multiline tooltips
+              beforeBody: function(tooltipItems) {
+                // If we have multiple datasets highlighted, add a separator
+                if (tooltipItems.length > 1) {
+                  return '───────────────';
+                }
+                return '';
+              }

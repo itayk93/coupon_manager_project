@@ -338,34 +338,40 @@
   
   /* # === Modal container styling === */
   #quickAddModal.modal {
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-    max-width: 550px;
+    height: 100%;
     z-index: 1000;
-    overflow-y: auto;
-    opacity: 1;
-    transition: opacity 0.3s ease;
-    max-height: 85vh; /* # Match stats modal max height */
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
   }
   
   #quickAddModal.modal.active {
-    display: block;
     opacity: 1;
+    visibility: visible;
   }
   
   /* # === Modal content styling === */
   #quickAddModal .modal-content {
     direction: rtl;
     background-color: white;
-    width: 100%;
-    border-radius: 10px; /* # Rounded corners matching stats modal */
-    box-shadow: var(--modal-shadow); /* # Consistent shadow */
+    width: 90%;
+    max-width: 550px;
+    max-height: 85vh;
+    border-radius: 12px;
+    box-shadow: var(--modal-shadow);
     position: relative;
+    overflow-y: auto;
     transform: translateY(0);
     opacity: 1;
     transition: transform 0.3s ease, opacity 0.3s ease;
-    overflow: hidden;
-    padding: 0;
   }
   
   #quickAddModal .modal-header {
@@ -375,6 +381,7 @@
     justify-content: space-between;
     align-items: center;
     background-color: var(--light-bg);
+    position: relative;
   }
   
   #quickAddModal .modal-header h3 {
@@ -382,8 +389,8 @@
     color: var(--primary-color);
     font-size: 1.4em;
     font-weight: 600;
-    text-align: center; /* # Center title like stats modal */
-    flex: 1; /* # Help with centering */
+    text-align: center;
+    flex: 1;
   }
   
   #quickAddModal .close-modal {
@@ -395,6 +402,15 @@
     transition: color 0.2s ease;
     position: absolute;
     right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   #quickAddModal .close-modal:hover {
@@ -403,7 +419,6 @@
   
   #quickAddModal .modal-body {
     padding: 0;
-    max-height: 80vh;
     overflow: hidden;
   }
   
@@ -935,7 +950,6 @@
       width: 95%;
       max-width: 550px;
       margin: auto;
-      padding: 0;
     }
     
     #quickAddModal .modal-header h3 {
@@ -1116,29 +1130,43 @@ document.addEventListener('DOMContentLoaded', function() {
   const quickAddModal = document.getElementById('quickAddModal');
   const quickAddForm = document.getElementById('quickAddCouponForm');
   
-  // # Function to close the modal
+  // # Global function for closing the modal to ensure consistent behavior
   function closeQuickAddModal() {
     debug('Closing modal');
-    quickAddModal.classList.remove('active');
     
-    // # If this is inside an iframe, notify the parent
-    if (window.parent && window.parent !== window) {
-      try {
-        window.parent.postMessage({ action: 'closeQuickAddModal' }, '*');
-      } catch (e) {
-        debug('Error posting message to parent: ' + e);
+    if (quickAddModal) {
+      quickAddModal.classList.remove('active');
+      
+      // # If this is inside an iframe, notify the parent
+      if (window.parent && window.parent !== window) {
+        try {
+          window.parent.postMessage({ action: 'closeQuickAddModal' }, '*');
+        } catch (e) {
+          debug('Error posting message to parent: ' + e);
+        }
       }
     }
   }
   
   // # Setup close button functionality
   if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', function() {
-      closeQuickAddModal();
-    });
+    // # Remove any existing event listeners to prevent duplicates
+    closeModalBtn.removeEventListener('click', closeQuickAddModal);
+    
+    // # Add event listener
+    closeModalBtn.addEventListener('click', closeQuickAddModal);
     debug('Close button event listener attached');
   } else {
     debug('Close button not found');
+  }
+  
+  // # Close modal when clicking on the backdrop (outside the modal content)
+  if (quickAddModal) {
+    quickAddModal.addEventListener('click', function(e) {
+      if (e.target === quickAddModal) {
+        closeQuickAddModal();
+      }
+    });
   }
   
   // # Get navigation elements
@@ -2172,7 +2200,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 companySelect.dispatchEvent(changeEvent);
               }
             }
-            
+
             // Fill in the coupon code
             if (data.data['קוד קופון'] && codeInput) {
               codeInput.value = data.data['קוד קופון'];
@@ -2278,8 +2306,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // # Add escape key handler for closing modal
   document.addEventListener('keydown', function(event) {
-    // # Check if the key is Escape (keyCode 27 or key='Escape')
-    if (event.key === 'Escape' || event.keyCode === 27) {
+    // # Check if the key is Escape (key='Escape')
+    if (event.key === 'Escape') {
       // # Close the modal if it's open
       if (quickAddModal && quickAddModal.classList.contains('active')) {
         closeQuickAddModal();
