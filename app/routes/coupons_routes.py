@@ -1765,31 +1765,56 @@ def add_coupon_with_image_html():
 
     return render_template('add_coupon_with_image.html', form=form)
 
+# Debug control - set this to True to enable debug prints, False to disable
+DEBUG_ENABLED = False
+
+def debug_print(message, level="INFO"):
+    """Print debug messages if debugging is enabled
+    
+    Args:
+        message: The message to print
+        level: Debug level (INFO, WARNING, ERROR)
+    """
+    if DEBUG_ENABLED:
+        print(f"[DEBUG-{level}] {message}")
+
 @coupons_bp.route('/add_coupon', methods=['GET', 'POST'])
 @login_required
 def add_coupon():
-    # # Log activity snippet (commented out)
+    debug_print("Entering add_coupon route")
+    
+    # Log activity snippet (commented out)
     # log_user_activity("add_coupon_view", None)
     try:
-        # # Check for AJAX requests first - this is important for SMS detection
+        debug_print("Checking if request is AJAX")
+        # Check for AJAX requests first - this is important for SMS detection
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            # # Check if this is an SMS detection request
+            debug_print("Processing AJAX request")
+            # Check if this is an SMS detection request
             if request.form.get('submit_sms') == 'true':
-                # # Get the SMS text from the form
+                debug_print("Processing SMS detection request")
+                # Get the SMS text from the form
                 sms_text = request.form.get('sms_text', '')
+                debug_print(f"SMS text received: {sms_text[:50]}..." if len(sms_text) > 50 else f"SMS text received: {sms_text}")
                 
                 if not sms_text:
+                    debug_print("No SMS text provided", "WARNING")
                     return jsonify(success=False, message="לא הוזן טקסט SMS")
                 
-                # # Get companies list for matching
+                # Get companies list for matching
+                debug_print("Fetching companies for matching")
                 companies = Company.query.order_by(Company.name).all()
                 companies_list = [c.name for c in companies]
+                debug_print(f"Found {len(companies_list)} companies")
                 
-                # # Extract coupon details from SMS text
+                # Extract coupon details from SMS text
+                debug_print("Extracting coupon details from SMS")
                 extracted_data_df, pricing_df = extract_coupon_detail_sms(sms_text, companies_list)
+                debug_print(f"Extraction complete. Data found: {not extracted_data_df.empty}")
                 
-                # # Log GPT usage if available
+                # Log GPT usage if available
                 if not pricing_df.empty:
+                    debug_print("Logging GPT usage")
                     pricing_row = pricing_df.iloc[0]
                     new_usage = GptUsage(
                         user_id=current_user.id,
@@ -1808,12 +1833,15 @@ def add_coupon():
                     )
                     db.session.add(new_usage)
                     db.session.commit()
+                    debug_print("GPT usage logged successfully")
                 
-                # # Return extracted data if available
+                # Return extracted data if available
                 if not extracted_data_df.empty:
+                    debug_print("Processing extracted data")
                     extracted_data = extracted_data_df.iloc[0].to_dict()
                     
-                    # # Convert data types for JSON serialization
+                    # Convert data types for JSON serialization
+                    debug_print("Converting data types for JSON serialization")
                     for key, value in extracted_data.items():
                         if pd.isna(value):
                             extracted_data[key] = None
@@ -1822,29 +1850,113 @@ def add_coupon():
                         elif isinstance(value, np.float64):
                             extracted_data[key] = float(value)
                     
+                    debug_print("Returning extracted data via JSON")
                     return jsonify(success=True, message="הקופון זוהה בהצלחה!", data=extracted_data)
                 else:
+                    debug_print("No data extracted from SMS", "WARNING")
                     return jsonify(success=False, message="לא ניתן לזהות נתונים בטקסט שהוזן")
                 
-            # # Regular AJAX coupon submission
+            # Regular AJAX coupon submission
             elif request.form.get('submit_coupon') == 'true':
-                # # Standard coupon form handling for AJAX
-                # # This part would handle the quick add modal form submission
-                # # Code implementation would be similar to the non-AJAX path but return JSON
+                debug_print("Processing AJAX coupon submission")
                 
-                return jsonify(success=True, message="קופון נוסף בהצלחה!")
-        
-        # # Non-AJAX request handling - the original function logic follows:
+                # Validate form data similar to manual submission
+                code = request.form.get('code', '').strip()
+                value = float(request.form.get('value', 0))
+                cost = float(request.form.get('cost', 0))
+                description = (request.form.get('description', '') or '').strip()
+                expiration = request.form.get('expiration')
+                is_one_time = request.form.get('is_one_time') == 'true'
+                purpose = (request.form.get('purpose', '').strip() if is_one_time else '') or None
+                source = (request.form.get('source', '') or '').strip()
+                selected_company_id = request.form.get('company_id')
+                other_company_name = (request.form.get('other_company', '') or '').strip()
+
+                debug_print(f"AJAX Coupon details: code={code}, value={value}, cost={cost}")
+
+                try:
+                    # Check slots availability
+                    if current_user.slots_automatic_coupons <= 0:
+                        debug_print("No slots available", "WARNING")
+                        return jsonify(success=False, message="אין לך מספיק סלוטים להוספת קופונים.")
+
+                    # Handle company selection similar to manual submission
+                    if selected_company_id == 'other':
+                        if not other_company_name:
+                            debug_print("No company name provided", "WARNING")
+                            return jsonify(success=False, message="יש להזין שם חברה חדשה.")
+                        
+                        existing_company = Company.query.filter_by(name=other_company_name).first()
+                        if existing_company:
+                            company = existing_company
+                        else:
+                            company = Company(name=other_company_name, image_path='default_logo.png')
+                            db.session.add(company)
+                            db.session.flush()
+                    else:
+                        try:
+                            selected_company_id = int(selected_company_id)
+                            company = Company.query.get(selected_company_id)
+                            if not company:
+                                debug_print(f"Company with ID {selected_company_id} not found", "ERROR")
+                                return jsonify(success=False, message="חברה נבחרה אינה תקפה.")
+                        except (ValueError, TypeError):
+                            debug_print(f"Invalid company ID: {selected_company_id}", "ERROR")
+                            return jsonify(success=False, message="חברה נבחרה אינה תקפה.")
+
+                    # Decrease slots
+                    current_user.slots_automatic_coupons -= 1
+                    db.session.commit()
+                    debug_print(f"Slot used. Remaining slots: {current_user.slots_automatic_coupons}")
+
+                    # Create coupon
+                    new_coupon = Coupon(
+                        code=code,
+                        value=value,
+                        cost=cost,
+                        company=company.name,
+                        description=description,
+                        expiration=datetime.strptime(expiration, '%Y-%m-%d').date() if expiration else None,
+                        user_id=current_user.id,
+                        is_one_time=is_one_time,
+                        purpose=purpose,
+                        source=source
+                    )
+
+                    # Optional: Add tag
+                    chosen_company_name = company.name
+                    found_tag = get_most_common_tag_for_company(chosen_company_name)
+                    if found_tag:
+                        new_coupon.tags.append(found_tag)
+
+                    db.session.add(new_coupon)
+                    db.session.commit()
+                    
+                    debug_print(f"Coupon added successfully. ID: {new_coupon.id}")
+                    return jsonify(success=True, message="קופון נוסף בהצלחה!")
+
+                except Exception as e:
+                    db.session.rollback()
+                    debug_print(f"Error adding AJAX coupon: {e}", "ERROR")
+                    return jsonify(success=False, message=f"שגיאה בהוספת קופון: {str(e)}")
+
+        # Non-AJAX request handling - the original function logic follows:
+        debug_print("Processing non-AJAX request")
         manual = request.args.get('manual', 'false').lower() == 'true'
+        debug_print(f"Manual mode: {manual}")
         sms_form = SMSInputForm()
         coupon_form = CouponForm()
         show_coupon_form = manual
+        debug_print(f"Initial show_coupon_form: {show_coupon_form}")
 
+        debug_print("Fetching companies and tags")
         companies = Company.query.order_by(Company.name).all()
         tags = Tag.query.all()
+        debug_print(f"Found {len(companies)} companies and {len(tags)} tags")
 
         companies_list = [c.name for c in companies]
 
+        debug_print("Populating form choices")
         coupon_form.company_id.choices = (
             [('', 'בחר')] +
             [(str(company.id), company.name) for company in companies] +
@@ -1856,11 +1968,16 @@ def add_coupon():
             [('other', 'אחר')]
         )
 
-        # # Process SMS submission
+        # Process SMS submission
         if sms_form.validate_on_submit() and 'sms_text' in request.form:
+            debug_print("Processing SMS form submission")
             sms_text = sms_form.sms_text.data
+            debug_print(f"SMS text: {sms_text[:50]}..." if len(sms_text) > 50 else f"SMS text: {sms_text}")
             extracted_data_df, pricing_df = extract_coupon_detail_sms(sms_text, companies_list)
+            debug_print(f"Extraction complete. Data found: {not extracted_data_df.empty}")
+            
             if not pricing_df.empty:
+                debug_print("Logging GPT usage")
                 pricing_row = pricing_df.iloc[0]
                 new_usage = GptUsage(
                     user_id=current_user.id,
@@ -1879,10 +1996,15 @@ def add_coupon():
                 )
                 db.session.add(new_usage)
                 db.session.commit()
+                debug_print("GPT usage logged successfully")
 
             if not extracted_data_df.empty:
+                debug_print("Processing extracted data")
                 extracted_data = extracted_data_df.iloc[0].to_dict()
                 company_name = extracted_data.get('חברה', '').strip()
+                debug_print(f"Extracted company name: {company_name}")
+                
+                debug_print("Finding best company match")
                 best_match_ratio = 0
                 best_company = None
                 for comp in companies:
@@ -1890,24 +2012,30 @@ def add_coupon():
                     if ratio > best_match_ratio:
                         best_match_ratio = ratio
                         best_company = comp
+                debug_print(f"Best match: {best_company.name if best_company else 'None'} with ratio {best_match_ratio}")
 
                 if best_company and best_match_ratio >= 90:
+                    debug_print(f"Using existing company: {best_company.name}")
                     coupon_form.company_id.data = str(best_company.id)
                     coupon_form.other_company.data = ''
                     chosen_company_name = best_company.name
                 else:
+                    debug_print(f"Using new company name: {company_name}")
                     coupon_form.company_id.data = 'other'
                     coupon_form.other_company.data = company_name
                     chosen_company_name = company_name
 
+                debug_print("Populating coupon form with extracted data")
                 coupon_form.code.data = extracted_data.get('קוד קופון')
                 coupon_form.cost.data = extracted_data.get('עלות', 0) or 0
                 try:
                     if extracted_data.get('תאריך תפוגה'):
+                        debug_print(f"Parsing expiration date: {extracted_data['תאריך תפוגה']}")
                         coupon_form.expiration.data = datetime.strptime(
                             extracted_data['תאריך תפוגה'], '%Y-%m-%d'
                         ).date()
                 except Exception as e:
+                    debug_print(f"Error parsing expiration date: {e}", "ERROR")
                     current_app.logger.error(f"[ERROR] parsing expiration date: {e}")
 
                 coupon_form.is_one_time.data = bool(extracted_data.get('קוד לשימוש חד פעמי'))
@@ -1916,23 +2044,31 @@ def add_coupon():
                 coupon_form.value.data = extracted_data.get('ערך מקורי', 0) or 0
                 coupon_form.discount_percentage.data = 0
 
+                debug_print(f"Checking slot availability. Current slots: {current_user.slots_automatic_coupons}")
                 if current_user.slots_automatic_coupons > 0:
                     current_user.slots_automatic_coupons -= 1
                     db.session.commit()
+                    debug_print(f"Slot used. Remaining slots: {current_user.slots_automatic_coupons}")
                 else:
+                    debug_print("No slots available", "WARNING")
                     flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
                     return redirect(url_for('coupons.add_coupon'))
 
+                debug_print(f"Finding tag for company: {chosen_company_name}")
                 found_tag = get_most_common_tag_for_company(chosen_company_name)
                 current_app.logger.info(f"[DEBUG] Received tag => '{found_tag}' for company '{chosen_company_name}'")
                 if found_tag:
+                    debug_print(f"Tag found: {found_tag.name}")
                     coupon_form.tag_id.data = str(found_tag.id)
                     coupon_form.other_tag.data = ''
 
                 show_coupon_form = True
+                debug_print("Form populated successfully, showing coupon form")
             else:
+                debug_print("No data found in SMS", "WARNING")
                 flash('לא נמצאו נתונים בהודעת ה-SMS.', 'danger')
 
+            debug_print("Rendering template with SMS data")
             return render_template(
                 'add_coupon.html',
                 coupon_form=coupon_form,
@@ -1942,23 +2078,30 @@ def add_coupon():
                 tags=tags
             )
 
-        # # Process POST request (image upload or manual coupon submission)
+        # Process POST request (image upload or manual coupon submission)
         if request.method == 'POST':
+            debug_print("Processing POST request")
             if 'upload_image' in request.form and coupon_form.upload_image.data:
+                debug_print("Processing image upload")
                 image_file = coupon_form.coupon_image.data
                 if image_file and image_file.filename != '':
+                    debug_print(f"Image file: {image_file.filename}")
                     try:
                         flash("Starting image processing...", "info")
                         upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+                        debug_print(f"Upload folder: {upload_folder}")
                         if not os.path.exists(upload_folder):
                             os.makedirs(upload_folder)
+                            debug_print(f"Created folder: {upload_folder}")
                             flash(f"Folder {upload_folder} created.", "info")
 
                         image_path = os.path.join(upload_folder, image_file.filename)
                         image_file.save(image_path)
+                        debug_print(f"Image saved to: {image_path}")
                         flash(f"Image saved to {image_path}.", "success")
 
                         if not companies_list:
+                            debug_print("Company list is empty", "WARNING")
                             flash("Company list is empty. Ensure companies exist in the system.", "warning")
                             return render_template('add_coupon.html',
                                                    coupon_form=coupon_form,
@@ -1967,17 +2110,21 @@ def add_coupon():
                                                    companies=companies,
                                                    tags=tags)
 
+                        debug_print("Extracting coupon details from image")
                         coupon_df, pricing_df = extract_coupon_detail_image_proccess(
                             client_id=os.getenv('IMGUR_CLIENT_ID'),
                             image_path=image_path,
                             companies_list=companies_list
                         )
+                        debug_print("Image processing completed")
                         flash("extract_coupon_detail_image_proccess completed.", "info")
 
                         if not coupon_df.empty:
+                            debug_print("Coupon details extracted successfully")
                             flash("Coupon details extracted successfully.", "success")
 
                             extracted_company = coupon_df.loc[0, 'חברה']
+                            debug_print(f"Extracted company: {extracted_company}")
                             best_match_ratio = 0
                             best_company = None
                             for comp in companies:
@@ -1985,16 +2132,20 @@ def add_coupon():
                                 if ratio > best_match_ratio:
                                     best_match_ratio = ratio
                                     best_company = comp
+                            debug_print(f"Best match: {best_company.name if best_company else 'None'} with ratio {best_match_ratio}")
 
                             if best_company and best_match_ratio >= 90:
+                                debug_print(f"Using existing company: {best_company.name}")
                                 coupon_form.company_id.data = str(best_company.id)
                                 coupon_form.other_company.data = ''
                                 chosen_company_name = best_company.name
                             else:
+                                debug_print(f"Using new company name: {extracted_company}")
                                 coupon_form.company_id.data = 'other'
                                 coupon_form.other_company.data = extracted_company
                                 chosen_company_name = extracted_company
 
+                            debug_print("Populating coupon form with extracted data")
                             coupon_form.code.data = coupon_df.loc[0, 'קוד קופון']
                             coupon_form.cost.data = coupon_df.loc[0, 'עלות'] if pd.notnull(coupon_df.loc[0, 'עלות']) else 0
                             coupon_form.value.data = coupon_df.loc[0, 'ערך מקורי'] if pd.notnull(coupon_df.loc[0, 'ערך מקורי']) else 0
@@ -2002,28 +2153,36 @@ def add_coupon():
                             try:
                                 expiration_val = coupon_df.loc[0, 'תאריך תפוגה']
                                 if pd.notnull(expiration_val):
+                                    debug_print(f"Parsing expiration date: {expiration_val}")
                                     coupon_form.expiration.data = pd.to_datetime(expiration_val).date()
                             except Exception as e:
+                                debug_print(f"Error parsing expiration date: {e}", "ERROR")
                                 current_app.logger.error(f"[ERROR] parsing expiration date from image: {e}")
 
                             coupon_form.description.data = coupon_df.loc[0, 'תיאור'] if pd.notnull(coupon_df.loc[0, 'תיאור']) else ''
                             coupon_form.is_one_time.data = False
                             coupon_form.purpose.data = ''
 
+                            debug_print(f"Checking slot availability. Current slots: {current_user.slots_automatic_coupons}")
                             if current_user.slots_automatic_coupons > 0:
                                 current_user.slots_automatic_coupons -= 1
                                 db.session.commit()
+                                debug_print(f"Slot used. Remaining slots: {current_user.slots_automatic_coupons}")
                             else:
+                                debug_print("No slots available", "WARNING")
                                 flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
                                 return redirect(url_for('coupons.add_coupon'))
 
+                            debug_print(f"Finding tag for company: {chosen_company_name}")
                             found_tag = get_most_common_tag_for_company(chosen_company_name)
                             current_app.logger.info(f"[DEBUG] Received tag => '{found_tag}' for company '{chosen_company_name}'")
                             if found_tag:
+                                debug_print(f"Tag found: {found_tag.name}")
                                 coupon_form.tag_id.data = str(found_tag.id)
                                 coupon_form.other_tag.data = ''
 
                             try:
+                                debug_print("Logging user activity")
                                 new_activity = {
                                     "user_id": current_user.id,
                                     "coupon_id": None,
@@ -2044,20 +2203,27 @@ def add_coupon():
                                     new_activity
                                 )
                                 db.session.commit()
+                                debug_print("Activity logged successfully")
                             except Exception as e:
+                                debug_print(f"Error logging activity: {e}", "ERROR")
                                 db.session.rollback()
                                 current_app.logger.error(f"Error logging activity [add_coupon_via_image_upload]: {e}")
 
                             show_coupon_form = True
+                            debug_print("Form populated successfully, showing coupon form")
                             flash("Form populated successfully. Please check and edit if necessary.", "success")
                         else:
+                            debug_print("No coupon details found in image", "WARNING")
                             flash("Could not extract coupon details from image.", "danger")
                     except Exception as e:
+                        debug_print(f"Error processing image: {e}", "ERROR")
                         current_app.logger.error(f"[ERROR] processing image: {e}")
                         traceback.print_exc()
                         flash("An error occurred while processing the image. Please try again later.", "danger")
                 else:
+                    debug_print("No image provided", "WARNING")
                     flash("Image is required.", "danger")
+                debug_print("Rendering template after image processing")
                 return render_template('add_coupon.html',
                                        coupon_form=coupon_form,
                                        sms_form=sms_form,
@@ -2065,52 +2231,81 @@ def add_coupon():
                                        companies=companies,
                                        tags=tags)
             elif 'submit_coupon' in request.form and coupon_form.submit_coupon.data:
-                # # Manual flow - user pressed submit_coupon
+                debug_print("Processing manual coupon submission")
+                # Manual flow - user pressed submit_coupon
                 if coupon_form.validate_on_submit():
+                    debug_print("Form validation successful")
                     code = coupon_form.code.data.strip()
+                    debug_print(f"Coupon code: {code}")
                     try:
                         value = float(coupon_form.value.data) if coupon_form.value.data else 0
+                        debug_print(f"Coupon value: {value}")
                     except Exception as e:
+                        debug_print(f"Error converting value to float: {e}", "ERROR")
                         current_app.logger.error(f"[ERROR] converting value to float: {e}")
                         value = 0
                     try:
                         cost = float(coupon_form.cost.data) if coupon_form.cost.data else 0
+                        debug_print(f"Coupon cost: {cost}")
                     except Exception as e:
+                        debug_print(f"Error converting cost to float: {e}", "ERROR")
                         current_app.logger.error(f"[ERROR] converting cost to float: {e}")
                         cost = 0
                     description = (coupon_form.description.data or '').strip()
                     expiration = coupon_form.expiration.data or None
+                    debug_print(f"Expiration date: {expiration}")
                     is_one_time = coupon_form.is_one_time.data
+                    debug_print(f"One-time use: {is_one_time}")
                     purpose = (coupon_form.purpose.data.strip() if is_one_time else '') or None
-                    source = coupon_form.source.data.strip()  # # Source field
+                    source = coupon_form.source.data.strip()  # Source field
+                    debug_print(f"Source: {source}")
                     selected_company_id = coupon_form.company_id.data
+                    debug_print(f"Selected company ID: {selected_company_id}")
                     other_company_name = (coupon_form.other_company.data or '').strip()
+                    
                     if selected_company_id == 'other':
+                        debug_print("Processing 'other' company selection")
                         if not other_company_name:
+                            debug_print("No company name provided", "WARNING")
                             flash('יש להזין שם חברה חדשה.', 'danger')
                             return redirect(url_for('coupons.add_coupon', manual='true'))
+                        debug_print(f"Checking if company '{other_company_name}' already exists")
                         existing_company = Company.query.filter_by(name=other_company_name).first()
                         if existing_company:
+                            debug_print(f"Company already exists: {existing_company.name}")
                             company = existing_company
                         else:
+                            debug_print(f"Creating new company: {other_company_name}")
                             company = Company(name=other_company_name, image_path='default_logo.png')
                             db.session.add(company)
                             db.session.flush()
+                            debug_print(f"New company created with ID: {company.id}")
                     else:
+                        debug_print(f"Using existing company with ID: {selected_company_id}")
                         try:
                             selected_company_id = int(selected_company_id)
                             company = Company.query.get(selected_company_id)
                             if not company:
+                                debug_print(f"Company with ID {selected_company_id} not found", "ERROR")
                                 flash('חברה נבחרה אינה תקפה.', 'danger')
                                 return redirect(url_for('coupons.add_coupon', manual='true'))
+                            debug_print(f"Company found: {company.name}")
                         except (ValueError, TypeError):
+                            debug_print(f"Invalid company ID: {selected_company_id}", "ERROR")
                             flash('חברה נבחרה אינה תקפה.', 'danger')
                             return redirect(url_for('coupons.add_coupon', manual='true'))
+                    
+                    debug_print(f"Checking slot availability. Current slots: {current_user.slots_automatic_coupons}")
                     if current_user.slots_automatic_coupons <= 0:
+                        debug_print("No slots available", "WARNING")
                         flash('אין לך מספיק סלוטים להוספת קופונים.', 'danger')
                         return redirect(url_for('coupons.add_coupon', manual='true'))
+                    
                     current_user.slots_automatic_coupons -= 1
                     db.session.commit()
+                    debug_print(f"Slot used. Remaining slots: {current_user.slots_automatic_coupons}")
+                    
+                    debug_print("Creating new coupon object")
                     new_coupon = Coupon(
                         code=code,
                         value=value,
@@ -2121,19 +2316,29 @@ def add_coupon():
                         user_id=current_user.id,
                         is_one_time=is_one_time,
                         purpose=purpose,
-                        source=source  # # Source field
+                        source=source  # Source field
                     )
                     new_coupon.buyme_coupon_url = coupon_form.buyme_coupon_url.data.strip() if coupon_form.buyme_coupon_url.data else None
+                    debug_print(f"BuyMe URL: {new_coupon.buyme_coupon_url}")
+                    
                     chosen_company_name = company.name
+                    debug_print(f"Finding tag for company: {chosen_company_name}")
                     found_tag = get_most_common_tag_for_company(chosen_company_name)
                     if found_tag:
+                        debug_print(f"Tag found: {found_tag.name}")
                         new_coupon.tags.append(found_tag)
+                    
                     db.session.add(new_coupon)
+                    debug_print("Attempting to save coupon to database")
                     try:
                         db.session.commit()
+                        debug_print(f"Coupon saved with ID: {new_coupon.id}")
                         add_coupon_transaction(new_coupon)
-                        # # Activity log snippet
+                        debug_print("Coupon transaction recorded")
+                        
+                        # Activity log snippet
                         try:
+                            debug_print("Logging user activity")
                             new_activity = {
                                 "user_id": current_user.id,
                                 "coupon_id": new_coupon.id,
@@ -2154,25 +2359,35 @@ def add_coupon():
                                 new_activity
                             )
                             db.session.commit()
+                            debug_print("Activity logged successfully")
                         except Exception as e:
+                            debug_print(f"Error logging activity: {e}", "ERROR")
                             db.session.rollback()
                             current_app.logger.error(f"Error logging activity [add_coupon_manual_submit]: {e}")
-                        # # If request is made via AJAX, return JSON response without full page reload
+                        
+                        # If request is made via AJAX, return JSON response without full page reload
                         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            debug_print("Returning AJAX success response")
                             return jsonify(success=True, message="קופון נוסף בהצלחה!")
                         else:
+                            debug_print("Redirecting to coupons list")
                             flash('קופון נוסף בהצלחה!', 'success')
                             return redirect(url_for('coupons.show_coupons'))
                     except IntegrityError as e:
+                        debug_print(f"IntegrityError: {e}", "ERROR")
                         db.session.rollback()
                         current_app.logger.error(f"[ERROR] IntegrityError adding coupon: {e}")
                         flash('קוד קופון זה כבר קיים. אנא בחר קוד אחר.', 'danger')
                     except Exception as e:
+                        debug_print(f"Error adding coupon: {e}", "ERROR")
                         db.session.rollback()
                         current_app.logger.error(f"[ERROR] Error adding coupon: {e}")
                         flash('אירעה שגיאה בעת הוספת הקופון. נסה שוב.', 'danger')
                 else:
+                    debug_print("Form validation failed", "WARNING")
                     flash("הטופס אינו תקין. אנא בדוק את הנתונים שהזנת.", "danger")
+                    
+        debug_print("Rendering add_coupon template")
         return render_template(
             'add_coupon.html',
             coupon_form=coupon_form,
@@ -2182,6 +2397,7 @@ def add_coupon():
             tags=tags
         )
     except Exception as e:
+        debug_print(f"Unhandled exception: {e}", "ERROR")
         current_app.logger.error(f"[ERROR] Unhandled exception in add_coupon: {e}")
         traceback.print_exc()
         flash("אירעה שגיאה בלתי צפויה. אנא נסה שוב מאוחר יותר.", "danger")

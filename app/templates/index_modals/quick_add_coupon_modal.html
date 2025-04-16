@@ -1124,6 +1124,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   debug('Initializing quick add coupon modal');
+  console.log('DEBUG: Modal script loaded');
   
   // # Initialize DOM elements
   const closeModalBtn = document.getElementById('closeQuickAddModal');
@@ -1898,228 +1899,145 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // # AJAX form submission handler
-  if (quickAddForm) {
-    quickAddForm.addEventListener('submit', function(event) {
-      event.preventDefault(); // # Prevent default form submission
-      debug('Form submission initiated');
-      
-      // # Check if the form submission is from SMS detect button
-      const isSmsSubmission = event.submitter && event.submitter.id === 'submit_sms';
-      
-      // # Perform validation only for regular submissions
-      if (!isSmsSubmission) {
-        if (!validateCurrentStep()) {
-          debug('Form validation failed');
-          return false;
-        }
-      }
-      
-      // # Create FormData from the form
-      const formData = new FormData(quickAddForm);
-      formData.append('is_ajax', 'true');
-      
-      // # Include SMS flag if needed
-      if (isSmsSubmission) {
-        formData.append('submit_sms', 'true');
-        debug('SMS detection submission');
-      }
-      
-      // # Send form data via AJAX
-      fetch('/add_coupon', {
-        method: 'POST',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest' // # Mark as AJAX request
-        },
-        body: formData
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          debug('Form submitted successfully: ' + data.message);
-          
-          if (isSmsSubmission) {
-            // # For SMS detection, update the form fields with the detected data
-            // # alert('הקופון זוהה בהצלחה!');
-            
-            // # Populate form fields with the detected data
-            if (data.data) {
-              debug('Received coupon data to populate form fields');
-              
-              // # Handle company selection
-              const companyName = data.data['חברה'];
-              if (companyName) {
-                debug('Processing company: ' + companyName);
-                // # Look for a match in the company dropdown
-                let companyFound = false;
-                if (companySelect) {
-                  // # First try to find an exact match in the dropdown
-                  for (let i = 0; i < companySelect.options.length; i++) {
-                    if (companySelect.options[i].text.trim().toLowerCase() === companyName.toLowerCase()) {
-                      companySelect.value = companySelect.options[i].value;
-                      companyFound = true;
-                      debug('Company match found in dropdown: ' + companySelect.options[i].value);
-                      break;
-                    }
-                  }
-                  
-                  // # If no exact match, use "other" and set the name
-                  if (!companyFound) {
-                    companySelect.value = 'other';
-                    if (otherCompanyInput) {
-                      otherCompanyInput.value = companyName;
-                      debug('Company not found in dropdown, using "other" option with: ' + companyName);
-                    }
-                  }
-                  
-                  // # Trigger change event to update UI
-                  const changeEvent = new Event('change');
-                  companySelect.dispatchEvent(changeEvent);
-                }
-              }
-              
-              // # Fill in the coupon code
-              if (data.data['קוד קופון'] && codeInput) {
-                codeInput.value = data.data['קוד קופון'];
-                debug('Set coupon code: ' + data.data['קוד קופון']);
-              }
-              
-              // # Fill in cost
-              if (data.data['עלות'] !== undefined && costInput) {
-                costInput.value = data.data['עלות'];
-                debug('Set cost: ' + data.data['עלות']);
-              }
-              
-              // # Fill in value
-              if (data.data['ערך מקורי'] !== undefined && valueInput) {
-                valueInput.value = data.data['ערך מקורי'];
-                debug('Set value: ' + data.data['ערך מקורי']);
-              }
-              
-              // # Fill in expiration date if available
-              if (data.data['תאריך תפוגה'] && expirationInput) {
-                expirationInput.value = data.data['תאריך תפוגה'];
-                debug('Set expiration date: ' + data.data['תאריך תפוגה']);
-              }
-              
-              // # Handle one-time coupon
-              if (data.data['קוד לשימוש חד פעמי'] !== undefined && isOneTimeCheckbox) {
-                isOneTimeCheckbox.checked = Boolean(data.data['קוד לשימוש חד פעמי']);
-                debug('Set one-time flag: ' + isOneTimeCheckbox.checked);
-                
-                // # Trigger change event to show/hide related fields
-                const changeEvent = new Event('change');
-                isOneTimeCheckbox.dispatchEvent(changeEvent);
-                
-                // # Fill in purpose if it's a one-time coupon
-                if (purposeInput && data.data['מטרת הקופון']) {
-                  purposeInput.value = data.data['מטרת הקופון'];
-                  debug('Set purpose: ' + data.data['מטרת הקופון']);
-                }
-              }
-              
-              // # Fill in description if available
-              if (data.data['תיאור'] && descriptionInput) {
-                descriptionInput.value = data.data['תיאור'];
-                debug('Set description: ' + data.data['תיאור']);
-              }
-              
-              // # Fill in source if available
-              if (data.data['מאיפה קיבלת את הקופון'] && sourceInput) {
-                sourceInput.value = data.data['מאיפה קיבלת את הקופון'];
-                debug('Set source: ' + data.data['מאיפה קיבלת את הקופון']);
-              }
-              
-              // # Calculate discount percentage if not provided but we have cost and value
-              if (discountInput) {
-                if (data.data['אחוז הנחה']) {
-                  discountInput.value = data.data['אחוז הנחה'];
-                  debug('Set discount percentage from data: ' + data.data['אחוז הנחה']);
-                } else {
-                  const cost = parseFloat(costInput.value);
-                  const value = parseFloat(valueInput.value);
-                  if (!isNaN(cost) && !isNaN(value) && value > 0) {
-                    const discount = ((value - cost) / value * 100).toFixed(2);
-                    discountInput.value = discount;
-                    debug('Calculated discount percentage: ' + discount);
-                    
-                    // # Update the visual discount display
-                    if (discountDisplay && discountValue) {
-                      discountDisplay.style.width = Math.min(100, discount) + '%';
-                      discountValue.textContent = discount + '%';
-                    }
-                  }
-                }
-              }
-              
-              // # Update fields to ensure validation
-              updateFields(null);
-              debug('Updated fields and validation');
-              
-              // # Move to step 2 after a short delay to allow UI to update
-              setTimeout(() => {
-                debug('Moving to step 2');
-                goToStep(2);
-              }, 500);
-            }
-          } else {
-            // # For regular submission, close modal and show success message
-            
-            // # Close modal in parent window
-            closeQuickAddModal();
-            
-            // # Dispatch custom flash message event
-            const flashEvent = new CustomEvent('showFlashMessage', {
-              detail: { message: data.message, type: 'success' }
-            });
-            window.dispatchEvent(flashEvent);
-            
-            // # If we're in an iframe, notify the parent
-            if (window.parent && window.parent !== window) {
-              try {
-                window.parent.postMessage({
-                  action: 'couponAdded',
-                  message: data.message
-                }, '*');
-                
-                // # Reload the parent page
-                setTimeout(() => {
-                  window.parent.location.reload();
-                }, 500);
-              } catch (e) {
-                debug('Error posting message to parent: ' + e);
-              }
-            }
-          }
-        } else {
-          debug('Error from server: ' + (data.message || 'Unknown error'));
-          alert(data.message || 'שגיאה בהוספת הקופון. אנא נסה שנית.');
-        }
-      })
-      .catch(error => {
-        debug('AJAX error: ' + error);
-        alert('שגיאה בלתי צפויה. אנא נסה שנית מאוחר יותר.');
-      });
-    });
+  // # Function to handle company selection for SMS detection
+  function handleCompanyField(companyName) {
+    if (!companyName || !companySelect) {
+      debug('No company name provided or company select not found');
+      return;
+    }
     
-    debug('Form submission handler attached');
+    debug(`Handling company ${companyName}`);
+    
+    let companyFound = false;
+    // Look for a match in the company dropdown
+    for (let i = 0; i < companySelect.options.length; i++) {
+      if (companySelect.options[i].text.trim().toLowerCase() === companyName.toLowerCase()) {
+        companySelect.value = companySelect.options[i].value;
+        companyFound = true;
+        debug(`Found company in select list at index ${i}`);
+        break;
+      }
+    }
+    
+    // If no exact match, use "other" and set the name
+    if (!companyFound && otherCompanyInput) {
+      companySelect.value = 'other';
+      otherCompanyInput.value = companyName;
+      debug(`Company not found in dropdown, using "other" option with: ${companyName}`);
+    }
+    
+    // Trigger change event to update UI
+    companySelect.dispatchEvent(new Event('change'));
   }
   
-  // Find the submit_sms button and add a direct click handler to it
+  // # Function to fill form with data from SMS detection
+  function fillFormWithData(data) {
+    debug('Filling form with data:', data);
+    
+    // Handle company selection
+    const companyName = data['חברה'];
+    if (companyName) {
+      handleCompanyField(companyName);
+    }
+    
+    // Fill in the coupon code
+    if (data['קוד קופון'] && codeInput) {
+      codeInput.value = data['קוד קופון'];
+      debug(`Set coupon code: ${data['קוד קופון']}`);
+    }
+    
+    // Fill in cost
+    if (data['עלות'] !== undefined && costInput) {
+      costInput.value = data['עלות'];
+      debug(`Set cost: ${data['עלות']}`);
+    }
+    
+    // Fill in value
+    if (data['ערך מקורי'] !== undefined && valueInput) {
+      valueInput.value = data['ערך מקורי'];
+      debug(`Set value: ${data['ערך מקורי']}`);
+    }
+    
+    // Fill in expiration date if available
+    if (data['תאריך תפוגה'] && expirationInput) {
+      expirationInput.value = data['תאריך תפוגה'];
+      debug(`Set expiration date: ${data['תאריך תפוגה']}`);
+    }
+    
+    // Handle one-time coupon
+    if (data['קוד לשימוש חד פעמי'] !== undefined && isOneTimeCheckbox) {
+      isOneTimeCheckbox.checked = Boolean(data['קוד לשימוש חד פעמי']);
+      debug(`Set one-time flag: ${isOneTimeCheckbox.checked}`);
+      
+      // Trigger change event to show/hide related fields
+      isOneTimeCheckbox.dispatchEvent(new Event('change'));
+      
+      // Fill in purpose if it's a one-time coupon
+      if (purposeInput && data['מטרת הקופון']) {
+        purposeInput.value = data['מטרת הקופון'];
+        debug(`Set purpose: ${data['מטרת הקופון']}`);
+      }
+    }
+    
+    // Fill in description if available
+    if (data['תיאור'] && descriptionInput) {
+      descriptionInput.value = data['תיאור'];
+      debug(`Set description: ${data['תיאור']}`);
+    }
+    
+    // Fill in source if available
+    if (data['מאיפה קיבלת את הקופון'] && sourceInput) {
+      sourceInput.value = data['מאיפה קיבלת את הקופון'];
+      debug(`Set source: ${data['מאיפה קיבלת את הקופון']}`);
+    }
+    
+    // Calculate discount percentage if not provided but we have cost and value
+    if (discountInput) {
+      if (data['אחוז הנחה']) {
+        discountInput.value = data['אחוז הנחה'];
+        debug(`Set discount percentage from data: ${data['אחוז הנחה']}`);
+      } else {
+        const cost = parseFloat(costInput.value);
+        const value = parseFloat(valueInput.value);
+        if (!isNaN(cost) && !isNaN(value) && value > 0) {
+          const discount = ((value - cost) / value * 100).toFixed(2);
+          discountInput.value = discount;
+          debug(`Calculated discount percentage: ${discount}`);
+          
+          // Update the visual discount display
+          if (discountDisplay && discountValue) {
+            discountDisplay.style.width = Math.min(100, discount) + '%';
+            discountValue.textContent = discount + '%';
+          }
+        }
+      }
+    }
+    
+    // Update fields to ensure validation
+    updateFields(null);
+    debug('Updated fields and validation');
+  }
+  
+  // # SMS detection functionality
   if (submitSmsButton) {
+    console.log('DEBUG: Found submit_sms button');
+    
     submitSmsButton.addEventListener('click', function() {
       debug('SMS detect button clicked');
+      console.log('DEBUG: submit_sms button clicked');
       
       // Get the SMS text value
-      const smsText = document.getElementById('sms_text')?.value || '';
+      const smsText = smsTextArea?.value || '';
       if (!smsText.trim()) {
         alert('יש להזין תוכן להודעה');
+        console.error('DEBUG: No SMS text provided');
         return;
       }
       
       // Show loading indicator
       submitSmsButton.disabled = true;
       submitSmsButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> מזהה...';
+      const originalButtonText = submitSmsButton.textContent;
       
       // Create FormData object directly
       const formData = new FormData();
@@ -2131,6 +2049,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
       if (csrfToken) {
         formData.append('csrf_token', csrfToken);
+        console.log('DEBUG: Added CSRF token');
+      } else {
+        console.warn('DEBUG: No CSRF token found');
       }
       
       // Get the current URL path for the form submission
@@ -2138,8 +2059,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const currentPath = window.location.pathname;
       const submitUrl = currentPath.includes('/add_coupon') ? currentPath : '/add_coupon';
       
-      debug('Submitting to: ' + submitUrl);
-      debug('SMS text: ' + smsText.substring(0, 30) + '...');
+      debug(`Submitting to: ${submitUrl}`);
+      debug(`SMS text: ${smsText.substring(0, 30)}...`);
+      console.log('DEBUG: Submitting SMS to:', submitUrl);
       
       // Send request to server
       fetch(submitUrl, {
@@ -2150,8 +2072,9 @@ document.addEventListener('DOMContentLoaded', function() {
         body: formData
       })
       .then(response => {
+        console.log('DEBUG: Response status:', response.status);
         if (!response.ok) {
-          debug('Server response not OK: ' + response.status + ' ' + response.statusText);
+          debug(`Server response not OK: ${response.status} ${response.statusText}`);
           throw new Error('Server responded with status: ' + response.status);
         }
         return response.json();
@@ -2160,124 +2083,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset button state
         submitSmsButton.disabled = false;
         submitSmsButton.innerHTML = 'זהה קופון';
+        console.log('DEBUG: Response data:', data);
         
         if (data.success) {
-          debug('Coupon detected successfully: ' + data.message);
+          debug(`Coupon detected successfully: ${data.message}`);
           alert('הקופון זוהה בהצלחה!');
           
           // Populate form fields with the detected data
           if (data.data) {
-            debug('Received coupon data to populate form fields');
-            
-            // Handle company selection
-            const companyName = data.data['חברה'];
-            if (companyName) {
-              debug('Processing company: ' + companyName);
-              // Look for a match in the company dropdown
-              let companyFound = false;
-              if (companySelect) {
-                // First try to find an exact match in the dropdown
-                for (let i = 0; i < companySelect.options.length; i++) {
-                  if (companySelect.options[i].text.trim().toLowerCase() === companyName.toLowerCase()) {
-                    companySelect.value = companySelect.options[i].value;
-                    companyFound = true;
-                    debug('Company match found in dropdown: ' + companySelect.options[i].value);
-                    break;
-                  }
-                }
-                
-                // If no exact match, use "other" and set the name
-                if (!companyFound) {
-                  companySelect.value = 'other';
-                  if (otherCompanyInput) {
-                    otherCompanyInput.value = companyName;
-                    debug('Company not found in dropdown, using "other" option with: ' + companyName);
-                  }
-                }
-                
-                // Trigger change event to update UI
-                const changeEvent = new Event('change');
-                companySelect.dispatchEvent(changeEvent);
-              }
-            }
-
-            // Fill in the coupon code
-            if (data.data['קוד קופון'] && codeInput) {
-              codeInput.value = data.data['קוד קופון'];
-              debug('Set coupon code: ' + data.data['קוד קופון']);
-            }
-            
-            // Fill in cost
-            if (data.data['עלות'] !== undefined && costInput) {
-              costInput.value = data.data['עלות'];
-              debug('Set cost: ' + data.data['עלות']);
-            }
-            
-            // Fill in value
-            if (data.data['ערך מקורי'] !== undefined && valueInput) {
-              valueInput.value = data.data['ערך מקורי'];
-              debug('Set value: ' + data.data['ערך מקורי']);
-            }
-            
-            // Fill in expiration date if available
-            if (data.data['תאריך תפוגה'] && expirationInput) {
-              expirationInput.value = data.data['תאריך תפוגה'];
-              debug('Set expiration date: ' + data.data['תאריך תפוגה']);
-            }
-            
-            // Handle one-time coupon
-            if (data.data['קוד לשימוש חד פעמי'] !== undefined && isOneTimeCheckbox) {
-              isOneTimeCheckbox.checked = Boolean(data.data['קוד לשימוש חד פעמי']);
-              debug('Set one-time flag: ' + isOneTimeCheckbox.checked);
-              
-              // Trigger change event to show/hide related fields
-              const changeEvent = new Event('change');
-              isOneTimeCheckbox.dispatchEvent(changeEvent);
-              
-              // Fill in purpose if it's a one-time coupon
-              if (purposeInput && data.data['מטרת הקופון']) {
-                purposeInput.value = data.data['מטרת הקופון'];
-                debug('Set purpose: ' + data.data['מטרת הקופון']);
-              }
-            }
-            
-            // Fill in description if available
-            if (data.data['תיאור'] && descriptionInput) {
-              descriptionInput.value = data.data['תיאור'];
-              debug('Set description: ' + data.data['תיאור']);
-            }
-            
-            // Fill in source if available
-            if (data.data['מאיפה קיבלת את הקופון'] && sourceInput) {
-              sourceInput.value = data.data['מאיפה קיבלת את הקופון'];
-              debug('Set source: ' + data.data['מאיפה קיבלת את הקופון']);
-            }
-            
-            // Calculate discount percentage if not provided but we have cost and value
-            if (discountInput) {
-              if (data.data['אחוז הנחה']) {
-                discountInput.value = data.data['אחוז הנחה'];
-                debug('Set discount percentage from data: ' + data.data['אחוז הנחה']);
-              } else {
-                const cost = parseFloat(costInput.value);
-                const value = parseFloat(valueInput.value);
-                if (!isNaN(cost) && !isNaN(value) && value > 0) {
-                  const discount = ((value - cost) / value * 100).toFixed(2);
-                  discountInput.value = discount;
-                  debug('Calculated discount percentage: ' + discount);
-                  
-                  // Update the visual discount display
-                  if (discountDisplay && discountValue) {
-                    discountDisplay.style.width = Math.min(100, discount) + '%';
-                    discountValue.textContent = discount + '%';
-                  }
-                }
-              }
-            }
-            
-            // Update fields to ensure validation
-            updateFields(null);
-            debug('Updated fields and validation');
+            fillFormWithData(data.data);
             
             // Move to step 2 after a short delay to allow UI to update
             setTimeout(() => {
@@ -2286,7 +2100,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 500);
           }
         } else {
-          debug('Error from server: ' + (data.message || 'Unknown error'));
+          debug(`Error from server: ${data.message || 'Unknown error'}`);
           alert(data.message || 'שגיאה בזיהוי הקופון. אנא נסה שנית.');
         }
       })
@@ -2295,14 +2109,190 @@ document.addEventListener('DOMContentLoaded', function() {
         submitSmsButton.disabled = false;
         submitSmsButton.innerHTML = 'זהה קופון';
         
-        debug('AJAX error: ' + error);
-        console.error('Error details:', error);
+        debug(`AJAX error: ${error}`);
+        console.error('DEBUG: Error during fetch:', error);
         alert('שגיאה בתקשורת עם השרת. אנא ודא שהשרת פעיל ונסה שנית.');
       });
     });
     
-    debug('SMS detection button direct handler attached');
+    debug('SMS detection button handler attached');
+    console.log('DEBUG: SMS button event listener attached');
+  } else {
+    console.error('DEBUG: submit_sms button not found');
   }
+  
+  // AJAX form submission handler
+  if (quickAddForm) {
+    quickAddForm.addEventListener('submit', function(event) {
+      // Prevent the default form submission behavior
+      event.preventDefault(); 
+      
+      // Log the start of form submission process
+      console.log('DEBUG: Form submission initiated');
+      console.log('DEBUG: Submission trigger:', event.submitter);
+
+      // Check if the submission is from SMS detection button
+      const isSmsSubmission = event.submitter && event.submitter.id === 'submit_sms';
+      
+      // Validate the form if it's not an SMS submission
+      if (!isSmsSubmission && !validateCurrentStep()) {
+        console.error('DEBUG: Form validation failed');
+        alert('Please ensure all required fields are filled');
+        return false;
+      }
+      
+      // Create FormData object from the form
+      const formData = new FormData(quickAddForm);
+      
+      // Add custom flags to identify the submission type
+      formData.append('is_ajax', 'true');
+      
+      // Append submission type flags
+      if (isSmsSubmission) {
+        formData.append('submit_sms', 'true');
+        console.log('DEBUG: SMS detection submission');
+      } else {
+        formData.append('submit_coupon', 'true');
+      }
+      
+      // Debug: Log all form data being sent
+      console.log('DEBUG: Form data contents:');
+      for (const [key, value] of formData.entries()) {
+        // Mask sensitive data if needed
+        const maskedValue = key.includes('cvv') ? '****' : value;
+        console.log(`  ${key}: ${maskedValue}`);
+      }
+      
+      // Get the submit button to manage its state
+      const submitButton = document.getElementById('quick_submit_button');
+      const originalButtonText = submitButton ? submitButton.textContent : 'מעבד';
+
+      // Change submit button to loading state
+      if (submitButton && !isSmsSubmission) {
+        submitButton.textContent = 'מעבד';
+        submitButton.disabled = true;
+      }
+      
+      // Detailed logging of submission attempt
+      console.log('DEBUG: Attempting to submit to /add_coupon endpoint');
+      console.log('DEBUG: Submission type:', isSmsSubmission ? 'SMS' : 'Regular Coupon');
+
+      // Send form data via AJAX
+      fetch('/add_coupon', {
+        method: 'POST',
+        headers: {
+          // Mark as AJAX request to handle differently on server
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+      })
+      .then(response => {
+        // Log the raw response details
+        console.log('DEBUG: Response status:', response.status);
+        console.log('DEBUG: Response headers:', Array.from(response.headers.entries()));
+
+        // Check if response is OK
+        if (!response.ok && !isSmsSubmission) {
+          console.error(`DEBUG: Server response not OK: ${response.status} ${response.statusText}`);
+          throw new Error('Server responded with status: ' + response.status);
+        }
+
+        // Try to parse response as JSON
+        return response.json().catch(error => {
+          console.error('DEBUG: JSON parse error:', error);
+          return { 
+            success: false, 
+            message: 'Invalid server response',
+            rawResponse: response
+          };
+        });
+      })
+      .then(data => {
+        // Comprehensive logging of server response
+        console.log('DEBUG: Full server response:', JSON.stringify(data, null, 2));
+        
+        // Reset submit button state
+        if (submitButton && !isSmsSubmission) {
+          submitButton.textContent = originalButtonText;
+          submitButton.disabled = false;
+        }
+        
+        // Handle successful submission
+        if (data.success) {
+          console.log(`DEBUG: Submission successful: ${data.message}`);
+          
+          // Different handling for SMS vs regular submission
+          if (isSmsSubmission) {
+            // SMS detection specific handling
+            if (data.data) {
+              fillFormWithData(data.data);
+              setTimeout(() => {
+                console.log('DEBUG: Moving to step 2');
+                goToStep(2);
+              }, 500);
+            }
+          } else {
+            // Regular coupon submission
+            alert('Coupon added successfully!');
+            
+            // Close modal in parent window
+            closeQuickAddModal();
+            
+            // Dispatch custom event for flash message
+            const flashEvent = new CustomEvent('showFlashMessage', {
+              detail: { message: data.message, type: 'success' }
+            });
+            window.dispatchEvent(flashEvent);
+            
+            // If we're in an iframe, notify the parent
+            if (window.parent && window.parent !== window) {
+              try {
+                window.parent.postMessage({
+                  action: 'couponAdded',
+                  message: data.message
+                }, '*');
+                
+                // Reload the parent page
+                setTimeout(() => {
+                  window.parent.location.reload();
+                }, 1000);
+              } catch (e) {
+                console.error(`DEBUG: Error posting message to parent: ${e}`);
+              }
+            } else {
+              // If not in iframe, redirect to coupons page
+              setTimeout(() => {
+                window.location.href = '/coupons';
+              }, 1000);
+            }
+          }
+        } else {
+          // Handle submission failure
+          console.error(`DEBUG: Server returned error: ${data.message || 'Unknown error'}`);
+          alert(data.message || 'Error adding coupon. Please try again.');
+        }
+      })
+      .catch(error => {
+        // Comprehensive error handling
+        console.error('DEBUG: Full submission error:', error);
+
+        // Reset submit button
+        if (submitButton && !isSmsSubmission) {
+          submitButton.textContent = originalButtonText;
+          submitButton.disabled = false;
+        }
+
+        // User-friendly error message
+        alert('An unexpected error occurred. Please check your internet connection and try again.');
+
+        // Optional: Log error details to console
+        if (error.response) {
+          console.error('Error response:', error.response);
+        }
+      });
+    });
+  }
+  
   
   // # Add escape key handler for closing modal
   document.addEventListener('keydown', function(event) {
@@ -2316,6 +2306,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   debug('Modal initialization complete');
+  console.log('DEBUG: Modal initialization complete');
 });
 </script>
 </body>
