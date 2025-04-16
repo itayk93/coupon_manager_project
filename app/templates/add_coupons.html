@@ -6,30 +6,41 @@
 
 {% block content %}
 <section class="add-coupon">
-    <h2>הוספת קופונים מרובים</h2>
+    <!-- Main section title -->
+    <h2 class="section-title">הוספת קופונים מרובים</h2>
 
-    <div class="add-coupons-buttons">
-        <div class="button-row">
-            <a href="{{ url_for('coupons.add_coupon') }}" class="secondary-button">
-                <i class="fa fa-plus-circle" aria-hidden="true"></i> הוספת קופון יחיד
-            </a>
-            <a href="{{ url_for('coupons.upload_coupons') }}" class="secondary-button">
-                <i class="fa fa-upload" aria-hidden="true"></i> העלאת קובץ קופונים
-            </a>
-        </div>
+    <!-- Action buttons in a single row -->
+    <div class="action-buttons-row">
+        <a href="{{ url_for('coupons.add_coupon') }}" class="action-button">
+            <span class="button-content">
+                <span class="button-text">הוספת קופון יחיד</span>
+                <i class="fa fa-plus-circle button-icon" aria-hidden="true"></i>
+            </span>
+        </a>
+        <a href="{{ url_for('coupons.upload_coupons') }}" class="action-button">
+            <span class="button-content">
+                <span class="button-text">העלאת קובץ קופונים</span>
+                <i class="fa fa-upload button-icon" aria-hidden="true"></i>
+            </span>
+        </a>
     </div>
 
+    <!-- Display flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-messages">
           {% for category, message in messages %}
-            <div class="flash {{ category }}">{{ message }}</div>
+            <div class="flash {{ category }}">
+                <span class="message-text">{{ message }}</span>
+                <button class="close-flash" aria-label="Close">&times;</button>
+            </div>
           {% endfor %}
         </div>
       {% endif %}
     {% endwith %}
 
-    <form method="post" id="coupons-form">
+    <!-- Multiple coupons form -->
+    <form method="post" id="coupons-form" class="multi-coupons-form">
         {{ form.hidden_tag() }}
 
         <div id="coupons-container">
@@ -39,27 +50,30 @@
             {# Only render this fieldset if coupon_data exists or it's the first entry #}
             {% if coupon_data or loop.index0 < 1 %}
             <fieldset class="coupon-fieldset" data-index="{{ loop.index0 }}">
-                <legend>קופון {{ loop.index }}</legend>
+                <legend class="fieldset-legend">קופון {{ loop.index }}</legend>
 
+                <!-- Coupon actions toolbar -->
                 <div class="coupon-actions">
-                    <button type="button" class="duplicate-coupon-button">
+                    <button type="button" class="action-button-small duplicate-coupon-button">
                         <i class="fa fa-clone"></i> שכפול קופון
                     </button>
-                    <button type="button" class="remove-coupon-button">
+                    <button type="button" class="action-button-small remove-coupon-button">
                         <i class="fa fa-trash"></i> הסרת קופון
                     </button>
                 </div>
+                
                 {% if current_user.is_admin %}
-                <!-- Button for entering BuyMe URLs (only if user is admin) - appears below the BuyMe field -->
+                <!-- Button for entering BuyMe URLs (only if user is admin) -->
                 <div class="form-group">
-                    <button type="button" class="open-modal-button buyme-link-button">
+                    <button type="button" class="action-button-small open-modal-button buyme-link-button">
                         <i class="fa fa-link"></i> הזנת קופונים של-BuyMe
                     </button>
                 </div>
                 {% endif %}
                 
+                <!-- Company selection field -->
                 <div class="form-group">
-                    <label for="coupons-{{ loop.index0 }}-company_id">
+                    <label for="coupons-{{ loop.index0 }}-company_id" class="form-label">
                         שם החברה:<span class="required">*</span>
                     </label>
                     <select id="coupons-{{ loop.index0 }}-company_id"
@@ -80,18 +94,19 @@
                     {% endfor %}
                 </div>
 
-                {# BuyMe URL field - if there's data from the URL, initialize the field with coupon_data.url #}
+                <!-- BuyMe URL field - shown only for BuyMe company -->
                 <div class="form-group" id="buyme_coupon_link_group_{{ loop.index0 }}" style="display: none;">
-                    <label for="coupons-{{ loop.index0 }}-buyme_coupon_url">כתובת URL של הקופון ל-BuyMe</label>
+                    <label for="coupons-{{ loop.index0 }}-buyme_coupon_url" class="form-label">כתובת URL של הקופון ל-BuyMe</label>
                     <input type="url" id="coupons-{{ loop.index0 }}-buyme_coupon_url" 
                            name="coupons-{{ loop.index0 }}-buyme_coupon_url" 
                            class="input-field" value="{{ coupon_data.url if coupon_data else '' }}">
                 </div>
 
+                <!-- Other company field - shown only when 'other' is selected -->
                 <div class="form-group other-company-group"
                      id="other_company_group_{{ loop.index0 }}"
                      {% if coupon_form.company_id.data != 'other' %}style="display: none;"{% endif %}>
-                    <label for="coupons-{{ loop.index0 }}-other_company">שם חברה חדשה:</label>
+                    <label for="coupons-{{ loop.index0 }}-other_company" class="form-label">שם חברה חדשה:</label>
                     <input type="text"
                            id="coupons-{{ loop.index0 }}-other_company"
                            name="coupons-{{ loop.index0 }}-other_company"
@@ -102,96 +117,150 @@
                     {% endfor %}
                 </div>
 
+                <!-- Coupon code field -->
                 <div class="form-group">
-                    {{ coupon_form.code.label }}
-                    {# If coupon data exists from URL - initialize code field accordingly #}
-                    {{ coupon_form.code(class="input-field", value=coupon_data.coupon_code if coupon_data else coupon_form.code.data) }}
+                    <label for="coupons-{{ loop.index0 }}-code" class="form-label">
+                        קוד קופון:<span class="required">*</span>
+                    </label>
+                    <input type="text" 
+                           id="coupons-{{ loop.index0 }}-code" 
+                           name="coupons-{{ loop.index0 }}-code" 
+                           class="input-field" 
+                           required 
+                           value="{{ coupon_data.coupon_code if coupon_data else coupon_form.code.data }}">
                     {% for error in coupon_form.code.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
                 </div>
 
+                <!-- Coupon value field -->
                 <div class="form-group">
-                    {{ coupon_form.value.label }}
-                    {# Initialize value if data exists from URL #}
-                    {{ coupon_form.value(class="input-field coupon-value", id="coupons-" ~ loop.index0 ~ "-value", value=(coupon_data.value if coupon_data else (coupon_form.value.data if coupon_form.value.data is not none else ''))) }}
+                    <label for="coupons-{{ loop.index0 }}-value" class="form-label">
+                        ערך הקופון:<span class="required">*</span>
+                    </label>
+                    <input type="number"
+                           step="0.01"
+                           id="coupons-{{ loop.index0 }}-value"
+                           name="coupons-{{ loop.index0 }}-value"
+                           class="input-field coupon-value"
+                           required
+                           value="{{ coupon_data.value if coupon_data else (coupon_form.value.data if coupon_form.value.data is not none else '') }}">
                     {% for error in coupon_form.value.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
                 </div>
 
+                <!-- Coupon cost field -->
                 <div class="form-group">
-                    {{ coupon_form.cost.label }}
-                    {# Initialize cost if data exists from URL #}
-                    {{ coupon_form.cost(class="input-field coupon-cost", id="coupons-" ~ loop.index0 ~ "-cost", value=(coupon_data.cost if coupon_data else (coupon_form.cost.data if coupon_form.cost.data is not none else ''))) }}
+                    <label for="coupons-{{ loop.index0 }}-cost" class="form-label">
+                        עלות הקופון:<span class="required">*</span>
+                    </label>
+                    <input type="number"
+                           step="0.01"
+                           id="coupons-{{ loop.index0 }}-cost"
+                           name="coupons-{{ loop.index0 }}-cost"
+                           class="input-field coupon-cost"
+                           required
+                           value="{{ coupon_data.cost if coupon_data else (coupon_form.cost.data if coupon_form.cost.data is not none else '') }}">
                     {% for error in coupon_form.cost.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
                 </div>
 
-                <!-- Add visible discount_percentage field -->
+                <!-- Discount percentage field -->
                 <div class="form-group">
-                    <label for="coupons-{{ loop.index0 }}-discount_percentage">אחוז הנחה:</label>
+                    <label for="coupons-{{ loop.index0 }}-discount_percentage" class="form-label">אחוז הנחה:</label>
                     <input type="number" 
                            id="coupons-{{ loop.index0 }}-discount_percentage" 
                            name="coupons-{{ loop.index0 }}-discount_percentage"
                            class="input-field coupon-discount" 
                            min="0" max="100" step="0.01"
                            value="{{ coupon_data.discount_percentage if coupon_data and coupon_data.discount_percentage else '0' }}">
+                    <!-- Visual discount display -->
+                    <div class="discount-display-container">
+                        <div class="discount-display" style="width: {{ coupon_data.discount_percentage if coupon_data and coupon_data.discount_percentage else '0' }}%;">
+                            <span class="discount-value">{{ coupon_data.discount_percentage if coupon_data and coupon_data.discount_percentage else '0' }}%</span>
+                        </div>
+                    </div>
                     <div class="validation-message error" style="display: none;">
                         יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה, בערך גדול מ-0.
                     </div>
                 </div>
 
+                <!-- Expiration date field -->
                 <div class="form-group">
-                    {{ coupon_form.expiration.label }}
-                    {# Initialize expiration date if data exists from URL #}
-                    {{ coupon_form.expiration(class="input-field", type="date", value=(coupon_data.validity if coupon_data else (coupon_form.expiration.data if coupon_form.expiration.data is not none else ''))) }}
+                    <label for="coupons-{{ loop.index0 }}-expiration" class="form-label">תאריך תפוגה:</label>
+                    <input type="date"
+                           id="coupons-{{ loop.index0 }}-expiration"
+                           name="coupons-{{ loop.index0 }}-expiration"
+                           class="input-field date-input"
+                           value="{{ coupon_data.validity if coupon_data else (coupon_form.expiration.data if coupon_form.expiration.data is not none else '') }}">
                     {% for error in coupon_form.expiration.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
                 </div>
 
-                <!-- Source field ("Where did you get the coupon from") -->
+                <!-- Source field -->
                 <div class="form-group">
-                    <label for="coupons-{{ loop.index0 }}-source">מאיפה קיבלת את הקופון:</label>
+                    <label for="coupons-{{ loop.index0 }}-source" class="form-label">מאיפה קיבלת את הקופון:</label>
                     <input type="text" 
                            id="coupons-{{ loop.index0 }}-source" 
                            name="coupons-{{ loop.index0 }}-source" 
                            class="input-field"
-                           value="{{ '' if coupon_data else '' }}">
+                           value="{{ coupon_form.source.data if coupon_form.source.data else '' }}">
                 </div>
 
-                <div class="form-group checkbox-inline">
-                    <label for="coupons-{{ loop.index0 }}-include_card_info">
-                        <input type="checkbox" id="coupons-{{ loop.index0 }}-include_card_info" name="coupons-{{ loop.index0 }}-include_card_info">
+                <!-- Card details checkbox -->
+                <div class="form-group checkbox-container">
+                    <input type="checkbox" 
+                           id="coupons-{{ loop.index0 }}-include_card_info" 
+                           name="coupons-{{ loop.index0 }}-include_card_info"
+                           class="checkbox-input">
+                    <label for="coupons-{{ loop.index0 }}-include_card_info" class="checkbox-label">
                         האם להכניס תוקף כרטיס ו-CVV?
                     </label>
                 </div>
 
-                <div id="card_fields_container_{{ loop.index0 }}" style="display: none;">
+                <!-- Card fields container - hidden by default -->
+                <div id="card_fields_container_{{ loop.index0 }}" class="card-fields" style="display: none;">
+                    <!-- CVV Field -->
                     <div class="form-group">
-                        <label for="coupons-{{ loop.index0 }}-cvv">CVV</label>
-                        <input type="text" id="coupons-{{ loop.index0 }}-cvv" name="coupons-{{ loop.index0 }}-cvv" class="input-field" maxlength="3">
+                        <label for="coupons-{{ loop.index0 }}-cvv" class="form-label">CVV</label>
+                        <input type="text" 
+                               id="coupons-{{ loop.index0 }}-cvv" 
+                               name="coupons-{{ loop.index0 }}-cvv" 
+                               class="input-field" 
+                               maxlength="3">
                     </div>
+                    <!-- Card Expiration Field -->
                     <div class="form-group">
-                        <label for="coupons-{{ loop.index0 }}-card_exp">תוקף כרטיס</label>
-                        <input type="text" id="coupons-{{ loop.index0 }}-card_exp" name="coupons-{{ loop.index0 }}-card_exp" class="input-field card-exp-input" maxlength="5" placeholder="MM/YY">
+                        <label for="coupons-{{ loop.index0 }}-card_exp" class="form-label">תוקף כרטיס</label>
+                        <input type="text" 
+                               id="coupons-{{ loop.index0 }}-card_exp" 
+                               name="coupons-{{ loop.index0 }}-card_exp" 
+                               class="input-field card-exp-input" 
+                               maxlength="5" 
+                               placeholder="MM/YY">
                     </div>
                 </div>
 
-                <div class="form-group tooltip-checkbox-container" style="position: relative;">
-                    <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף" style="margin-left: 8px;">❔</button>
-                    <label>
-                        {{ coupon_form.is_one_time() }}
+                <!-- One-time use checkbox with tooltip -->
+                <div class="form-group tooltip-checkbox-container">
+                    <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
+                    <input type="checkbox"
+                           id="coupons-{{ loop.index0 }}-is_one_time"
+                           name="coupons-{{ loop.index0 }}-is_one_time"
+                           class="checkbox-input"
+                           {% if coupon_form.is_one_time.data %}checked{% endif %}>
+                    <label for="coupons-{{ loop.index0 }}-is_one_time" class="checkbox-label">
                         קוד לשימוש חד פעמי
                     </label>
+                    <!-- Mobile tooltip -->
                     <div class="mobile-tooltip">
-                        <span class="close-tooltip" style="position: absolute; top: 5px; right: 10px;">×</span>
-                        <div style="padding-right: 25px;">
-                            קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
-                        </div>
+                        קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                        <span class="close-tooltip">×</span>
                     </div>
+                    <!-- Desktop tooltip -->
                     <div class="tooltip">
                         קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
                     </div>
@@ -200,11 +269,16 @@
                     {% endfor %}
                 </div>
 
+                <!-- Purpose field - shown only when one-time is checked -->
                 <div class="form-group purpose-field"
                      id="purpose_group_{{ loop.index0 }}"
                      {% if not coupon_form.is_one_time.data %}style="display: none;"{% endif %}>
-                    {{ coupon_form.purpose.label }}
-                    {{ coupon_form.purpose(class="input-field") }}
+                    <label for="coupons-{{ loop.index0 }}-purpose" class="form-label">מטרת הקופון:</label>
+                    <input type="text"
+                           id="coupons-{{ loop.index0 }}-purpose"
+                           name="coupons-{{ loop.index0 }}-purpose"
+                           class="input-field"
+                           value="{{ coupon_form.purpose.data if coupon_form.purpose.data else '' }}">
                     {% for error in coupon_form.purpose.errors %}
                         <span class="error">{{ error }}</span>
                     {% endfor %}
@@ -214,13 +288,15 @@
             {% endfor %}
         </div>
 
-        <div class="button-row" style="margin-top: 20px;">
-            <button type="button" class="add-coupon-button secondary-button">
+        <!-- Button to add more coupons -->
+        <div class="center-text">
+            <button type="button" class="secondary-button add-coupon-button">
                 <i class="fa fa-plus-circle"></i> הוספת קופון נוסף
             </button>
         </div>
 
-        <div class="form-group" style="margin-top: 20px; text-align: center;">
+        <!-- Submit button -->
+        <div class="form-group submit-group">
             <button type="submit" class="submit-button">הוספת הקופונים לארנק</button>
         </div>
     </form>
@@ -228,34 +304,37 @@
 
 {% if current_user.is_admin %}
 <!-- Modal for entering coupon URLs (appears only if user is admin) -->
-<div id="urlModal" class="modal" style="display: none;">
+<div id="urlModal" class="modal">
     <div class="modal-content">
         <span class="close-modal">&times;</span>
-        <h3>הזן URL של הקופונים ל-BuyMe</h3>
-        <p>הזן את ה-URL של הקופונים (אם יש יותר מאחד, יש ללחוץ ENTER אחרי כל URL חדש):</p>
+        <h3 class="modal-title">הזן URL של הקופונים ל-BuyMe</h3>
+        <p class="modal-description">הזן את ה-URL של הקופונים (אם יש יותר מאחד, יש ללחוץ ENTER אחרי כל URL חדש):</p>
         <textarea id="coupon-urls" class="input-field" rows="10" placeholder="הזן URL של קופונים כאן..."></textarea>
-        <div style="margin-top: 20px; text-align: center;">
+        <div class="modal-footer">
             <button id="submitUrls" class="submit-button">שלח קישורים</button>
         </div>
     </div>
 </div>
 {% endif %}
  
+<!-- Template for new coupon fieldsets -->
 <template id="coupon-template">
     <fieldset class="coupon-fieldset" data-index="__INDEX__">
-        <legend>קופון</legend>
+        <legend class="fieldset-legend">קופון</legend>
 
+        <!-- Coupon actions toolbar -->
         <div class="coupon-actions">
-            <button type="button" class="duplicate-coupon-button">
+            <button type="button" class="action-button-small duplicate-coupon-button">
                 <i class="fa fa-clone"></i> שכפל קופון
             </button>
-            <button type="button" class="remove-coupon-button">
+            <button type="button" class="action-button-small remove-coupon-button">
                 <i class="fa fa-trash"></i> הסר קופון
             </button>
         </div>
 
+        <!-- Company selection field -->
         <div class="form-group">
-            <label for="coupons-__INDEX__-company_id">
+            <label for="coupons-__INDEX__-company_id" class="form-label">
                 שם החברה:<span class="required">*</span>
             </label>
             <select id="coupons-__INDEX__-company_id"
@@ -270,24 +349,28 @@
             </select>
         </div>
 
+        <!-- BuyMe URL field -->
+        <div class="form-group" id="buyme_coupon_link_group___INDEX__" style="display: none;">
+            <label for="coupons-__INDEX__-buyme_coupon_url" class="form-label">כתובת URL של הקופון ל-BuyMe</label>
+            <input type="url" id="coupons-__INDEX__-buyme_coupon_url" 
+                   name="coupons-__INDEX__-buyme_coupon_url" 
+                   class="input-field">
+        </div>
+
+        <!-- Other company field -->
         <div class="form-group other-company-group"
              id="other_company_group___INDEX__"
              style="display: none;">
-            <label for="coupons-__INDEX__-other_company">שם חברה חדשה:</label>
+            <label for="coupons-__INDEX__-other_company" class="form-label">שם חברה חדשה:</label>
             <input type="text"
                    id="coupons-__INDEX__-other_company"
                    name="coupons-__INDEX__-other_company"
                    class="input-field">
         </div>
 
-        <!-- Source field ("Where did you get the coupon from") -->
+        <!-- Coupon code field -->
         <div class="form-group">
-            <label for="coupons-__INDEX__-source">מאיפה קיבלת את הקופון:</label>
-            <input type="text" id="coupons-__INDEX__-source" name="coupons-__INDEX__-source" class="input-field">
-        </div>
-
-        <div class="form-group">
-            <label for="coupons-__INDEX__-code">
+            <label for="coupons-__INDEX__-code" class="form-label">
                 קוד קופון:<span class="required">*</span>
             </label>
             <input type="text"
@@ -297,8 +380,9 @@
                    required>
         </div>
 
+        <!-- Coupon value field -->
         <div class="form-group">
-            <label for="coupons-__INDEX__-value">ערך הקופון:<span class="required">*</span></label>
+            <label for="coupons-__INDEX__-value" class="form-label">ערך הקופון:<span class="required">*</span></label>
             <input type="number"
                    step="0.01"
                    id="coupons-__INDEX__-value"
@@ -307,8 +391,9 @@
                    required>
         </div>
 
+        <!-- Coupon cost field -->
         <div class="form-group">
-            <label for="coupons-__INDEX__-cost">עלות הקופון:<span class="required">*</span></label>
+            <label for="coupons-__INDEX__-cost" class="form-label">עלות הקופון:<span class="required">*</span></label>
             <input type="number"
                    step="0.01"
                    id="coupons-__INDEX__-cost"
@@ -317,9 +402,9 @@
                    required>
         </div>
 
-        <!-- Visible discount_percentage field -->
+        <!-- Discount percentage field -->
         <div class="form-group">
-            <label for="coupons-__INDEX__-discount_percentage">אחוז הנחה:</label>
+            <label for="coupons-__INDEX__-discount_percentage" class="form-label">אחוז הנחה:</label>
             <input type="number"
                    step="0.01"
                    id="coupons-__INDEX__-discount_percentage"
@@ -327,56 +412,93 @@
                    class="input-field coupon-discount"
                    min="0" max="100"
                    value="0">
+            <!-- Visual discount display -->
+            <div class="discount-display-container">
+                <div class="discount-display" style="width: 0%;">
+                    <span class="discount-value">0%</span>
+                </div>
+            </div>
             <div class="validation-message error" style="display: none;">
                 יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה, בערך גדול מ-0.
             </div>
         </div>
 
+        <!-- Source field -->
         <div class="form-group">
-            <label for="coupons-__INDEX__-expiration">תאריך תפוגה:</label>
-            <input type="date"
-                   id="coupons-__INDEX__-expiration"
-                   name="coupons-__INDEX__-expiration"
+            <label for="coupons-__INDEX__-source" class="form-label">מאיפה קיבלת את הקופון:</label>
+            <input type="text" 
+                   id="coupons-__INDEX__-source" 
+                   name="coupons-__INDEX__-source" 
                    class="input-field">
         </div>
 
-        <div class="form-group checkbox-inline">
-            <label for="coupons-__INDEX__-include_card_info">
-                <input type="checkbox" id="coupons-__INDEX__-include_card_info" name="coupons-__INDEX__-include_card_info">
+        <!-- Expiration date field -->
+        <div class="form-group">
+            <label for="coupons-__INDEX__-expiration" class="form-label">תאריך תפוגה:</label>
+            <input type="date"
+                   id="coupons-__INDEX__-expiration"
+                   name="coupons-__INDEX__-expiration"
+                   class="input-field date-input">
+        </div>
+
+        <!-- Card details checkbox -->
+        <div class="form-group checkbox-container">
+            <input type="checkbox" 
+                   id="coupons-__INDEX__-include_card_info" 
+                   name="coupons-__INDEX__-include_card_info"
+                   class="checkbox-input">
+            <label for="coupons-__INDEX__-include_card_info" class="checkbox-label">
                 האם להכניס תוקף כרטיס ו-CVV?
             </label>
         </div>
 
-        <div id="card_fields_container___INDEX__" style="display: none;">
+        <!-- Card fields container -->
+        <div id="card_fields_container___INDEX__" class="card-fields" style="display: none;">
             <div class="form-group">
-                <label for="coupons-__INDEX__-cvv">CVV</label>
-                <input type="text" id="coupons-__INDEX__-cvv" name="coupons-__INDEX__-cvv" class="input-field" maxlength="3">
+                <label for="coupons-__INDEX__-cvv" class="form-label">CVV</label>
+                <input type="text" 
+                       id="coupons-__INDEX__-cvv" 
+                       name="coupons-__INDEX__-cvv" 
+                       class="input-field" 
+                       maxlength="3">
             </div>
             <div class="form-group">
-                <label for="coupons-__INDEX__-card_exp">תוקף כרטיס</label>
-                <input type="text" id="coupons-__INDEX__-card_exp" name="coupons-__INDEX__-card_exp" class="input-field card-exp-input" maxlength="5" placeholder="MM/YY">
+                <label for="coupons-__INDEX__-card_exp" class="form-label">תוקף כרטיס</label>
+                <input type="text" 
+                       id="coupons-__INDEX__-card_exp" 
+                       name="coupons-__INDEX__-card_exp" 
+                       class="input-field card-exp-input" 
+                       maxlength="5" 
+                       placeholder="MM/YY">
             </div>
         </div>
 
-        <div class="form-group tooltip-checkbox-container" style="position: relative;">
+        <!-- One-time use checkbox with tooltip -->
+        <div class="form-group tooltip-checkbox-container">
             <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
             <input type="checkbox"
                    id="coupons-__INDEX__-is_one_time"
-                   name="coupons-__INDEX__-is_one_time">
-            <label for="coupons-__INDEX__-is_one_time">קוד לשימוש חד פעמי</label>
+                   name="coupons-__INDEX__-is_one_time"
+                   class="checkbox-input">
+            <label for="coupons-__INDEX__-is_one_time" class="checkbox-label">
+                קוד לשימוש חד פעמי
+            </label>
+            <!-- Mobile tooltip -->
             <div class="mobile-tooltip">
                 קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
                 <span class="close-tooltip">×</span>
             </div>
+            <!-- Desktop tooltip -->
             <div class="tooltip">
                 קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
             </div>
         </div>
 
+        <!-- Purpose field -->
         <div class="form-group purpose-field"
              id="purpose_group___INDEX__"
              style="display: none;">
-            <label for="coupons-__INDEX__-purpose">מטרת הקופון:</label>
+            <label for="coupons-__INDEX__-purpose" class="form-label">מטרת הקופון:</label>
             <input type="text"
                    id="coupons-__INDEX__-purpose"
                    name="coupons-__INDEX__-purpose"
@@ -387,775 +509,614 @@
 {% endblock %}
 
 {% block scripts %}
-<style>
-.center-text {
-    text-align: center;
-}
-.flash-messages {
-    margin-bottom: 20px;
-}
-.flash {
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 3px;
-}
-.flash.error {
-    background-color: #f8d7da;
-    color: #721c24;
-}
-.flash.success {
-    background-color: #d4edda;
-    color: #155724;
-}
-.add-coupons-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 20px;
-}
-.button-row {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-.button-row.full-width {
-    width: 100%;
-}
-.wide-button {
-    flex-grow: 1;
-    text-align: center;
-    display: block;
-    width: 100%;
-    max-width: 320px;
-}
-.add-coupon-button {
-    border: none;
-    box-shadow: none;
-    outline: none;
-}
-.coupon-fieldset {
-    margin-bottom: 20px;
-    border: 1px solid #ccc;
-    padding: 15px;
-    border-radius: 5px;
-}
-.coupon-actions {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-.form-group {
-    margin-bottom: 15px;
-}
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-}
-.required {
-    color: red;
-}
-.input-field {
-    width: 100%;
-    padding: 6px;
-    box-sizing: border-box;
-    margin-top: 5px;
-}
-.error {
-    color: red;
-    font-size: 0.9em;
-    margin-top: 3px;
-}
-.submit-button {
-    background-color: #2c7be5;
-    color: #fff;
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-    border-radius: 4px;
-}
-.submit-button:hover {
-    background-color: #1a5cb8;
-}
-
-/* Mobile-specific styles */
-@media (max-width: 768px) {
-    .slots-info-mobile {
-        display: block;
-    }
-    .no-slots-message {
-        text-align: center;
-    }
-    .manual-entry p {
-        text-align: center;
-    }
-
-    /* Create a grid with 2 columns for top buttons */
-    .add-coupons-buttons {
-        display: grid;
-        grid-template-columns: 1fr 1fr; /* Two equally sized columns */
-        gap: 10px; /* Space between buttons */
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-    }
-
-    /* Adjust button styling */
-    .button-row {
-        display: contents; /* Preserve grid layout */
-    }
-
-    .button-row a {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 15px;
-        font-size: 16px;
-        text-align: center;
-        min-height: 50px; /* Uniform height */
-        width: 100%;
-    }
-
-    /* Wide button doesn't span the entire width */
-    .button-row.full-width {
-        grid-column: span 2; /* Takes up the entire width of the grid */
-        display: flex;
-        justify-content: center;
-        width: 100%;
-    }
-
-    .wide-button {
-        width: 100%; /* Now its width matches the buttons above */
-        max-width: 100%;
-    }
-    .tooltip {
-        /* Allows seeing the text but not capturing clicks/touch */
-        pointer-events: none;
-    }
-
-    .tooltip .close-tooltip {
-        /* Only allow clicks on the close button */
-        pointer-events: auto; 
-    }
-}
-
-/* Modal styles */
-.modal {
-    display: none; /* Hidden by default */
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    padding-top: 60px;
-}
-
-/* Modal content */
-.modal-content {
-    background-color: #fff;
-    margin: 5% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 600px;
-    border-radius: 5px;
-    position: relative;
-}
-
-/* Close button */
-.close-modal {
-    color: #aaa;
-    font-size: 28px;
-    font-weight: bold;
-    position: absolute;
-    top: 10px;
-    right: 25px;
-    cursor: pointer;
-}
-
-.close-modal:hover,
-.close-modal:focus {
-    color: black;
-    text-decoration: none;
-}
-
-/* Tooltip Styles */
-.tooltip-checkbox-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.tooltip-button-mobile {
-    background: none;
-    border: 1px solid #ccc;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    font-size: 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.tooltip {
-    display: none;
-    position: absolute;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    padding: 10px;
-    border-radius: 4px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    font-size: 14px;
-    max-width: 300px;
-    z-index: 100;
-    top: -5px;
-    left: 30px;
-}
-
-.mobile-tooltip {
-    display: none;
-    position: fixed;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    padding: 15px;
-    border-radius: 4px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    font-size: 14px;
-    max-width: 90%;
-    width: 300px;
-    z-index: 1001;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-.tooltip-button-mobile:hover + .tooltip, 
-.tooltip-button-mobile:focus + .tooltip {
-    display: block;
-}
-
-.close-tooltip {
-    position: absolute;
-    top: 5px;
-    right: 10px;
-    font-size: 18px;
-    cursor: pointer;
-}
-</style>
-
+{{ super() }}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        let index = {{ form.coupons|length }};
+document.addEventListener('DOMContentLoaded', function() {
+    let index = {{ form.coupons|length }};
     
-        // === Helper function to parse float values safely ===
-        function toFloat(value) {
-            const num = parseFloat(value);
-            return isNaN(num) ? null : num;
-        }
+    // === Helper function to parse float values safely ===
+    function toFloat(value) {
+        const num = parseFloat(value);
+        return isNaN(num) ? null : num;
+    }
 
-        // === Auto-calculation functionality for discount, cost and value ===
-        function setupCalculations(fieldset) {
-            const idx = fieldset.dataset.index;
-            const valueInput = fieldset.querySelector(`#coupons-${idx}-value`);
-            const costInput = fieldset.querySelector(`#coupons-${idx}-cost`);
-            const discountInput = fieldset.querySelector(`#coupons-${idx}-discount_percentage`);
-            const validationMessage = fieldset.querySelector('.validation-message');
+    // === Handle flash message close buttons ===
+    document.querySelectorAll('.close-flash').forEach(button => {
+        button.addEventListener('click', function() {
+            this.closest('.flash').remove();
+        });
+    });
+
+    // Auto-dismiss flash messages after 5 seconds
+    setTimeout(() => {
+        document.querySelectorAll('.flash').forEach(message => {
+            message.classList.add('fade-out');
+            setTimeout(() => message.remove(), 500);
+        });
+    }, 5000);
+
+    // === Calculation functionality for discount, cost and value ===
+    function setupCalculations(fieldset) {
+        const idx = fieldset.dataset.index;
+        const valueInput = fieldset.querySelector(`#coupons-${idx}-value`);
+        const costInput = fieldset.querySelector(`#coupons-${idx}-cost`);
+        const discountInput = fieldset.querySelector(`#coupons-${idx}-discount_percentage`);
+        const discountDisplay = fieldset.querySelector('.discount-display');
+        const discountValue = fieldset.querySelector('.discount-value');
+        const validationMessage = fieldset.querySelector('.validation-message');
+        
+        if (!valueInput || !costInput || !discountInput || !discountDisplay || !discountValue) return;
+        
+        function updateFields(changedField) {
+            const value = toFloat(valueInput.value);
+            const cost = toFloat(costInput.value);
+            const discount = toFloat(discountInput.value);
             
-            if (!valueInput || !costInput || !discountInput) return;
+            // Update discount visual display
+            if (discount !== null && discount >= 0 && discount <= 100) {
+                discountDisplay.style.width = discount + '%';
+                discountValue.textContent = discount.toFixed(2) + '%';
+            }
             
-            function updateFields(changedField) {
-                const value = toFloat(valueInput.value);
-                const cost = toFloat(costInput.value);
-                const discount = toFloat(discountInput.value);
-                
-                // Special case: If cost is exactly 0 and value is positive, set discount to 100%
-                if (cost === 0 && value > 0) {
-                    discountInput.value = "100.00";
-                    if (validationMessage) validationMessage.style.display = 'none';
-                    return;
+            // Special case: If cost is exactly 0 and value is positive, set discount to 100%
+            if (cost === 0 && value > 0) {
+                discountInput.value = "100.00";
+                discountDisplay.style.width = "100%";
+                discountValue.textContent = "100.00%";
+                if (validationMessage) validationMessage.style.display = 'none';
+                return;
+            }
+            
+            let filledCount = 0;
+            if (cost !== null && cost >= 0) filledCount++;
+            if (value !== null && value > 0) filledCount++;
+            if (discount !== null && discount > 0 && discount <= 100) filledCount++;
+            
+            if (filledCount < 2) {
+                if (validationMessage) validationMessage.style.display = 'block';
+                return;
+            } else {
+                if (validationMessage) validationMessage.style.display = 'none';
+            }
+            
+            if (filledCount === 2) {
+                if (cost >= 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
+                    // When cost and discount are provided, calculate value
+                    if (discount === 100) {
+                        // Handle division by zero case when discount is 100%
+                        valueInput.value = cost > 0 ? (cost * 100).toFixed(2) : "0.00";
+                    } else {
+                        valueInput.value = (cost / (1 - discount / 100)).toFixed(2);
+                    }
+                } else if (cost >= 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
+                    // When cost and value are provided, calculate discount
+                    if (cost === 0) {
+                        discountInput.value = "100.00";
+                        discountDisplay.style.width = "100%";
+                        discountValue.textContent = "100.00%";
+                    } else {
+                        const newDiscount = ((1 - cost / value) * 100).toFixed(2);
+                        discountInput.value = newDiscount;
+                        discountDisplay.style.width = newDiscount + "%";
+                        discountValue.textContent = newDiscount + "%";
+                    }
+                } else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost < 0)) {
+                    // When value and discount are provided, calculate cost
+                    costInput.value = (value * (1 - discount / 100)).toFixed(2);
                 }
-                
-                let filledCount = 0;
-                if (cost !== null && cost >= 0) filledCount++;
-                if (value !== null && value > 0) filledCount++;
-                if (discount !== null && discount > 0 && discount <= 100) filledCount++;
-                
-                if (filledCount < 2) {
-                    if (validationMessage) validationMessage.style.display = 'block';
-                    return;
-                } else {
-                    if (validationMessage) validationMessage.style.display = 'none';
-                }
-                
-                if (filledCount === 2) {
-                    if (cost >= 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
-                        // When cost and discount are provided, calculate value
-                        if (discount === 100) {
-                            // Handle division by zero case when discount is 100%
-                            valueInput.value = cost > 0 ? (cost * 100).toFixed(2) : "0.00";
-                        } else {
-                            valueInput.value = (cost / (1 - discount / 100)).toFixed(2);
-                        }
-                    } else if (cost >= 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
-                        // When cost and value are provided, calculate discount
-                        if (cost === 0) {
-                            discountInput.value = "100.00";
-                        } else {
-                            discountInput.value = ((1 - cost / value) * 100).toFixed(2);
-                        }
-                    } else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost < 0)) {
-                        // When value and discount are provided, calculate cost
+            } else if (filledCount === 3) {
+                if (changedField === 'cost' && discount > 0 && discount <= 100 && value > 0) {
+                    if (cost === 0) {
+                        discountInput.value = "100.00";
+                        discountDisplay.style.width = "100%";
+                        discountValue.textContent = "100.00%";
+                    } else {
+                        const newDiscount = ((1 - cost / value) * 100).toFixed(2);
+                        discountInput.value = newDiscount;
+                        discountDisplay.style.width = newDiscount + "%";
+                        discountValue.textContent = newDiscount + "%";
+                    }
+                } else if (changedField === 'value' && cost >= 0 && discount > 0 && discount <= 100) {
+                    if (cost === 0) {
+                        discountInput.value = "100.00";
+                        discountDisplay.style.width = "100%";
+                        discountValue.textContent = "100.00%";
+                    } else {
+                        const newDiscount = ((1 - cost / value) * 100).toFixed(2);
+                        discountInput.value = newDiscount;
+                        discountDisplay.style.width = newDiscount + "%";
+                        discountValue.textContent = newDiscount + "%";
+                    }
+                } else if (changedField === 'discount' && cost >= 0 && value > 0) {
+                    if (discount === 100) {
+                        costInput.value = "0.00";
+                    } else {
                         costInput.value = (value * (1 - discount / 100)).toFixed(2);
                     }
-                } else if (filledCount === 3) {
-                    if (changedField === 'cost' && discount > 0 && discount <= 100 && value > 0) {
-                        if (cost === 0) {
-                            discountInput.value = "100.00";
-                        } else {
-                            discountInput.value = ((1 - cost / value) * 100).toFixed(2);
-                        }
-                    } else if (changedField === 'value' && cost >= 0 && discount > 0 && discount <= 100) {
-                        discountInput.value = cost === 0 ? "100.00" : ((1 - cost / value) * 100).toFixed(2);
-                    } else if (changedField === 'discount' && cost >= 0 && value > 0) {
-                        if (discount === 100) {
-                            costInput.value = "0.00";
-                        } else {
-                            costInput.value = (value * (1 - discount / 100)).toFixed(2);
-                        }
-                    }
                 }
             }
-            
-            valueInput.addEventListener('change', function() {
-                updateFields('value');
-            });
-            costInput.addEventListener('change', function() {
-                updateFields('cost');
-            });
-            discountInput.addEventListener('change', function() {
-                updateFields('discount');
-            });
-            
-            // Initial calculation
-            updateFields(null);
         }
         
-        // === Automatic formatting for MM/YY field ===
-        function setupCardExpFormatting(fieldset) {
-            const cardExpInput = fieldset.querySelector('.card-exp-input');
-            if (cardExpInput) {
-                cardExpInput.addEventListener('input', function(event) {
-                    let value = event.target.value.replace(/\D/g, ''); // Only digits
-                    if (value.length > 2) {
-                        value = value.substring(0, 2) + '/' + value.substring(2, 4);
-                    }
-                    event.target.value = value;
+        valueInput.addEventListener('input', function() {
+            updateFields('value');
+        });
+        costInput.addEventListener('input', function() {
+            updateFields('cost');
+        });
+        discountInput.addEventListener('input', function() {
+            updateFields('discount');
+        });
+        
+        // Initial calculation
+        updateFields(null);
+    }
+    
+    // === Automatic formatting for MM/YY field ===
+    function setupCardExpFormatting(fieldset) {
+        const cardExpInput = fieldset.querySelector('.card-exp-input');
+        if (cardExpInput) {
+            cardExpInput.addEventListener('input', function(event) {
+                let value = event.target.value.replace(/\D/g, ''); // Only digits
+                if (value.length > 2) {
+                    value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                }
+                event.target.value = value;
+            });
+        }
+    }
+
+    // === Initialize a coupon fieldset with all event handlers ===
+    function initializeCouponFieldset(fieldset, idx) {
+        fieldset.dataset.index = idx;
+
+        // Setup card fields toggle
+        const includeCardInfoCheckbox = fieldset.querySelector(
+            'input[type="checkbox"][name="coupons-' + idx + '-include_card_info"]'
+        );
+        const cardFieldsContainer = fieldset.querySelector(
+            '#card_fields_container_' + idx
+        );
+
+        function toggleCardFields() {
+            if (!includeCardInfoCheckbox || !cardFieldsContainer) return;
+            if (includeCardInfoCheckbox.checked) {
+                cardFieldsContainer.style.display = 'block';
+            } else {
+                cardFieldsContainer.style.display = 'none';
+                cardFieldsContainer.querySelectorAll('input').forEach(input => {
+                    input.value = '';
                 });
             }
         }
-    
-        function initializeCouponFieldset(fieldset, idx) {
-            fieldset.dataset.index = idx;
-    
-            const includeCardInfoCheckbox = fieldset.querySelector(
-                'input[type="checkbox"][name="coupons-' + idx + '-include_card_info"]'
-            );
-            const cardFieldsContainer = fieldset.querySelector(
-                '#card_fields_container_' + idx
-            );
-    
-            function toggleCardFields() {
-                if (!includeCardInfoCheckbox || !cardFieldsContainer) return;
-                if (includeCardInfoCheckbox.checked) {
-                    cardFieldsContainer.style.display = 'block';
-                } else {
-                    cardFieldsContainer.style.display = 'none';
-                    cardFieldsContainer.querySelectorAll('input').forEach(input => {
-                        input.value = '';
-                    });
-                }
+
+        if (includeCardInfoCheckbox && cardFieldsContainer) {
+            includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
+            toggleCardFields();
+        }
+
+        // Setup company selection & "other" company field toggle
+        const companySelect = fieldset.querySelector('.company-select');
+        const otherCompanyGroup = fieldset.querySelector('.other-company-group');
+
+        function toggleOtherCompanyField() {
+            if (!companySelect || !otherCompanyGroup) return;
+            
+            if (companySelect.value === 'other') {
+                otherCompanyGroup.style.display = 'block';
+            } else {
+                otherCompanyGroup.style.display = 'none';
+                const input = otherCompanyGroup.querySelector('input');
+                if (input) input.value = '';
             }
-    
-            if (includeCardInfoCheckbox && cardFieldsContainer) {
-                includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
-                toggleCardFields();
-            }
-    
-            const companySelect = fieldset.querySelector('.company-select');
-            const otherCompanyGroup = fieldset.querySelector('.other-company-group');
-    
-            function toggleOtherCompanyField() {
-                if (companySelect.value === 'other') {
-                    otherCompanyGroup.style.display = 'block';
-                } else {
-                    otherCompanyGroup.style.display = 'none';
-                    const input = otherCompanyGroup.querySelector('input');
-                    if (input) input.value = '';
-                }
-            }
+        }
+        if (companySelect && otherCompanyGroup) {
             toggleOtherCompanyField();
             companySelect.addEventListener('change', toggleOtherCompanyField);
-    
-            // Add the new "BuyMe URL" field toggle
-            const buymeCouponLinkGroup = fieldset.querySelector('#buyme_coupon_link_group_' + idx);
-    
-            function toggleBuymeCouponLinkField() {
-                if (!buymeCouponLinkGroup) return;
-                if (companySelect.value === '54') {  // assuming 54 is the ID for BuyMe
-                    buymeCouponLinkGroup.style.display = 'block';
-                } else {
-                    buymeCouponLinkGroup.style.display = 'none';
-                    const buymeCouponLinkInput = buymeCouponLinkGroup.querySelector('input');
-                    if (buymeCouponLinkInput) {
-                        buymeCouponLinkInput.value = '';
-                    }
+        }
+
+        // Setup BuyMe URL field toggle
+        const buymeCouponLinkGroup = fieldset.querySelector('#buyme_coupon_link_group_' + idx);
+
+        function toggleBuymeCouponLinkField() {
+            if (!companySelect || !buymeCouponLinkGroup) return;
+            
+            if (companySelect.value === '54') {  // assuming 54 is the ID for BuyMe
+                buymeCouponLinkGroup.style.display = 'block';
+            } else {
+                buymeCouponLinkGroup.style.display = 'none';
+                const buymeCouponLinkInput = buymeCouponLinkGroup.querySelector('input');
+                if (buymeCouponLinkInput) {
+                    buymeCouponLinkInput.value = '';
                 }
             }
+        }
+        if (companySelect && buymeCouponLinkGroup) {
             companySelect.addEventListener('change', toggleBuymeCouponLinkField);
             toggleBuymeCouponLinkField();
-    
-            const isOneTimeCheckbox = fieldset.querySelector('input[type="checkbox"][name$="-is_one_time"]');
-            const purposeGroup = fieldset.querySelector('.purpose-field');
-    
-            function togglePurposeField() {
-                if (isOneTimeCheckbox.checked) {
-                    purposeGroup.style.display = 'block';
-                } else {
-                    purposeGroup.style.display = 'none';
-                    const input = purposeGroup.querySelector('input');
-                    if (input) input.value = '';
-                }
+        }
+
+        // Setup one-time purpose field toggle
+        const isOneTimeCheckbox = fieldset.querySelector('input[type="checkbox"][name$="-is_one_time"]');
+        const purposeGroup = fieldset.querySelector('.purpose-field');
+
+        function togglePurposeField() {
+            if (!isOneTimeCheckbox || !purposeGroup) return;
+            
+            if (isOneTimeCheckbox.checked) {
+                purposeGroup.style.display = 'block';
+            } else {
+                purposeGroup.style.display = 'none';
+                const input = purposeGroup.querySelector('input');
+                if (input) input.value = '';
             }
+        }
+        if (isOneTimeCheckbox && purposeGroup) {
             togglePurposeField();
             isOneTimeCheckbox.addEventListener('change', togglePurposeField);
-    
-            const removeButton = fieldset.querySelector('.remove-coupon-button');
-            if (removeButton) {
-                removeButton.addEventListener('click', function() {
-                    fieldset.remove();
-                    updateLegends();
-                });
-            }
-    
-            const duplicateButton = fieldset.querySelector('.duplicate-coupon-button');
-            if (duplicateButton) {
-                duplicateButton.addEventListener('click', function() {
-                    duplicateCoupon(fieldset);
-                });
-            }
-            
-            // Set up calculations for this fieldset
-            setupCalculations(fieldset);
-            
-            // Set up card expiration formatting
-            setupCardExpFormatting(fieldset);
-            
-            // Set up tooltip functionality
-            setupTooltips(fieldset);
         }
-        
-        // === Tooltip functionality ===
-        function setupTooltips(fieldset) {
-            const tooltipButtons = fieldset.querySelectorAll('.tooltip-button-mobile');
-            
-            tooltipButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const tooltip = this.nextElementSibling.nextElementSibling;
-                    if (tooltip && tooltip.classList.contains('mobile-tooltip')) {
-                        tooltip.style.display = 'block';
-                    }
-                });
-            });
-            
-            const closeButtons = fieldset.querySelectorAll('.close-tooltip');
-            closeButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const tooltip = this.parentElement;
-                    tooltip.style.display = 'none';
-                });
-            });
-        }
-    
-        function updateLegends() {
-            const fieldsets = document.querySelectorAll('.coupon-fieldset');
-            fieldsets.forEach(function(fieldset, idx) {
-                fieldset.dataset.index = idx;
-                updateFieldsetIndex(fieldset, idx);
-            });
-            index = fieldsets.length;
-        }
-    
-        function updateFieldsetIndex(fieldset, newIndex) {
-            const oldIndex = fieldset.dataset.index || '__INDEX__';
-            const regex = new RegExp('(coupons-)(?:' + oldIndex + '|__INDEX__)(-)', 'g');
-    
-            fieldset.querySelectorAll('[name], [id], [for]').forEach(element => {
-                if (element.name) {
-                    element.name = element.name.replace(regex, '$1' + newIndex + '$2');
-                    element.name = element.name.replace('___INDEX__', newIndex);
-                }
-                if (element.id) {
-                    element.id = element.id.replace(regex, '$1' + newIndex + '$2');
-                    element.id = element.id.replace('___INDEX__', newIndex);
-                    element.id = element.id.replace('__INDEX__', newIndex);
-                }
-                if (element.htmlFor) {
-                    element.htmlFor = element.htmlFor.replace(regex, '$1' + newIndex + '$2');
-                    element.htmlFor = element.htmlFor.replace('___INDEX__', newIndex);
-                    element.htmlFor = element.htmlFor.replace('__INDEX__', newIndex);
-                }
-            });
-    
-            fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"]').forEach(element => {
-                element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
-                element.id = element.id.replace('__INDEX__', newIndex);
-                element.id = element.id.replace('___INDEX__', newIndex);
-            });
-    
-            fieldset.querySelectorAll('[id^="card_fields_container_"]').forEach(element => {
-                element.id = element.id.replace('___INDEX__', newIndex);
-                element.id = element.id.replace('__INDEX__', newIndex);
-            });
-    
-            fieldset.querySelectorAll('[id^="buyme_coupon_link_group_"]').forEach(element => {
-                element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
-                element.id = element.id.replace('__INDEX__', newIndex);
-            });
-    
-            const legend = fieldset.querySelector('legend');
-            if (legend) {
-                legend.textContent = 'קופון ' + (newIndex + 1);
-            }
-        }
-    
-        function duplicateCoupon(fieldset) {
-            const container = document.getElementById('coupons-container');
-            const clonedFieldset = fieldset.cloneNode(true);
-            updateFieldsetIndex(clonedFieldset, index);
-    
-            const originalInputs = fieldset.querySelectorAll('input, select, textarea');
-            const clonedInputs = clonedFieldset.querySelectorAll('input, select, textarea');
-            clonedInputs.forEach((input, i) => {
-                if (input.type === 'checkbox') {
-                    input.checked = originalInputs[i].checked;
-                } else {
-                    input.value = originalInputs[i].value;
-                }
-            });
-    
-            initializeCouponFieldset(clonedFieldset, index);
-            container.appendChild(clonedFieldset);
-            index++;
-            updateLegends();
-        }
-    
-        function addCoupon() {
-            const container = document.getElementById('coupons-container');
-            const template = document.getElementById('coupon-template').content.cloneNode(true);
-            const newFieldset = template.querySelector('.coupon-fieldset');
-    
-            updateFieldsetIndex(newFieldset, index);
-            initializeCouponFieldset(newFieldset, index);
-            container.appendChild(newFieldset);
-            index++;
-            updateLegends();
-        }
-    
-        // Direct fix for potential empty fieldsets at the beginning
-        function cleanEmptyFieldsets() {
-            const container = document.getElementById('coupons-container');
-            if (!container) return;
-            
-            const fieldsets = container.querySelectorAll('.coupon-fieldset');
-            let emptyIndices = [];
-            
-            // Identify empty fieldsets
-            fieldsets.forEach((fieldset, idx) => {
-                const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
-                const codeValue = codeInput ? codeInput.value.trim() : '';
-                
-                const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                const valueValue = valueInput ? valueInput.value.trim() : '';
-                
-                // If the fieldset is effectively empty
-                if (codeValue === '' && valueValue === '') {
-                    emptyIndices.push(idx);
-                }
-            });
-            
-            // Remove empty fieldsets (starting from the end to not mess up indices)
-            for (let i = emptyIndices.length - 1; i >= 0; i--) {
-                fieldsets[emptyIndices[i]].remove();
-            }
-            
-            // If we removed any fieldsets, update the indices
-            if (emptyIndices.length > 0) {
+
+        // Setup remove button
+        const removeButton = fieldset.querySelector('.remove-coupon-button');
+        if (removeButton) {
+            removeButton.addEventListener('click', function() {
+                fieldset.remove();
                 updateLegends();
-                console.log(`Removed ${emptyIndices.length} empty fieldsets and updated indices`);
-            }
+            });
+        }
+
+        // Setup duplicate button
+        const duplicateButton = fieldset.querySelector('.duplicate-coupon-button');
+        if (duplicateButton) {
+            duplicateButton.addEventListener('click', function() {
+                duplicateCoupon(fieldset);
+            });
         }
         
-        // Run cleaning immediately and after a short delay to catch any dynamic issues
-        cleanEmptyFieldsets();
-        setTimeout(cleanEmptyFieldsets, 500);
+        // Set up calculations for this fieldset
+        setupCalculations(fieldset);
+        
+        // Set up card expiration formatting
+        setupCardExpFormatting(fieldset);
+        
+        // Set up tooltip functionality
+        setupTooltips(fieldset);
+    }
     
-        const existingFieldsets = document.querySelectorAll('.coupon-fieldset');
-        existingFieldsets.forEach(function(fieldset, idx) {
-            initializeCouponFieldset(fieldset, idx);
+    // === Tooltip functionality ===
+    function setupTooltips(fieldset) {
+        const tooltipButtons = fieldset.querySelectorAll('.tooltip-button-mobile');
+        
+        tooltipButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const tooltip = this.nextElementSibling.nextElementSibling;
+                if (tooltip && tooltip.classList.contains('mobile-tooltip')) {
+                    // Close all other tooltips first
+                    document.querySelectorAll('.mobile-tooltip').forEach(t => {
+                        if (t !== tooltip) t.style.display = 'none';
+                    });
+                    
+                    // Toggle this tooltip
+                    tooltip.style.display = tooltip.style.display === 'block' ? 'none' : 'block';
+                }
+            });
         });
+        
+        const closeButtons = fieldset.querySelectorAll('.close-tooltip');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                this.closest('.mobile-tooltip').style.display = 'none';
+            });
+        });
+    }
     
-        // Add coupon button
-        const addCouponButton = document.querySelector('.add-coupon-button');
+    // Close tooltips when clicking outside
+    document.addEventListener('click', function(e) {
+        const target = e.target;
+        if (!target.closest('.tooltip-button-mobile') && 
+            !target.closest('.mobile-tooltip')) {
+            
+            document.querySelectorAll('.mobile-tooltip').forEach(tooltip => {
+                tooltip.style.display = 'none';
+            });
+        }
+    });
+
+    // === Update fieldset legends and indices ===
+    function updateLegends() {
+        const fieldsets = document.querySelectorAll('.coupon-fieldset');
+        fieldsets.forEach(function(fieldset, idx) {
+            fieldset.dataset.index = idx;
+            updateFieldsetIndex(fieldset, idx);
+        });
+        index = fieldsets.length;
+    }
+
+    // === Update all form elements in a fieldset to a new index ===
+    function updateFieldsetIndex(fieldset, newIndex) {
+        const oldIndex = fieldset.dataset.index || '__INDEX__';
+        const regex = new RegExp('(coupons-)(?:' + oldIndex + '|__INDEX__)(-)', 'g');
+
+        // Update input names, ids, and labels
+        fieldset.querySelectorAll('[name], [id], [for]').forEach(element => {
+            if (element.name) {
+                element.name = element.name.replace(regex, '$1' + newIndex + '$2');
+                element.name = element.name.replace('___INDEX__', newIndex);
+            }
+            if (element.id) {
+                element.id = element.id.replace(regex, '$1' + newIndex + '$2');
+                element.id = element.id.replace('___INDEX__', newIndex);
+                element.id = element.id.replace('__INDEX__', newIndex);
+            }
+            if (element.htmlFor) {
+                element.htmlFor = element.htmlFor.replace(regex, '$1' + newIndex + '$2');
+                element.htmlFor = element.htmlFor.replace('___INDEX__', newIndex);
+                element.htmlFor = element.htmlFor.replace('__INDEX__', newIndex);
+            }
+        });
+
+        // Update special container IDs
+        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"]').forEach(element => {
+            element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
+            element.id = element.id.replace('__INDEX__', newIndex);
+            element.id = element.id.replace('___INDEX__', newIndex);
+        });
+
+        fieldset.querySelectorAll('[id^="card_fields_container_"]').forEach(element => {
+            element.id = element.id.replace('___INDEX__', newIndex);
+            element.id = element.id.replace('__INDEX__', newIndex);
+            element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
+        });
+
+        fieldset.querySelectorAll('[id^="buyme_coupon_link_group_"]').forEach(element => {
+            element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
+            element.id = element.id.replace('__INDEX__', newIndex);
+            element.id = element.id.replace('___INDEX__', newIndex);
+        });
+
+        // Update legend text
+        const legend = fieldset.querySelector('legend');
+        if (legend) {
+            legend.textContent = 'קופון ' + (newIndex + 1);
+        }
+    }
+
+    // === Duplicate a coupon fieldset ===
+    function duplicateCoupon(fieldset) {
+        const container = document.getElementById('coupons-container');
+        const clonedFieldset = fieldset.cloneNode(true);
+        updateFieldsetIndex(clonedFieldset, index);
+
+        // Copy values from original to clone
+        const originalInputs = fieldset.querySelectorAll('input, select, textarea');
+        const clonedInputs = clonedFieldset.querySelectorAll('input, select, textarea');
+        clonedInputs.forEach((input, i) => {
+            if (input.type === 'checkbox') {
+                input.checked = originalInputs[i].checked;
+            } else {
+                input.value = originalInputs[i].value;
+            }
+        });
+
+        // Initialize the cloned fieldset
+        initializeCouponFieldset(clonedFieldset, index);
+        container.appendChild(clonedFieldset);
+        index++;
+        updateLegends();
+    }
+
+    // === Add a new coupon fieldset ===
+    function addCoupon() {
+        const container = document.getElementById('coupons-container');
+        const template = document.getElementById('coupon-template').content.cloneNode(true);
+        const newFieldset = template.querySelector('.coupon-fieldset');
+
+        updateFieldsetIndex(newFieldset, index);
+        initializeCouponFieldset(newFieldset, index);
+        container.appendChild(newFieldset);
+        index++;
+        updateLegends();
+    }
+
+    // === Clean empty fieldsets ===
+    function cleanEmptyFieldsets() {
+        const container = document.getElementById('coupons-container');
+        if (!container) return;
+        
+        const fieldsets = container.querySelectorAll('.coupon-fieldset');
+        let emptyIndices = [];
+        
+        // Identify empty fieldsets
+        fieldsets.forEach((fieldset, idx) => {
+            const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+            const codeValue = codeInput ? codeInput.value.trim() : '';
+            
+            const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+            const valueValue = valueInput ? valueInput.value.trim() : '';
+            
+            // If the fieldset is effectively empty
+            if (codeValue === '' && valueValue === '') {
+                emptyIndices.push(idx);
+            }
+        });
+        
+        // Remove empty fieldsets (starting from the end to not mess up indices)
+        for (let i = emptyIndices.length - 1; i >= 0; i--) {
+            fieldsets[emptyIndices[i]].remove();
+        }
+        
+        // If we removed any fieldsets, update the indices
+        if (emptyIndices.length > 0) {
+            updateLegends();
+            console.log(`Removed ${emptyIndices.length} empty fieldsets and updated indices`);
+        }
+    }
+    
+    // Run cleaning immediately and after a short delay to catch any dynamic issues
+    cleanEmptyFieldsets();
+    setTimeout(cleanEmptyFieldsets, 500);
+
+    // Initialize all existing fieldsets
+    const existingFieldsets = document.querySelectorAll('.coupon-fieldset');
+    existingFieldsets.forEach(function(fieldset, idx) {
+        initializeCouponFieldset(fieldset, idx);
+    });
+
+    // Add coupon button handler
+    const addCouponButton = document.querySelector('.add-coupon-button');
+    if (addCouponButton) {
         addCouponButton.addEventListener('click', function(event) {
             event.preventDefault();
             addCoupon();
         });
+    }
+
+    // === Modal handling (admin-only) ===
+    const openModalButtons = document.querySelectorAll('.open-modal-button');
+    const modal = document.getElementById('urlModal');
+    const closeModalButton = document.querySelector('.close-modal');
     
-        // Attach event listeners to all open-modal buttons (admin-only)
-        const openModalButtons = document.querySelectorAll('.open-modal-button');
-        const modal = document.getElementById('urlModal');
-        const closeModalButton = document.querySelector('.close-modal');
-        const urlTextArea = document.getElementById('coupon-urls');
-    
-        openModalButtons.forEach(function(button) {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                modal.style.display = 'block';
-            });
+    openModalButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (modal) modal.style.display = 'block';
         });
-    
-        if (closeModalButton) {
-            closeModalButton.addEventListener('click', function() {
-                modal.style.display = 'none';
-            });
-        }
-    
+    });
+
+    if (closeModalButton && modal) {
+        closeModalButton.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+    }
+
+    // Close modal when clicking outside
+    if (modal) {
         window.addEventListener('click', function(event) {
             if (event.target === modal) {
                 modal.style.display = 'none';
             }
         });
-    
-        // Check expiration date and all required fields before form submission
-        const couponsForm = document.getElementById('coupons-form');
-        if (couponsForm) {
-            couponsForm.addEventListener('submit', function(e) {
-                // Clean any empty fieldsets first
-                cleanEmptyFieldsets();
+    }
+
+    // === Form submission validation ===
+    const couponsForm = document.getElementById('coupons-form');
+    if (couponsForm) {
+        couponsForm.addEventListener('submit', function(e) {
+            // Clean any empty fieldsets first
+            cleanEmptyFieldsets();
+            
+            // Check if there are any fieldsets left
+            const fieldsets = document.querySelectorAll('.coupon-fieldset');
+            if (fieldsets.length === 0) {
+                e.preventDefault();
+                alert('אין קופונים להוספה. אנא הוסף לפחות קופון אחד.');
+                return;
+            }
+            
+            // Check if all required fields are populated
+            let hasErrors = false;
+            
+            fieldsets.forEach((fieldset, idx) => {
+                const companySelect = fieldset.querySelector('select[name^="coupons-"][name$="-company_id"]');
+                const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+                const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
                 
-                // Check if there are any fieldsets left
-                const fieldsets = document.querySelectorAll('.coupon-fieldset');
-                if (fieldsets.length === 0) {
-                    e.preventDefault();
-                    alert('אין קופונים להוספה. אנא הוסף לפחות קופון אחד.');
-                    return;
+                // Check required fields
+                if (!companySelect || !companySelect.value || companySelect.value === "") {
+                    console.error(`Coupon #${idx+1}: Missing company selection`);
+                    hasErrors = true;
                 }
                 
-                // Now check if all required fields are populated
-                let hasErrors = false;
-                
-                fieldsets.forEach((fieldset, idx) => {
-                    const companySelect = fieldset.querySelector('select[name^="coupons-"][name$="-company_id"]');
-                    const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
-                    const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                    const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
-                    
-                    // Check required fields
-                    if (!companySelect || !companySelect.value || companySelect.value === "") {
-                        console.error(`Coupon #${idx+1}: Missing company selection`);
-                        hasErrors = true;
-                    }
-                    
-                    if (!codeInput || !codeInput.value.trim()) {
-                        console.error(`Coupon #${idx+1}: Missing coupon code`);
-                        hasErrors = true;
-                    }
-                    
-                    // Check that at least value and cost are filled
-                    const hasValue = valueInput && valueInput.value && valueInput.value.trim() !== "";
-                    const hasCost = costInput && costInput.value && costInput.value.trim() !== "";
-                    
-                    if (!hasValue || !hasCost) {
-                        console.error(`Coupon #${idx+1}: Need both value and cost fields`);
-                        hasErrors = true;
-                    }
-                    
-                    // Automatically calculate discount percentage if not set
-                    const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
-                    if (hasValue && hasCost && discountInput) {
-                        const value = parseFloat(valueInput.value);
-                        const cost = parseFloat(costInput.value);
-                        
-                        // Calculate discount only if it's not already set
-                        if (!discountInput.value || discountInput.value === "0") {
-                            if (cost === 0) {
-                                discountInput.value = "100.00";
-                            } else {
-                                discountInput.value = ((1 - cost / value) * 100).toFixed(2);
-                            }
-                        }
-                    }
-                });
-                
-                if (hasErrors) {
-                    e.preventDefault();
-                    alert('חלק מהשדות הנדרשים חסרים. אנא ודא שכל הקופונים מכילים: חברה, קוד קופון, ערך קופון ועלות.');
-                    return;
+                if (!codeInput || !codeInput.value.trim()) {
+                    console.error(`Coupon #${idx+1}: Missing coupon code`);
+                    hasErrors = true;
                 }
-    
-                // Check for expired coupons
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-    
-                let expiredCoupons = [];
-    
-                fieldsets.forEach((fieldset, idx) => {
-                    const expirationInput = fieldset.querySelector('input[type="date"][name^="coupons-"][name$="-expiration"]');
-                    if (expirationInput && expirationInput.value) {
-                        const parts = expirationInput.value.split('-');
-                        if (parts.length === 3) {
-                            const year = parseInt(parts[0]);
-                            const month = parseInt(parts[1]) - 1;
-                            const day = parseInt(parts[2]);
-                            const selectedDate = new Date(year, month, day);
-                            if (selectedDate <= today) {
-                                const formattedDate = String(day).padStart(2, '0') + '/' + String(month + 1).padStart(2, '0') + '/' + year;
-                                const companySelect = fieldset.querySelector('.company-select');
-                                const companyName = companySelect ? companySelect.options[companySelect.selectedIndex].text : 'Unknown';
-                                const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
-                                const couponCode = codeInput ? codeInput.value : 'Unknown';
-                                const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                                const couponValue = valueInput ? valueInput.value : 'Unknown';
-                                expiredCoupons.push(
-                                    "📌 Coupon #" + (idx+1) + ":\n" +
-                                    "- 🏢 Company: " + companyName + "\n" +
-                                    "- 🔢 Coupon Code: " + couponCode + "\n" +
-                                    "- 💰 Value: " + couponValue + "\n" +
-                                    "- ⏳ Expiration: " + formattedDate
-                                );
-                            }
+                
+                // Check that at least value and cost are filled
+                const hasValue = valueInput && valueInput.value && valueInput.value.trim() !== "";
+                const hasCost = costInput && costInput.value && costInput.value.trim() !== "";
+                
+                if (!hasValue || !hasCost) {
+                    console.error(`Coupon #${idx+1}: Need both value and cost fields`);
+                    hasErrors = true;
+                }
+                
+                // Automatically calculate discount percentage if not set
+                const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
+                if (hasValue && hasCost && discountInput) {
+                    const value = parseFloat(valueInput.value);
+                    const cost = parseFloat(costInput.value);
+                    
+                    // Calculate discount only if it's not already set
+                    if (!discountInput.value || discountInput.value === "0") {
+                        if (cost === 0) {
+                            discountInput.value = "100.00";
+                        } else {
+                            discountInput.value = ((1 - cost / value) * 100).toFixed(2);
                         }
-                    }
-                });
-    
-                if (expiredCoupons.length > 0) {
-                    const confirmMsg = 
-                        "⚠️ Attention! The following coupons have an expiration date that is either today or has passed:\n\n" +
-                        expiredCoupons.join("\n\n") +
-                        "\n\n❓ Do you still want to continue?";
-                    if (!confirm(confirmMsg)) {
-                        e.preventDefault();
                     }
                 }
             });
-        }
-    });
-    
-    document.getElementById('submitUrls').addEventListener('click', async function () {
+            
+            if (hasErrors) {
+                e.preventDefault();
+                alert('חלק מהשדות הנדרשים חסרים. אנא ודא שכל הקופונים מכילים: חברה, קוד קופון, ערך קופון ועלות.');
+                return;
+            }
+
+            // Check for expired coupons
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            let expiredCoupons = [];
+
+            fieldsets.forEach((fieldset, idx) => {
+                const expirationInput = fieldset.querySelector('input[type="date"][name^="coupons-"][name$="-expiration"]');
+                if (expirationInput && expirationInput.value) {
+                    const parts = expirationInput.value.split('-');
+                    if (parts.length === 3) {
+                        const year = parseInt(parts[0]);
+                        const month = parseInt(parts[1]) - 1;
+                        const day = parseInt(parts[2]);
+                        const selectedDate = new Date(year, month, day);
+                        if (selectedDate <= today) {
+                            const formattedDate = String(day).padStart(2, '0') + '/' + String(month + 1).padStart(2, '0') + '/' + year;
+                            const companySelect = fieldset.querySelector('.company-select');
+                            const companyName = companySelect ? companySelect.options[companySelect.selectedIndex].text : 'Unknown';
+                            const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+                            const couponCode = codeInput ? codeInput.value : 'Unknown';
+                            const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                            const couponValue = valueInput ? valueInput.value : 'Unknown';
+                            expiredCoupons.push(
+                                "📌 Coupon #" + (idx+1) + ":\n" +
+                                "- 🏢 Company: " + companyName + "\n" +
+                                "- 🔢 Coupon Code: " + couponCode + "\n" +
+                                "- 💰 Value: " + couponValue + "\n" +
+                                "- ⏳ Expiration: " + formattedDate
+                            );
+                        }
+                    }
+                }
+            });
+
+            if (expiredCoupons.length > 0) {
+                const confirmMsg = 
+                    "⚠️ Attention! The following coupons have an expiration date that is either today or has passed:\n\n" +
+                    expiredCoupons.join("\n\n") +
+                    "\n\n❓ Do you still want to continue?";
+                if (!confirm(confirmMsg)) {
+                    e.preventDefault();
+                }
+            }
+        });
+    }
+});
+
+// === Submit URLs Handler (admin only) ===
+const submitUrlsButton = document.getElementById('submitUrls');
+if (submitUrlsButton) {
+    submitUrlsButton.addEventListener('click', async function () {
         const textarea = document.getElementById('coupon-urls');
         const rawText = textarea.value.trim();
     
@@ -1264,7 +1225,7 @@
                         // Update other specific elements that have indices
                         fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
                             const baseId = el.id.split('_')[0] + '_' + el.id.split('_')[1] + '_';
-                            el.id = baseId + idx;
+                            el.id = `${baseId}${idx}`;
                         });
                         
                         // Update the legend text
@@ -1332,146 +1293,677 @@
             submitButton.disabled = false;
         }
     });
-    
-    // Fix for BuyMe coupon import validation issues
-    document.addEventListener('DOMContentLoaded', function() {
-        const fixBuymeCouponResponse = () => {
-            const container = document.getElementById('coupons-container');
-            if (!container) return;
+}
+
+// Fix for BuyMe coupon import validation issues
+document.addEventListener('DOMContentLoaded', function() {
+    const fixBuymeCouponResponse = () => {
+        const container = document.getElementById('coupons-container');
+        if (!container) return;
+        
+        // Step 1: Find and remove any empty fieldsets at the beginning
+        const fieldsets = container.querySelectorAll('.coupon-fieldset');
+        let emptyFieldsetsRemoved = false;
+        
+        fieldsets.forEach((fieldset, idx) => {
+            const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
+            const codeValue = codeInput ? codeInput.value.trim() : '';
             
-            // Step 1: Find and remove any empty fieldsets at the beginning
-            const fieldsets = container.querySelectorAll('.coupon-fieldset');
-            let emptyFieldsetsRemoved = false;
+            // If this is an empty fieldset (only has company ID set) - remove it
+            if (!codeValue) {
+                fieldset.remove();
+                emptyFieldsetsRemoved = true;
+                console.log(`Removed empty fieldset at index ${idx}`);
+            }
+        });
+        
+        // Step 2: If we removed fieldsets, update all indices
+        if (emptyFieldsetsRemoved) {
+            const remainingFieldsets = container.querySelectorAll('.coupon-fieldset');
+            remainingFieldsets.forEach((fieldset, newIdx) => {
+                // Update data-index
+                fieldset.dataset.index = newIdx;
+                
+                // Update all name, id, and for attributes
+                fieldset.querySelectorAll('[name^="coupons-"], [id^="coupons-"], [for^="coupons-"]').forEach(el => {
+                    const pattern = /^(coupons-)\d+(-.*)/;
+                    
+                    if (el.name) {
+                        el.name = el.name.replace(pattern, `$1${newIdx}$2`);
+                    }
+                    if (el.id) {
+                        el.id = el.id.replace(pattern, `$1${newIdx}$2`);
+                    }
+                    if (el.htmlFor) {
+                        el.htmlFor = el.htmlFor.replace(pattern, `$1${newIdx}$2`);
+                    }
+                });
+                
+                // Update special IDs (containers, etc.)
+                fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
+                    const parts = el.id.split('_');
+                    if (parts.length >= 3) {
+                        // Rebuild ID with new index
+                        const baseId = parts.slice(0, -1).join('_');
+                        el.id = `${baseId}_${newIdx}`;
+                    }
+                });
+                
+                // Update legend text
+                const legend = fieldset.querySelector('legend');
+                if (legend) {
+                    legend.textContent = `קופון ${newIdx + 1}`;
+                }
+                
+                // Special handling for BuyMe coupons - automatically set discount_percentage to 100 if cost is 0
+                const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
+                const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
+                
+                if (valueInput && costInput && discountInput) {
+                    const value = parseFloat(valueInput.value) || 0;
+                    const cost = parseFloat(costInput.value) || 0;
+                    
+                    // If we have a value but cost is 0, set discount to 100%
+                    if (value > 0 && cost === 0) {
+                        discountInput.value = "100";
+                        console.log(`Set discount to 100% for fieldset ${newIdx} (value: ${value}, cost: ${cost})`);
+                    }
+                    // Otherwise calculate proper discount
+                    else if (value > 0 && cost > 0) {
+                        const discount = ((value - cost) / value) * 100;
+                        discountInput.value = discount.toFixed(2);
+                        console.log(`Calculated discount ${discount.toFixed(2)}% for fieldset ${newIdx}`);
+                    }
+                }
+            });
+            
+            console.log(`Fixed indices for ${remainingFieldsets.length} fieldsets`);
+        }
+    };
+    
+    // Run the fix when the page loads, and again after a short delay
+    fixBuymeCouponResponse();
+    setTimeout(fixBuymeCouponResponse, 500);
+    
+    // Modify the form submission to also validate and fix discount percentages
+    const originalSubmitUrls = document.getElementById('submitUrls');
+    if (originalSubmitUrls) {
+        const originalClick = originalSubmitUrls.onclick;
+        originalSubmitUrls.onclick = null;
+        
+        originalSubmitUrls.addEventListener('click', async function(event) {
+            // Call the original handler
+            if (originalClick) {
+                await originalClick.call(this, event);
+            }
+            
+            // Apply our fix after a small delay to ensure the DOM has been updated
+            setTimeout(fixBuymeCouponResponse, 1000);
+        });
+    }
+    
+    // Also add pre-submission validation to ensure discount percentages are properly set
+    const couponsForm = document.getElementById('coupons-form');
+    if (couponsForm) {
+        couponsForm.addEventListener('submit', function(e) {
+            const fieldsets = document.querySelectorAll('.coupon-fieldset');
             
             fieldsets.forEach((fieldset, idx) => {
-                const codeInput = fieldset.querySelector('input[name^="coupons-"][name$="-code"]');
-                const codeValue = codeInput ? codeInput.value.trim() : '';
+                const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
+                const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
+                const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
                 
-                // If this is an empty fieldset (only has company ID set) - remove it
-                if (!codeValue) {
-                    fieldset.remove();
-                    emptyFieldsetsRemoved = true;
-                    console.log(`Removed empty fieldset at index ${idx}`);
+                if (valueInput && costInput && discountInput) {
+                    const value = parseFloat(valueInput.value) || 0;
+                    const cost = parseFloat(costInput.value) || 0;
+                    
+                    // If value exists and cost is 0, set discount to 100%
+                    if (value > 0 && cost === 0) {
+                        discountInput.value = "100";
+                    }
+                    // Otherwise calculate proper discount
+                    else if (value > 0 && cost > 0) {
+                        const discount = ((value - cost) / value) * 100;
+                        discountInput.value = discount.toFixed(2);
+                    }
                 }
             });
-            
-            // Step 2: If we removed fieldsets, update all indices
-            if (emptyFieldsetsRemoved) {
-                const remainingFieldsets = container.querySelectorAll('.coupon-fieldset');
-                remainingFieldsets.forEach((fieldset, newIdx) => {
-                    // Update data-index
-                    fieldset.dataset.index = newIdx;
-                    
-                    // Update all name, id, and for attributes
-                    fieldset.querySelectorAll('[name^="coupons-"], [id^="coupons-"], [for^="coupons-"]').forEach(el => {
-                        const pattern = /^(coupons-)\d+(-.*)/;
-                        
-                        if (el.name) {
-                            el.name = el.name.replace(pattern, `$1${newIdx}$2`);
-                        }
-                        if (el.id) {
-                            el.id = el.id.replace(pattern, `$1${newIdx}$2`);
-                        }
-                        if (el.htmlFor) {
-                            el.htmlFor = el.htmlFor.replace(pattern, `$1${newIdx}$2`);
-                        }
-                    });
-                    
-                    // Update special IDs (containers, etc.)
-                    fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
-                        const parts = el.id.split('_');
-                        if (parts.length >= 3) {
-                            // Rebuild ID with new index
-                            const baseId = parts.slice(0, -1).join('_');
-                            el.id = `${baseId}_${newIdx}`;
-                        }
-                    });
-                    
-                    // Update legend text
-                    const legend = fieldset.querySelector('legend');
-                    if (legend) {
-                        legend.textContent = `קופון ${newIdx + 1}`;
-                    }
-                    
-                    // Special handling for BuyMe coupons - automatically set discount_percentage to 100 if cost is 0
-                    const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                    const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
-                    const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
-                    
-                    if (valueInput && costInput && discountInput) {
-                        const value = parseFloat(valueInput.value) || 0;
-                        const cost = parseFloat(costInput.value) || 0;
-                        
-                        // If we have a value but cost is 0, set discount to 100%
-                        if (value > 0 && cost === 0) {
-                            discountInput.value = "100";
-                            console.log(`Set discount to 100% for fieldset ${newIdx} (value: ${value}, cost: ${cost})`);
-                        }
-                        // Otherwise calculate proper discount
-                        else if (value > 0 && cost > 0) {
-                            const discount = ((value - cost) / value) * 100;
-                            discountInput.value = discount.toFixed(2);
-                            console.log(`Calculated discount ${discount.toFixed(2)}% for fieldset ${newIdx}`);
-                        }
-                    }
-                });
-                
-                console.log(`Fixed indices for ${remainingFieldsets.length} fieldsets`);
-            }
-        };
-        
-        // Run the fix when the page loads, and again after a short delay
-        fixBuymeCouponResponse();
-        setTimeout(fixBuymeCouponResponse, 500);
-        
-        // Modify the form submission to also validate and fix discount percentages
-        const originalSubmitUrls = document.getElementById('submitUrls');
-        if (originalSubmitUrls) {
-            const originalClick = originalSubmitUrls.onclick;
-            originalSubmitUrls.onclick = null;
-            
-            originalSubmitUrls.addEventListener('click', async function(event) {
-                // Call the original handler
-                if (originalClick) {
-                    await originalClick.call(this, event);
-                }
-                
-                // Apply our fix after a small delay to ensure the DOM has been updated
-                setTimeout(fixBuymeCouponResponse, 1000);
-            });
-        }
-        
-        // Also add pre-submission validation to ensure discount percentages are properly set
-        const couponsForm = document.getElementById('coupons-form');
-        if (couponsForm) {
-            couponsForm.addEventListener('submit', function(e) {
-                const fieldsets = document.querySelectorAll('.coupon-fieldset');
-                
-                fieldsets.forEach((fieldset, idx) => {
-                    const valueInput = fieldset.querySelector('input[name^="coupons-"][name$="-value"]');
-                    const costInput = fieldset.querySelector('input[name^="coupons-"][name$="-cost"]');
-                    const discountInput = fieldset.querySelector('input[name^="coupons-"][name$="-discount_percentage"]');
-                    
-                    if (valueInput && costInput && discountInput) {
-                        const value = parseFloat(valueInput.value) || 0;
-                        const cost = parseFloat(costInput.value) || 0;
-                        
-                        // If value exists and cost is 0, set discount to 100%
-                        if (value > 0 && cost === 0) {
-                            discountInput.value = "100";
-                        }
-                        // Otherwise calculate proper discount
-                        else if (value > 0 && cost > 0) {
-                            const discount = ((value - cost) / value) * 100;
-                            discountInput.value = discount.toFixed(2);
-                        }
-                    }
-                });
-            }, true); // Use capturing phase to run before other handlers
-        }
-    });
+        }, true); // Use capturing phase to run before other handlers
+    }
+});
 </script>
-    
-    
 
+<style>
+/* ==============================
+   Modern styling for coupon form
+   ============================== */
+
+/* Main layout and containers */
+.add-coupon {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.section-title {
+    color: #3498db;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Action buttons in a row */
+.action-buttons-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border: 1px solid #3498db;
+    border-radius: 50px;
+    padding: 10px 15px;
+    background-color: white;
+    color: #3498db;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    height: 50px;
+    flex: 1;
+    min-width: 0; /* Allow buttons to shrink below content size */
+}
+
+.action-button:hover {
+    background-color: #3498db;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.action-button-small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border: 1px solid #3498db;
+    border-radius: 6px;
+    padding: 8px 12px;
+    background-color: white;
+    color: #3498db;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+.action-button-small:hover {
+    background-color: #3498db;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.button-content {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+.button-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+}
+
+.button-icon {
+    margin-right: 8px;
+    font-size: 1.2rem;
+}
+
+/* Flash messages */
+.flash-messages {
+    margin-bottom: 20px;
+}
+
+.flash {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideInDown 0.3s ease;
+}
+
+.flash.success {
+    background-color: rgba(46, 204, 113, 0.2);
+    border: 1px solid #2ecc71;
+    color: #27ae60;
+}
+
+.flash.error, 
+.flash.danger {
+    background-color: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+    color: #c0392b;
+}
+
+.flash.warning {
+    background-color: rgba(243, 156, 18, 0.2);
+    border: 1px solid #f39c12;
+    color: #d35400;
+}
+
+.close-flash {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.flash.fade-out {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+/* Form styling */
+.multi-coupons-form {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.multi-coupons-form::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 30%;
+    height: 4px;
+    background: linear-gradient(to right, transparent, #3498db);
+    border-radius: 0 8px 0 0;
+}
+
+/* Coupon fieldset styling */
+.coupon-fieldset {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.fieldset-legend {
+    color: #3498db;
+    font-weight: 600;
+    padding: 0 10px;
+    margin-bottom: 10px;
+}
+
+.coupon-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #333;
+}
+
+.required {
+    color: #e74c3c;
+    margin-right: 3px;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    background-color: white;
+}
+
+.input-field:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    outline: none;
+}
+
+.date-input {
+    cursor: pointer;
+}
+
+.error, .validation-message {
+    color: #e74c3c;
+    font-size: 0.85em;
+    margin-top: 5px;
+}
+
+.center-text {
+    text-align: center;
+}
+
+/* Submit button */
+.submit-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.submit-button:hover:not(:disabled) {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+}
+
+.submit-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.submit-group {
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* Secondary button */
+.secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    color: #3498db;
+    border: 1px solid #3498db;
+    border-radius: 6px;
+    padding: 8px 16px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.secondary-button:hover {
+    background-color: #3498db;
+    color: white;
+}
+
+.secondary-button i {
+    margin-left: 8px;
+}
+
+/* Card fields */
+.card-fields {
+    background-color: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    animation: slideDown 0.3s ease;
+}
+
+/* Checkbox styling */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.checkbox-input {
+    margin-left: 10px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checkbox-label {
+    cursor: pointer;
+}
+
+/* Tooltip styling */
+.tooltip-checkbox-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.tooltip-button,
+.tooltip-button-mobile {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-right: 10px;
+    font-size: 12px;
+}
+
+.tooltip-button:hover {
+    background-color: #f8f9fa;
+}
+
+.tooltip,
+.mobile-tooltip {
+    display: none;
+    position: absolute;
+    background-color: #2c3e50;
+    color: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    max-width: 250px;
+    z-index: 100;
+    text-align: right;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.tooltip {
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 8px;
+}
+
+.mobile-tooltip {
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+}
+
+.tooltip::after,
+.mobile-tooltip::after {
+    content: "";
+    position: absolute;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #2c3e50 transparent transparent transparent;
+    top: 100%;
+    right: 10px;
+}
+
+.close-tooltip {
+    float: left;
+    cursor: pointer;
+    margin-right: 8px;
+}
+
+/* Discount display */
+.discount-display-container {
+    margin-top: 8px;
+    width: 100%;
+    height: 30px;
+    position: relative;
+}
+
+.discount-display {
+    background: linear-gradient(to right, white 0%, #3498db 100%);
+    height: 100%;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.discount-value {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #333;
+    font-weight: bold;
+    font-size: 0.9em;
+    text-shadow: 0 0 2px white;
+}
+
+/* Modal styling */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    overflow: auto;
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 25px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    position: relative;
+}
+
+.modal-title {
+    color: #3498db;
+    margin-top: 5px;
+    margin-bottom: 15px;
+}
+
+.modal-description {
+    margin-bottom: 15px;
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-modal:hover {
+    color: #555;
+}
+
+.modal-footer {
+    margin-top: 20px;
+    text-align: center;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    /* Mobile action buttons layout */
+    .action-buttons-row {
+        flex-wrap: wrap;
+    }
+    
+    .action-button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .tooltip {
+        display: none !important; /* Hide desktop tooltip on mobile */
+    }
+    
+    /* Make mobile tooltips fixed position for better visibility */
+    .mobile-tooltip {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        max-width: 300px;
+        z-index: 1001;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-tooltip {
+        display: none !important; /* Hide mobile tooltip on desktop */
+    }
+    
+    .tooltip-button:hover + .tooltip,
+    .tooltip-button:focus + .tooltip,
+    .tooltip:hover {
+        display: block;
+    }
+}
+
+/* Animations */
+@keyframes slideInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        max-height: 0;
+        opacity: 0;
+    }
+    to {
+        max-height: 500px;
+        opacity: 1;
+    }
+}
+</style>
 {% endblock %}

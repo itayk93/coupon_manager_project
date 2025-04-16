@@ -290,18 +290,20 @@
 
 /* # Mobile Responsive Adjustments */
 @media (max-width: 767px) {
-  /* Stack buttons on mobile */
+  /* Keep buttons side by side on mobile but make them smaller */
   .coupon-info-buttons {
-    flex-direction: column;
+    flex-direction: row; /* שמירה על סידור אופקי במקום עמודה */
     gap: 8px;
     width: 100%;
+    justify-content: center; /* יישור למרכז */
   }
   
-  /* Full-width buttons on mobile */
+  /* Make buttons fit side by side on mobile */
   .update-usage-btn,
   .show-big-btn {
-    width: 100%;
-    padding: 8px 0;
+    width: auto; /* במקום 100% */
+    padding: 8px 10px; /* מרווח אופקי קטן יותר */
+    font-size: 0.85em; /* גודל טקסט קטן יותר */
   }
   
   /* Smaller font for coupon code on mobile */
