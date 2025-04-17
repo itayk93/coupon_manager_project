@@ -1,3 +1,4 @@
+<!-- add_coupons.html -->
 {% extends 'base.html' %}
 
 {% block title %}
@@ -17,12 +18,52 @@
                 <i class="fa fa-plus-circle button-icon" aria-hidden="true"></i>
             </span>
         </a>
-        <a href="{{ url_for('coupons.upload_coupons') }}" class="action-button">
+        <a href="{{ url_for('coupons.upload_coupons') }}" class="action-button upload-button">
             <span class="button-content">
-                <span class="button-text">העלאת קובץ קופונים</span>
+                <span class="button-text">
+                    <span class="desktop-text">העלאת קובץ קופונים</span>
+                    <span class="mobile-text">קובץ קופונים</span>
+                </span>
                 <i class="fa fa-upload button-icon" aria-hidden="true"></i>
             </span>
         </a>
+    </div>
+
+    <!-- Help button that toggles instructions -->
+    <div class="help-button-container">
+        <button type="button" id="toggle-instructions" class="help-button" aria-label="הצג/הסתר הסברים">
+            <i class="fa fa-question-circle" aria-hidden="true"></i>
+            <span class="help-button-text">הסבר</span>
+        </button>
+    </div>
+
+    <!-- Instructions panel with gender sensitivity - hidden by default -->
+    <div class="instructions-panel" id="instructions-panel" style="display: none;">
+        <h3 class="instructions-title">
+            <i class="fa fa-question-circle" aria-hidden="true"></i>
+            איך להוסיף קופונים מרובים?
+        </h3>
+        <ol class="instructions-list">
+            {% if current_user.gender == "female" %}
+            <li>מלאי את פרטי הקופון הראשון בטופס למטה.</li>
+            <li>לאחר מילוי הפרטים, לחצי על "הוספת קופון נוסף" אם ברצונך להוסיף קופונים נוספים.</li>
+            <li>באפשרותך לשכפל קופון קיים על ידי לחיצה על כפתור "שכפול קופון".</li>
+            <li>כשסיימת למלא את כל הקופונים, לחצי על "הוספת הקופונים לארנק".</li>
+            {% else %}
+            <li>מלא את פרטי הקופון הראשון בטופס למטה.</li>
+            <li>לאחר מילוי הפרטים, לחץ על "הוספת קופון נוסף" אם ברצונך להוסיף קופונים נוספים.</li>
+            <li>באפשרותך לשכפל קופון קיים על ידי לחיצה על כפתור "שכפול קופון".</li>
+            <li>כשסיימת למלא את כל הקופונים, לחץ על "הוספת הקופונים לארנק".</li>
+            {% endif %}
+        </ol>
+        <div class="important-note">
+            <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+            {% if current_user.gender == "female" %}
+            <span>שימי לב: שדות עם כוכבית (*) הם שדות חובה.</span>
+            {% else %}
+            <span>שים לב: שדות עם כוכבית (*) הם שדות חובה.</span>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Display flash messages -->
@@ -52,24 +93,23 @@
             <fieldset class="coupon-fieldset" data-index="{{ loop.index0 }}">
                 <legend class="fieldset-legend">קופון {{ loop.index }}</legend>
 
-                <!-- Coupon actions toolbar -->
-                <div class="coupon-actions">
+                <!-- Coupon action buttons container -->
+                <div class="coupon-actions-container">
                     <button type="button" class="action-button-small duplicate-coupon-button">
-                        <i class="fa fa-clone"></i> שכפול קופון
+                        <i class="fa fa-clone action-icon"></i> שכפול קופון
                     </button>
                     <button type="button" class="action-button-small remove-coupon-button">
-                        <i class="fa fa-trash"></i> הסרת קופון
+                        <i class="fa fa-trash action-icon"></i> הסרת קופון
                     </button>
-                </div>
-                
-                {% if current_user.is_admin %}
-                <!-- Button for entering BuyMe URLs (only if user is admin) -->
-                <div class="form-group">
+                    
+                    {% if current_user.is_admin %}
                     <button type="button" class="action-button-small open-modal-button buyme-link-button">
-                        <i class="fa fa-link"></i> הזנת קופונים של-BuyMe
+                        <i class="fa fa-link action-icon"></i> 
+                        <span class="desktop-text">קופוני BuyMe</span>
+                        <span class="mobile-text">BuyMe</span>
                     </button>
+                    {% endif %}
                 </div>
-                {% endif %}
                 
                 <!-- Company selection field -->
                 <div class="form-group">
@@ -291,7 +331,7 @@
         <!-- Button to add more coupons -->
         <div class="center-text">
             <button type="button" class="secondary-button add-coupon-button">
-                <i class="fa fa-plus-circle"></i> הוספת קופון נוסף
+                <i class="fa fa-plus-circle action-icon"></i> הוספת קופון נוסף
             </button>
         </div>
 
@@ -322,14 +362,22 @@
     <fieldset class="coupon-fieldset" data-index="__INDEX__">
         <legend class="fieldset-legend">קופון</legend>
 
-        <!-- Coupon actions toolbar -->
-        <div class="coupon-actions">
+        <!-- Coupon action buttons container -->
+        <div class="coupon-actions-container">
             <button type="button" class="action-button-small duplicate-coupon-button">
-                <i class="fa fa-clone"></i> שכפל קופון
+                <i class="fa fa-clone action-icon"></i> שכפל קופון
             </button>
             <button type="button" class="action-button-small remove-coupon-button">
-                <i class="fa fa-trash"></i> הסר קופון
+                <i class="fa fa-trash action-icon"></i> הסר קופון
             </button>
+            
+            {% if current_user.is_admin %}
+            <button type="button" class="action-button-small open-modal-button buyme-link-button">
+                <i class="fa fa-link action-icon"></i> 
+                <span class="desktop-text">קופוני BuyMe</span>
+                <span class="mobile-text">BuyMe</span>
+            </button>
+            {% endif %}
         </div>
 
         <!-- Company selection field -->
@@ -512,6 +560,25 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Toggle instructions panel
+    const helpButton = document.getElementById('toggle-instructions');
+    const instructionsPanel = document.getElementById('instructions-panel');
+    
+    if (helpButton && instructionsPanel) {
+        helpButton.addEventListener('click', function() {
+            // Toggle display of instructions panel
+            if (instructionsPanel.style.display === 'none') {
+                instructionsPanel.style.display = 'block';
+                helpButton.classList.add('active');
+                // Scroll to the instructions panel
+                instructionsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                instructionsPanel.style.display = 'none';
+                helpButton.classList.remove('active');
+            }
+        });
+    }
+    
     let index = {{ form.coupons|length }};
     
     // === Helper function to parse float values safely ===
@@ -1435,10 +1502,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-/* ==============================
-   Modern styling for coupon form
-   ============================== */
-
 /* Main layout and containers */
 .add-coupon {
     max-width: 700px;
@@ -1452,6 +1515,47 @@ document.addEventListener('DOMContentLoaded', function() {
     font-weight: 600;
     text-align: center;
     margin-bottom: 20px;
+}
+
+/* Help button styling */
+.help-button-container {
+    display: flex;
+    justify-content: center;
+    margin: 15px 0;
+}
+
+.help-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 8px 16px;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    gap: 8px;
+}
+
+.help-button-text {
+    font-weight: 500;
+}
+
+.help-button:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.help-button.active {
+    background-color: #2980b9;
+}
+
+.help-button.active i {
+    transform: rotate(180deg);
 }
 
 /* Action buttons in a row */
@@ -1512,6 +1616,11 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 2px 5px rgba(0,0,0,0.15);
 }
 
+/* Icon spacing in buttons */
+.action-icon {
+    margin-left: 8px; /* Add space between icon and text for RTL layout */
+}
+
 .button-content {
     display: flex;
     width: 100%;
@@ -1529,6 +1638,46 @@ document.addEventListener('DOMContentLoaded', function() {
 .button-icon {
     margin-right: 8px;
     font-size: 1.2rem;
+}
+
+/* Instructions panel styling */
+.instructions-panel {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.instructions-title {
+    color: #3498db;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.instructions-list {
+    padding-right: 20px;
+    margin: 15px 0;
+}
+
+.instructions-list li {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.important-note {
+    margin-top: 15px;
+    padding: 10px 15px;
+    background-color: rgba(243, 156, 18, 0.1);
+    border-right: 3px solid #f39c12;
+    color: #d35400;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 4px;
 }
 
 /* Flash messages */
@@ -1615,12 +1764,6 @@ document.addEventListener('DOMContentLoaded', function() {
     font-weight: 600;
     padding: 0 10px;
     margin-bottom: 10px;
-}
-
-.coupon-actions {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
 }
 
 .form-group {
@@ -1903,7 +2046,13 @@ document.addEventListener('DOMContentLoaded', function() {
     text-align: center;
 }
 
-/* Responsive styles */
+/* Desktop vs mobile text content */
+@media (min-width: 769px) {
+    .mobile-text {
+        display: none;
+    }
+}
+
 @media (max-width: 768px) {
     /* Mobile action buttons layout */
     .action-buttons-row {
@@ -1913,6 +2062,10 @@ document.addEventListener('DOMContentLoaded', function() {
     .action-button {
         width: 100%;
         margin-bottom: 10px;
+    }
+    
+    .desktop-text {
+        display: none;
     }
     
     .tooltip {
@@ -1963,6 +2116,46 @@ document.addEventListener('DOMContentLoaded', function() {
     to {
         max-height: 500px;
         opacity: 1;
+    }
+}
+
+/* Improved action button styles */
+.coupon-actions-container {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 8px;
+}
+
+.coupon-actions-container .action-button-small {
+    flex: 1;
+    max-width: 130px;
+    min-width: 0;
+    font-size: 0.9rem;
+    padding: 8px 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 36px;
+}
+
+/* Special styling for BuyMe button */
+.buyme-link-button {
+    font-size: 0.9rem !important;
+    max-width: 130px !important;
+}
+
+/* Adjustments for very small screens */
+@media (max-width: 480px) {
+    .coupon-actions-container .action-button-small {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+    }
+    
+    .action-icon {
+        margin-left: 6px; /* Slightly reduced margin on small screens */
     }
 }
 </style>

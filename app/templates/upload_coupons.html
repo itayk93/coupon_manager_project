@@ -1,132 +1,548 @@
 <!-- upload_coupons.html -->
-
 {% extends 'base.html' %}
 
-{% block title %}העלה קובץ קופונים{% endblock %}
+{% block title %}
+העלאת קובץ קופונים
+{% endblock %}
 
 {% block content %}
 <section class="add-coupon">
-    <h2>העלה קובץ קופונים</h2>
+    <!-- Main section title -->
+    <h2 class="section-title">העלאת קובץ קופונים</h2>
 
-    <!-- הוספת כפתורים מעל הטופס -->
-    <div class="add-coupons-buttons">
-        <a href="{{ url_for('coupons.add_coupon') }}" class="secondary-button">
-            <i class="fa fa-plus-circle" aria-hidden="true"></i> הוספת קופון
+    <!-- Action buttons in a single row -->
+    <div class="action-buttons-row">
+        <a href="{{ url_for('coupons.add_coupon') }}" class="action-button">
+            <span class="button-content">
+                <span class="button-text">הוספת קופון יחיד</span>
+                <i class="fa fa-plus-circle button-icon" aria-hidden="true"></i>
+            </span>
         </a>
-        <a href="{{ url_for('coupons.add_coupons_bulk') }}" class="secondary-button">
-            <i class="fa fa-plus-circle" aria-hidden="true"></i> הוספת קופונים מרובים
+        <a href="{{ url_for('coupons.add_coupons_bulk') }}" class="action-button">
+            <span class="button-content">
+                <span class="button-text">
+                    <span class="desktop-text">הוספת קופונים מרובים</span>
+                    <span class="mobile-text">קופונים מרובים</span>
+                </span>
+                <i class="fa fa-list button-icon" aria-hidden="true"></i>
+            </span>
         </a>
     </div>
 
-    <!-- כפתור להורדת התבנית מתחת לכפתורים הקיימים -->
-    <div class="download-template-button">
-        <a href="{{ url_for('uploads.download_template') }}" class="primary-button">
-            <i class="fa fa-download" aria-hidden="true"></i> הורד תבנית קופונים
+    <!-- Template download button -->
+    <div class="download-template-container">
+        <a href="{{ url_for('uploads.download_template') }}" class="download-button">
+            <span class="button-content">
+                <span class="button-text">הורדת תבנית קופונים</span>
+                <i class="fa fa-download button-icon" aria-hidden="true"></i>
+            </span>
         </a>
     </div>
 
-    <form method="post" enctype="multipart/form-data">
-        {{ form.hidden_tag() }}
-        <div class="form-group">
-            {{ form.file.label }}
-            {{ form.file(class="input-field") }}
-            {% for error in form.file.errors %}
-                <span class="error-message">{{ error }}</span><br>
-            {% endfor %}
+    <!-- Display flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">
+                <span class="message-text">{{ message }}</span>
+                <button class="close-flash" aria-label="Close">&times;</button>
+            </div>
+          {% endfor %}
         </div>
-        <button type="submit" class="submit-button">העלה קובץ</button>
+      {% endif %}
+    {% endwith %}
+
+    <!-- File upload form -->
+    <form method="post" enctype="multipart/form-data" class="upload-form">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group file-upload-group">
+            <label for="{{ form.file.id }}" class="form-label">
+                בחר קובץ קופונים:<span class="required">*</span>
+            </label>
+            
+            <div class="file-upload-container">
+                {{ form.file(class="file-input", id="file-input") }}
+                <label for="file-input" class="file-input-label">
+                    <i class="fa fa-upload upload-icon" aria-hidden="true"></i>
+                    <span class="file-input-text">בחר קובץ...</span>
+                </label>
+                <div class="selected-file-name" id="selected-file-name">לא נבחר קובץ</div>
+            </div>
+            
+            {% for error in form.file.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+            
+            <div class="file-format-info">
+                <p class="format-note">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                    פורמטים נתמכים: Excel (.xlsx, .xls), CSV (.csv)
+                </p>
+            </div>
+        </div>
+
+        <!-- Submit button -->
+        <div class="form-group submit-group">
+            <button type="submit" class="submit-button">
+                <i class="fa fa-upload" aria-hidden="true"></i>
+                העלאת הקובץ
+            </button>
+        </div>
     </form>
+    
+    <!-- Instructions panel with gender sensitivity -->
+    <div class="instructions-panel">
+        <h3 class="instructions-title">
+            <i class="fa fa-question-circle" aria-hidden="true"></i>
+            איך להעלות קופונים?
+        </h3>
+        <ol class="instructions-list">
+            {% if current_user.gender == "female" %}
+            <li>הורידי את תבנית הקופונים הריקה בלחיצה על כפתור "הורדת תבנית קופונים" לעיל.</li>
+            <li>מלאי את הקופונים שלך בתוך הקובץ - שמרי על המבנה שלו.</li>
+            <li>שמרי את הקובץ ולחצי על "בחר קובץ" כדי להעלות את הקובץ המעודכן.</li>
+            <li>לחצי על "העלאת הקובץ" כדי לייבא את הקופונים למערכת.</li>
+            {% else %}
+            <li>הורד את תבנית הקופונים הריקה בלחיצה על כפתור "הורדת תבנית קופונים" לעיל.</li>
+            <li>מלא את הקופוניםפ שלך בתוך הקובץ - שמור על המבנה שלו.</li>
+            <li>שמור את הקובץ ולחץ על "בחר קובץ" כדי להעלות את הקובץ המעודכן.</li>
+            <li>לחץ על "העלאת הקובץ" כדי לייבא את הקופונים למערכת.</li>
+            {% endif %}
+        </ol>
+        <div class="important-note">
+            <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+            {% if current_user.gender == "female" %}
+            <span>שימי לב: אין לשנות את כותרות העמודות בתבנית.</span>
+            {% else %}
+            <span>שים לב: אין לשנות את כותרות העמודות בתבנית.</span>
+            {% endif %}
+        </div>
+    </div>
 </section>
 {% endblock %}
 
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle file input change to show selected filename
+    const fileInput = document.getElementById('file-input');
+    const fileNameDisplay = document.getElementById('selected-file-name');
+    
+    if (fileInput && fileNameDisplay) {
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = fileInput.files[0].name;
+                fileNameDisplay.classList.add('file-selected');
+            } else {
+                fileNameDisplay.textContent = 'לא נבחר קובץ';
+                fileNameDisplay.classList.remove('file-selected');
+            }
+        });
+    }
+    
+    // Handle flash message close buttons
+    document.querySelectorAll('.close-flash').forEach(button => {
+        button.addEventListener('click', function() {
+            this.closest('.flash').remove();
+        });
+    });
+
+    // Auto-dismiss flash messages after 5 seconds
+    setTimeout(() => {
+        document.querySelectorAll('.flash').forEach(message => {
+            message.classList.add('fade-out');
+            setTimeout(() => message.remove(), 500);
+        });
+    }, 5000);
+});
+</script>
+{% endblock %}
+
 {% block styles %}
+{{ super() }}
 <style>
-    /* סגנון לכפתורים המשניים */
-    .add-coupons-buttons {
-        display: flex;
-        justify-content: center; /* מרכז את הכפתורים */
-        gap: 15px; /* רווח בין הכפתורים */
-        margin-bottom: 25px; /* רווח מתחת לכפתורים */
+/* Main layout and containers */
+.add-coupon {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.section-title {
+    color: #3498db;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Action buttons in a row */
+.action-buttons-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border: 1px solid #3498db;
+    border-radius: 50px;
+    padding: 10px 15px;
+    background-color: white;
+    color: #3498db;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    height: 50px;
+    flex: 1;
+    min-width: 0; /* Allow buttons to shrink below content size */
+}
+
+.action-button:hover {
+    background-color: #3498db;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Download template button */
+.download-template-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.download-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border: 1px solid #27ae60;
+    border-radius: 50px;
+    padding: 10px 20px;
+    background-color: #27ae60;
+    color: white;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 300px;
+}
+
+.download-button:hover {
+    background-color: #2ecc71;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Icon spacing in buttons */
+.button-content {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+.button-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+}
+
+.button-icon {
+    margin-right: 8px;
+    font-size: 1.2rem;
+}
+
+/* Flash messages */
+.flash-messages {
+    margin-bottom: 20px;
+}
+
+.flash {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideInDown 0.3s ease;
+}
+
+.flash.success {
+    background-color: rgba(46, 204, 113, 0.2);
+    border: 1px solid #2ecc71;
+    color: #27ae60;
+}
+
+.flash.error, 
+.flash.danger {
+    background-color: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+    color: #c0392b;
+}
+
+.flash.warning {
+    background-color: rgba(243, 156, 18, 0.2);
+    border: 1px solid #f39c12;
+    color: #d35400;
+}
+
+.close-flash {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.flash.fade-out {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+/* Form styling */
+.upload-form {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.upload-form::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 30%;
+    height: 4px;
+    background: linear-gradient(to right, transparent, #3498db);
+    border-radius: 0 8px 0 0;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.required {
+    color: #e74c3c;
+    margin-right: 3px;
+}
+
+/* File upload styling */
+.file-upload-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.file-input {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+}
+
+.file-input-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 400px;
+    height: 120px;
+    border: 2px dashed #3498db;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+.file-input-label:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    border-color: #2980b9;
+}
+
+.upload-icon {
+    font-size: 2rem;
+    color: #3498db;
+    margin-bottom: 10px;
+}
+
+.file-input-text {
+    font-weight: 500;
+    color: #3498db;
+}
+
+.selected-file-name {
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    word-break: break-all;
+    max-width: 100%;
+    text-align: center;
+}
+
+.file-selected {
+    color: #2980b9;
+    font-weight: 500;
+}
+
+.file-format-info {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.format-note {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.error {
+    color: #e74c3c;
+    font-size: 0.85em;
+    margin-top: 5px;
+    display: block;
+    text-align: center;
+}
+
+/* Submit button */
+.submit-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.submit-button:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+}
+
+.submit-group {
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* Instructions panel */
+.instructions-panel {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 30px;
+}
+
+.instructions-title {
+    color: #3498db;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.instructions-list {
+    padding-right: 20px;
+    margin: 15px 0;
+}
+
+.instructions-list li {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.important-note {
+    margin-top: 15px;
+    padding: 10px 15px;
+    background-color: rgba(243, 156, 18, 0.1);
+    border-right: 3px solid #f39c12;
+    color: #d35400;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 4px;
+}
+
+/* Desktop vs mobile text content */
+@media (min-width: 769px) {
+    .mobile-text {
+        display: none;
     }
+}
 
-    .secondary-button {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 16px;
-        background-color: var(--accent-color);
-        color: var(--white);
-        text-decoration: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: background-color var(--transition-speed);
-        font-size: 0.9em; /* קונטור קטן יותר */
+@media (max-width: 768px) {
+    /* Mobile action buttons layout */
+    .action-buttons-row {
+        flex-direction: column;
+        gap: 12px;
     }
-
-    .secondary-button:hover {
-        background-color: #e67e22; /* שינוי ידני מכיוון ש-CSS לא תומך בפונקציית darken */
+    
+    .action-button {
+        width: 100%;
     }
-
-    .secondary-button .fa {
-        font-size: 1.2em;
+    
+    .desktop-text {
+        display: none;
     }
-
-    /* סגנון לכפתור ההורדה */
-    .download-template-button {
-        text-align: center; /* מרכז את הכפתור */
-        margin-bottom: 25px; /* רווח מתחת לכפתור */
+    
+    .download-button {
+        max-width: 100%;
     }
-
-    .primary-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 16px;
-        background-color: var(--primary-color);
-        color: var(--white);
-        text-decoration: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: background-color var(--transition-speed);
-        font-size: 0.9em;
+    
+    .file-input-label {
+        height: 100px;
     }
-
-    .primary-button:hover {
-        background-color: #2980b9; /* שינוי ידני לצבע שונה בעת מעבר העכבר */
+    
+    .instructions-panel {
+        padding: 15px;
     }
+}
 
-    .primary-button .fa {
-        font-size: 1.2em;
+/* Animations */
+@keyframes slideInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
     }
-
-    /* התאמה לכפתורים במובייל */
-    @media (max-width: 768px) {
-        .add-coupons-buttons {
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .secondary-button {
-            width: 100%; /* מאפשר לכפתורים להתפרס על רוחב המסך במובייל */
-            justify-content: center;
-        }
-
-        .download-template-button {
-            margin-bottom: 15px; /* רווח קטן יותר במובייל */
-        }
-
-        .primary-button {
-            width: 100%; /* מאפשר לכפתור להתפרס על רוחב המסך במובייל */
-            justify-content: center;
-        }
+    to {
+        transform: translateY(0);
+        opacity: 1;
     }
-
-    /* סגנון לשגיאות */
-    .error-message {
-        color: red;
-        font-size: 0.8em;
-    }
+}
 </style>
 {% endblock %}
