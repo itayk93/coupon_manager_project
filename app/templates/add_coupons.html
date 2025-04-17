@@ -847,27 +847,47 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Set up tooltip functionality
         setupTooltips(fieldset);
+        
+        // Set up desktop tooltip hover functionality
+        setupDesktopTooltipHover(fieldset);
     }
     
-    // === Tooltip functionality ===
+    // === Tooltip functionality - IMPROVED ===
     function setupTooltips(fieldset) {
+        // Find all tooltip buttons in this fieldset
         const tooltipButtons = fieldset.querySelectorAll('.tooltip-button-mobile');
         
         tooltipButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const tooltip = this.nextElementSibling.nextElementSibling;
-                if (tooltip && tooltip.classList.contains('mobile-tooltip')) {
-                    // Close all other tooltips first
-                    document.querySelectorAll('.mobile-tooltip').forEach(t => {
-                        if (t !== tooltip) t.style.display = 'none';
-                    });
+            // Find the specific tooltips related to this button
+            const mobileTooltip = button.parentNode.querySelector('.mobile-tooltip');
+            
+            button.addEventListener('click', function(e) {
+                // Only handle clicks for mobile devices
+                if (window.innerWidth <= 768) {
+                    e.preventDefault(); // Prevent any default behavior
                     
-                    // Toggle this tooltip
-                    tooltip.style.display = tooltip.style.display === 'block' ? 'none' : 'block';
+                    // Handle mobile tooltip
+                    if (mobileTooltip) {
+                        // Close all other mobile tooltips first
+                        document.querySelectorAll('.mobile-tooltip').forEach(t => {
+                            if (t !== mobileTooltip) t.style.display = 'none';
+                        });
+                        
+                        // Toggle this tooltip
+                        mobileTooltip.style.display = mobileTooltip.style.display === 'block' ? 'none' : 'block';
+                        
+                        // Position mobile tooltip properly
+                        if (mobileTooltip.style.display === 'block') {
+                            const buttonRect = this.getBoundingClientRect();
+                            mobileTooltip.style.top = (buttonRect.height + 5) + 'px';
+                            mobileTooltip.style.right = '0';
+                        }
+                    }
                 }
             });
         });
         
+        // Close buttons for mobile tooltips
         const closeButtons = fieldset.querySelectorAll('.close-tooltip');
         closeButtons.forEach(button => {
             button.addEventListener('click', function(e) {
@@ -876,7 +896,59 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
+    // Add hover behavior for desktop tooltips - IMPROVED VERSION
+    function setupDesktopTooltipHover(fieldset) {
+        const tooltipButtons = fieldset.querySelectorAll('.tooltip-button-mobile');
+        
+        tooltipButtons.forEach(button => {
+            const container = button.closest('.tooltip-checkbox-container');
+            const tooltip = container ? container.querySelector('.tooltip') : null;
+            
+            if (tooltip && window.innerWidth >= 769) {
+                // Add hover event listeners
+                button.addEventListener('mouseenter', function() {
+                    // Position the tooltip above everything else
+                    tooltip.style.zIndex = '999';
+                    
+                    // Ensure it's positioned properly and not cut off
+                    const containerRect = container.getBoundingClientRect();
+                    const windowWidth = window.innerWidth;
+                    
+                    // If near the right edge of the screen, adjust position
+                    if (containerRect.right + 125 > windowWidth) {
+                        tooltip.style.right = '0';
+                        tooltip.style.left = 'auto';
+                    } else {
+                        tooltip.style.right = '-115px';
+                        tooltip.style.left = 'auto';
+                    }
+                    
+                    // Show the tooltip
+                    tooltip.style.display = 'block';
+                });
+                
+                button.addEventListener('mouseleave', function() {
+                    // Only hide if not hovering on tooltip
+                    if (!isHoveringOnTooltip) {
+                        tooltip.style.display = 'none';
+                    }
+                });
+                
+                // Allow hovering on the tooltip itself without it disappearing
+                let isHoveringOnTooltip = false;
+                tooltip.addEventListener('mouseenter', function() {
+                    isHoveringOnTooltip = true;
+                });
+                
+                tooltip.addEventListener('mouseleave', function() {
+                    isHoveringOnTooltip = false;
+                    tooltip.style.display = 'none';
+                });
+            }
+        });
+    }
+
     // Close tooltips when clicking outside
     document.addEventListener('click', function(e) {
         const target = e.target;
@@ -1893,13 +1965,15 @@ document.addEventListener('DOMContentLoaded', function() {
     cursor: pointer;
 }
 
-/* Tooltip styling */
+/* Tooltip styling - IMPROVED */
 .tooltip-checkbox-container {
     position: relative;
     display: flex;
     align-items: center;
+    gap: 10px; /* Space between tooltip button and checkbox */
 }
 
+/* Tooltip button styling - IMPROVED */
 .tooltip-button,
 .tooltip-button-mobile {
     background: none;
@@ -1912,14 +1986,17 @@ document.addEventListener('DOMContentLoaded', function() {
     justify-content: center;
     cursor: pointer;
     transition: background-color 0.2s ease;
-    margin-right: 10px;
+    margin-right: 3px; /* Increased margin to move it further right */
     font-size: 12px;
+    order: -1; /* Makes the button appear first in RTL layout */
 }
 
+.tooltip-button-mobile:hover,
 .tooltip-button:hover {
     background-color: #f8f9fa;
 }
 
+/* Base tooltip styles - IMPROVED */
 .tooltip,
 .mobile-tooltip {
     display: none;
@@ -1935,33 +2012,87 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
+/* Desktop tooltip - IMPROVED */
 .tooltip {
     bottom: 100%;
-    right: 0;
+    right: -115px;
     margin-bottom: 8px;
+    width: 250px;
+    z-index: 999; /* Make sure it appears above everything */
+    position: absolute; /* Ensure absolute positioning */
+    pointer-events: auto; /* Allow interaction with the tooltip */
 }
 
-.mobile-tooltip {
-    top: 100%;
-    right: 0;
-    margin-top: 8px;
-}
 
-.tooltip::after,
-.mobile-tooltip::after {
+/* Desktop tooltip arrow - IMPROVED */
+.tooltip::after {
     content: "";
     position: absolute;
     border-width: 5px;
     border-style: solid;
     border-color: #2c3e50 transparent transparent transparent;
     top: 100%;
+    right: 125px; /* Center arrow */
+}
+
+/* Mobile tooltip - IMPROVED */
+.mobile-tooltip {
+    position: absolute; /* Changed from fixed to position properly */
+    top: 0;
+    right: 0;
+    margin-top: 30px;
+    width: 200px;
+}
+
+/* Mobile tooltip arrow - IMPROVED */
+.mobile-tooltip::after {
+    content: "";
+    position: absolute;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent #2c3e50 transparent;
+    bottom: 100%; /* Changed to point upward */
     right: 10px;
 }
 
+/* Close button in tooltip */
 .close-tooltip {
     float: left;
     cursor: pointer;
     margin-right: 8px;
+}
+
+/* Desktop specific tooltip behavior - IMPROVED */
+@media (min-width: 769px) {
+    .mobile-tooltip {
+        display: none !important; /* Hide mobile tooltip on desktop */
+    }
+    
+    /* Show desktop tooltip on hover or focus */
+    .tooltip-button-mobile:hover + .tooltip,
+    .tooltip-button-mobile:focus + .tooltip,
+    .tooltip:hover {
+        display: block !important;
+    }
+}
+
+/* Mobile specific tooltip behavior - IMPROVED */
+@media (max-width: 768px) {
+    /* Hide desktop tooltip on mobile */
+    .tooltip {
+        display: none !important;
+    }
+    
+    /* Fix mobile tooltip positioning */
+    .mobile-tooltip {
+        position: absolute;
+        top: 0;
+        left: auto;
+        right: 0;
+        transform: none;
+        width: 200px;
+        max-width: 90vw;
+    }
 }
 
 /* Discount display */
@@ -2066,33 +2197,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .desktop-text {
         display: none;
-    }
-    
-    .tooltip {
-        display: none !important; /* Hide desktop tooltip on mobile */
-    }
-    
-    /* Make mobile tooltips fixed position for better visibility */
-    .mobile-tooltip {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 80%;
-        max-width: 300px;
-        z-index: 1001;
-    }
-}
-
-@media (min-width: 769px) {
-    .mobile-tooltip {
-        display: none !important; /* Hide mobile tooltip on desktop */
-    }
-    
-    .tooltip-button:hover + .tooltip,
-    .tooltip-button:focus + .tooltip,
-    .tooltip:hover {
-        display: block;
     }
 }
 
