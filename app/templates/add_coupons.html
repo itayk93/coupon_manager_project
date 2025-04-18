@@ -2014,13 +2014,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Desktop tooltip - IMPROVED */
 .tooltip {
-    bottom: 100%;
-    right: -115px;
-    margin-bottom: 8px;
-    width: 250px;
-    z-index: 999; /* Make sure it appears above everything */
-    position: absolute; /* Ensure absolute positioning */
-    pointer-events: auto; /* Allow interaction with the tooltip */
+    position: absolute;
+    width: auto;
+    min-width: 200px;
+    max-width: 300px;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    white-space: normal;
+    word-wrap: break-word;
 }
 
 
@@ -2057,9 +2060,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Close button in tooltip */
 .close-tooltip {
-    float: left;
+    position: absolute;
+    top: 8px;
+    right: 7px;
     cursor: pointer;
-    margin-right: 8px;
+    font-size: 16px;
+    width: 20px;
+    height: 20px;
+    line-height: 18px;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    padding: 0;
+    z-index: 10;
+}
+
+/* Add some padding to prevent text from getting behind the X button */
+.mobile-tooltip {
+    padding-top: 5px;
+    padding-right: 25px; /* Add right padding to make space for the X button */
+    position: relative; /* Ensure the tooltip has position relative for absolute positioning of X */
+    text-align: center;           /* Centers inline text horizontally */
+    display: flex;                /* Enables flexbox layout for more precise alignment */
+    justify-content: center;      /* Horizontally centers flex items */
+    align-items: center;          /* Vertically centers flex items (only works if height is set) */
 }
 
 /* Desktop specific tooltip behavior - IMPROVED */
