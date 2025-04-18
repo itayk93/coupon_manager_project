@@ -665,15 +665,6 @@ function handleResize() {
   updateChartForMobile(couponUsageChart, isMobile);
   updateChartForMobile(couponTypeChart, isMobile);
   
-  // Update font size for X-axis ticks
-  const charts = [timelineChart, savingsPercentageChart, cumulativeSavingsChart, couponUsageChart, couponTypeChart];
-  charts.forEach(chart => {
-    if (chart && chart.options && chart.options.scales && chart.options.scales.x && chart.options.scales.x.ticks) {
-      chart.options.scales.x.ticks.font = { size: isMobile ? 8 : (isTablet ? 10 : 12) };
-      chart.update();
-    }
-  });
-
   // Handle visibility of mobile-specific elements
   const mobileElements = document.querySelectorAll('.hide-on-mobile');
   mobileElements.forEach(el => {
@@ -686,10 +677,9 @@ function handleResize() {
 }
 
 /**
- * Function #2: updateChartForMobile - Applies mobile-specific optimizations to a chart
- * This function is called by handleResize for each chart
- *
- * CHANGES NEEDED: Make font size for X-axis smaller and increase rotation angle
+ * Update chart config for mobile optimization
+ * @param {Chart} chart - The chart object to update
+ * @param {boolean} isMobile - Whether the device is mobile
  */
 function updateChartForMobile(chart, isMobile) {
   if (!chart) return;
@@ -700,15 +690,11 @@ function updateChartForMobile(chart, isMobile) {
     if (chart.options.scales.x) {
       // Adjust font size
       if (chart.options.scales.x.ticks) {
-        chart.options.scales.x.ticks.font = { 
-          // CHANGE HERE: Make font size smaller (was 8 : 12)
-          size: isMobile ? 5 : 7  // Even smaller font size
-        };
+        chart.options.scales.x.ticks.font = { size: isMobile ? 8 : 12 };
         
-        // Increase rotation for x-axis labels to save space
-        // CHANGE HERE: Increase rotation angle to fit longer labels
-        chart.options.scales.x.ticks.maxRotation = isMobile ? 60 : 45;  // Increased from 45 to 60 for mobile
-        chart.options.scales.x.ticks.minRotation = isMobile ? 45 : 30;  // Changed to ensure consistent rotation
+        // Increase rotation for x-axis labels on mobile to save space
+        chart.options.scales.x.ticks.maxRotation = isMobile ? 45 : 0;
+        chart.options.scales.x.ticks.minRotation = isMobile ? 30 : 0;
       }
     }
     
@@ -2073,7 +2059,7 @@ function updateCouponUsageChart(companiesData) {
  * Create coupon type chart - showing only categories with at least 2 coupons
  * @param {Array} companiesData - Company statistics data
  */
-function createCouponTypeChart(companiesData) {
+ function createCouponTypeChart(companiesData) {
   // Check if Chart.js is available
   if (typeof Chart === 'undefined') {
     document.getElementById('couponTypeChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
@@ -2123,103 +2109,93 @@ function createCouponTypeChart(companiesData) {
       ];
       
       // Create the chart
-      // Create the chart
       couponTypeChart = new Chart(ctx, {
-        type   : 'bar',
-        data   : {
-          labels   : chartData.map(i => i.tag_name),
-          datasets : [{
-            label           : 'אחוז חיסכון',
-            data            : chartData.map(i => i.avg_savings_percentage),
-            backgroundColor : chartData.map((_, i) => colors[i % colors.length])
+        type: 'bar',
+        data: {
+          labels: chartData.map(item => item.tag_name),
+          datasets: [{
+            label: 'אחוז חיסכון',
+            data: chartData.map(item => item.avg_savings_percentage),
+            backgroundColor: chartData.map((_, index) => colors[index % colors.length])
           }]
         },
         options: {
-          responsive          : true,
-          maintainAspectRatio : false,
-          font                : { family:"'Helvetica Neue','Arial',sans-serif" },
-
+          responsive: true,
+          maintainAspectRatio: false,
+          // Important: Set default font for all text to support Hebrew
+          font: {
+            family: "'Helvetica Neue', 'Arial', sans-serif"
+          },
           plugins: {
-            legend : { display:false },
-
-            /* ---------- tooltip (fixed) ---------- */
+            legend: {
+              display: false // Hide legend as we only have one data series
+            },
             tooltip: {
-              enabled          : true,
-              mode             : 'nearest',
-              rtl              : true,
-              textDirection    : 'rtl',
-              displayColors    : false,           // no little color‑box
-              backgroundColor  : 'rgba(0,0,0,0.85)',
-              borderRadius     : 6,
-              padding          : { top:14, right:16, bottom:14, left:16 },
-              bodySpacing      : 6,               // extra spacing between rows
-              titleMarginBottom: 10,
-              caretSize        : 6,
-
-              titleFont : { size:isMobile?14:16, weight:'bold' },
-              bodyFont  : { size:isMobile?13:15 },
-              titleAlign: 'right',
-              bodyAlign : 'right',
-
-              callbacks:{
-                /* keep category name as bold title */
-                title(tooltipItems){
-                  return tooltipItems[0].label;
-                },
-
-                /* body rows – with LRM before numbers to avoid bidi‑flip */
-                label(ctx){
-                  const item = chartData[ctx.dataIndex];
-                  const LRM  = '\u200E';                      // Left‑To‑Right mark
-
+              enabled: true,
+              mode: 'nearest',
+              rtl: true, // RTL support for Hebrew
+              textDirection: 'rtl',
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleFont: {
+                size: isMobile ? 12 : 14
+              },
+              bodyFont: {
+                size: isMobile ? 11 : 13
+              },
+              callbacks: {
+                // Format tooltip content
+                label: function(context) {
+                  const item = chartData[context.dataIndex];
                   return [
-                    `מספר קופונים: ${LRM}${item.total_coupons}`,
-                    `סך חיסכון: ₪${LRM}${item.total_savings.toFixed(2)}`,
-                    `אחוז חיסכון: ${LRM}${ctx.raw.toFixed(1)}%`
+                    `קטגוריה: ${item.tag_name}`,
+                    `מספר קופונים: ${item.total_coupons}`,
+                    `סך חיסכון: ${item.total_savings.toFixed(2)} ₪`,
+                    `אחוז חיסכון: ${item.avg_savings_percentage.toFixed(1)}%`
                   ];
+                },
+                // Remove default title
+                title: function() {
+                  return '';
                 }
               }
             }
           },
-
-          /* ---------- axes ---------- */
-          scales:{
-            y:{
-              beginAtZero:true,
-              max        :100,
-              ticks:{
-                stepSize:20,
-                font    :{ size:isMobile?10:12 },
-                callback:value=>value+'%'
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100, // Set max to 100% for percentage scale
+              ticks: {
+                font: { 
+                  size: isMobile ? 10 : 12
+                },
+                callback: function(value) {
+                  return value + '%'; // Add % to y-axis values
+                }
               },
-              title:{
-                display:true,
-                text:'אחוז החיסכון (%)',
-                font:{ size:isMobile?11:13, weight:'bold' },
-                padding:{ bottom:10 }
+              title: {
+                display: true,
+                text: 'אחוז החיסכון (%)',
+                font: {
+                  size: isMobile ? 11 : 13,
+                  weight: 'bold'
+                },
+                padding: { bottom: 10 }
               }
             },
-            x:{
-              ticks:{
-                font       :{ size:isMobile?5:7 },
-                maxRotation:isMobile?60:45,
-                minRotation:isMobile?60:45
+            x: {
+              ticks: {
+                font: { 
+                  size: isMobile ? 10 : 12
+                },
+                // Rotate labels for better fit
+                maxRotation: isMobile ? 45 : 30,
+                minRotation: isMobile ? 45 : 30
               }
             }
           }
         }
       });
-
-      /* ---------- extra CSS for nicer line‑height ---------- */
-      const style = document.createElement('style');
-      style.textContent = `
-        /* affects only internal <table> generated by chart.js tooltip */
-        .chartjs-tooltip td, .chartjs-tooltip th {
-          line-height: 1.45 !important;   /* add vertical breathing room */
-        }
-      `;
-      document.head.appendChild(style);
-
+      
       // Store original data for filtering
       couponTypeChart.originalData = chartData;
       
@@ -2237,10 +2213,9 @@ function createCouponTypeChart(companiesData) {
         }
         
         if (couponTypeChart.options.scales.x.ticks) {
-          // CHANGE HERE: Update font size in the resize handler
-          couponTypeChart.options.scales.x.ticks.font.size = newIsMobile ? 5 : 7;  // Reduced size
-          couponTypeChart.options.scales.x.ticks.maxRotation = newIsMobile ? 60 : 45;  // Increased rotation
-          couponTypeChart.options.scales.x.ticks.minRotation = newIsMobile ? 60 : 45;  // Consistent rotation
+          couponTypeChart.options.scales.x.ticks.font.size = newIsMobile ? 10 : 12;
+          couponTypeChart.options.scales.x.ticks.maxRotation = newIsMobile ? 45 : 30;
+          couponTypeChart.options.scales.x.ticks.minRotation = newIsMobile ? 45 : 30;
         }
         
         if (couponTypeChart.options.plugins.tooltip) {

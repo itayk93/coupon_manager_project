@@ -77,12 +77,12 @@
     
     <!-- New Chart: One-Time vs Non-One-Time Coupons -->
     <div class="chart-container">
-      <h3>אחוז החיסכון לפי קטגוריית קופון</h3>
-      <div class="chart-info-icon"
-         data-tooltip="גרף זה מציג את אחוז ההנחה הממוצע — כמה חסכת בפועל מתוך הערך המקורי — בכל קטגוריית קופונים. מוצגות הקטגוריות בעלות אחוז החיסכון הגבוה ביותר (Top‑5 במובייל, Top‑7 בדסקטופ).">ℹ️</div>
-      <canvas id="couponTypeChart" class="chart"></canvas>
+      <h3>קופונים חד פעמיים ורב פעמיים</h3>
+      <div class="chart-info-icon" data-tooltip="גרף זה מציג את היחס בין קופונים חד פעמיים (שניתן לנצל פעם אחת בלבד) לבין קופונים רב פעמיים (שניתן לנצל מספר פעמים) בכל חברה.">ℹ️</div>
+      <div id="couponTypeChart" class="chart"></div>
     </div>
-    </div>
+  </div>
+  
   <div class="stats-details">
     <h3>פירוט החיסכון לפי חברות</h3>
     <div class="savings-table-wrapper">
@@ -665,15 +665,6 @@ function handleResize() {
   updateChartForMobile(couponUsageChart, isMobile);
   updateChartForMobile(couponTypeChart, isMobile);
   
-  // Update font size for X-axis ticks
-  const charts = [timelineChart, savingsPercentageChart, cumulativeSavingsChart, couponUsageChart, couponTypeChart];
-  charts.forEach(chart => {
-    if (chart && chart.options && chart.options.scales && chart.options.scales.x && chart.options.scales.x.ticks) {
-      chart.options.scales.x.ticks.font = { size: isMobile ? 8 : (isTablet ? 10 : 12) };
-      chart.update();
-    }
-  });
-
   // Handle visibility of mobile-specific elements
   const mobileElements = document.querySelectorAll('.hide-on-mobile');
   mobileElements.forEach(el => {
@@ -686,10 +677,9 @@ function handleResize() {
 }
 
 /**
- * Function #2: updateChartForMobile - Applies mobile-specific optimizations to a chart
- * This function is called by handleResize for each chart
- *
- * CHANGES NEEDED: Make font size for X-axis smaller and increase rotation angle
+ * Update chart config for mobile optimization
+ * @param {Chart} chart - The chart object to update
+ * @param {boolean} isMobile - Whether the device is mobile
  */
 function updateChartForMobile(chart, isMobile) {
   if (!chart) return;
@@ -700,15 +690,11 @@ function updateChartForMobile(chart, isMobile) {
     if (chart.options.scales.x) {
       // Adjust font size
       if (chart.options.scales.x.ticks) {
-        chart.options.scales.x.ticks.font = { 
-          // CHANGE HERE: Make font size smaller (was 8 : 12)
-          size: isMobile ? 5 : 7  // Even smaller font size
-        };
+        chart.options.scales.x.ticks.font = { size: isMobile ? 8 : 12 };
         
-        // Increase rotation for x-axis labels to save space
-        // CHANGE HERE: Increase rotation angle to fit longer labels
-        chart.options.scales.x.ticks.maxRotation = isMobile ? 60 : 45;  // Increased from 45 to 60 for mobile
-        chart.options.scales.x.ticks.minRotation = isMobile ? 45 : 30;  // Changed to ensure consistent rotation
+        // Increase rotation for x-axis labels on mobile to save space
+        chart.options.scales.x.ticks.maxRotation = isMobile ? 45 : 0;
+        chart.options.scales.x.ticks.minRotation = isMobile ? 30 : 0;
       }
     }
     
@@ -2065,292 +2051,169 @@ function updateCouponUsageChart(companiesData) {
   couponUsageChart.update();
 }
 
-/********************************************************************
- *  createCouponTypeChart  –  build the chart once
- *  This function creates a bar chart showing savings percentage by coupon category
- *******************************************************************/
 /**
- * Create coupon type chart - showing only categories with at least 2 coupons
- * @param {Array} companiesData - Company statistics data
+ * Create coupon type chart (one-time vs non-one-time)
+ * @param {Array} companiesData - Array of company statistics data
  */
 function createCouponTypeChart(companiesData) {
-  // Check if Chart.js is available
-  if (typeof Chart === 'undefined') {
-    document.getElementById('couponTypeChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
-    return;
-  }
-  
-  const container = document.getElementById('couponTypeChart');
-  if (!container) return;
-  
-  // Fetch tag coupon stats from server
-  fetch('/tag_coupon_stats')
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(tagData => {
-      // Determine display limit based on screen size
-      const isMobile = window.innerWidth < 768;
-      const displayLimit = isMobile ? 5 : 7;
-      
-      // Process and filter data - ONLY categories with at least 2 coupons
-      const chartData = tagData
-        .filter(item => item.total_coupons >= 2) // Filter for minimum 2 coupons
-        .sort((a, b) => b.avg_savings_percentage - a.avg_savings_percentage)
-        .slice(0, displayLimit);
-      
-      // If no valid data, show message
-      if (!chartData.length) {
-        container.innerHTML = '<p style="text-align:center;padding-top:80px;">אין קטגוריות עם 2 קופונים או יותר</p>';
-        return;
-      }
-      
-      // Create chart
-      const ctx = container.getContext('2d');
-      
-      // Colors for chart bars
-      const colors = [
-        'rgba(52, 152, 219, 0.7)',  // Blue
-        'rgba(46, 204, 113, 0.7)',  // Green
-        'rgba(241, 196, 15, 0.7)',  // Yellow
-        'rgba(231, 76, 60, 0.7)',   // Red
-        'rgba(155, 89, 182, 0.7)',  // Purple
-        'rgba(26, 188, 156, 0.7)',  // Turquoise
-        'rgba(243, 156, 18, 0.7)'   // Orange
-      ];
-      
-      // Create the chart
-      // Create the chart
-      couponTypeChart = new Chart(ctx, {
-        type   : 'bar',
-        data   : {
-          labels   : chartData.map(i => i.tag_name),
-          datasets : [{
-            label           : 'אחוז חיסכון',
-            data            : chartData.map(i => i.avg_savings_percentage),
-            backgroundColor : chartData.map((_, i) => colors[i % colors.length])
-          }]
-        },
-        options: {
-          responsive          : true,
-          maintainAspectRatio : false,
-          font                : { family:"'Helvetica Neue','Arial',sans-serif" },
-
-          plugins: {
-            legend : { display:false },
-
-            /* ---------- tooltip (fixed) ---------- */
-            tooltip: {
-              enabled          : true,
-              mode             : 'nearest',
-              rtl              : true,
-              textDirection    : 'rtl',
-              displayColors    : false,           // no little color‑box
-              backgroundColor  : 'rgba(0,0,0,0.85)',
-              borderRadius     : 6,
-              padding          : { top:14, right:16, bottom:14, left:16 },
-              bodySpacing      : 6,               // extra spacing between rows
-              titleMarginBottom: 10,
-              caretSize        : 6,
-
-              titleFont : { size:isMobile?14:16, weight:'bold' },
-              bodyFont  : { size:isMobile?13:15 },
-              titleAlign: 'right',
-              bodyAlign : 'right',
-
-              callbacks:{
-                /* keep category name as bold title */
-                title(tooltipItems){
-                  return tooltipItems[0].label;
-                },
-
-                /* body rows – with LRM before numbers to avoid bidi‑flip */
-                label(ctx){
-                  const item = chartData[ctx.dataIndex];
-                  const LRM  = '\u200E';                      // Left‑To‑Right mark
-
-                  return [
-                    `מספר קופונים: ${LRM}${item.total_coupons}`,
-                    `סך חיסכון: ₪${LRM}${item.total_savings.toFixed(2)}`,
-                    `אחוז חיסכון: ${LRM}${ctx.raw.toFixed(1)}%`
-                  ];
-                }
-              }
+  if (typeof Chart !== 'undefined') {
+    const container = document.getElementById('couponTypeChart');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    
+    // Prepare data for the chart - top companies by coupon count
+    const chartData = [...companiesData]
+      .sort((a, b) => (b.coupons_count || 0) - (a.coupons_count || 0))
+      .slice(0, 10); // Show top 10 companies by coupon count
+    
+    // Responsive font size based on screen size
+    const isMobile = window.innerWidth < 768;
+    const fontSize = isMobile ? 10 : 12;
+    
+    // Limit to fewer companies on mobile
+    const mobileLimit = isMobile ? 5 : 10;
+    const displayData = chartData.slice(0, mobileLimit);
+    
+    couponTypeChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: displayData.map(d => d.company),
+        datasets: [
+          {
+            label: 'קופונים חד פעמיים',
+            data: displayData.map(d => d.one_time_count || 0),
+            backgroundColor: 'rgba(255, 87, 34, 0.7)', // Orange for one-time
+            borderColor: 'rgba(255, 87, 34, 1)',
+            borderWidth: 1
+          },
+          {
+            label: 'קופונים רב פעמיים',
+            data: displayData.map(d => d.non_one_time_count || 0),
+            backgroundColor: 'rgba(156, 39, 176, 0.7)', // Purple for non-one-time
+            borderColor: 'rgba(156, 39, 176, 1)',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            ticks: {
+              font: { size: fontSize },
+              maxRotation: isMobile ? 60 : 0,
+              minRotation: isMobile ? 45 : 0
             }
           },
-
-          /* ---------- axes ---------- */
-          scales:{
-            y:{
-              beginAtZero:true,
-              max        :100,
-              ticks:{
-                stepSize:20,
-                font    :{ size:isMobile?10:12 },
-                callback:value=>value+'%'
-              },
-              title:{
-                display:true,
-                text:'אחוז החיסכון (%)',
-                font:{ size:isMobile?11:13, weight:'bold' },
-                padding:{ bottom:10 }
-              }
+          y: {
+            beginAtZero: true,
+            stacked: true,
+            ticks: {
+              font: { size: fontSize }
             },
-            x:{
-              ticks:{
-                font       :{ size:isMobile?5:7 },
-                maxRotation:isMobile?60:45,
-                minRotation:isMobile?60:45
+            title: {
+              display: true,
+              text: 'מספר קופונים',
+              font: {
+                size: fontSize + 2
               }
             }
           }
+        },
+        plugins: {
+          tooltip: {
+            rtl: true,
+            textDirection: 'rtl',
+            callbacks: {
+              label: function(context) {
+                const datasetLabel = context.dataset.label || '';
+                const value = context.raw;
+                
+                // Find the full company data
+                const company = context.label;
+                const companyData = companiesData.find(c => c.company === company);
+                
+                if (!companyData) return `${datasetLabel}: ${value}`;
+                
+                const totalCoupons = companyData.coupons_count || 0;
+                const oneTimeCoupons = companyData.one_time_count || 0;
+                const nonOneTimeCoupons = companyData.non_one_time_count || 0;
+                
+                if (context.datasetIndex === 0) { // One-time coupons
+                  const oneTimePercentage = totalCoupons > 0 ? (oneTimeCoupons / totalCoupons * 100).toFixed(1) : 0;
+                  return `קופונים חד פעמיים: ${oneTimeCoupons} (${oneTimePercentage}%)`;
+                } else { // Non-one-time coupons
+                  const nonOneTimePercentage = totalCoupons > 0 ? (nonOneTimeCoupons / totalCoupons * 100).toFixed(1) : 0;
+                  return `קופונים רב פעמיים: ${nonOneTimeCoupons} (${nonOneTimePercentage}%)`;
+                }
+              },
+              // Add total coupons to footer
+              footer: function(tooltipItems) {
+                const company = tooltipItems[0].label;
+                const companyData = companiesData.find(c => c.company === company);
+                
+                if (!companyData) return '';
+                
+                // Simplified footer for mobile
+                if (window.innerWidth < 768) {
+                  return [`סה"כ קופונים: ${companyData.coupons_count || 0}`];
+                }
+                
+                const totalSavings = companyData.savings || 0;
+                const oneTimeSavings = totalSavings * ((companyData.one_time_count || 0) / (companyData.coupons_count || 1));
+                const nonOneTimeSavings = totalSavings * ((companyData.non_one_time_count || 0) / (companyData.coupons_count || 1));
+                
+                return [
+                  `סה"כ קופונים: ${companyData.coupons_count || 0}`,
+                  `חיסכון בקופונים חד פעמיים: ${oneTimeSavings.toFixed(2)} ₪`,
+                  `חיסכון בקופונים רב פעמיים: ${nonOneTimeSavings.toFixed(2)} ₪`
+                ];
+              }
+            }
+          },
+          legend: {
+            position: 'top',
+            labels: {
+              font: { size: fontSize },
+              boxWidth: isMobile ? 10 : 15
+              }
         }
-      });
-
-      /* ---------- extra CSS for nicer line‑height ---------- */
-      const style = document.createElement('style');
-      style.textContent = `
-        /* affects only internal <table> generated by chart.js tooltip */
-        .chartjs-tooltip td, .chartjs-tooltip th {
-          line-height: 1.45 !important;   /* add vertical breathing room */
-        }
-      `;
-      document.head.appendChild(style);
-
-      // Store original data for filtering
-      couponTypeChart.originalData = chartData;
-      
-      // Add resize handler for responsive adjustments
-      window.addEventListener('resize', handleChartResize);
-      
-      function handleChartResize() {
-        if (!couponTypeChart) return;
-        
-        const newIsMobile = window.innerWidth < 768;
-        
-        // Update font sizes based on screen size
-        if (couponTypeChart.options.scales.y.ticks) {
-          couponTypeChart.options.scales.y.ticks.font.size = newIsMobile ? 10 : 12;
-        }
-        
-        if (couponTypeChart.options.scales.x.ticks) {
-          // CHANGE HERE: Update font size in the resize handler
-          couponTypeChart.options.scales.x.ticks.font.size = newIsMobile ? 5 : 7;  // Reduced size
-          couponTypeChart.options.scales.x.ticks.maxRotation = newIsMobile ? 60 : 45;  // Increased rotation
-          couponTypeChart.options.scales.x.ticks.minRotation = newIsMobile ? 60 : 45;  // Consistent rotation
-        }
-        
-        if (couponTypeChart.options.plugins.tooltip) {
-          couponTypeChart.options.plugins.tooltip.titleFont.size = newIsMobile ? 12 : 14;
-          couponTypeChart.options.plugins.tooltip.bodyFont.size = newIsMobile ? 11 : 13;
-        }
-        
-        couponTypeChart.update();
       }
-    })
-    .catch(error => {
-      console.error('Error loading coupon type chart data:', error);
-      container.innerHTML = `
-        <div style="color:#e74c3c; text-align:center; padding:25px; direction:rtl;">
-          <div>שגיאה בטעינת נתוני הקופונים</div>
-          <small>${error.message}</small>
-        </div>
-      `;
-    });
+    }
+  });
+} else {
+  document.getElementById('couponTypeChart').innerHTML = '<p style="text-align:center;padding-top:80px;">לצפייה בגרף יש להתקין ספריית Chart.js</p>';
+}
 }
 
 /**
- * Update coupon type chart with filtered data
- * @param {Array} companiesData - Array of filtered company statistics data
- */
+* Update coupon type chart with filtered data
+* @param {Array} companiesData - Array of company statistics data
+*/
 function updateCouponTypeChart(companiesData) {
-  // If the chart doesn't exist yet, create it
-  if (!couponTypeChart) {
-    createCouponTypeChart(companiesData);
-    return;
-  }
-  
-  // If we don't have the original data, we can't filter properly
-  if (!couponTypeChart.originalData) {
-    // Recreate the chart to fetch the data again
-    createCouponTypeChart(companiesData);
-    return;
-  }
-  
-  // Get the filtered data - this is example filter logic
-  // You'll need to adapt this to your actual data structure and filtering needs
-  let filteredData = [...couponTypeChart.originalData];
-  
-  // Apply company filters if needed
-  if (selectedCompanies && !selectedCompanies.has('all')) {
-    // Filter by selected companies - example logic
-    filteredData = filteredData.filter(item => {
-      // This assumes your tag/coupon data has a companies array
-      // Adjust according to your actual data structure
-      if (item.companies) {
-        return item.companies.some(company => selectedCompanies.has(company));
-      }
-      return false;
-    });
-  }
-  
-  // Apply coupon type filters if needed
-  if (selectedCouponTypes && !selectedCouponTypes.has('all')) {
-    // Filter by coupon types - example logic
-    if (selectedCouponTypes.has('one_time') && !selectedCouponTypes.has('non_one_time')) {
-      // Only one-time coupons
-      filteredData = filteredData.filter(item => item.is_one_time === true);
-    } else if (selectedCouponTypes.has('non_one_time') && !selectedCouponTypes.has('one_time')) {
-      // Only non-one-time coupons
-      filteredData = filteredData.filter(item => item.is_one_time === false);
-    }
-  }
-  
-  // Always ensure we have at least 2 coupons in each category after filtering
-  filteredData = filteredData.filter(item => item.total_coupons >= 2);
-  
-  // Mobile or desktop display
-  const isMobile = window.innerWidth < 768;
-  const displayLimit = isMobile ? 5 : 7;
-  
-  // Sort and limit the data
-  filteredData = filteredData
-    .sort((a, b) => b.avg_savings_percentage - a.avg_savings_percentage)
-    .slice(0, displayLimit);
-  
-  // If no data after filtering, show empty state
-  if (filteredData.length === 0) {
-    // Set empty data
-    couponTypeChart.data.labels = [];
-    couponTypeChart.data.datasets[0].data = [];
-    couponTypeChart.data.datasets[0].backgroundColor = [];
-  } else {
-    // Colors for chart bars
-    const colors = [
-      'rgba(52, 152, 219, 0.7)',  // Blue
-      'rgba(46, 204, 113, 0.7)',  // Green
-      'rgba(241, 196, 15, 0.7)',  // Yellow
-      'rgba(231, 76, 60, 0.7)',   // Red
-      'rgba(155, 89, 182, 0.7)',  // Purple
-      'rgba(26, 188, 156, 0.7)',  // Turquoise
-      'rgba(243, 156, 18, 0.7)'   // Orange
-    ];
-    
-    // Update chart with new data
-    couponTypeChart.data.labels = filteredData.map(item => item.tag_name);
-    couponTypeChart.data.datasets[0].data = filteredData.map(item => item.avg_savings_percentage);
-    couponTypeChart.data.datasets[0].backgroundColor = filteredData.map((_, index) => 
-      colors[index % colors.length]
-    );
-  }
-  
-  // Apply changes
-  couponTypeChart.update();
-}
+if (!couponTypeChart) return;
 
+// Prepare data for the chart - sort by total coupons
+const chartData = [...companiesData]
+  .sort((a, b) => (b.coupons_count || 0) - (a.coupons_count || 0));
+
+// Limit to fewer companies on mobile
+const isMobile = window.innerWidth < 768;
+const limit = isMobile ? 5 : 10;
+const displayData = chartData.slice(0, limit);
+
+// Update chart data
+couponTypeChart.data.labels = displayData.map(d => d.company);
+couponTypeChart.data.datasets[0].data = displayData.map(d => d.one_time_count ||0);
+couponTypeChart.data.datasets[1].data = displayData.map(d => d.non_one_time_count || 0);
+
+couponTypeChart.update();
+}
 
 // Add custom styles for timeline chart tooltips and controls
 (function() {

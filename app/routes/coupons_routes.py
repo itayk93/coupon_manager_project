@@ -337,6 +337,75 @@ def show_coupons():
                            coupons_for_sale=coupons_for_sale,
                            company_logo_mapping=company_logo_mapping)
 
+# ────────────────────────────────────────────────────────────────────────────────
+# coupons_routes.py   – fixed get_tag_coupon_stats (works on PostgreSQL)
+# ────────────────────────────────────────────────────────────────────────────────
+from sqlalchemy import func, Numeric          # ← keep near other SQLAlchemy imports
+# …
+
+@coupons_bp.route('/tag_coupon_stats')
+@login_required
+def get_tag_coupon_stats():
+    """
+    Returns (as JSON) up‑to‑15 tags that belong to the current user, sorted by
+    average saving percentage (highest→lowest).  Each row contains:
+
+        • tag_id
+        • tag_name
+        • total_coupons          – how many of the user's coupons carry this tag
+        • total_savings (₪)      – Σ(value‑cost) over those coupons
+        • avg_savings_percentage – mean( (value‑cost)/value * 100 )  rounded to 2dp
+    """
+    try:
+        # ── 1. build the % expression once, keeps the query readable ───────────
+        percent_expr = (
+            (Coupon.value - Coupon.cost) /
+            func.nullif(Coupon.value, 0) * 100          # prevent divide‑by‑0
+        )
+
+        # ── 2. construct the ORM query – no raw SQL, portable across DBs ──────
+        avg_savings_percentage = func.coalesce(
+            func.round(
+                func.avg(percent_expr.cast(Numeric)),   # cast → NUMERIC so round() works
+                2
+            ),
+            0
+        ).label("avg_savings_percentage")
+
+        qry = (
+            db.session.query(
+                Tag.id.label("tag_id"),
+                Tag.name.label("tag_name"),
+                func.count(Coupon.id.distinct()).label("total_coupons"),
+                func.coalesce(func.sum(Coupon.value - Coupon.cost), 0).label("total_savings"),
+                avg_savings_percentage
+            )
+            .join(coupon_tags, Tag.id == coupon_tags.c.tag_id)
+            .join(Coupon, Coupon.id == coupon_tags.c.coupon_id)
+            .filter(Coupon.user_id == current_user.id)          # scope = this user
+            .group_by(Tag.id, Tag.name)
+            .order_by(avg_savings_percentage.desc())            # sort by % saving
+            .limit(15)
+        )
+
+        # ── 3. materialise & jsonify ──────────────────────────────────────────
+        tag_stats = [
+            {
+                "tag_id":    row.tag_id,
+                "tag_name":  row.tag_name,
+                "total_coupons": int(row.total_coupons),
+                "total_savings": float(row.total_savings),
+                "avg_savings_percentage": float(row.avg_savings_percentage)
+            }
+            for row in qry.all()
+        ]
+        return jsonify(tag_stats)
+
+    except Exception:
+        # logs full stack‑trace; response remains generic
+        current_app.logger.exception("get_tag_coupon_stats failed")
+        return jsonify({"error": "internal server error"}), 500
+
 
 @coupons_bp.route('/upload_coupons', methods=['GET', 'POST'])
 @login_required
