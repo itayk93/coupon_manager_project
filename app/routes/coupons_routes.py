@@ -384,6 +384,7 @@ def get_tag_coupon_stats():
             .join(Coupon, Coupon.id == coupon_tags.c.coupon_id)
             .filter(Coupon.user_id == current_user.id)          # scope = this user
             .group_by(Tag.id, Tag.name)
+            .having(func.count(Coupon.id.distinct()) >= 3)      # only tags with at least 3 coupons
             .order_by(avg_savings_percentage.desc())            # sort by % saving
             .limit(15)
         )
@@ -405,7 +406,6 @@ def get_tag_coupon_stats():
         # logs full stack‑trace; response remains generic
         current_app.logger.exception("get_tag_coupon_stats failed")
         return jsonify({"error": "internal server error"}), 500
-
 
 @coupons_bp.route('/upload_coupons', methods=['GET', 'POST'])
 @login_required
