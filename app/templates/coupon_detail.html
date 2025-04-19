@@ -631,18 +631,6 @@
         }
         {% endif %}
 
-        // אנימציות כניסה לדף
-        function animateElements() {
-            const elements = document.querySelectorAll('.coupon-card-details, .info-box, .action-button');
-            elements.forEach((element, index) => {
-                setTimeout(() => {
-                    element.classList.add('fade-in-up');
-                }, 100 * index);
-            });
-        }
-
-        // הפעלת אנימציות לאחר טעינת הדף
-        setTimeout(animateElements, 300);
     });
 </script>
 
@@ -1144,5 +1132,43 @@
         font-size: 12px;
     }
 }
+/* mark-as-used button */
+.mark-as-used-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin-top: 20px;
+    grid-column: 1 / -1;
+}
+
+.mark-as-used-container .danger-button {
+    background: linear-gradient(to right, #e74c3c, #c0392b);
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 50px;
+    font-size: 1em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    outline: none;
+    transform: scale(0.9); /* מקטין את הכפתור ב-10% */
+}
+
+.mark-as-used-container .danger-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    background: linear-gradient(to right, #c0392b, #e74c3c);
+}
+
+.mark-as-used-container .danger-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
 </style>
 {% endblock %}

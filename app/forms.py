@@ -515,7 +515,7 @@ class SellerAddCouponCodeForm(FlaskForm):
 
 
 class MarkCouponAsUsedForm(FlaskForm):
-    submit = SubmitField('סמן כנוצל')
+    submit = SubmitField('סימון הקופון כנוצל')
 
 
 class UpdateCouponUsageForm(FlaskForm):
