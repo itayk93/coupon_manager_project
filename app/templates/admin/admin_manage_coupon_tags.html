@@ -1,502 +1,1733 @@
 {% extends "base.html" %}
 
-{% block title %}ניהול קופונים - עדכון תגיות והורדה אוטומטית{% endblock %}
-
-{% block styles %}
-<!-- סגנונות ספציפיים לעמוד ניהול הקופונים -->
-<style>
-    /* עיצוב ספציפי לדף הנוכחי */
-    .dashboard-container {
-        max-width: var(--max-width);
-        margin: 20px auto;
-        padding: 0 20px;
-    }
-
-    .stats-card {
-        transition: transform 0.2s;
-        background-color: var(--white);
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .stats-card:hover {
-        transform: translateY(-5px);
-    }
-
-    .stats-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--primary-color);
-    }
-
-    .stats-label {
-        color: #6b7280;
-        font-weight: 500;
-    }
-
-    .custom-tabs {
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-    .custom-tabs .nav-link {
-        color: #6b7280;
-        border: none;
-        padding: 10px 15px;
-        border-bottom: 3px solid transparent;
-        font-weight: 500;
-    }
-
-    .custom-tabs .nav-link.active {
-        color: var(--primary-color);
-        background: transparent;
-        border-bottom: 3px solid var(--primary-color);
-    }
-
-    .custom-tabs .nav-link:hover:not(.active) {
-        border-bottom: 3px solid #e5e7eb;
-    }
-
-    .card-header {
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        padding: 15px 20px;
-        font-weight: 600;
-    }
-
-    .tag-badge {
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        background-color: #e5e7eb;
-        color: #374151;
-    }
-
-    .tag-badge.primary {
-        background-color: var(--secondary-color);
-        color: var(--primary-color);
-    }
-
-    .action-btn {
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.875rem;
-        transition: all 0.2s;
-    }
-
-    .action-btn:hover {
-        transform: translateY(-2px);
-    }
-
-    /* דו-שימושיות בין עמוד נוכחי ובסיס */
-    .card {
-        background-color: var(--white);
-        border-radius: 8px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        border: none;
-    }
-
-    .table-card {
-        overflow: hidden;
-    }
-
-    .coupon-table tr {
-        transition: background-color 0.15s;
-    }
-
-    .coupon-table tr:hover {
-        background-color: #f3f4f6;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="dashboard-container">
-    <!-- כותרת הדף עם כפתורי פעולה -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="fw-bold">ניהול קופונים</h1>
-        <div>
-            <button class="button">
-                <i class="fas fa-file-export me-1"></i> ייצוא נתונים
-            </button>
-            <button class="button" style="margin-right: 10px;">
-                <i class="fas fa-plus me-1"></i> הוסף קופון חדש
-            </button>
-        </div>
-    </div>
+<section class="tm-admin-coupon-tags">
+    <h2 class="tm-page-title">ניהול קטגוריות לקופונים (Admin)</h2>
 
-    <!-- כרטיסיות סטטיסטיקה -->
-    <div class="row row-cols-1 row-cols-md-3 g-4 mb-4 stats-row">
-        <div class="col">
-            <div class="card stats-card h-100">
-                <div class="card-body text-center p-4">
-                    <h2 class="stats-value mb-1">{{ coupons|length }}</h2>
-                    <div class="stats-label">סה"כ קופונים</div>
-                </div>
-            </div>
+    <!-- Batch Actions Form - Redesigned Component -->
+    <div id="batch-actions" class="tm-content-card tm-batch-actions-card">
+        <div class="tm-card-header">
+            <h3 class="tm-section-title">
+                <i class="fas fa-tasks"></i> פעולות מרובות
+            </h3>
         </div>
-        <div class="col">
-            <div class="card stats-card h-100">
-                <div class="card-body text-center p-4">
-                    <h2 class="stats-value mb-1">{{ coupons|selectattr('tag_name')|list|length }}</h2>
-                    <div class="stats-label">קופונים עם תגית</div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card stats-card h-100">
-                <div class="card-body text-center p-4">
-                    <h2 class="stats-value mb-1">{{ coupons|selectattr('auto_download_details')|list|length }}</h2>
-                    <div class="stats-label">הורדה אוטומטית</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- תפריט לשוניות -->
-    <ul class="nav nav-tabs custom-tabs mb-4" id="couponsTab" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-pane" type="button" role="tab" aria-controls="all-pane" aria-selected="true">
-                <i class="fas fa-list me-1"></i> כל הקופונים
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tagged-tab" data-bs-toggle="tab" data-bs-target="#tagged-pane" type="button" role="tab" aria-controls="tagged-pane" aria-selected="false">
-                <i class="fas fa-tag me-1"></i> קופונים עם תגיות
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="auto-tab" data-bs-toggle="tab" data-bs-target="#auto-pane" type="button" role="tab" aria-controls="auto-pane" aria-selected="false">
-                <i class="fas fa-download me-1"></i> הורדה אוטומטית
-            </button>
-        </li>
-    </ul>
-
-    <!-- תוכן הלשוניות -->
-    <div class="tab-content" id="couponsTabContent">
-        <!-- לשונית כל הקופונים -->
-        <div class="tab-pane fade show active" id="all-pane" role="tabpanel" aria-labelledby="all-tab" tabindex="0">
-            <div class="card table-card">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">רשימת כל הקופונים</h5>
-                    <div>
-                        <button class="btn btn-sm btn-outline-secondary me-2" id="refreshBtn">
-                            <i class="fas fa-sync-alt"></i>
+        <div class="tm-batch-control">
+            <div class="tm-batch-row">
+                <div class="tm-selection-status">
+                    <div class="tm-selection-count-container">
+                        <span id="selected-count" class="tm-selection-count">0</span>
+                        <span class="tm-selection-text">קופונים נבחרו</span>
+                        <span id="selection-info" class="tm-badge tm-badge-info"><i class="fas fa-info-circle"></i></span>
+                    </div>
+                    <div class="tm-selection-actions">
+                        <button type="button" id="select-all-btn" class="tm-action-button tm-small tm-outlined">
+                            <i class="fas fa-check-square"></i> בחר הכל
                         </button>
-                        <button class="btn btn-sm btn-outline-secondary" id="filterToggleBtn">
-                            <i class="fas fa-filter"></i>
+                        <button type="button" id="clear-selection-btn" class="tm-action-button tm-small tm-outlined tm-secondary">
+                            <i class="fas fa-times"></i> נקה בחירה
                         </button>
                     </div>
                 </div>
-
-                <!-- פאנל סינון -->
-                <div id="filterPanel" class="card-body border-bottom" style="display: none;">
-                    <div class="row">
-                        <div class="col-md-3 mb-2">
-                            <label for="companyFilter" class="form-label">חברה:</label>
-                            <select id="companyFilter" class="form-select form-select-sm">
-                                <option value="">הכל</option>
-                                <option value="max">Max</option>
-                                <option value="multipass">Multipass</option>
-                                <option value="buyme">BuyMe</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label for="tagFilter" class="form-label">תגית:</label>
-                            <select id="tagFilter" class="form-select form-select-sm">
-                                <option value="">הכל</option>
-                                {% for tag in tags %}
+            </div>
+            <div class="tm-batch-row">
+                <form id="batch-tag-form" method="POST" action="{{ url_for('admin_coupon_tags_bp.update_multiple_tags') }}" class="tm-batch-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="coupon_ids" id="selected-coupon-ids">
+                    <div class="tm-batch-inputs">
+                        <div class="tm-select-wrapper">
+                            <i class="fas fa-tag tm-input-icon"></i>
+                            <select name="tag_id" class="tm-select-field" required>
+                                <option value="" disabled selected>בחר תגית...</option>
+                                {% for tag in tags|sort(attribute='name') %}
                                 <option value="{{ tag.id }}">{{ tag.name }}</option>
                                 {% endfor %}
                             </select>
+                            <i class="fas fa-chevron-down tm-select-arrow"></i>
                         </div>
-                        <div class="col-md-3 mb-2">
-                            <label for="autoDownloadFilter" class="form-label">הורדה אוטומטית:</label>
-                            <select id="autoDownloadFilter" class="form-select form-select-sm">
-                                <option value="">הכל</option>
-                                <option value="yes">כן</option>
-                                <option value="no">לא</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 d-flex align-items-end">
-                            <button id="applyFilterBtn" class="button me-2">החל</button>
-                            <button id="resetFilterBtn" class="button secondary-button">אפס</button>
-                        </div>
+                        <button type="submit" class="tm-action-button tm-primary" id="apply-tag-btn" disabled>
+                            <i class="fas fa-check"></i> החל קטגוריה
+                        </button>
                     </div>
-                </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-                <!-- טבלת הקופונים -->
-                <div class="table-responsive">
-                    <table class="table table-hover coupon-table mb-0">
-                        <thead>
-                            <tr>
-                                <th>מספר קופון</th>
-                                <th>חברה</th>
-                                <th>תגית</th>
-                                <th>הורדה אוטומטית</th>
-                                <th>פעולות</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for coupon in coupons %}
-                            <tr>
-                                <td class="fw-medium">{{ coupon.id }}</td>
-                                <td>{{ coupon.company }}</td>
-                                <td>
-                                    {% if coupon.tag_name %}
-                                    <span class="tag-badge primary">{{ coupon.tag_name }}</span>
-                                    {% else %}
-                                    <span class="text-muted">לא הוגדרה</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if coupon.auto_download_details %}
-                                    <span class="badge bg-success">כן</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">לא</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="action-btn btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editCouponModal-{{ coupon.id }}">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="action-btn btn btn-sm btn-outline-danger">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
+    <div class="tm-content-card">
+        <div class="tm-card-header">
+            <h3 class="tm-section-title">
+                <i class="fas fa-list"></i> רשימת קופונים ותגיות
+            </h3>
+            <div class="tm-search-container">
+                <div class="tm-input-with-icon">
+                    <i class="fas fa-search tm-input-icon"></i>
+                    <input type="text" id="couponSearchInput" class="tm-input-field" placeholder="חיפוש לפי חברה או תגית...">
+                </div>
+                <div class="tm-filter-wrapper">
+                    <div class="tm-select-wrapper">
+                        <i class="fas fa-filter tm-input-icon"></i>
+                        <select id="tagFilter" class="tm-select-field">
+                            <option value="all">כל הקטגוריות</option>
+                            <option value="none">ללא קטגוריה</option>
+                            {% for tag in tags|sort(attribute='name') %}
+                            <option value="{{ tag.id }}">{{ tag.name }}</option>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- כותרת תחתונה עם דפדוף -->
-                <div class="card-footer bg-white d-flex justify-content-between align-items-center">
-                    <div>מציג {{ coupons|length }} מתוך {{ coupons|length }} קופונים</div>
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item disabled">
-                                <a class="page-link" href="#" aria-label="Previous">
-                                    <span aria-hidden="true">&laquo;</span>
-                                </a>
-                            </li>
-                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                            <li class="page-item disabled">
-                                <a class="page-link" href="#" aria-label="Next">
-                                    <span aria-hidden="true">&raquo;</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
-            </div>
-        </div>
-
-        <!-- לשונית קופונים עם תגיות -->
-        <div class="tab-pane fade" id="tagged-pane" role="tabpanel" aria-labelledby="tagged-tab" tabindex="0">
-            <div class="card">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">קופונים עם תגיות</h5>
-                </div>
-                <div class="card-body">
-                    <p>כאן תוכל לנהל את כל הקופונים שהוגדרו להם תגיות.</p>
-
-                    <!-- טבלת קופונים עם תגיות -->
-                    <div class="table-responsive">
-                        <table class="table table-hover coupon-table">
-                            <thead>
-                                <tr>
-                                    <th>מספר קופון</th>
-                                    <th>חברה</th>
-                                    <th>תגית נוכחית</th>
-                                    <th>עדכון תגית</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for coupon in coupons if coupon.tag_name %}
-                                <tr>
-                                    <td class="fw-medium">{{ coupon.id }}</td>
-                                    <td>{{ coupon.company }}</td>
-                                    <td>
-                                        <span class="tag-badge primary">{{ coupon.tag_name }}</span>
-                                    </td>
-                                    <td>
-                                        <!-- טופס לעדכון תגית -->
-                                        <form method="POST" class="d-flex align-items-center">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
-                                            <select class="form-select form-select-sm me-2" name="tag_id" required>
-                                                {% for tag in tags %}
-                                                <option value="{{ tag.id }}" {% if coupon.tag_id == tag.id %}selected{% endif %}>
-                                                    {{ tag.name }}
-                                                </option>
-                                                {% endfor %}
-                                            </select>
-                                            <button type="submit" name="update_tag" class="action-btn btn btn-sm btn-primary">עדכן תגית</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                        </select>
+                        <i class="fas fa-chevron-down tm-select-arrow"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- לשונית הורדה אוטומטית -->
-        <div class="tab-pane fade" id="auto-pane" role="tabpanel" aria-labelledby="auto-tab" tabindex="0">
-            <div class="card">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">קופונים עם הורדה אוטומטית</h5>
-                </div>
-                <div class="card-body">
-                    <p>כאן תוכל לנהל את כל הקופונים שהוגדרו להם הורדה אוטומטית.</p>
+        <div class="tm-table-responsive">
+            <table class="tm-coupon-tags-table">
+                <thead>
+                    <tr>
+                        <th class="tm-checkbox-column">
+                            <div class="tm-checkbox-wrapper">
+                                <input type="checkbox" id="select-all-header" class="tm-checkbox">
+                                <label for="select-all-header" class="tm-checkbox-label"></label>
+                            </div>
+                        </th>
+                        <th class="tm-sortable" data-sort="id">
+                            <span>מזהה</span>
+                            <i class="fas fa-sort"></i>
+                        </th>
+                        <th class="tm-sortable tm-company-column" data-sort="company">
+                            <span>חברה</span>
+                            <i class="fas fa-sort"></i>
+                        </th>
+                        <th class="tm-sortable tm-tag-column" data-sort="tag">
+                            <span>קטגוריה</span>
+                            <i class="fas fa-sort"></i>
+                        </th>
+                        <th class="tm-sortable" data-sort="auto">
+                            <span>הורדה אוטומטית</span>
+                            <i class="fas fa-sort"></i>
+                        </th>
+                        <th>פעולות</th>
+                    </tr>
+                </thead>
+                <tbody id="couponsTableBody">
+                {% for coupon in coupons %}
+                    <tr data-coupon-id="{{ coupon.id }}" data-tag-id="{{ coupon.tag_id or 'none' }}" class="tm-table-row-fade">
+                        <td class="tm-checkbox-column">
+                            <div class="tm-checkbox-wrapper">
+                                <input type="checkbox" id="coupon-{{ coupon.id }}" class="tm-checkbox coupon-checkbox" data-coupon-id="{{ coupon.id }}">
+                                <label for="coupon-{{ coupon.id }}" class="tm-checkbox-label"></label>
+                            </div>
+                        </td>
+                        <td>{{ coupon.id }}</td>
+                        <td class="tm-company-column">
+                            <div class="tm-company-name">{{ coupon.company }}</div>
+                        </td>
+                        <td class="tm-tag-column">
+                            {% if coupon.tag_id %}
+                            <div class="tm-tag-badge">
+                                <i class="fas fa-tag"></i> {{ coupon.tag_name }}
+                            </div>
+                            {% else %}
+                            <div class="tm-tag-badge tm-tag-badge-empty">
+                                <i class="fas fa-times-circle"></i> ללא קטגוריה
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="tm-auto-badge {% if coupon.auto_download_details %}tm-auto-badge-active{% else %}tm-auto-badge-inactive{% endif %}">
+                                {% if coupon.auto_download_details %}
+                                <i class="fas fa-check-circle"></i> פעיל
+                                {% else %}
+                                <i class="fas fa-times-circle"></i> לא פעיל
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="tm-actions-column">
+                            <div class="tm-action-buttons">
+                                <!-- Update Tag Button -->
+                                <button type="button" class="tm-action-button tm-edit-button tm-tooltip"
+                                        onclick="openTagModal('{{ coupon.id }}', '{{ coupon.company }}', '{{ coupon.tag_id or '' }}')">
+                                    <i class="fas fa-tag"></i>
+                                    <span class="tm-tooltip-text">עדכון קטגוריה</span>
+                                </button>
 
-                    <!-- טבלת קופונים עם הורדה אוטומטית -->
-                    <div class="table-responsive">
-                        <table class="table table-hover coupon-table">
-                            <thead>
-                                <tr>
-                                    <th>מספר קופון</th>
-                                    <th>חברה</th>
-                                    <th>הורדה אוטומטית</th>
-                                    <th>עדכון הורדה</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for coupon in coupons if coupon.auto_download_details %}
-                                <tr>
-                                    <td class="fw-medium">{{ coupon.id }}</td>
-                                    <td>{{ coupon.company }}</td>
-                                    <td>
-                                        <span class="badge bg-success">{{ coupon.auto_download_details }}</span>
-                                    </td>
-                                    <td>
-                                        <!-- טופס לעדכון הורדה אוטומטית -->
-                                        <form method="POST" class="d-flex align-items-center">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
-                                            <select class="form-select form-select-sm me-2" name="auto_download_details">
-                                                <option value="">בחר ערך</option>
-                                                <option value="Max" {% if coupon.auto_download_details == "Max" %}selected{% endif %}>Max</option>
-                                                <option value="Multipass" {% if coupon.auto_download_details == "Multipass" %}selected{% endif %}>Multipass</option>
-                                                <option value="BuyMe" {% if coupon.auto_download_details == "BuyMe" %}selected{% endif %}>BuyMe</option>
-                                            </select>
-                                            <button type="submit" name="update_auto" class="action-btn btn btn-sm btn-secondary">עדכן הורדה</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                                <!-- Update Auto Download Button -->
+                                <button type="button" class="tm-action-button tm-auto-button tm-tooltip"
+                                        onclick="openAutoModal('{{ coupon.id }}', '{{ coupon.company }}', '{{ coupon.auto_download_details or '' }}')">
+                                    <i class="fas fa-download"></i>
+                                    <span class="tm-tooltip-text">הורדה אוטומטית</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div id="noCouponsMessage" class="tm-no-data-message" style="display: none;">
+                <i class="fas fa-search"></i>
+                <p>לא נמצאו קופונים התואמים לחיפוש</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal Container -->
+<div class="tm-modal-backdrop" id="modalBackdrop"></div>
+
+<!-- מודל לעדכון תגית -->
+<div id="tagModal" class="tm-modal">
+    <div class="tm-modal-content">
+        <div class="tm-modal-header">
+            <h3>
+                <i class="fas fa-tag"></i> עדכון קטגוריה לקופון
+            </h3>
+            <button class="tm-close-button" onclick="closeTagModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="tm-modal-body">
+            <p id="tagModalDescription" class="tm-modal-description"></p>
+            <form id="updateTagForm" method="POST" action="" class="tm-animated-form">
+                <input type="hidden" name="coupon_id" id="tag_coupon_id">
+                <input type="hidden" name="update_tag" value="1">
+                <div class="tm-form-group">
+                    <label class="tm-form-label">בחר קטגוריה:</label>
+                    <div class="tm-select-wrapper">
+                        <i class="fas fa-tag tm-input-icon"></i>
+                        <select name="tag_id" id="tag_id" class="tm-select-field" required>
+                            {% for tag in tags|sort(attribute='name') %}
+                            <option value="{{ tag.id }}">{{ tag.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <i class="fas fa-chevron-down tm-select-arrow"></i>
                     </div>
                 </div>
-            </div>
+                <div class="tm-form-actions">
+                    <button type="submit" class="tm-action-button">
+                        <i class="fas fa-save"></i> שמירה
+                    </button>
+                    <button type="button" class="tm-action-button tm-secondary" onclick="closeTagModal()">
+                        <i class="fas fa-times"></i> ביטול
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
-
-    <!-- חלוניות מודאליות לעריכת קופון -->
-    {% for coupon in coupons %}
-    <div class="modal fade" id="editCouponModal-{{ coupon.id }}" tabindex="-1" aria-labelledby="editCouponModalLabel-{{ coupon.id }}" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editCouponModalLabel-{{ coupon.id }}">עריכת קופון</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editCouponForm-{{ coupon.id }}" method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
-                        <div class="mb-3">
-                            <label for="couponId-{{ coupon.id }}" class="form-label">מספר קופון</label>
-                            <input type="text" class="form-control input-field" id="couponId-{{ coupon.id }}" value="{{ coupon.id }}" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label for="company-{{ coupon.id }}" class="form-label">חברה</label>
-                            <input type="text" class="form-control input-field" id="company-{{ coupon.id }}" value="{{ coupon.company }}" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label for="tagId-{{ coupon.id }}" class="form-label">תגית</label>
-                            <select class="form-select input-field" id="tagId-{{ coupon.id }}" name="tag_id">
-                                <option value="">בחר תגית</option>
-                                {% for tag in tags %}
-                                <option value="{{ tag.id }}" {% if coupon.tag_id == tag.id %}selected{% endif %}>{{ tag.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="autoDownload-{{ coupon.id }}" class="form-label">הורדה אוטומטית</label>
-                            <select class="form-select input-field" id="autoDownload-{{ coupon.id }}" name="auto_download_details">
-                                <option value="">בחר ערך</option>
-                                <option value="Max" {% if coupon.auto_download_details == "Max" %}selected{% endif %}>Max</option>
-                                <option value="Multipass" {% if coupon.auto_download_details == "Multipass" %}selected{% endif %}>Multipass</option>
-                                <option value="BuyMe" {% if coupon.auto_download_details == "BuyMe" %}selected{% endif %}>BuyMe</option>
-                            </select>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="button secondary-button" data-bs-dismiss="modal">ביטול</button>
-                            <button type="submit" class="button" name="update_all">שמור שינויים</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
 </div>
+
+<!-- מודל לעדכון הורדה אוטומטית -->
+<div id="autoModal" class="tm-modal">
+    <div class="tm-modal-content">
+        <div class="tm-modal-header">
+            <h3>
+                <i class="fas fa-download"></i> עדכון הורדה אוטומטית
+            </h3>
+            <button class="tm-close-button" onclick="closeAutoModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="tm-modal-body">
+            <p id="autoModalDescription" class="tm-modal-description"></p>
+            <form id="updateAutoForm" method="POST" action="" class="tm-animated-form">
+                <input type="hidden" name="coupon_id" id="auto_coupon_id">
+                <input type="hidden" name="update_auto" value="1">
+                <div class="tm-form-group">
+                    <label class="tm-form-label">הגדרות הורדה אוטומטית:</label>
+                    <div class="tm-input-with-icon">
+                        <i class="fas fa-cog tm-input-icon"></i>
+                        <input type="text" name="auto_download_details" id="auto_download_details" class="tm-input-field" placeholder="הכנס פרטי הורדה אוטומטית או השאר ריק לביטול...">
+                    </div>
+                    <div class="tm-form-help">
+                        <i class="fas fa-info-circle"></i> השאר ריק כדי לבטל הורדה אוטומטית.
+                    </div>
+                </div>
+                <div class="tm-form-actions">
+                    <button type="submit" class="tm-action-button">
+                        <i class="fas fa-save"></i> שמירה
+                    </button>
+                    <button type="button" class="tm-action-button tm-secondary" onclick="closeAutoModal()">
+                        <i class="fas fa-times"></i> ביטול
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Container -->
+<div class="tm-notification-container"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // פתיחה וסגירה של פאנל הסינון
-    document.addEventListener('DOMContentLoaded', function() {
-        // טוען את פונקציונליות הסינון
-        const filterToggleBtn = document.getElementById('filterToggleBtn');
-        const filterPanel = document.getElementById('filterPanel');
-        const applyFilterBtn = document.getElementById('applyFilterBtn');
-        const resetFilterBtn = document.getElementById('resetFilterBtn');
+    // ====== Page Initialization ======
+    document.addEventListener("DOMContentLoaded", function() {
+        // Initialize table sorting
+        initTableSorting();
 
-        // אירוע לכפתור ההחלפה של פאנל הסינון
-        if (filterToggleBtn) {
-            filterToggleBtn.addEventListener('click', function() {
-                if (filterPanel.style.display === 'none') {
-                    filterPanel.style.display = 'block';
-                } else {
-                    filterPanel.style.display = 'none';
+        // Initialize search functionality
+        initSearch();
+
+        // Initialize tag filtering
+        initTagFiltering();
+
+        // Initialize badge formatting
+        initBadges();
+
+        // Initialize multiple selection functionality
+        initMultipleSelection();
+
+        // Fade in table rows with delay
+        animateTableRows();
+
+        // Add form animations
+        initFormAnimations();
+
+        // Add notifications system
+        initNotifications();
+    });
+
+    // ====== Multiple Selection Functions ======
+    function initMultipleSelection() {
+        const selectAllHeader = document.getElementById('select-all-header');
+        const selectAllBtn = document.getElementById('select-all-btn');
+        const clearSelectionBtn = document.getElementById('clear-selection-btn');
+        const applyTagBtn = document.getElementById('apply-tag-btn');
+        const selectedCountDisplay = document.getElementById('selected-count');
+        const checkboxes = document.querySelectorAll('.coupon-checkbox');
+        const hiddenInput = document.getElementById('selected-coupon-ids');
+
+        // Function to update UI based on selection state
+        function updateSelectionUI() {
+            const checkedBoxes = document.querySelectorAll('.coupon-checkbox:checked');
+            const selectedCount = checkedBoxes.length;
+
+            // Update the counter
+            selectedCountDisplay.textContent = selectedCount;
+
+            // Enable/disable the apply button
+            applyTagBtn.disabled = selectedCount === 0;
+
+            // Update the hidden input with comma-separated IDs
+            const selectedIds = Array.from(checkedBoxes).map(cb => cb.dataset.couponId).join(',');
+            hiddenInput.value = selectedIds;
+
+            // Update header checkbox state
+            const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+                const row = cb.closest('tr');
+                return row && getComputedStyle(row).display !== 'none';
+            });
+
+            const allVisible = visibleCheckboxes.length > 0;
+            const allVisibleChecked = allVisible && visibleCheckboxes.every(cb => cb.checked);
+
+            selectAllHeader.checked = allVisibleChecked;
+            selectAllHeader.indeterminate = !allVisibleChecked && visibleCheckboxes.some(cb => cb.checked);
+        }
+
+        // Select all checkboxes (visible only)
+        selectAllHeader.addEventListener('change', function() {
+            const isChecked = this.checked;
+            const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+                const row = cb.closest('tr');
+                return row && getComputedStyle(row).display !== 'none';
+            });
+
+            visibleCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+
+            updateSelectionUI();
+        });
+
+        // Select all button
+        selectAllBtn.addEventListener('click', function() {
+            const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+                const row = cb.closest('tr');
+                return row && getComputedStyle(row).display !== 'none';
+            });
+
+            visibleCheckboxes.forEach(cb => {
+                cb.checked = true;
+            });
+
+            updateSelectionUI();
+        });
+
+        // Clear selection button
+        clearSelectionBtn.addEventListener('click', function() {
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+
+            updateSelectionUI();
+        });
+
+        // Individual checkbox change
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateSelectionUI);
+        });
+
+        // Initialize selection state
+        updateSelectionUI();
+    }
+
+    // ====== Table Functions ======
+    function initTableSorting() {
+        const sortableHeaders = document.querySelectorAll('.tm-sortable');
+
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const sortField = this.getAttribute('data-sort');
+                const sortDirection = this.classList.contains('tm-asc') ? 'tm-desc' : 'tm-asc';
+
+                // Remove sort classes from all headers
+                sortableHeaders.forEach(h => {
+                    h.classList.remove('tm-asc', 'tm-desc');
+                    h.querySelector('i.fas').className = 'fas fa-sort';
+                });
+
+                // Add sort class to current header
+                this.classList.add(sortDirection);
+                this.querySelector('i.fas').className = `fas fa-sort-${sortDirection === 'tm-asc' ? 'up' : 'down'}`;
+
+                // Sort the table
+                sortTable(sortField, sortDirection);
+            });
+        });
+    }
+
+    function sortTable(field, direction) {
+        const tableBody = document.getElementById('couponsTableBody');
+        const rows = Array.from(tableBody.querySelectorAll('tr'));
+
+        // Sort rows
+        rows.sort((a, b) => {
+            let aValue, bValue;
+
+            switch(field) {
+                case 'id':
+                    aValue = parseInt(a.cells[1].textContent.trim());
+                    bValue = parseInt(b.cells[1].textContent.trim());
+                    break;
+                case 'company':
+                    aValue = a.cells[2].textContent.trim();
+                    bValue = b.cells[2].textContent.trim();
+                    break;
+                case 'tag':
+                    aValue = a.cells[3].textContent.trim();
+                    bValue = b.cells[3].textContent.trim();
+                    break;
+                case 'auto':
+                    aValue = a.cells[4].textContent.trim();
+                    bValue = b.cells[4].textContent.trim();
+                    break;
+                default:
+                    aValue = 0;
+                    bValue = 0;
+            }
+
+            return direction === 'tm-asc' ?
+                   (aValue > bValue ? 1 : -1) :
+                   (aValue < bValue ? 1 : -1);
+        });
+
+        // Remove existing rows
+        while (tableBody.firstChild) {
+            tableBody.removeChild(tableBody.firstChild);
+        }
+
+        // Add sorted rows
+        rows.forEach(row => {
+            tableBody.appendChild(row);
+        });
+
+        // Re-apply animation
+        animateTableRows();
+    }
+
+    function initSearch() {
+        const searchInput = document.getElementById('couponSearchInput');
+
+        searchInput.addEventListener('input', function() {
+            filterTable();
+        });
+    }
+
+    function initTagFiltering() {
+        const tagFilter = document.getElementById('tagFilter');
+
+        tagFilter.addEventListener('change', function() {
+            filterTable();
+        });
+    }
+
+    function filterTable() {
+        const searchTerm = document.getElementById('couponSearchInput').value.toLowerCase();
+        const tagFilter = document.getElementById('tagFilter').value;
+        const rows = document.querySelectorAll('#couponsTableBody tr');
+        let visibleRows = 0;
+
+        rows.forEach(row => {
+            const company = row.cells[2].textContent.toLowerCase();
+            const tagText = row.cells[3].textContent.toLowerCase();
+            const rowTagId = row.getAttribute('data-tag-id');
+
+            const matchesSearch = company.includes(searchTerm) || tagText.includes(searchTerm);
+            const matchesTagFilter = (tagFilter === 'all') ||
+                                    (tagFilter === 'none' && rowTagId === 'none') ||
+                                    (rowTagId === tagFilter);
+
+            if (matchesSearch && matchesTagFilter) {
+                row.style.display = '';
+                visibleRows++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Show or hide the "no results" message
+        document.getElementById('noCouponsMessage').style.display =
+            visibleRows === 0 ? 'flex' : 'none';
+
+        // Update checkboxes after filtering
+        const selectAllHeader = document.getElementById('select-all-header');
+        selectAllHeader.checked = false;
+        selectAllHeader.indeterminate = false;
+
+        // Trigger selection UI update to reflect the filtered state
+        document.dispatchEvent(new Event('selectionChanged'));
+    }
+
+    function initBadges() {
+        // Nothing specific to do here now
+    }
+
+    function animateTableRows() {
+        const rows = document.querySelectorAll('#couponsTableBody tr');
+
+        rows.forEach((row, index) => {
+            // Reset animation
+            row.style.opacity = 0;
+
+            // Apply animation with delay based on index
+            setTimeout(() => {
+                row.style.opacity = 1;
+            }, 30 * index);
+        });
+    }
+
+    // ====== Modal Functions ======
+    function openTagModal(couponId, companyName, currentTagId) {
+        document.getElementById("updateTagForm").action = "{{ url_for('admin_coupon_tags_bp.manage_coupon_tags') }}";
+        document.getElementById("tag_coupon_id").value = couponId;
+
+        if (currentTagId) {
+            document.getElementById("tag_id").value = currentTagId;
+        }
+
+                    document.getElementById("tagModalDescription").innerHTML =
+            `עדכון קטגוריה לקופון '<strong>${companyName}</strong>'`;
+
+        document.getElementById("tagModal").classList.add('tm-active');
+        document.getElementById("modalBackdrop").classList.add('tm-active');
+
+        // Add animation class
+        setTimeout(() => {
+            document.getElementById("tagModal").classList.add('tm-visible');
+        }, 10);
+    }
+
+    function closeTagModal() {
+        const modal = document.getElementById("tagModal");
+        modal.classList.remove('tm-visible');
+
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+            modal.classList.remove('tm-active');
+            document.getElementById("modalBackdrop").classList.remove('tm-active');
+        }, 300);
+    }
+
+    function openAutoModal(couponId, companyName, currentAutoDetails) {
+        document.getElementById("updateAutoForm").action = "{{ url_for('admin_coupon_tags_bp.manage_coupon_tags') }}";
+        document.getElementById("auto_coupon_id").value = couponId;
+        document.getElementById("auto_download_details").value = currentAutoDetails;
+
+        document.getElementById("autoModalDescription").innerHTML =
+            `עדכון הגדרות הורדה אוטומטית לקופון '<strong>${companyName}</strong>'`;
+
+        document.getElementById("autoModal").classList.add('tm-active');
+        document.getElementById("modalBackdrop").classList.add('tm-active');
+
+        // Add animation class
+        setTimeout(() => {
+            document.getElementById("autoModal").classList.add('tm-visible');
+        }, 10);
+    }
+
+    function closeAutoModal() {
+        const modal = document.getElementById("autoModal");
+        modal.classList.remove('tm-visible');
+
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+            modal.classList.remove('tm-active');
+            document.getElementById("modalBackdrop").classList.remove('tm-active');
+        }, 300);
+    }
+
+    // ====== Form Animation Functions ======
+    function initFormAnimations() {
+        // Add focus effects for inputs
+        const inputs = document.querySelectorAll('.tm-input-field, .tm-select-field');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('tm-focused');
+            });
+
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('tm-focused');
+            });
+        });
+
+        // Animate form submission
+        const forms = document.querySelectorAll('form.tm-animated-form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(event) {
+                // Prevent immediate submission
+                if (!this.classList.contains('tm-submitted')) {
+                    event.preventDefault();
+                    this.classList.add('tm-submitted');
+
+                    // Create a loading animation
+                    const submitBtn = this.querySelector('input[type="submit"], button[type="submit"]');
+                    const originalText = submitBtn.value || submitBtn.textContent;
+                    const loadingSpinner = document.createElement('span');
+                    loadingSpinner.className = 'tm-loading-spinner';
+
+                    if (submitBtn.tagName === 'INPUT') {
+                        submitBtn.value = 'מעבד...';
+                    } else {
+                        submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> מעבד...';
+                    }
+
+                    // Submit the form after a short delay
+                    setTimeout(() => {
+                        this.submit();
+                    }, 500);
                 }
             });
+        });
+    }
+
+    // ====== Notification System ======
+    function initNotifications() {
+        // Create notification container if it doesn't exist
+        if (!document.querySelector('.tm-notification-container')) {
+            const notificationContainer = document.createElement('div');
+            notificationContainer.className = 'tm-notification-container';
+            document.body.appendChild(notificationContainer);
         }
 
-        // אירוע לכפתור החלת הסינון
-        if (applyFilterBtn) {
-            applyFilterBtn.addEventListener('click', function() {
-                // הוסף כאן לוגיקת סינון
-                alert('פילטרים הוחלו בהצלחה');
-            });
+        // Display any flash messages if they exist
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    showNotification('{{ category }}', '{{ message }}');
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    }
+
+    function showNotification(type, message, title = '') {
+        const container = document.querySelector('.tm-notification-container');
+
+        // Set default titles based on type
+        if (!title) {
+            switch (type) {
+                case 'success':
+                    title = 'הצלחה!';
+                    break;
+                case 'warning':
+                    title = 'אזהרה';
+                    break;
+                case 'danger':
+                case 'error':
+                    title = 'שגיאה';
+                    type = 'error'; // Normalize to 'error' for CSS
+                    break;
+                case 'info':
+                    title = 'הודעה';
+                    break;
+            }
         }
 
-        // אירוע לכפתור איפוס הסינון
-        if (resetFilterBtn) {
-            resetFilterBtn.addEventListener('click', function() {
-                const companyFilter = document.getElementById('companyFilter');
-                const tagFilter = document.getElementById('tagFilter');
-                const autoDownloadFilter = document.getElementById('autoDownloadFilter');
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `tm-notification tm-notification-${type}`;
 
-                if (companyFilter) companyFilter.value = '';
-                if (tagFilter) tagFilter.value = '';
-                if (autoDownloadFilter) autoDownloadFilter.value = '';
-            });
+        // Set icon based on type
+        let icon;
+        switch (type) {
+            case 'success':
+                icon = 'check-circle';
+                break;
+            case 'warning':
+                icon = 'exclamation-triangle';
+                break;
+            case 'error':
+                icon = 'times-circle';
+                break;
+            case 'info':
+            default:
+                icon = 'info-circle';
+                break;
         }
 
-        // אירוע לכפתור הרענון
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', function() {
-                location.reload();
-            });
+        notification.innerHTML = `
+            <div class="tm-notification-icon">
+                <i class="fas fa-${icon}"></i>
+            </div>
+            <div class="tm-notification-content">
+                <div class="tm-notification-title">${title}</div>
+                <div class="tm-notification-message">${message}</div>
+            </div>
+            <button class="tm-notification-close">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="tm-notification-progress">
+                <div class="tm-notification-progress-bar"></div>
+            </div>
+        `;
+
+        // Add to container
+        container.appendChild(notification);
+
+        // Show notification with animation
+        setTimeout(() => {
+            notification.classList.add('tm-show');
+        }, 10);
+
+        // Add click listener to close button
+        notification.querySelector('.tm-notification-close').addEventListener('click', () => {
+            closeNotification(notification);
+        });
+
+        // Auto close after 5 seconds
+        setTimeout(() => {
+            closeNotification(notification);
+        }, 5000);
+    }
+
+    function closeNotification(notification) {
+        notification.classList.remove('tm-show');
+
+        // Remove from DOM after animation completes
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.parentElement.removeChild(notification);
+            }
+        }, 500);
+    }
+
+    // Close modals when clicking outside of them
+    document.getElementById("modalBackdrop").addEventListener("click", function() {
+        closeTagModal();
+        closeAutoModal();
+    });
+
+    // Add keyboard support for modals (Escape key)
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeTagModal();
+            closeAutoModal();
         }
     });
 </script>
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* ====== General Reset & Base Styles ====== */
+    .tm-admin-coupon-tags {
+        direction: rtl;
+        text-align: right;
+        font-family: 'Rubik', sans-serif;
+    }
+
+    /* ====== Container & Layout ====== */
+    .tm-content-card {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .tm-content-card:hover {
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .tm-card-header {
+        padding: 1.5rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    /* ====== Page Title ====== */
+    .tm-page-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        position: relative;
+        display: inline-block;
+    }
+
+    .tm-page-title:after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        right: 0;
+        width: 80px;
+        height: 4px;
+        background: linear-gradient(90deg, #3498db, #2980b9);
+        border-radius: 2px;
+    }
+
+    .tm-section-title {
+        font-size: 1.4rem;
+        color: #2c3e50;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .tm-section-title i {
+        margin-left: 0.75rem;
+        color: #3498db;
+    }
+
+    /* ====== Search and Filter ====== */
+    .tm-search-container {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .tm-input-with-icon {
+        position: relative;
+        width: 250px;
+        max-width: 100%;
+    }
+
+    .tm-input-field, .tm-select-field {
+        width: 100%;
+        padding: 0.8rem 2.5rem 0.8rem 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .tm-input-field:focus, .tm-select-field:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+        outline: none;
+    }
+
+    .tm-input-icon {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #adb5bd;
+        transition: all 0.3s ease;
+    }
+
+    .tm-input-field:focus + .tm-input-icon,
+    .tm-select-field:focus + .tm-input-icon {
+        color: #3498db;
+    }
+
+    .tm-select-wrapper {
+        position: relative;
+        width: 250px;
+        max-width: 100%;
+    }
+
+    .tm-select-arrow {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #adb5bd;
+        pointer-events: none;
+    }
+
+    .tm-filter-wrapper {
+        flex-grow: 1;
+        max-width: 250px;
+    }
+
+    /* ====== Table Styling ====== */
+    .tm-table-responsive {
+        overflow-x: auto;
+        border-radius: 8px;
+        max-width: 100%;
+        margin-bottom: 1rem;
+        position: relative;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    }
+
+    .tm-coupon-tags-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background-color: #fff;
+    }
+
+    /* Column width adjustments */
+    .tm-checkbox-column {
+        width: 40px;
+        min-width: 40px;
+    }
+
+    .tm-coupon-tags-table th:nth-child(2), /* ID column */
+    .tm-coupon-tags-table td:nth-child(2) {
+        width: 60px;
+        min-width: 60px;
+    }
+
+    .tm-company-column {
+        width: 18%;  /* Reduced width as requested */
+        min-width: 120px;
+    }
+
+    .tm-tag-column {
+        width: 15%;  /* Reduced width as requested */
+        min-width: 100px;
+    }
+
+    .tm-coupon-tags-table th:nth-child(5), /* Auto download column */
+    .tm-coupon-tags-table td:nth-child(5) {
+        width: 150px;
+        min-width: 120px;
+    }
+
+    .tm-actions-column {
+        width: 100px;
+        min-width: 100px;
+    }
+
+    .tm-coupon-tags-table th {
+        padding: 0.8rem 0.6rem;
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #2c3e50;
+        text-align: right;
+        border-bottom: 2px solid #e9ecef;
+        position: relative;
+        font-size: 0.95rem;
+        white-space: nowrap;
+    }
+
+    .tm-coupon-tags-table th.tm-sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .tm-coupon-tags-table th.tm-sortable:hover {
+        background-color: #e9ecef;
+    }
+
+    .tm-coupon-tags-table th.tm-sortable i {
+        margin-right: 0.5rem;
+        color: #adb5bd;
+        transition: all 0.3s ease;
+    }
+
+    .tm-coupon-tags-table th.tm-asc i,
+    .tm-coupon-tags-table th.tm-desc i {
+        color: #3498db;
+    }
+
+    .tm-coupon-tags-table td {
+        padding: 0.7rem 0.6rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+        text-align: right;
+        font-size: 0.95rem;
+    }
+
+    .tm-coupon-tags-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .tm-coupon-tags-table tr:hover td {
+        background-color: #f8f9fa;
+    }
+
+    .tm-table-row-fade {
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    /* Truncate long text in company column */
+    .tm-company-name {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ====== Batch Actions Card ====== */
+    .tm-batch-actions-card {
+        background-color: #ffffff;
+        border-right: 4px solid #3498db;
+        margin-bottom: 1.5rem;
+    }
+
+    .tm-batch-control {
+        padding: 1rem 1.5rem 1.5rem;
+    }
+
+    .tm-batch-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .tm-selection-status {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        background-color: #f8f9fa;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+    }
+
+    .tm-selection-count-container {
+        display: flex;
+        align-items: center;
+    }
+
+    .tm-selection-count {
+        font-weight: bold;
+        font-size: 1.4rem;
+        color: #3498db;
+        margin-left: 0.5rem;
+    }
+
+    .tm-selection-text {
+        font-size: 1rem;
+        color: #2c3e50;
+    }
+
+    .tm-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .tm-badge-info {
+        background-color: #e7f4fd;
+        color: #3498db;
+    }
+
+    .tm-selection-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .tm-action-button.tm-outlined {
+        background-color: transparent;
+        border: 1px solid currentColor;
+    }
+
+    .tm-action-button.tm-outlined:not(.tm-secondary) {
+        color: #3498db;
+    }
+
+    .tm-action-button.tm-outlined:not(.tm-secondary):hover {
+        background-color: #e7f4fd;
+        transform: translateY(-2px);
+    }
+
+    .tm-action-button.tm-outlined.tm-secondary {
+        color: #6c757d;
+    }
+
+    .tm-action-button.tm-outlined.tm-secondary:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-2px);
+    }
+
+    .tm-batch-form {
+        display: flex;
+        width: 100%;
+    }
+
+    .tm-batch-inputs {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        width: 100%;
+    }
+
+    .tm-select-wrapper {
+        flex: 1;
+        max-width: 300px;
+    }
+
+    /* ====== Checkbox Styling ====== */
+    .tm-checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tm-checkbox {
+        position: absolute;
+        opacity: 0;
+    }
+
+    .tm-checkbox-label {
+        position: relative;
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        background-color: #fff;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .tm-checkbox:checked + .tm-checkbox-label {
+        background-color: #3498db;
+        border-color: #3498db;
+    }
+
+    .tm-checkbox:checked + .tm-checkbox-label:after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 6px;
+        width: 5px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
+    .tm-checkbox:focus + .tm-checkbox-label {
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+    }
+
+    /* ====== Badges ====== */
+    .tm-tag-badge {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
+        border-radius: 30px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background-color: #e7f4fd;
+        color: #3498db;
+        white-space: nowrap;
+    }
+
+    .tm-tag-badge i {
+        margin-left: 0.3rem;
+    }
+
+    .tm-tag-badge-empty {
+        background-color: #f8f9fa;
+        color: #adb5bd;
+    }
+
+    .tm-auto-badge {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
+        border-radius: 30px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .tm-auto-badge i {
+        margin-left: 0.3rem;
+    }
+
+    .tm-auto-badge-active {
+        background-color: #e8f8f0;
+        color: #2ecc71;
+    }
+
+    .tm-auto-badge-inactive {
+        background-color: #f8f9fa;
+        color: #adb5bd;
+    }
+
+    /* ====== Button Styling ====== */
+    .tm-action-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.7rem 1.2rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #fff;
+        background-color: #3498db;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .tm-action-button i {
+        margin-left: 0.5rem;
+    }
+
+    .tm-action-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        background-color: #2980b9;
+    }
+
+    .tm-action-button:disabled {
+        background-color: #b3cfe2;
+        cursor: not-allowed;
+    }
+
+    .tm-action-button.tm-secondary {
+        background-color: #6c757d;
+    }
+
+    .tm-action-button.tm-secondary:hover {
+        background-color: #5a6268;
+    }
+
+    .tm-action-button.tm-small {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    /* Action buttons in the table */
+    .tm-action-buttons {
+        display: flex;
+        gap: 0.3rem;
+        justify-content: flex-end;
+    }
+
+    .tm-action-buttons .tm-action-button {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+    }
+
+    .tm-action-buttons .tm-action-button i {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+    .tm-edit-button {
+        background-color: #3498db;
+    }
+
+    .tm-auto-button {
+        background-color: #2ecc71;
+    }
+
+    .tm-auto-button:hover {
+        background-color: #27ae60;
+    }
+
+    /* ====== Modal Styling ====== */
+    .tm-modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .tm-modal-backdrop.tm-active {
+        display: block;
+        opacity: 1;
+    }
+
+    .tm-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: none;
+        z-index: 1000;
+        overflow-y: auto;
+    }
+
+    .tm-modal.tm-active {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .tm-modal-content {
+        background-color: #fff;
+        width: 90%;
+        max-width: 500px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        transform: scale(0.9) translateY(20px);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .tm-modal.tm-visible .tm-modal-content {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+
+    .tm-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .tm-modal-header h3 {
+        font-size: 1.25rem;
+        color: #2c3e50;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .tm-modal-header h3 i {
+        margin-left: 0.75rem;
+        color: #3498db;
+    }
+
+    .tm-close-button {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        color: #adb5bd;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .tm-close-button:hover {
+        background-color: #e9ecef;
+        color: #2c3e50;
+    }
+
+    .tm-modal-body {
+        padding: 1.5rem;
+    }
+
+    .tm-modal-description {
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border-right: 3px solid #3498db;
+    }
+
+    .tm-modal-description i {
+        color: #3498db;
+        margin-left: 0.5rem;
+    }
+
+    /* ====== Form Styling ====== */
+    .tm-form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .tm-form-label {
+        display: block;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .tm-form-help {
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: #7f8c8d;
+    }
+
+    .tm-form-help i {
+        margin-left: 0.3rem;
+        color: #3498db;
+    }
+
+    .tm-form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 1.5rem;
+    }
+
+    /* ====== Tooltips ====== */
+    .tm-tooltip {
+        position: relative;
+    }
+
+    .tm-tooltip-text {
+        visibility: hidden;
+        background-color: #2c3e50;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 0.5rem 0.75rem;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        white-space: nowrap;
+        font-size: 0.8rem;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .tm-tooltip-text::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #2c3e50 transparent transparent transparent;
+    }
+
+    .tm-tooltip:hover .tm-tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    /* ====== Notification System ====== */
+    .tm-notification-container {
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        z-index: 1001;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 350px;
+    }
+
+    .tm-notification {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        transform: translateX(120%);
+        opacity: 0;
+        transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .tm-notification.tm-show {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .tm-notification-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 1rem;
+        flex-shrink: 0;
+    }
+
+    .tm-notification-success .tm-notification-icon {
+        background-color: #e8f8f0;
+        color: #2ecc71;
+    }
+
+    .tm-notification-info .tm-notification-icon {
+        background-color: #e7f4fd;
+        color: #3498db;
+    }
+
+    .tm-notification-warning .tm-notification-icon {
+        background-color: #fef5e5;
+        color: #f39c12;
+    }
+
+    .tm-notification-error .tm-notification-icon {
+        background-color: #fdeaea;
+        color: #e74c3c;
+    }
+
+    .tm-notification-content {
+        flex-grow: 1;
+        overflow: hidden;
+    }
+
+    .tm-notification-title {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+        color: #2c3e50;
+    }
+
+    .tm-notification-message {
+        font-size: 0.9rem;
+        color: #6c757d;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .tm-notification-close {
+        background: none;
+        border: none;
+        color: #adb5bd;
+        cursor: pointer;
+        padding: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        flex-shrink: 0;
+    }
+
+    .tm-notification-close:hover {
+        color: #2c3e50;
+    }
+
+    .tm-notification-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background-color: #f8f9fa;
+    }
+
+    .tm-notification-progress-bar {
+        height: 100%;
+        width: 100%;
+        transform-origin: right;
+        background-color: #3498db;
+        animation: progress 5s linear forwards;
+    }
+
+    .tm-notification-success .tm-notification-progress-bar {
+        background-color: #2ecc71;
+    }
+
+    .tm-notification-warning .tm-notification-progress-bar {
+        background-color: #f39c12;
+    }
+
+    .tm-notification-error .tm-notification-progress-bar {
+        background-color: #e74c3c;
+    }
+
+    @keyframes progress {
+        from { transform: scaleX(1); }
+        to { transform: scaleX(0); }
+    }
+
+    .tm-no-data-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+        text-align: center;
+    }
+
+    .tm-no-data-message i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #adb5bd;
+    }
+
+    /* ====== Responsive Styles ====== */
+    @media (max-width: 992px) {
+        .tm-search-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .tm-input-with-icon,
+        .tm-select-wrapper,
+        .tm-filter-wrapper {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .tm-batch-form {
+            justify-content: flex-start;
+            margin-top: 1rem;
+            width: 100%;
+        }
+
+        .tm-batch-inputs {
+            width: 100%;
+        }
+    }
+
+    /* ====== Fix mobile display - show Tags column, hide Auto column ====== */
+    @media (max-width: 768px) {
+        /* Hide auto download column on mobile */
+        .tm-coupon-tags-table th:nth-child(5),
+        .tm-coupon-tags-table td:nth-child(5) {
+            display: none;
+        }
+
+        /* Keep the tag column visible and ensure it has enough width */
+        .tm-tag-column {
+            width: auto;
+            min-width: 110px;
+        }
+
+        .tm-page-title {
+            font-size: 1.5rem;
+        }
+
+        .tm-section-title {
+            font-size: 1.2rem;
+        }
+
+        .tm-card-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .tm-batch-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .tm-selection-status {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .tm-selection-actions {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .tm-selection-actions .tm-action-button {
+            flex: 1;
+        }
+
+        .tm-batch-inputs {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .tm-batch-inputs .tm-select-wrapper {
+            max-width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .tm-batch-inputs .tm-action-button {
+            width: 100%;
+        }
+
+        .tm-form-actions {
+            flex-direction: column;
+        }
+
+        .tm-form-actions .tm-action-button {
+            width: 100%;
+        }
+
+        /* Hide less important columns on mobile */
+        .tm-coupon-tags-table th:nth-child(4),
+        .tm-coupon-tags-table td:nth-child(4) {
+            display: none;
+        }
+
+        .tm-company-column {
+            width: auto;  /* Let it take available space */
+        }
+    }
+
+    @media (max-width: 576px) {
+        .tm-page-title {
+            font-size: 1.3rem;
+        }
+
+        .tm-section-title {
+            font-size: 1.1rem;
+        }
+
+        .tm-notification-container {
+            right: 10px;
+            left: 10px;
+            width: calc(100% - 20px);
+        }
+
+        /* Further optimize for very small screens */
+        .tm-coupon-tags-table th,
+        .tm-coupon-tags-table td {
+            padding: 0.5rem 0.3rem;
+            font-size: 0.8rem;
+        }
+
+        .tm-tag-badge,
+        .tm-auto-badge {
+            padding: 0.25rem 0.4rem;
+            font-size: 0.75rem;
+        }
+
+        .tm-action-buttons .tm-action-button {
+            width: 30px;
+            height: 30px;
+        }
+
+        .tm-action-buttons .tm-action-button i {
+            font-size: 0.8rem;
+        }
+    }
+</style>
 {% endblock %}
