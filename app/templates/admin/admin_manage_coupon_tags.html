@@ -187,6 +187,7 @@
         <div class="tm-modal-body">
             <p id="tagModalDescription" class="tm-modal-description"></p>
             <form id="updateTagForm" method="POST" action="" class="tm-animated-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="coupon_id" id="tag_coupon_id">
                 <input type="hidden" name="update_tag" value="1">
                 <div class="tm-form-group">
@@ -228,6 +229,7 @@
         <div class="tm-modal-body">
             <p id="autoModalDescription" class="tm-modal-description"></p>
             <form id="updateAutoForm" method="POST" action="" class="tm-animated-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="coupon_id" id="auto_coupon_id">
                 <input type="hidden" name="update_auto" value="1">
                 <div class="tm-form-group">
