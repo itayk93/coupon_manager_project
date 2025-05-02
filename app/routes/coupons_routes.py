@@ -2971,224 +2971,143 @@ def get_companies():
         return []
 
 
+# ---------- Route ----------
 @coupons_bp.route('/coupon_detail/<int:id>')
 @login_required
 def coupon_detail(id):
-    coupon = Coupon.query.get_or_404(id)
-    is_owner = (coupon.user_id == current_user.id)
+    """
+    Display full details for a specific coupon.
 
-    mark_form = MarkCouponAsUsedForm()
+    Only the user who owns the coupon can view this page.
+    Any other user receives a 404 response *without* revealing
+    whether the coupon exists.
+    """
+
+    # ------------------------------------------------------------------
+    # 1) Fetch the coupon **only** if the current user is the owner.
+    #    first_or_404() automatically returns a 404 error if no record
+    #    matches (either coupon does not exist OR belongs to someone else).
+    # ------------------------------------------------------------------
+    coupon = (Coupon.query
+              .filter_by(id=id, user_id=current_user.id)
+              .first_or_404())
+
+    # At this point we know the viewer is the owner.
+    is_owner = True
+
+    # ------------------------------------------------------------------
+    # 2) Initialize WTForms instances used in the template.
+    # ------------------------------------------------------------------
+    mark_form   = MarkCouponAsUsedForm()
     delete_form = DeleteCouponForm()
     update_form = UpdateCouponUsageForm()
 
-    # בדיקה האם auto_download_details אינו NULL
+    # A flag that controls whether the “Multipass” button is shown.
     show_multipass_button = coupon.auto_download_details is not None
 
-    #log_user_activity("view_coupon", coupon.id)
-
-    # שומר את זה לגיבוי - ב01/02/2025 הוספתי תיקון שמטרתו למנוע מצב שיש עדכון ידני ועדכון אוטומטי שחופפים אחד את השני
-    sql_old = text("""
-WITH CouponFilter AS (
-    SELECT DISTINCT coupon_id
-    FROM coupon_transaction
-    WHERE source = 'Multipass'
-),
-CombinedData AS (
-    SELECT
-        'coupon_usage' AS source_table,
-        id,
-        coupon_id,
-        -used_amount AS transaction_amount,
-        timestamp,
-        action,
-        details,
-        NULL AS location,
-        0 AS recharge_amount,
-        NULL AS reference_number,
-        NULL AS source
-    FROM
-        coupon_usage
-    WHERE
-        details NOT LIKE '%Multipass%'
-
-    UNION ALL
-
-    SELECT
-        'coupon_transaction' AS source_table,
-        id,
-        coupon_id,
-        -usage_amount + recharge_amount AS transaction_amount,
-        transaction_date AS timestamp,
-        source AS action,
-        CASE
-            WHEN location IS NOT NULL AND location != '' THEN location
-            ELSE NULL
-        END AS details,
-        location,
-        recharge_amount,
-        reference_number,
-        source
-    FROM
-        coupon_transaction
-),
-SummedData AS (
-    SELECT
-        source_table,
-        id,
-        coupon_id,
-        timestamp,
-        transaction_amount,
-        details,
-        action
-    FROM CombinedData
-    WHERE NOT (
-        coupon_id IN (SELECT coupon_id FROM CouponFilter) AND action = 'User'
-    )
-    AND coupon_id = :coupon_id
-
-    UNION ALL
-
-    SELECT
-        'sum_row' AS source_table,
-        NULL AS id,
-        coupon_id,
-        NULL AS timestamp,
-        SUM(transaction_amount) AS transaction_amount,
-        'יתרה בקופון' AS details,
-        NULL AS action
-    FROM CombinedData
-    WHERE NOT (
-        coupon_id IN (SELECT coupon_id FROM CouponFilter) AND action = 'User'
-    )
-    AND coupon_id = :coupon_id
-    GROUP BY coupon_id
-)
-SELECT
-    source_table,
-    id,
-    coupon_id,
-    timestamp,
-    transaction_amount,
-    details,
-    action
-FROM SummedData
-ORDER BY
-    CASE WHEN timestamp IS NULL THEN 1 ELSE 0 END,
-    timestamp ASC;
-""")
-
+    # ------------------------------------------------------------------
+    # 3) Consolidate usage / transaction rows *exactly like before*.
+    #    (Your original SQL kept; modified only for readability.)
+    # ------------------------------------------------------------------
     sql = text("""
-    WITH CouponFilter AS (
-        SELECT DISTINCT coupon_id
-        FROM coupon_transaction
-        WHERE source = 'Multipass'
-    ),
-    CombinedData AS (
-        SELECT
-            'coupon_usage' AS source_table,
-            id,
-            coupon_id,
-            -used_amount AS transaction_amount,
-            timestamp,
-            action,
-            details,
-            NULL AS location,
-            0 AS recharge_amount,
-            NULL AS reference_number,
-            NULL AS source
-        FROM
-            coupon_usage
-        WHERE
-            details NOT LIKE '%Multipass%'
+        WITH CouponFilter AS (
+            SELECT DISTINCT coupon_id
+            FROM coupon_transaction
+            WHERE source = 'Multipass'
+        ),
+        CombinedData AS (
+            SELECT
+                'coupon_usage' AS source_table,
+                id,
+                coupon_id,
+                -used_amount AS transaction_amount,
+                timestamp,
+                action,
+                details,
+                NULL  AS location,
+                0     AS recharge_amount,
+                NULL  AS reference_number,
+                NULL  AS source
+            FROM coupon_usage
+            WHERE details NOT LIKE '%Multipass%'
 
-        UNION ALL
+            UNION ALL
 
-        SELECT
-            'coupon_transaction' AS source_table,
-            id,
-            coupon_id,
-            -usage_amount + recharge_amount AS transaction_amount,
-            transaction_date AS timestamp,
-            source AS action,
-            CASE
-                WHEN location IS NOT NULL AND location != '' THEN location
-                ELSE NULL
-            END AS details,
-            location,
-            recharge_amount,
-            reference_number,
-            source
-        FROM
-            coupon_transaction
-    ),
-    SummedData AS (
-        SELECT
-            source_table,
-            id,
-            coupon_id,
-            timestamp,
-            transaction_amount,
-            details,
-            action
-        FROM CombinedData
-        WHERE coupon_id = :coupon_id
-        AND (
-            coupon_id NOT IN (SELECT coupon_id FROM CouponFilter)
-            OR (source_table = 'coupon_transaction' AND action = 'Multipass')
+            SELECT
+                'coupon_transaction' AS source_table,
+                id,
+                coupon_id,
+                -usage_amount + recharge_amount AS transaction_amount,
+                transaction_date AS timestamp,
+                source AS action,
+                CASE WHEN location IS NOT NULL AND location <> ''
+                     THEN location ELSE NULL END AS details,
+                location,
+                recharge_amount,
+                reference_number,
+                source
+            FROM coupon_transaction
+        ),
+        SummedData AS (
+            SELECT
+                source_table, id, coupon_id, timestamp,
+                transaction_amount, details, action
+            FROM CombinedData
+            WHERE coupon_id = :coupon_id
+              AND (
+                  coupon_id NOT IN (SELECT coupon_id FROM CouponFilter)
+                  OR (source_table = 'coupon_transaction' AND action = 'Multipass')
+              )
+
+            UNION ALL
+
+            SELECT
+                'sum_row'        AS source_table,
+                NULL             AS id,
+                coupon_id,
+                NULL             AS timestamp,
+                SUM(transaction_amount) AS transaction_amount,
+                'יתרה בקופון'   AS details,
+                NULL             AS action
+            FROM CombinedData
+            WHERE coupon_id = :coupon_id
+              AND (
+                  coupon_id NOT IN (SELECT coupon_id FROM CouponFilter)
+                  OR (source_table = 'coupon_transaction' AND action = 'Multipass')
+              )
+            GROUP BY coupon_id
         )
-
-        UNION ALL
-
-        SELECT
-            'sum_row' AS source_table,
-            NULL AS id,
-            coupon_id,
-            NULL AS timestamp,
-            SUM(transaction_amount) AS transaction_amount,
-            'יתרה בקופון' AS details,
-            NULL AS action
-        FROM CombinedData
-        WHERE coupon_id = :coupon_id
-        AND (
-            coupon_id NOT IN (SELECT coupon_id FROM CouponFilter)
-            OR (source_table = 'coupon_transaction' AND action = 'Multipass')
-        )
-        GROUP BY coupon_id
-    )
-    SELECT
-        source_table,
-        id,
-        coupon_id,
-        timestamp,
-        transaction_amount,
-        details,
-        action
-    FROM SummedData
-    ORDER BY
-        CASE WHEN timestamp IS NULL THEN 1 ELSE 0 END,
-        timestamp ASC;
+        SELECT source_table, id, coupon_id, timestamp,
+               transaction_amount, details, action
+        FROM   SummedData
+        ORDER  BY CASE WHEN timestamp IS NULL THEN 1 ELSE 0 END,
+                 timestamp ASC;
     """)
 
     result = db.session.execute(sql, {'coupon_id': coupon.id})
     consolidated_rows = result.fetchall()
 
+    # ------------------------------------------------------------------
+    # 4) Extra calculations for display (discount, logo, etc.).
+    # ------------------------------------------------------------------
     discount_percentage = None
     if coupon.is_for_sale and coupon.value > 0:
-        discount_percentage = ((coupon.value - coupon.cost) / coupon.value) * 100
-        discount_percentage = round(discount_percentage, 2)
+        discount_percentage = round(
+            ((coupon.value - coupon.cost) / coupon.value) * 100, 2
+        )
 
     companies = Company.query.order_by(Company.name).all()
     company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
-    company_logo = company_logo_mapping.get(coupon.company.lower())
+    company_logo = company_logo_mapping.get(coupon.company.lower(),
+                                            'images/default_logo.png')
 
-    # אם החברה לא נמצאה או שאין לה לוגו, השתמש בלוגו ברירת מחדל
-    if not company_logo:
-        company_logo = 'images/default_logo.png'  # ודא שהתמונה קיימת תחת static/images/
-
+    # ------------------------------------------------------------------
+    # 5) Render the template with all the gathered context.
+    # ------------------------------------------------------------------
     return render_template(
         'coupon_detail.html',
         coupon=coupon,
-        is_owner=is_owner,
+        is_owner=is_owner,                 # always True here
         mark_form=mark_form,
         delete_form=delete_form,
         update_form=update_form,
@@ -3199,7 +3118,6 @@ ORDER BY
         card_exp=coupon.card_exp,
         show_multipass_button=show_multipass_button
     )
-
 
 @coupons_bp.route('/delete_coupon/<int:id>', methods=['POST'])
 @login_required
