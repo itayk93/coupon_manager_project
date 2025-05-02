@@ -6,12 +6,26 @@
 
 {% block content %}
 <section class="edit-coupon">
-    <h2>ערוך קופון</h2>
+    <h2 class="section-title">ערוך קופון</h2>
 
-    <form method="post" action="{{ url_for('coupons.edit_coupon', id=coupon.id) }}">
+    <!-- Display flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">
+                <span class="message-text">{{ message }}</span>
+                <button class="close-flash" aria-label="Close">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('coupons.edit_coupon', id=coupon.id) }}" class="manual-coupon-form">
         {{ form.hidden_tag() }}
 
-        <!-- הודעות שגיאה כלליות -->
+        <!-- Error messages -->
         {% if form.errors %}
             <div class="error-messages">
                 <ul>
@@ -24,147 +38,151 @@
             </div>
         {% endif %}
 
-        <!-- שדה החברה -->
+        <!-- Company Field -->
         <div class="form-group">
-            {{ form.company_id.label }}
+            {{ form.company_id.label(class="form-label") }}
             {{ form.company_id(class="input-field", id="edit_coupon_company_select") }}
             {% for error in form.company_id.errors %}
-                <span class="error">{{ error }}</span>
+                <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
 
-        <!-- שדה חברה אחרת (מוסתר כברירת מחדל) -->
+        <!-- Other Company Field (hidden by default) -->
         <div class="form-group" id="edit_coupon_other_company_group" style="display: none;">
-            {{ form.other_company.label }}
+            {{ form.other_company.label(class="form-label") }}
             {{ form.other_company(class="input-field", id="edit_coupon_other_company_input") }}
             {% for error in form.other_company.errors %}
-                <span class="error">{{ error }}</span>
+                <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
 
-        <!-- שדה קישור לקופון BuyMe (מוסתר כברירת מחדל) -->
+        <!-- BuyMe Coupon Link Field (hidden by default) -->
         <div class="form-group" id="edit_coupon_buyme_link_group" style="display: none;">
-            <label for="edit_coupon_buyme_link">כתובת URL של הקופון ל-BuyMe</label>
+            <label for="edit_coupon_buyme_link" class="form-label">כתובת URL של הקופון ל-BuyMe</label>
             {{ form.buyme_coupon_url(class="input-field", id="edit_coupon_buyme_link") }}
         </div>
 
-        <!-- שדה הקוד -->
+        <!-- Code Field -->
         <div class="form-group">
-            {{ form.code.label }}
+            {{ form.code.label(class="form-label") }}
             {{ form.code(class="input-field", id="edit_coupon_code") }}
             {% for error in form.code.errors %}
-                <span class="error">{{ error }}</span>
+                <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
 
-        <!-- שדה העלות -->
+        <!-- Cost Field -->
         <div class="form-group">
-            {{ form.cost.label }}
+            {{ form.cost.label(class="form-label") }}
             {{ form.cost(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01", id="edit_coupon_cost") }}
             {% for error in form.cost.errors %}
-                <span class="error">{{ error }}</span>
+                <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
 
-        <!-- שדה אחוז הנחה -->
+        <!-- Discount Percentage Field -->
         <div class="form-group">
-            {{ form.discount_percentage.label }}
+            {{ form.discount_percentage.label(class="form-label") }}
             {{ form.discount_percentage(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", min="0", max="100", step="0.01", id="edit_coupon_discount_percentage") }}
             {% for error in form.discount_percentage.errors %}
-                <span class="error">{{ error }}</span>
+                <div class="error">{{ error }}</div>
             {% endfor %}
+            
+            <!-- Visual discount display -->
+            <div class="discount-display-container">
+                <div class="discount-display">
+                    <span class="discount-value">0%</span>
+                </div>
+            </div>
         </div>
 
-        <!-- שדה הערך -->
+        <!-- Value Field -->
         <div class="form-group">
-            {{ form.value.label }}
+            {{ form.value.label(class="form-label") }}
             {{ form.value(class="input-field", type="number", inputmode="numeric", pattern="[0-9]*", step="0.01", id="edit_coupon_value") }}
             {% for error in form.value.errors %}
-                <span class="error">{{ error }}</span>
+                <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
 
-        <!-- שדה תאריך תפוגה -->
+        <!-- Expiration Field -->
         <div class="form-group">
-            {{ form.expiration.label }}
-            {{ form.expiration(class="input-field", type="date", id="edit_coupon_expiration", value=form.expiration.data.strftime('%Y-%m-%d') if form.expiration.data else '') }}
+            {{ form.expiration.label(class="form-label") }}
+            {{ form.expiration(class="input-field date-input", type="date", id="edit_coupon_expiration", value=form.expiration.data.strftime('%Y-%m-%d') if form.expiration.data else '') }}
             {% for error in form.expiration.errors %}
-                <span class="error">{{ error }}</span>
+                <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
 
-        <!-- שדה תיאור -->
+        <!-- Description Field -->
         <div class="form-group">
-            {{ form.description.label }}
+            {{ form.description.label(class="form-label") }}
             {{ form.description(class="input-field", rows="4", id="edit_coupon_description") }}
             {% for error in form.description.errors %}
-                <span class="error">{{ error }}</span>
+                <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
 
-        <!-- Checkbox: האם להכניס תוקף כרטיס ו-CVV -->
-        <div class="form-group checkbox-inline">
-            <label for="edit_coupon_include_card_info">
-                <input type="checkbox" id="edit_coupon_include_card_info" name="include_card_info">
-                האם להכניס תוקף כרטיס ו-CVV?
-            </label>
+        <!-- Include Card Info Checkbox -->
+        <div class="form-group checkbox-container">
+            <input type="checkbox" id="edit_coupon_include_card_info" name="include_card_info" class="checkbox-input">
+            <label for="edit_coupon_include_card_info" class="checkbox-label">האם להכניס תוקף כרטיס ו-CVV?</label>
         </div>
         
-        <!-- שדות הכרטיס, מוסתרים כברירת מחדל -->
-        <div id="edit_coupon_card_fields_container" style="display: none;">
+        <!-- Card fields, hidden by default -->
+        <div id="edit_coupon_card_fields_container" class="card-fields" style="display: none;">
             <!-- CVV Field -->
             <div class="form-group">
-                {{ form.cvv.label }}
+                {{ form.cvv.label(class="form-label") }}
                 {{ form.cvv(class="input-field", id="edit_coupon_cvv") }}
                 {% for error in form.cvv.errors %}
-                    <span class="error">{{ error }}</span>
+                    <div class="error">{{ error }}</div>
                 {% endfor %}
             </div>
 
             <!-- Card Exp Field -->
             <div class="form-group">
-                <label for="edit_coupon_card_exp">תוקף כרטיס</label>
+                <label for="edit_coupon_card_exp" class="form-label">תוקף כרטיס</label>
                 <input type="text" id="edit_coupon_card_exp" name="card_exp" class="input-field" maxlength="5" placeholder="MM/YY"
-                value="{{ form.card_exp.data if form.card_exp.data else '' }}">         
+                    value="{{ form.card_exp.data if form.card_exp.data else '' }}">
                 {% for error in form.card_exp.errors %}
-                    <span class="error">{{ error }}</span>
+                    <div class="error">{{ error }}</div>
                 {% endfor %}
-            </div>            
+            </div>
         </div>
 
-        <!-- שדה האם חד-פעמי -->
-        <div class="form-group tooltip-checkbox-container" style="position: relative;">
-            <button type="button" class="tooltip-button-mobile" id="edit_coupon_tooltip_btn" aria-label="מידע נוסף">❔</button>
-            {{ form.is_one_time(id="edit_coupon_is_one_time") }}
-            <label for="edit_coupon_is_one_time">
-                {{ form.is_one_time.label }}
+        <!-- One-Time Use Checkbox (with tooltip) -->
+        <div class="form-group checkbox-container tooltip-container">
+            {{ form.is_one_time(id="edit_coupon_is_one_time", class="checkbox-input") }}
+            <label for="edit_coupon_is_one_time" class="checkbox-label">
+                <span class="checkbox-text">{{ form.is_one_time.label }}</span>
             </label>
-            <div class="mobile-tooltip" id="edit_coupon_mobile_tooltip" style="display: none;">
+            <button type="button" class="tooltip-button" id="edit_coupon_tooltip_btn" aria-label="מידע נוסף">❔</button>
+            <div class="mobile-tooltip" id="edit_coupon_mobile_tooltip">
                 קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
                 <span class="close-tooltip" id="edit_coupon_close_mobile_tooltip">×</span>
             </div>
             <div class="tooltip" id="edit_coupon_desktop_tooltip">
                 קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
-                <span class="close-tooltip" id="edit_coupon_close_desktop_tooltip">×</span>
             </div>
             {% for error in form.is_one_time.errors %}
-                <span class="error">{{ error }}</span>
+                <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
 
-        <!-- שדה מטרה (מוצג רק אם חד-פעמי) -->
+        <!-- Purpose Field (Hidden by default) -->
         <div class="form-group" id="edit_coupon_purpose_field" style="display: none;">
-            {{ form.purpose.label }}
+            {{ form.purpose.label(class="form-label") }}
             {{ form.purpose(class="input-field", id="edit_coupon_purpose") }}
             {% for error in form.purpose.errors %}
-                <span class="error">{{ error }}</span>
+                <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
 
-        <!-- כפתור שמירה -->
-        <div class="form-group">
+        <!-- Submit Button -->
+        <div class="form-group submit-group">
             {{ form.submit(class="submit-button", id="edit_coupon_submit_button") }}
-            <div id="edit_coupon_validation_message" class="error" style="display:none; margin-top: 5px;">
+            <div id="edit_coupon_validation_message" class="validation-message" style="display:none;">
                 יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה, בערך גדול מ-0.
             </div>
         </div>
@@ -174,233 +192,429 @@
 
 {% block styles %}
 <style>
-    /* סגנון לכותרת */
-    .edit-coupon h2 {
-        text-align: center;
-        color: var(--primary-color);
-        margin-bottom: 20px;
-    }
+/* ==============================
+   Modern styling for edit coupon form
+   ============================== */
 
-    /* סגנון לכפתורים המשניים */
-    .edit-coupon-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
+/* Main layout and containers */
+.edit-coupon {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px;
+}
 
-    .secondary-button {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        background-color: var(--accent-color);
-        color: var(--white);
-        text-decoration: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: background-color var(--transition-speed);
-        font-size: 0.9em;
-        min-width: 120px;
-    }
+.section-title {
+    color: #3498db;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+}
 
-    .secondary-button:hover {
-        background-color: #e67e22;
-    }
+/* Flash messages */
+.flash-messages {
+    margin-bottom: 20px;
+}
 
-    .secondary-button .fa {
-        font-size: 1.2em;
-    }
+.flash {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideInDown 0.3s ease;
+}
 
-    /* התאמה לכפתורים במובייל */
-    @media (max-width: 768px) {
-        .edit-coupon-buttons {
-            flex-direction: column;
-            gap: 10px;
-        }
+.flash.success {
+    background-color: rgba(46, 204, 113, 0.2);
+    border: 1px solid #2ecc71;
+    color: #27ae60;
+}
 
-        .secondary-button {
-            width: 100%;
-            justify-content: center;
-        }
-    }
+.flash.error, 
+.flash.danger {
+    background-color: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+    color: #c0392b;
+}
 
-    /* סגנונות נוספים */
-    .error {
-        color: red;
-        font-size: 0.9em;
-    }
+.flash.warning {
+    background-color: rgba(243, 156, 18, 0.2);
+    border: 1px solid #f39c12;
+    color: #d35400;
+}
 
-    .input-field {
-        width: 100%;
-        padding: 8px;
-        margin-bottom: 10px;
-        box-sizing: border-box;
-    }
+.close-flash {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
 
-    .submit-button {
-        background-color: var(--primary-color);
-        color: var(--white);
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 1em;
-    }
+.flash.fade-out {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
 
-    .submit-button:hover {
-        background-color: #0056b3;
-    }
+/* Form styling */
+.manual-coupon-form {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
 
-    /* יישור של הצ'קבוקס לצד הטקסט */
-    .checkbox-inline label {
-        display: flex;
-        align-items: center;
-        gap: 8px; /* רווח קטן בין הצ'קבוקס לטקסט */
-        font-size: 1em;
-        cursor: pointer;
-    }
+.manual-coupon-form::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 30%;
+    height: 4px;
+    background: linear-gradient(to right, transparent, #3498db);
+    border-radius: 0 8px 0 0;
+}
 
-    /* ודא שהתצוגה תישאר נכונה במסכים קטנים */
-    @media (max-width: 768px) {
-        .checkbox-inline label {
-            display: flex;
-            align-items: center;
-            gap: 6px; /* התאמת הרווח במסכים קטנים */
-        }
-    }
+.form-group {
+    margin-bottom: 15px;
+}
 
-    /* סגנונות עבור tooltip */
-    .tooltip-checkbox-container {
-        position: relative;
-        display: flex;
-        align-items: center;
-        margin-bottom: 10px;
-    }
+.form-label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #333;
+}
 
-    .tooltip-button-mobile {
-        background: none;
-        border: none;
-        color: #666;
-        font-size: 16px;
-        cursor: pointer;
-        margin-right: 5px;
-    }
+.input-field {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    background-color: white;
+}
 
-    .mobile-tooltip {
-        position: absolute;
-        bottom: 100%;
-        right: 0;
-        width: calc(100% - 20px);
-        background-color: #fff;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        padding: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        z-index: 100;
-        font-size: 13px;
-        margin-bottom: 5px;
-    }
+.input-field:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    outline: none;
+}
 
+textarea.input-field {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.error, .validation-message {
+    color: #e74c3c;
+    font-size: 0.85em;
+    margin-top: 5px;
+}
+
+.error-messages {
+    background-color: rgba(231, 76, 60, 0.1);
+    border: 1px solid #e74c3c;
+    border-radius: 6px;
+    padding: 10px 15px;
+    margin-bottom: 15px;
+}
+
+.error-messages ul {
+    margin: 0;
+    padding-right: 20px;
+}
+
+.error-messages li {
+    color: #e74c3c;
+}
+
+/* Submit button */
+.submit-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.submit-button:hover:not(:disabled) {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+}
+
+.submit-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.submit-group {
+    text-align: center;
+}
+
+/* Card fields */
+.card-fields {
+    background-color: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    animation: slideDown 0.3s ease;
+}
+
+/* Checkbox styling */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.checkbox-input {
+    margin-left: 10px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checkbox-label {
+    cursor: pointer;
+}
+
+/* Tooltip styling */
+.tooltip-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.tooltip-button {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-right: 10px;
+    font-size: 12px;
+}
+
+.tooltip-button:hover {
+    background-color: #f8f9fa;
+}
+
+.tooltip,
+.mobile-tooltip {
+    display: none;
+    position: absolute;
+    background-color: #2c3e50;
+    color: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    max-width: 250px;
+    z-index: 100;
+    text-align: right;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.tooltip {
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 8px;
+}
+
+.mobile-tooltip {
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+}
+
+.tooltip::after,
+.mobile-tooltip::after {
+    content: "";
+    position: absolute;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #2c3e50 transparent transparent transparent;
+    top: 100%;
+    right: 10px;
+}
+
+.close-tooltip {
+    float: left;
+    cursor: pointer;
+    margin-right: 8px;
+}
+
+/* Discount display */
+.discount-display-container {
+    margin-top: 8px;
+    width: 100%;
+    height: 30px;
+    position: relative;
+}
+
+.discount-display {
+    background: linear-gradient(to right, white 0%, #3498db 100%);
+    height: 100%;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.discount-value {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #333;
+    font-weight: bold;
+    font-size: 0.9em;
+    text-shadow: 0 0 2px white;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
     .tooltip {
-        visibility: hidden;
-        width: 300px;
-        background-color: #555;
-        color: #fff;
-        text-align: center;
-        border-radius: 6px;
-        padding: 5px;
-        position: absolute;
-        z-index: 1;
-        bottom: 125%;
-        right: 50%;
-        margin-right: -150px;
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
-
-    .tooltip-checkbox-container:hover .tooltip {
-        visibility: visible;
-        opacity: 1;
-    }
-
-    .close-tooltip {
-        position: absolute;
-        top: 5px;
-        right: 5px;
-        cursor: pointer;
-        font-size: 16px;
+        display: none !important; /* Hide desktop tooltip on mobile */
     }
     
-    /* Mobile styles for tooltips */
-    @media (max-width: 768px) {
-        .tooltip {
-            width: calc(100% - 40px);
-            right: 20px;
-            margin-right: 0;
-        }
-        .tooltip .close-tooltip {
-            pointer-events: auto; 
-        }
+    .tooltip-button-mobile {
+        background: none;
+        border: 1px solid #ddd;
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        margin-right: 10px;
+        font-size: 12px;
     }
+}
+
+@media (min-width: 769px) {
+    .mobile-tooltip {
+        display: none !important; /* Hide mobile tooltip on desktop */
+    }
+    
+    .tooltip-button:hover + .tooltip,
+    .tooltip-button:focus + .tooltip,
+    .tooltip:hover {
+        display: block;
+    }
+}
+
+/* Animations */
+@keyframes slideInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        max-height: 0;
+        opacity: 0;
+    }
+    to {
+        max-height: 500px;
+        opacity: 1;
+    }
+}
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // ======== הגדרת משתנים גלובליים ========
-        // חברות
+        // ========= Initialize Variables =========
+        // Company related elements
         const companySelect = document.getElementById('edit_coupon_company_select');
         const otherCompanyGroup = document.getElementById('edit_coupon_other_company_group');
         const otherCompanyInput = document.getElementById('edit_coupon_other_company_input');
         const buymeLinkGroup = document.getElementById('edit_coupon_buyme_link_group');
         const buymeLinkInput = document.getElementById('edit_coupon_buyme_link');
         let originalBuyMeValue = '';
-
-        // פרטי קופון
+        
+        // Coupon price elements
         const couponCodeInput = document.getElementById('edit_coupon_code');
         const couponCostInput = document.getElementById('edit_coupon_cost');
         const discountPercentageInput = document.getElementById('edit_coupon_discount_percentage');
         const couponValueInput = document.getElementById('edit_coupon_value');
+        const discountDisplay = document.querySelector('.discount-display');
+        const discountValue = document.querySelector('.discount-value');
         const expirationInput = document.getElementById('edit_coupon_expiration');
         const descriptionInput = document.getElementById('edit_coupon_description');
         
-        // פרטי כרטיס
+        // Card info elements
         const includeCardInfoCheckbox = document.getElementById('edit_coupon_include_card_info');
         const cardFieldsContainer = document.getElementById('edit_coupon_card_fields_container');
         const cvvInput = document.getElementById('edit_coupon_cvv');
         const cardExpInput = document.getElementById('edit_coupon_card_exp');
         
-        // קופון חד-פעמי
+        // One-time coupon elements
         const isOneTimeCheckbox = document.getElementById('edit_coupon_is_one_time');
         const purposeField = document.getElementById('edit_coupon_purpose_field');
         
-        // Tooltips
+        // Tooltip elements
         const tooltipBtn = document.getElementById('edit_coupon_tooltip_btn');
         const mobileTooltip = document.getElementById('edit_coupon_mobile_tooltip');
         const closeMobileTooltip = document.getElementById('edit_coupon_close_mobile_tooltip');
         const desktopTooltip = document.getElementById('edit_coupon_desktop_tooltip');
-        const closeDesktopTooltip = document.getElementById('edit_coupon_close_desktop_tooltip');
         
-        // Submit
+        // Form validation elements
         const submitButton = document.getElementById('edit_coupon_submit_button');
         const validationMessage = document.getElementById('edit_coupon_validation_message');
-        const form = document.querySelector('form[action="{{ url_for('coupons.edit_coupon', id=coupon.id) }}"]');
+        const form = document.querySelector('form[action="{{ url_for("coupons.edit_coupon", id=coupon.id) }}"]');
 
-        // ======== ניהול שדה חברה אחרת ושדה BuyMe ========
+        // ========= Handle Flash Messages =========
+        // Close button functionality for flash messages
+        document.querySelectorAll('.close-flash').forEach(button => {
+            button.addEventListener('click', function() {
+                this.closest('.flash').remove();
+            });
+        });
+
+        // Auto-dismiss flash messages after 5 seconds
+        setTimeout(() => {
+            document.querySelectorAll('.flash').forEach(message => {
+                message.classList.add('fade-out');
+                setTimeout(() => message.remove(), 500);
+            });
+        }, 5000);
+
+        // ========= Company Field Handlers =========
+        // Toggle the "Other Company" field based on selection
         function toggleOtherCompanyField() {
             if (!companySelect) return;
             
-            console.log('בדיקת ערך החברה הנוכחי:', companySelect.value);
-            
-            // בדיקה מקיפה - גם בערך וגם בטקסט
+            // Check for any value that might indicate "other"
             const selectedOption = companySelect.options[companySelect.selectedIndex];
             const selectedText = selectedOption ? selectedOption.text : '';
-            console.log('טקסט האפשרות שנבחרה:', selectedText);
             
-            // בדיקה לכל אפשרות של "אחר"
             const isOtherOption = 
                 companySelect.value === 'other' || 
                 companySelect.value === 'Other' || 
@@ -411,106 +625,129 @@
             
             if (isOtherOption) {
                 otherCompanyGroup.style.display = 'block';
-                console.log('מציג שדה חברה אחרת');
             } else {
                 otherCompanyGroup.style.display = 'none';
                 if (otherCompanyInput) otherCompanyInput.value = '';
-                console.log('מסתיר שדה חברה אחרת');
             }
         }
         
+        // Toggle the BuyMe link field based on company selection
         function toggleBuymeLinkField() {
             if (!companySelect || !buymeLinkGroup) return;
             
-            // מעריך שהמזהה של BuyMe הוא "54"
+            // Check if BuyMe is selected (ID 54)
             if (companySelect.value === '54') {
                 buymeLinkGroup.style.display = 'block';
                 if (buymeLinkInput && originalBuyMeValue) {
                     buymeLinkInput.value = originalBuyMeValue;
                 }
-                console.log('מציג שדה קישור BuyMe');
             } else {
                 if (buymeLinkInput && buymeLinkInput.value) {
                     originalBuyMeValue = buymeLinkInput.value;
                 }
                 buymeLinkGroup.style.display = 'none';
-                console.log('מסתיר שדה קישור BuyMe');
             }
         }
         
-        // ======== ניהול שדה קופון חד-פעמי ========
+        // Add event listeners to company select
+        if (companySelect) {
+            // Store the BuyMe link value when page loads
+            if (buymeLinkInput && buymeLinkInput.value) {
+                originalBuyMeValue = buymeLinkInput.value;
+            }
+            
+            companySelect.addEventListener('change', function() {
+                // Store BuyMe link if changing from BuyMe
+                if (companySelect.value !== '54' && buymeLinkInput && buymeLinkInput.value) {
+                    originalBuyMeValue = buymeLinkInput.value;
+                }
+                
+                toggleOtherCompanyField();
+                toggleBuymeLinkField();
+            });
+        }
+
+        // ========= One-Time Coupon Handler =========
+        // Toggle the purpose field based on one-time checkbox
         function togglePurposeField() {
             if (!isOneTimeCheckbox || !purposeField) return;
             
             if (isOneTimeCheckbox.checked) {
                 purposeField.style.display = 'block';
-                console.log('מציג שדה מטרה - קופון חד פעמי');
             } else {
                 purposeField.style.display = 'none';
-                console.log('מסתיר שדה מטרה - קופון לא חד פעמי');
             }
         }
         
-        // ======== ניהול שדות פרטי כרטיס ========
+        // Add event listener to one-time checkbox
+        if (isOneTimeCheckbox) {
+            isOneTimeCheckbox.addEventListener('change', togglePurposeField);
+        }
+
+        // ========= Card Fields Handler =========
+        // Toggle card fields based on include card info checkbox
         function toggleCardFields() {
             if (!includeCardInfoCheckbox || !cardFieldsContainer) return;
             
             if (includeCardInfoCheckbox.checked) {
                 cardFieldsContainer.style.display = 'block';
                 localStorage.setItem('edit_coupon_include_card_info', 'true');
-                console.log('מציג שדות פרטי כרטיס');
             } else {
                 cardFieldsContainer.style.display = 'none';
                 localStorage.removeItem('edit_coupon_include_card_info');
                 if (cvvInput) cvvInput.value = '';
                 if (cardExpInput) cardExpInput.value = '';
-                console.log('מסתיר שדות פרטי כרטיס');
             }
         }
         
-        // ======== פורמט אוטומטי לשדה תוקף כרטיס ========
+        // Add event listener to card info checkbox
+        if (includeCardInfoCheckbox) {
+            // Check localStorage for saved state
+            if (localStorage.getItem('edit_coupon_include_card_info')) {
+                includeCardInfoCheckbox.checked = true;
+            }
+            
+            includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
+        }
+        
+        // ========= Card Expiry Formatter =========
+        // Format the card expiry to MM/YY
         function formatCardExp(event) {
-            let value = event.target.value.replace(/\D/g, ''); // רק ספרות
+            let value = event.target.value.replace(/\D/g, ''); // Only digits
             if (value.length > 2) {
                 value = value.substring(0, 2) + '/' + value.substring(2, 4);
             }
             event.target.value = value;
         }
         
-        // ======== ניהול Tooltips ========
+        // Add event listener for card expiry formatting
+        if (cardExpInput) {
+            cardExpInput.addEventListener('input', formatCardExp);
+        }
+
+        // ========= Tooltip Handlers =========
+        // Setup tooltips for both mobile and desktop
         function setupTooltips() {
-            // לחיצה על כפתור Tooltip במובייל
+            // Mobile tooltip button click
             if (tooltipBtn && mobileTooltip) {
                 tooltipBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     const isVisible = mobileTooltip.style.display === 'block';
                     mobileTooltip.style.display = isVisible ? 'none' : 'block';
-                    console.log('לחיצה על כפתור tooltip - מצב:', !isVisible);
                 });
             }
             
-            // כפתור סגירה של Tooltip במובייל
+            // Mobile tooltip close button
             if (closeMobileTooltip && mobileTooltip) {
                 closeMobileTooltip.addEventListener('click', function(e) {
                     e.stopPropagation();
                     mobileTooltip.style.display = 'none';
-                    console.log('סגירת tooltip במובייל');
                 });
             }
             
-            // כפתור סגירה של Tooltip בדסקטופ
-            if (closeDesktopTooltip && desktopTooltip) {
-                closeDesktopTooltip.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    desktopTooltip.style.visibility = 'hidden';
-                    desktopTooltip.style.opacity = '0';
-                    console.log('סגירת tooltip בדסקטופ');
-                });
-            }
-            
-            // סגירת tooltips בלחיצה מחוץ להם
+            // Close tooltips when clicking outside
             document.addEventListener('click', function(e) {
-                // סגירת tooltip במובייל
+                // Close mobile tooltip
                 if (mobileTooltip && 
                     e.target !== tooltipBtn && 
                     e.target !== mobileTooltip &&
@@ -518,7 +755,7 @@
                     mobileTooltip.style.display = 'none';
                 }
                 
-                // סגירת tooltip בדסקטופ
+                // Close desktop tooltip
                 if (desktopTooltip && 
                     e.target !== desktopTooltip &&
                     !desktopTooltip.contains(e.target)) {
@@ -527,13 +764,15 @@
                 }
             });
         }
-        
-        // ======== ניהול חישובי מחיר/ערך/הנחה ========
+
+        // ========= Price Calculation Functions =========
+        // Convert string to float or null if invalid
         function toFloat(value) {
             const num = parseFloat(value);
             return isNaN(num) ? null : num;
         }
         
+        // Update price fields based on changes
         function updatePriceFields(changedField) {
             if (!couponCostInput || !discountPercentageInput || !couponValueInput) return;
             
@@ -541,21 +780,26 @@
             const value = toFloat(couponValueInput.value);
             const discount = toFloat(discountPercentageInput.value);
             
-            console.log('חישוב מחדש - עלות:', cost, 'ערך:', value, 'הנחה:', discount, 'שדה שהשתנה:', changedField);
+            // Update discount visual display
+            if (discount !== null && discount >= 0 && discount <= 100 && discountDisplay && discountValue) {
+                discountDisplay.style.width = discount + '%';
+                discountValue.textContent = discount.toFixed(2) + '%';
+            }
             
-            // מקרה מיוחד: אם העלות היא 0 והערך חיובי, ההנחה היא 100%
+            // Special case: If cost is 0 and value is positive, set discount to 100%
             if (cost === 0 && value > 0) {
                 discountPercentageInput.value = "100.00";
                 if (validationMessage) validationMessage.style.display = 'none';
                 return;
             }
             
-            // בודק כמה שדות מלאים עם ערכים תקינים
+            // Count how many price fields have valid values
             let filledCount = 0;
             if (cost !== null && cost >= 0) filledCount++;
             if (value !== null && value > 0) filledCount++;
             if (discount !== null && discount > 0 && discount <= 100) filledCount++;
             
+            // Validate that at least 2 fields are filled
             if (filledCount < 2) {
                 if (validationMessage) validationMessage.style.display = 'block';
                 return;
@@ -563,9 +807,9 @@
                 if (validationMessage) validationMessage.style.display = 'none';
             }
             
-            // מחשב את הערך שחסר בהתאם לשניים האחרים
+            // Calculate the missing value based on the other two
             if (filledCount === 2) {
-                // כשיש עלות והנחה, מחשב את הערך
+                // When cost and discount are filled, calculate value
                 if (cost >= 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
                     if (discount === 100) {
                         couponValueInput.value = cost > 0 ? (cost * 100).toFixed(2) : "0.00";
@@ -573,7 +817,7 @@
                         couponValueInput.value = (cost / (1 - discount / 100)).toFixed(2);
                     }
                 } 
-                // כשיש עלות וערך, מחשב את ההנחה
+                // When cost and value are filled, calculate discount
                 else if (cost >= 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
                     if (cost === 0) {
                         discountPercentageInput.value = "100.00";
@@ -581,12 +825,12 @@
                         discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
                     }
                 } 
-                // כשיש ערך והנחה, מחשב את העלות
+                // When value and discount are filled, calculate cost
                 else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost < 0)) {
                     couponCostInput.value = (value * (1 - discount / 100)).toFixed(2);
                 }
             } 
-            // אם כל השדות מלאים, עדכן אותם בהתאם לשדה שהשתנה
+            // When all fields are filled, update based on which one changed
             else if (filledCount === 3) {
                 if (changedField === 'cost' && discount > 0 && discount <= 100 && value > 0) {
                     if (cost === 0) {
@@ -604,19 +848,29 @@
                     }
                 }
             }
+            
+            // Update discount display after calculations
+            if (discountPercentageInput.value && discountDisplay && discountValue) {
+                const newDiscount = parseFloat(discountPercentageInput.value);
+                if (!isNaN(newDiscount)) {
+                    discountDisplay.style.width = Math.min(100, newDiscount) + '%';
+                    discountValue.textContent = newDiscount.toFixed(2) + '%';
+                }
+            }
         }
-        
-        // ======== בדיקת תאריך תפוגה בעת הגשת הטופס ========
+
+        // ========= Expiration Date Validation =========
+        // Validate expiration date before form submission
         function setupExpirationCheck() {
             if (!form || !expirationInput) return;
             
             form.addEventListener('submit', function(e) {
-                if (!expirationInput.value) return; // אין תאריך, אין צורך בבדיקה
+                if (!expirationInput.value) return; // No date, no need to check
                 
-                const parts = expirationInput.value.split('-'); // פורמט YYYY-MM-DD
+                const parts = expirationInput.value.split('-'); // Format YYYY-MM-DD
                 if (parts.length === 3) {
                     const year = parseInt(parts[0]);
-                    const month = parseInt(parts[1]) - 1;
+                    const month = parseInt(parts[1]) - 1; // Months in JS are 0-11
                     const day = parseInt(parts[2]);
                     const selectedDate = new Date(year, month, day);
                     
@@ -627,14 +881,14 @@
                         const confirmMsg = "שימו לב! תאריך התפוגה של הקופון הוא היום או קודם. האם להמשיך?";
                         if (!confirm(confirmMsg)) {
                             e.preventDefault();
-                            console.log('הגשת טופס בוטלה - תאריך תפוגה בעבר');
                         }
                     }
                 }
             });
         }
-        
-        // ======== הגבלת קלט לשדות מספריים ========
+
+        // ========= Numeric Input Validation =========
+        // Restrict input to numeric values for number fields
         function setupNumericFields() {
             const numericFields = document.querySelectorAll('input[type="number"]');
             
@@ -643,7 +897,7 @@
                     const input = event.target;
                     const value = input.value;
                     
-                    // בדיקה שהערך מכיל רק מספרים או נקודה עשרונית
+                    // Make sure the value contains only numbers or decimal point
                     const isValid = /^-?\d*\.?\d*$/.test(value);
                     
                     if (!isValid) {
@@ -652,86 +906,45 @@
                 });
             });
         }
-        
-        // ======== תפקודיות בטעינת הדף ========
+
+        // ========= Initialize Page =========
+        // Run all initialization functions
         function initPage() {
-            console.log('מאתחל את הדף...');
-            
-            // רישום מאזיני אירועים עבור שדה החברה
-            if (companySelect) {
-                if (buymeLinkInput && buymeLinkInput.value) {
-                    originalBuyMeValue = buymeLinkInput.value;
-                }
-                
-                companySelect.addEventListener('change', function() {
-                    console.log('שדה החברה השתנה:', companySelect.value);
-                    
-                    // שמירת URL של BuyMe אם מחליפים חברה
-                    if (companySelect.value !== '54' && buymeLinkInput && buymeLinkInput.value) {
-                        originalBuyMeValue = buymeLinkInput.value;
-                    }
-                    
-                    toggleOtherCompanyField();
-                    toggleBuymeLinkField();
-                });
-            }
-            
-            // רישום מאזיני אירועים עבור שדה חד-פעמי
-            if (isOneTimeCheckbox) {
-                isOneTimeCheckbox.addEventListener('change', togglePurposeField);
-            }
-            
-            // רישום מאזיני אירועים עבור שדות הכרטיס
-            if (includeCardInfoCheckbox) {
-                // בדיקה אם יש מצב שמור ב-localStorage
-                if (localStorage.getItem('edit_coupon_include_card_info')) {
-                    includeCardInfoCheckbox.checked = true;
-                }
-                
-                includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
-            }
-            
-            // מאזין לפורמט שדה תוקף כרטיס
-            if (cardExpInput) {
-                cardExpInput.addEventListener('input', formatCardExp);
-            }
-            
-            // מאזיני אירועים לחישובי מחיר
-            if (couponCostInput && discountPercentageInput && couponValueInput) {
-                couponValueInput.addEventListener('change', function() {
+            // Register event listeners for price fields
+            if (couponValueInput && discountPercentageInput && couponCostInput) {
+                couponValueInput.addEventListener('input', function() {
                     updatePriceFields('value');
                 });
                 
-                discountPercentageInput.addEventListener('change', function() {
+                discountPercentageInput.addEventListener('input', function() {
                     updatePriceFields('discount');
                 });
                 
-                couponCostInput.addEventListener('change', function() {
+                couponCostInput.addEventListener('input', function() {
                     updatePriceFields('cost');
                 });
             }
             
-            // הגדרת tooltips
+            // Setup tooltips
             setupTooltips();
             
-            // בדיקת תאריך תפוגה
+            // Setup expiration date check
             setupExpirationCheck();
             
-            // הגבלת קלט לשדות מספריים
+            // Setup numeric field validation
             setupNumericFields();
             
-            // הפעלה ראשונית של כל פונקציות הטוגל בדיחוי קל
+            // Run initial toggles with slight delay to ensure DOM is ready
             setTimeout(function() {
                 toggleOtherCompanyField();
                 toggleBuymeLinkField();
                 togglePurposeField();
                 toggleCardFields();
                 updatePriceFields(null);
-                console.log('אתחול הדף הושלם');
             }, 100);
         }
         
-        // ========= אתחול הדף ==========
+        // Initialize the page
         initPage();
     });
 </script>
