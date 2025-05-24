@@ -120,15 +120,15 @@ def initiate_delete_user():
 
 def redirect_after_deletion():
     """
-    פונקציה שעוזרת להחליט לאן לחזור אחרי "מחיקה".
-    - אם המשתמש הנוכחי אדמין => נחזור לרשימת המשתמשים (manage_users).
-    - אחרת => נחזור לעמוד בית (או מה שתרצה).
+    פונקציה קטנה שמחליטה לאן להפנות לאחר פעולת מחיקה/אישור
+    אם current_user אדמין -> חזרה ל-manage_users
+    אחרת -> חזרה לעמוד ההתחברות
     """
     if current_user.is_authenticated and current_user.is_admin:
         return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
     else:
-        # עמוד הבית או פרופיל אישי
-        return redirect(url_for('profile.index'))
+        # מסך התחברות
+        return redirect(url_for('auth.login'))
 
 from flask_login import logout_user
 
@@ -219,18 +219,6 @@ def send_delete_confirmation_email(user, token):
 
     except Exception as e:
         current_app.logger.error(f"שגיאה בשליחת מייל למחיקת משתמש ל-{recipient_email}: {e}")
-
-def redirect_after_deletion():
-    """
-    פונקציה קטנה שמחליטה לאן להפנות לאחר פעולת מחיקה/אישור
-    אם current_user אדמין -> חזרה ל-manage_users
-    אחרת -> חזרה לעמוד הראשי
-    """
-    if current_user.is_authenticated and current_user.is_admin:
-        return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
-    else:
-        # עמוד הבית / פרופיל / כל דבר אחר
-        return redirect(url_for('profile.index'))
 
 @admin_users_bp.route('/resend_confirmation_email', methods=['POST'])
 @login_required

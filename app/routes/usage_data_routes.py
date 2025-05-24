@@ -2,8 +2,8 @@
 
 import json
 from datetime import datetime
-from flask import Blueprint, request, jsonify
-from flask_login import current_user  # <-- ייבוא Flask-Login
+from flask import Blueprint, request, jsonify, redirect, url_for
+from flask_login import current_user, logout_user  # <-- ייבוא Flask-Login
 from sqlalchemy import func
 
 from app.extensions import db
@@ -229,7 +229,12 @@ def delete_user_data():
     db.session.delete(user)
     db.session.commit()
 
-    return jsonify({"message": "User data deleted successfully"}), 200
+    # אם המשתמש שמבצע את הבקשה הוא המשתמש שנמחק, ננתק ונפנה למסך התחברות
+    if current_user.is_authenticated and current_user.id == int(user_id):
+        logout_user()
+        return redirect(url_for('auth.login'))
+    else:
+        return jsonify({"message": "User data deleted successfully"}), 200
 
 
 @usage_data_bp.route("/analytics/activities", methods=["GET"])

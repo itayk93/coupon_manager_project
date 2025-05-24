@@ -190,7 +190,8 @@ def login():
 
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        email = form.email.data.strip().lower()
+        user = User.query.filter_by(email=email).first()
 
         if not user:
             flash("משתמש לא קיים.", "danger")
@@ -264,7 +265,8 @@ def register():
 
 
         token = generate_confirmation_token(new_user.email)
-        confirm_url = url_for('auth.confirm_email', token=token, _external=True)
+        # יצירת קישור דינמי עם הדומיין הנוכחי (לוקאלי או פרודקשן)
+        confirm_url = request.host_url.rstrip('/') + url_for('auth.confirm_email', token=token)
         html = render_template('emails/account_confirmation.html', user=new_user, confirmation_link=confirm_url)
 
         sender_email = 'noreply@couponmasteril.com'
