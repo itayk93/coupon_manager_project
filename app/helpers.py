@@ -2040,7 +2040,7 @@ def get_geo_location(ip_address):
 def send_password_reset_email(user):
     try:
         token = generate_confirmation_token(user.email)
-        reset_url = url_for('auth.reset_password', token=token, _external=True)
+        reset_url = request.host_url.rstrip('/') + url_for('auth.reset_password', token=token)
         html = render_template('emails/password_reset_email.html', user=user, reset_link=reset_url)
 
         sender_email = 'noreply@couponmasteril.com'

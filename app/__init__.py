@@ -3,7 +3,7 @@
 import os
 import logging
 from datetime import datetime, timedelta
-from flask import Flask, render_template, url_for
+from flask import Flask, render_template, url_for, request
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.routes.coupons_routes import to_israel_time_filter  # Import the function
@@ -151,7 +151,7 @@ def send_expiration_warnings():
             if user:
                 try:
                     expiration_date = coupon.expiration
-                    coupon_detail_link = url_for('coupon_detail', id=coupon.id, _external=True)
+                    coupon_detail_link = request.host_url.rstrip('/') + url_for('coupon_detail', id=coupon.id)
                     html_content = render_template(
                         'emails/coupon_expiration_warning.html',
                         user=user,

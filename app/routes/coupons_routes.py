@@ -3002,7 +3002,7 @@ def coupon_detail(id):
     delete_form = DeleteCouponForm()
     update_form = UpdateCouponUsageForm()
 
-    # A flag that controls whether the “Multipass” button is shown.
+    # A flag that controls whether the "Multipass" button is shown.
     show_multipass_button = coupon.auto_download_details is not None
 
     # ------------------------------------------------------------------
@@ -3530,7 +3530,7 @@ def send_coupon_expiration_warning(coupon_id):
 
     user = coupon.user
     expiration_date = coupon.expiration
-    coupon_detail_link = url_for('coupons.coupon_detail', id=coupon.id, _external=True)
+    coupon_detail_link = request.host_url.rstrip('/') + url_for('coupons.coupon_detail', id=coupon.id)
 
     html_content = render_template('emails/coupon_expiration_warning.html',
                                    user=user,

@@ -17,7 +17,8 @@ from app.models import User
 # במקום Flask-Mail, נשתמש בפונקציה שלך מ-helpers.py
 from app.helpers import (
     send_email,
-    send_password_reset_email
+    send_password_reset_email,
+    generate_confirmation_token
 )
 
 admin_users_bp = Blueprint('admin_users_bp', __name__, url_prefix='/users')
@@ -183,10 +184,9 @@ def send_delete_confirmation_email(user, token):
     """
     שולח מייל עם לינק למחיקת המשתמש ומספק לוגים למעקב.
     """
-    deletion_link = url_for(
+    deletion_link = request.host_url.rstrip('/') + url_for(
         'admin_bp.admin_users_bp.confirm_delete_user',
-        token=token,
-        _external=True
+        token=token
     )
     subject = "אישור מחיקת חשבון ב-Coupon Master"
 
@@ -240,12 +240,9 @@ def resend_confirmation_email():
         flash("המשתמש כבר אישר את חשבונו.", "info")
         return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
 
-    # ייבוא הפונקציה ליצירת הטוקן (ודא שהפונקציה קיימת ב-app/helpers.py)
-    from app.helpers import generate_confirmation_token
-
     # יצירת טוקן אישור
     token = generate_confirmation_token(user.email)
-    confirm_url = url_for('auth.confirm_email', token=token, _external=True)
+    confirm_url = request.host_url.rstrip('/') + url_for('auth.confirm_email', token=token)
     
     # רינדור התבנית של מייל אישור (בדומה לשליחת המייל בהרשמה)
     html = render_template('emails/account_confirmation.html',

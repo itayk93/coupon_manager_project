@@ -532,7 +532,7 @@ def offer_coupon_process(request_id):
 
     # נשלח מייל למבקש
     buyer = User.query.get(coupon_request.user_id)
-    buy_link = url_for('transactions.buy_coupon_direct', coupon_id=chosen_coupon.id, _external=True)
+    buy_link = request.host_url.rstrip('/') + url_for('transactions.buy_coupon_direct', coupon_id=chosen_coupon.id)
 
     # בונים HTML
     html_content = render_template(
