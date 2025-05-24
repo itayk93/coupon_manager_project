@@ -878,3 +878,19 @@ class TransferCouponsForm(FlaskForm):
         validators=[DataRequired(message="חובה לבחור תגית יעד.")]
     )
     submit = SubmitField('העבר קופונים')
+
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField('סיסמא נוכחית', validators=[
+        DataRequired(message='נא להזין את הסיסמא הנוכחית')
+    ])
+    new_password = PasswordField('סיסמא חדשה', validators=[
+        DataRequired(message='נא להזין סיסמא חדשה'),
+        Length(min=8, message='הסיסמא חייבת להכיל לפחות 8 תווים'),
+        Regexp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$',
+               message='הסיסמא חייבת להכיל לפחות אות אחת ומספר אחד')
+    ])
+    confirm_password = PasswordField('אימות סיסמא חדשה', validators=[
+        DataRequired(message='נא לאמת את הסיסמא החדשה'),
+        EqualTo('new_password', message='הסיסמאות אינן תואמות')
+    ])

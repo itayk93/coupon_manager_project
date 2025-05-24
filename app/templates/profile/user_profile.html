@@ -52,6 +52,15 @@
         <p>{{ user.profile_description or 'אין תיאור פרופיל' }}</p>
     </div>
 
+    <!-- Add Change Password Button -->
+    {% if is_owner %}
+    <div class="change-password-section">
+        <a href="{{ url_for('profile.change_password') }}" class="change-password-button">
+            <i class="fa fa-key"></i> שינוי סיסמא
+        </a>
+    </div>
+    {% endif %}
+
     <!-- # User ID badge with enhanced styling for admin/owners -->
     {% if is_owner or is_admin %}
     <div class="user-id-box">
@@ -917,6 +926,36 @@
     .action-section {
         margin-top: 50px;
         text-align: center;
+    }
+
+    /* Change Password Button Styling */
+    .change-password-section {
+        margin: 20px 0;
+        text-align: center;
+    }
+
+    .change-password-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+        color: var(--white);
+        padding: 12px 25px;
+        border-radius: 50px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: var(--transition);
+        box-shadow: var(--box-shadow);
+    }
+
+    .change-password-button:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--box-shadow-hover);
+        color: var(--white);
+    }
+
+    .change-password-button .fa {
+        font-size: 18px;
     }
 
     .delete-form {

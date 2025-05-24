@@ -13,9 +13,9 @@ import pytz  # ספרייה לניהול אזורי זמן
 
 from app.extensions import db
 from app.models import Coupon, Company, Tag, CouponUsage, Transaction, Notification, CouponRequest, GptUsage, CouponTransaction
-from app.forms import ProfileForm, SellCouponForm, UploadCouponsForm, AddCouponsBulkForm, CouponForm, DeleteCouponsForm, ConfirmDeleteForm, MarkCouponAsUsedForm, EditCouponForm, ApproveTransactionForm,SMSInputForm
+from app.forms import ProfileForm, SellCouponForm, UploadCouponsForm, AddCouponsBulkForm, CouponForm, DeleteCouponsForm, ConfirmDeleteForm, MarkCouponAsUsedForm, EditCouponForm, ApproveTransactionForm,SMSInputForm, ChangePasswordForm
 from app.helpers import update_coupon_status, get_coupon_data, process_coupons_excel
-from app.helpers import send_coupon_purchase_request_email
+from app.helpers import send_coupon_purchase_request_email, send_password_change_email
 from sqlalchemy.exc import IntegrityError
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
@@ -834,3 +834,60 @@ def landing_page():
     
     # העברת המשתנה total_savings לטמפלט
     return render_template('landing_page.html', total_savings=total_savings)
+
+@profile_bp.route('/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if not current_user.check_password(form.current_password.data):
+            flash('סיסמא נוכחית שגויה', 'danger')
+            return render_template('profile/change_password.html', form=form)
+        
+        if form.current_password.data == form.new_password.data:
+            flash('הסיסמא החדשה חייבת להיות שונה מהסיסמא הנוכחית', 'danger')
+            return render_template('profile/change_password.html', form=form)
+        
+        # Store the new password in session for confirmation
+        session['new_password'] = form.new_password.data
+        
+        # Generate token for confirmation
+        token = current_user.generate_password_change_token()
+        
+        # Send confirmation email
+        if send_password_change_email(current_user, token):
+            flash('נשלח מייל אישור לשינוי הסיסמא. אנא בדוק את תיבת הדואר שלך.', 'info')
+        else:
+            flash('אירעה שגיאה בשליחת מייל האישור. אנא נסה שוב מאוחר יותר.', 'danger')
+            return render_template('profile/change_password.html', form=form)
+        
+        return redirect(url_for('profile.user_profile', user_id=current_user.id))
+    
+    return render_template('profile/change_password.html', form=form)
+
+@profile_bp.route('/confirm_password_change/<token>')
+@login_required
+def confirm_password_change(token):
+    try:
+        if current_user.verify_password_change_token(token):
+            # Get the new password from the session
+            new_password = session.get('new_password')
+            if not new_password:
+                flash('לא נמצאה סיסמא חדשה לאישור. אנא נסה שוב.', 'danger')
+                return redirect(url_for('profile.change_password'))
+            
+            # Update password
+            current_user.set_password(new_password)
+            db.session.commit()
+            
+            # Clear the session
+            session.pop('new_password', None)
+            
+            flash('הסיסמא עודכנה בהצלחה!', 'success')
+        else:
+            flash('הקישור לאישור שינוי הסיסמא אינו תקין או פג תוקף.', 'danger')
+    except Exception as e:
+        flash('אירעה שגיאה בעת אישור שינוי הסיסמא. אנא נסה שוב.', 'danger')
+        current_app.logger.error(f"Error confirming password change: {str(e)}")
+    
+    return redirect(url_for('profile.user_profile', user_id=current_user.id))

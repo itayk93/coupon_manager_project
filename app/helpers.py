@@ -43,6 +43,7 @@ import os
 from datetime import datetime
 from app.models import Company  # נניח שזה מביא את החברות מה-DB
 import logging
+from flask_mail import Message
 
 load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
@@ -2340,4 +2341,30 @@ def has_feature_access(feature_name, user):
         return bool(user.is_admin)
     else:
         # ערך אחר (כולל NULL) => סגור לכולם
+        return False
+
+def send_password_change_email(user, token):
+    """
+    שליחת מייל אישור שינוי סיסמא.
+    """
+    try:
+        confirmation_link = url_for('profile.confirm_password_change',
+                                  token=token,
+                                  _external=True)
+        
+        html_content = render_template('emails/password_change_confirmation.html',
+                                     user=user,
+                                     confirmation_link=confirmation_link)
+        
+        send_email(
+            sender_email='noreply@couponmasteril.com',
+            sender_name='Coupon Master',
+            recipient_email=user.email,
+            recipient_name=f"{user.first_name} {user.last_name}",
+            subject='אישור שינוי סיסמא - Coupon Master',
+            html_content=html_content
+        )
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Error sending password change email: {str(e)}")
         return False

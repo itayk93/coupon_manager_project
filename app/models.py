@@ -9,6 +9,9 @@ from flask_login import UserMixin
 from sqlalchemy.types import TypeDecorator, String
 from sqlalchemy.sql import func
 from cryptography.fernet import Fernet
+from itsdangerous import Serializer, URLSafeTimedSerializer
+from flask import current_app
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.extensions import db  # נניח שיש לך את האובייקט db כאן
 from sqlalchemy import Column, Integer, String  # הוסף את הייבוא החסר
@@ -140,6 +143,42 @@ class User(UserMixin, db.Model):
     consents = db.relationship("UserConsent", back_populates="user", lazy=True)
     activities = db.relationship("UserActivity", back_populates="user", lazy=True)
     opt_out = db.relationship("OptOut", back_populates="user", uselist=False)
+
+    def set_password(self, password):
+        """Hash and set the user's password."""
+        self.password = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Check if the provided password matches the stored hash."""
+        return check_password_hash(self.password, password)
+
+    def generate_password_change_token(self, expiration=3600):
+        """Generate a token for password change confirmation."""
+        from itsdangerous import URLSafeTimedSerializer
+        from flask import current_app
+        
+        s = URLSafeTimedSerializer(
+            current_app.config['SECRET_KEY'],
+            salt='password-change'  # Using a constant string for salt
+        )
+        return s.dumps({'user_id': self.id})  # Removed .decode('utf-8') as it's already a string
+
+    def verify_password_change_token(self, token, expiration=3600):
+        """Verify the password change token."""
+        from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+        from flask import current_app
+        
+        s = URLSafeTimedSerializer(
+            current_app.config['SECRET_KEY'],
+            salt='password-change'  # Same salt as in generate_password_change_token
+        )
+        try:
+            data = s.loads(token, max_age=expiration)
+            if data.get('user_id') != self.id:
+                return False
+            return True
+        except (SignatureExpired, BadSignature):
+            return False
 
 
 class Tag(db.Model):
