@@ -141,23 +141,23 @@ def confirm_delete_user(token):
         user_id = data.get('user_id')
     except SignatureExpired:
         flash("זמן האישור פג תוקף.", "error")
-        return redirect_after_deletion()
+        return redirect(url_for('auth.login'))
     except BadSignature:
         flash("קישור לא חוקי או טוקן פגום.", "error")
-        return redirect_after_deletion()
+        return redirect(url_for('auth.login'))
 
     user = User.query.get(user_id)
     if not user:
         flash("משתמש לא נמצא.", "error")
-        return redirect_after_deletion()
+        return redirect(url_for('auth.login'))
 
     if user.is_admin:
         flash("לא ניתן למחוק חשבון אדמין.", "error")
-        return redirect_after_deletion()
+        return redirect(url_for('auth.login'))
 
     if user.is_deleted:
         flash("המשתמש כבר נמחק בעבר.", "info")
-        return redirect_after_deletion()
+        return redirect(url_for('auth.login'))
 
     # שינוי הפרטים -> Deleted user
     now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -175,9 +175,9 @@ def confirm_delete_user(token):
     # אם המשתמש שמחק הוא אותו user, נבצע logout
     if current_user.is_authenticated and current_user.id == user.id:
         logout_user()
-        return redirect(url_for('auth.login'))
-    else:
-        return redirect_after_deletion()
+    
+    # תמיד נפנה למסך ההתחברות
+    return redirect(url_for('auth.login'))
 
 
 def send_delete_confirmation_email(user, token):
