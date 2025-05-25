@@ -5,20 +5,19 @@ from sqlalchemy.sql import text
 
 from app.extensions import db
 from app.models import Company, Coupon
-from app.helpers import send_email  # ודא שיש לך פונקציית send_email
-                                    # ב-app.helpers או בקובץ אחר מתאים
+from app.helpers import send_email  # Make sure you have a send_email function
+                                    # in app.helpers or another appropriate file
 from sqlalchemy import text
 from app.extensions import db
 
 
 def update_company_counts_and_send_email_old(app):
     """
-    מעדכנת את ספירת הקופונים לכל חברה ולאחר מכן שולחת
-    את תוצאות הטבלה במייל אל itayk93@gmail.com.
+    Updates the coupon count for each company and then sends
     """
     with app.app_context():
         try:
-            # 1. עדכון העמודה company_count
+            # 1. Update the company_count column
             update_query = text("""
                 UPDATE companies c
                 SET company_count = COALESCE(subquery.company_count, 0)
@@ -33,10 +32,10 @@ def update_company_counts_and_send_email_old(app):
             db.session.execute(update_query)
             db.session.commit()
 
-            # 2. שליפת הנתונים המעודכנים
+            # 2. Fetch updated data
             updated_companies = Company.query.order_by(Company.company_count.desc()).all()
 
-            # 3. בניית תוכן (HTML) להצגה במייל
+            # 3. Build HTML content for email
             html_rows = []
             for comp in updated_companies:
                 html_rows.append(
@@ -60,7 +59,7 @@ def update_company_counts_and_send_email_old(app):
             </html>
             """
 
-            # 4. שליחת מייל
+            # 4. Send email
             recipient_email = "itayk93@gmail.com"
             subject = "עדכון יומי: company_count"
             send_email(
@@ -80,17 +79,17 @@ def update_company_counts_and_send_email_old(app):
 
 def update_company_counts_and_send_email(app):
     """
-    מעדכנת את ספירת הקופונים לכל חברה ושולחת במייל דוח שמציג
-    עבור כל חברה:
-      - שם החברה
-      - מספר הקופונים (company_count)
-      - מחיר ממוצע לקופון (ממוצע עמודת cost)
-      - אחוז הנחה ממוצע (ממוצע עמודת discount_percentage, כאשר ערך NULL מתורגם ל-0)
-      - התאריך של הקופון האחרון שהוזן (הערך המקסימלי של date_added)
+    Updates the coupon count for each company and sends an email report showing
+    for each company:
+      - Company name
+      - Number of coupons (company_count)
+      - Average coupon price (average of cost column)
+      - Average discount percentage (average of discount_percentage column, where NULL is translated to 0)
+      - Date of the last entered coupon (maximum value of date_added)
     """
     with app.app_context():
         try:
-            # 1. עדכון העמודה company_count בטבלת companies
+            # 1. Update the company_count column in the companies table
             update_query = text("""
                 UPDATE companies c
                 SET company_count = COALESCE(subquery.company_count, 0)
@@ -105,7 +104,7 @@ def update_company_counts_and_send_email(app):
             db.session.execute(update_query)
             db.session.commit()
 
-            # 2. שליפת סטטיסטיקות מהטבלת coupon עם המרות מתאימות
+            # 2. Fetch statistics from the coupon table with appropriate conversions
             stats_query = text("""
                 SELECT
                     company,
@@ -118,10 +117,10 @@ def update_company_counts_and_send_email(app):
                 GROUP BY company
                 ORDER BY coupon_count DESC;  -- מיון לפי סה"כ קופונים
             """)
-            # שימוש ב-.mappings() כדי לקבל תוצאה כמילונים (dict)
+            # Using .mappings() to get results as dictionaries (dict)
             coupon_stats = db.session.execute(stats_query).mappings().all()
 
-            # 3. בניית תוכן HTML משופר עם CSS פנימי
+            # 3. Build enhanced HTML content with internal CSS
             html_content = f"""
             <html>
               <head>
@@ -132,7 +131,7 @@ def update_company_counts_and_send_email(app):
                     background-color: #f4f4f4;
                     margin: 0;
                     padding: 20px;
-                    direction: rtl;  /* הוספת RTL */
+                    direction: rtl;  /* Adding RTL */
                   }}
                   .container {{
                     background-color: #fff;
@@ -215,7 +214,7 @@ def update_company_counts_and_send_email(app):
             </html>
             """
 
-            # 4. שליחת המייל
+            # 4. Send email
             recipient_email = "itayk93@gmail.com"
             subject = "דוח יומי: נתוני קופונים לחברות"
             send_email(
@@ -244,7 +243,7 @@ AND status = 'פעיל'   -- רק קופונים פעילים
 AND is_for_sale = FALSE;  -- לא למכירה
 """)
     result = db.session.execute(query)
-    return result.fetchall()  # או עיבוד אחר
+    return result.fetchall()  # Or other processing
 
 
 import datetime
@@ -326,7 +325,6 @@ def save_process_status(process, was_sent):
     במקום להשתמש ב-ON CONFLICT, נבדוק קודם אם קיימת רשומה עבור (date, process)
     """
     today = datetime.date.today()
-    # בדיקה האם קיימת רשומה עבור תאריך ותהליך נתון
     existing = db.session.execute(
         text("SELECT * FROM daily_email_status WHERE date = :today AND process = :process"),
         {"today": today, "process": process}

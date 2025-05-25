@@ -30,10 +30,10 @@ from app.models import Company
 import numpy as np
 from sqlalchemy.sql import text
 import pytz
-from flask import flash  # ייבוא הפונקציה להצגת הודעות למשתמש
+from flask import flash  # Import the function for displaying user messages
 # app/helpers.py
 from app.models import FeatureAccess
-from flask import render_template  # ייבוא render_template
+from flask import render_template  # Import render_template
 from sqlalchemy import func
 from app.models import Tag, Coupon, coupon_tags
 import openai
@@ -41,7 +41,7 @@ import json
 import pandas as pd
 import os
 from datetime import datetime
-from app.models import Company  # נניח שזה מביא את החברות מה-DB
+from app.models import Company  
 import logging
 from flask_mail import Message
 
@@ -56,12 +56,12 @@ API_KEY = os.getenv("IPINFO_API_KEY")
 logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------
-#  פונקציית עזר ליצירת התראה
+#  Helper function for creating notifications
 # ----------------------------------------------------------------
 def create_notification(user_id, message, link):
     """
-    יוצרת התראה חדשה ומוסיפה אותה ל-DB (לא שוכחת לבצע db.session.commit()
-    במקום שקורא לפונקציה זו, או בהמשך הזרימה).
+    Creates a new notification and adds it to the DB (don't forget to perform db.session.commit()
+    where this function is called, or later in the flow).
     """
     tz_il = ZoneInfo('Asia/Jerusalem')
     now_il = datetime.now(tz_il)
@@ -70,24 +70,24 @@ def create_notification(user_id, message, link):
         user_id=user_id,
         message=message,
         link=link,
-        timestamp=datetime.now(tz_il)  # שמור לפי שעון ישראל
+        timestamp=datetime.now(tz_il)  # Save according to Israel time
     )
     db.session.add(notification)
 
 # ----------------------------------------------------------------
-#  פונקציית עזר לעדכון סטטוס קופון
+#  Helper function for updating coupon status
 # ----------------------------------------------------------------
 def update_coupon_status(coupon):
     """
-    מעדכנת את הסטטוס של הקופון (פעיל/נוצל/פג תוקף) לפי used_value ותאריך התפוגה.
-    כמו כן, שולחת התראה למשתמש אם זה עתה הפך לנוצל או לפג תוקף.
+    Updates the coupon status (active/used/expired) based on used_value and expiration date.
+    Also sends a notification to the user if it has just become used or expired.
     """
     try:
         current_date = datetime.now(timezone.utc).date()
-        old_status = coupon.status or 'פעיל'  # במקרה שאין עדיין סטטוס, נניח 'פעיל'
+        old_status = coupon.status or 'פעיל'  # If there's no status yet, assume 'active'
         new_status = 'פעיל'
 
-        # בדיקת פג תוקף
+        # Check expiration
         if coupon.expiration:
             if isinstance(coupon.expiration, date):
                 expiration_date = coupon.expiration
@@ -101,56 +101,39 @@ def update_coupon_status(coupon):
             if expiration_date and current_date > expiration_date:
                 new_status = 'פג תוקף'
 
-        # בדיקת נוצל לגמרי
+        # Check if fully used
         if coupon.used_value >= coupon.value:
             new_status = 'נוצל'
 
-        # עדכון בפועל אם אכן יש שינוי
+        # Update if there's actually a change
         if old_status != new_status:
             coupon.status = new_status
             logger.info(f"Coupon {coupon.id} status updated from '{old_status}' to '{new_status}'")
 
-            """""""""
-            # שליחת התראה רק אם שונה ל'נוצל' או 'פג תוקף'
-            if new_status == 'נוצל' and not coupon.notification_sent_nutzel:
-                create_notification(
-                    user_id=coupon.user_id,
-                    message=f"הקופון {coupon.code} נוצל במלואו.",
-                    link=url_for('coupons.coupon_detail', id=coupon.id)
-                )
-                coupon.notification_sent_nutzel = True
 
-            elif new_status == 'פג תוקף' and not coupon.notification_sent_pagh_tokev:
-                create_notification(
-                    user_id=coupon.user_id,
-                    message=f"הקופון {coupon.code} פג תוקף.",
-                    link=url_for('coupons.coupon_detail', id=coupon.id)
-                )
-                coupon.notification_sent_pagh_tokev = True
-            """""""""
 
     except Exception as e:
         logger.error(f"Error in update_coupon_status for coupon {coupon.id}: {e}")
 
 # ----------------------------------------------------------------
-#  פונקציית עזר לעדכון כמות שימוש בקופון
+#  Helper function for updating coupon usage amount
 # ----------------------------------------------------------------
 def update_coupon_usage(coupon, usage_amount, details='עדכון שימוש'):
     """
-    מעדכנת שימוש בקופון (מוסיפה ל-used_value), קוראת לעדכון סטטוס,
-    יוצרת רשומת שימוש, ושולחת התראה על העדכון.
+    Updates coupon usage (adds to used_value), calls status update,
+    creates a usage record, and sends a notification about the update.
 
-    :param coupon: אובייקט הקופון לעדכן
-    :param usage_amount: כמות השימוש להוסיף ל-used_value
-    :param details: תיאור הפעולה לרשומת השימוש
+    :param coupon: The coupon object to update
+    :param usage_amount: The amount of usage to add to used_value
+    :param details: Description of the action for the usage record
     """
     from app.models import CouponUsage
     try:
-        # עדכון הערך שנוצל
+        # Update the used value
         coupon.used_value += usage_amount
         update_coupon_status(coupon)
 
-        # יצירת רשומת שימוש
+        # Create usage record
         usage = CouponUsage(
             coupon_id=coupon.id,
             used_amount=usage_amount,
@@ -160,7 +143,7 @@ def update_coupon_usage(coupon, usage_amount, details='עדכון שימוש'):
         )
         db.session.add(usage)
 
-        # שליחת התראה למשתמש על העדכון
+        # Send notification to user about the update
         """""""""
         create_notification(
             user_id=coupon.user_id,
@@ -176,51 +159,16 @@ def update_coupon_usage(coupon, usage_amount, details='עדכון שימוש'):
         logger.error(f"Error updating coupon usage for coupon {coupon.id}: {e}")
         raise
 
-'''''''''''''''
-# ----------------------------------------------------------------
-#  פונקציית עזר לעדכון מרוכז של כל הקופונים הפעילים של משתמש
-# ----------------------------------------------------------------
-def update_all_active_coupons(user_id):
-    """
-    מעדכנת באופן מרוכז את כל הקופונים הפעילים (status='פעיל') של המשתמש user_id,
-    על-ידי קריאה ל-get_coupon_data והוספת סכום השימוש (usage_amount) מהטבלה שהתקבלה.
-
-    :param user_id: מזהה המשתמש
-    :return: (updated_coupons, failed_coupons) - רשימות של קודים שהצליחו/נכשלו
-    """
-    active_coupons = Coupon.query.filter_by(user_id=user_id, status='פעיל').all()
-    updated_coupons = []
-    failed_coupons = []
-
-    for coupon in active_coupons:
-        try:
-            df = get_coupon_data(coupon.code)
-            if df is not None and not df.empty:
-                total_usage = df['usage_amount'].sum()
-                # ההפרש בין total_usage הנוכחי ל-used_value הקיים
-                additional_usage = total_usage - coupon.used_value
-                if additional_usage > 0:
-                    update_coupon_usage(coupon, additional_usage, details='עדכון מרוכז')
-                updated_coupons.append(coupon.code)
-            else:
-                failed_coupons.append(coupon.code)
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error updating coupon {coupon.code}: {e}")
-            failed_coupons.append(coupon.code)
-
-    return updated_coupons, failed_coupons
-'''''''''''''''
 
 
 def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_html"):
     """
-    מפעילה Selenium כדי להיכנס לאתר Multipass או Max (לפי coupon.auto_download_details),
-    מורידה את המידע הרלוונטי וממירה אותו ל-DataFrame.
-    לאחר מכן, בודקת מה כבר קיים ב-DB בטבלת coupon_transaction ומשווה,
-    במטרה להוסיף עסקאות חדשות בלבד ולהתאים את הסטטוס של הקופון בהתאם.
+    Activates Selenium to enter the Multipass or Max website (according to coupon.auto_download_details),
+    downloads the relevant information and converts it to a DataFrame.
+    Then, checks what already exists in the DB in the coupon_transaction table and compares,
+    in order to add only new transactions and adjust the coupon status accordingly.
 
-    מחזירה DataFrame עם עסקאות חדשות בלבד, או None אם אין חדשות או אם הייתה שגיאה.
+    Returns a DataFrame with only new transactions, or None if there are no new ones or if there was an error.
     """
     import os
     import time
@@ -241,32 +189,29 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     os.makedirs(save_directory, exist_ok=True)
 
     coupon_number = coupon.code
-    coupon_kind = coupon.auto_download_details  # "Multipass" / "Max" (או אחר)
+    coupon_kind = coupon.auto_download_details  # "Multipass" / "Max" (or other)
     card_exp = coupon.card_exp
     cvv = coupon.cvv
 
-    # הגדרת אופציות בסיסיות ל-Selenium
+    # Basic Selenium options setup
     chrome_options = Options()
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_argument("--disable-images")  # מניעת טעינת תמונות
-    chrome_options.add_argument("--disable-extensions")  # מניעת הרחבות מיותרות
+    chrome_options.add_argument("--disable-images")  # Prevent image loading
+    chrome_options.add_argument("--disable-extensions")  # Disable unnecessary extensions
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
 
-    # אם מדובר ב-Max, נוסיף מצב Headless
+    # For the "Max" coupon type, block images
     if coupon_kind == "Max":
-        #chrome_options.add_argument("--headless=new")  # מצב Headless חדש יותר, תומך ביכולות מתקדמות
-        chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # חוסם תמונות מהדפדפן
+        chrome_options.add_argument("--blink-settings=imagesEnabled=false")
 
-    df = None  # כאן נאחסן את ה-DataFrame המתקבל
+    df = None  # DataFrame to hold the scraped data
 
-    # ----------------------------------------------------------------------
-    # טיפול במצב של Multipass
-    # ----------------------------------------------------------------------
+    # -------------------- Handling Multipass Scenario --------------------
     if coupon_kind == "Multipass":
         driver = None
         try:
@@ -283,7 +228,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             #print(cleaned_coupon_number)
             card_number_field.send_keys(cleaned_coupon_number)
 
-            # טיפול ב-reCAPTCHA
+            # Handle reCAPTCHA
             recaptcha_iframe = wait.until(
                 EC.presence_of_element_located((By.XPATH, "//iframe[contains(@src, 'recaptcha')]"))
             )
@@ -328,7 +273,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             if driver:
                 driver.quit()
 
-        # ניסיון לקרוא את הטבלה מתוך ה-HTML שנשמר
+        # Try to read the table from the saved HTML
         try:
             dfs = pd.read_html(file_path)
             os.remove(file_path)
@@ -339,7 +284,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
 
             df = dfs[0]
 
-            # שינוי שמות עמודות
+            # Change column names
             df = df.rename(columns={
                 'שם בית עסק': 'location',
                 'סכום טעינת תקציב': 'recharge_amount',
@@ -348,20 +293,20 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
                 'מספר אסמכתא': 'reference_number',
             })
 
-            # טיפול בעמודות חסרות
+            # Handle missing columns
             if 'recharge_amount' not in df.columns:
                 df['recharge_amount'] = 0.0
             if 'usage_amount' not in df.columns:
                 df['usage_amount'] = 0.0
 
-            # המרת תאריך
+            # Convert transaction date
             df['transaction_date'] = pd.to_datetime(
                 df['transaction_date'],
                 format='%H:%M %d/%m/%Y',
                 errors='coerce'
             )
 
-            # המרת עמודות מספריות
+            # Convert numeric columns
             numeric_columns = ['recharge_amount', 'usage_amount']
             for col in numeric_columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
@@ -371,18 +316,16 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             traceback.print_exc()
             return None
 
-    # ----------------------------------------------------------------------
-    # טיפול במצב של Max
-    # ----------------------------------------------------------------------
+    # -------------------- Handling Max Scenario --------------------
     elif coupon_kind == "Max":
         try:
-            # משתמשים ב-with כך ש-Selenium יסגר אוטומטית בסיום
+            # Use with so that Selenium closes automatically at the end
             with webdriver.Chrome(options=chrome_options) as driver:
                 wait = WebDriverWait(driver, 30)
                 driver.get("https://www.max.co.il/gift-card-transactions/main")
 
                 def safe_find(by, value, timeout=10):
-                    """ מנסה למצוא אלמנט עם זמן המתנה """
+                    """ Attempts to find an element with a timeout """
                     return WebDriverWait(driver, timeout).until(EC.visibility_of_element_located((by, value)))
 
                 card_number_field = safe_find(By.ID, "giftCardNumber")
@@ -407,9 +350,9 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
                 headers = [header.text.strip() for header in table.find_elements(By.TAG_NAME, "th")]
                 rows = []
 
-                # שורות הטבלה
+                # Table rows
                 all_rows = table.find_elements(By.TAG_NAME, "tr")
-                # שורת הכותרות היא בדרך-כלל הראשונה, לכן נתחיל מ-1
+                # The header is usually the first row, so we start from 1
                 for row in all_rows[1:]:
                     cells = [cell.text.strip() for cell in row.find_elements(By.TAG_NAME, "td")]
                     if cells:
@@ -417,7 +360,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
 
                 df = pd.DataFrame(rows, columns=headers)
 
-                # ניקוי וטיוב נתונים
+                # Clean up and format data
                 if "שולם בתאריך" in df.columns:
                     df["שולם בתאריך"] = pd.to_datetime(df["שולם בתאריך"], format="%d.%m.%Y", errors='coerce')
                 else:
@@ -445,7 +388,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
                 else:
                     df["יתרה"] = 0.0
 
-                # שינוי שמות העמודות
+                # Change column names
                 col_map = {
                     "שולם בתאריך": "transaction_date",
                     "שם בית העסק": "location",
@@ -458,7 +401,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
                     if k in df.columns:
                         df.rename(columns={k: v}, inplace=True)
 
-                # יצירת עמודות usage_amount ו-recharge_amount על-פי הפעולה
+                # Create usage_amount and recharge_amount columns based on action
                 df["usage_amount"] = df.apply(
                     lambda x: x["amount"] if ("action" in df.columns and x["action"] == "עסקה") else 0.0,
                     axis=1
@@ -468,12 +411,12 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
                     axis=1
                 )
 
-                # הוספת עמודת reference_number
-                # *כדי שניתן יהיה לזהות רשומות חדשות מול DB*
-                # למשל - ניצור מזהות ייחודית ע"פ אינדקס השורה
+                # Add reference number column
+                # *To allow identifying new transactions from DB*
+                # For example, create a unique identifier based on row index
                 df["reference_number"] = df.index.map(lambda i: f"max_ref_{int(time.time())}_{i}")
 
-                # הסרה של עמודות שלא צריך
+                # Drop unnecessary columns
                 for col_to_drop in ["action", "notes"]:
                     if col_to_drop in df.columns:
                         df.drop(columns=[col_to_drop], inplace=True)
@@ -484,20 +427,20 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             return None
 
     else:
-        # אם יש מצב אחר שאיננו Multipass או Max, אפשר להחזיר None או לטפל אחרת
+        # If there's any other case other than Multipass or Max, we can return None or handle it differently
         print(f"Unsupported coupon kind: {coupon_kind}")
         return None
 
-    # בשלב זה, אמור להיות לנו df מוכן
+    # At this point, we should have a ready df
     if df is None or df.empty:
         print("No data frame (df) was created or df is empty.")
         return None
 
     # ----------------------------------------------------------------------
-    # שלב משותף – בדיקת הנתונים מול ה-DB ועדכון
+    # Common Stage: Database Comparison and Update
     # ----------------------------------------------------------------------
     try:
-        # שליפת הקיימים מה-DB (reference_number בלבד)
+        # Retrieve existing data from the database (only reference_number)
         existing_data = pd.read_sql_query(
             """
             SELECT reference_number
@@ -508,8 +451,8 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             params={"coupon_id": coupon.id}
         )
 
-        # נבדוק אם מספר השורות ב-DB שונה ממספר השורות החדשות
-        # אם כן (במקרה שיש יותר מ-0 ב-DB) - נמחק את כולן ונכניס מחדש
+        # Check if the number of rows in the database is different from the new ones
+        # If yes (in case there are more than 0 in the DB) - delete all and insert new
         if len(existing_data) != len(df):
             if len(existing_data) > 0:
                 db.session.execute(
@@ -518,7 +461,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
                 )
                 db.session.commit()
 
-                # עדכון אחרי מחיקה
+                # Update after deletion
                 existing_data = pd.read_sql_query(
                     """
                     SELECT reference_number
@@ -531,17 +474,17 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
 
         existing_refs = set(existing_data['reference_number'].astype(str))
 
-        # המרת reference_number ל-string כדי להשוות נכון
+        # Convert reference_number to string for comparison
         df['reference_number'] = df['reference_number'].astype(str)
 
-        # סינון רשומות שכבר קיימות (אם במקרה נשארו כאלה)
+        # Filter out existing transactions (if any were left behind)
         df_new = df[~df['reference_number'].isin(existing_refs)]
 
         if df_new.empty:
             print("No new transactions to add (all references already exist in DB).")
             return None
 
-        # הוספת רשומות חדשות
+        # Add new transactions
         for idx, row in df_new.iterrows():
             transaction = CouponTransaction(
                 coupon_id=coupon.id,
@@ -553,18 +496,18 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             )
             db.session.add(transaction)
 
-        # עדכון סה"כ שימוש בפועל
+        # Update total usage in the database
         total_used = db.session.query(func.sum(CouponTransaction.usage_amount)) \
                          .filter_by(coupon_id=coupon.id).scalar() or 0.0
         coupon.used_value = float(total_used)
 
-        # קריאה לפונקציית עדכון הסטטוס (לדוגמה: האם הקופון אזל, עדיין פעיל וכו')
+        # Check if the coupon is still active
         update_coupon_status(coupon)
 
         db.session.commit()
 
         print(f"Transactions for coupon {coupon.code} have been updated in the database.")
-        return df_new  # מחזירים את העסקאות החדשות
+        return df_new  # Return the new transactions
     except Exception as e:
         print(f"An error occurred during data parsing or database operations: {e}")
         traceback.print_exc()
@@ -1058,7 +1001,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
 
 
 def convert_coupon_data(file_path):
-    # קריאת ה-HTML ל-DataFrame
+    # Read the HTML to DataFrame
     dfs = pd.read_html(file_path)
     df = dfs[0]
     print("Columns in DataFrame:", df.columns)
@@ -1071,16 +1014,16 @@ def convert_coupon_data(file_path):
     card_number_match = re.search(card_number_pattern, html_content)
     card_number_extracted = int(card_number_match.group(1)) if card_number_match else coupon_number
 
-    # עדכון מיפוי העמודות בהתאם לעמודות הנוכחיות
+    # Update mapping of columns according to current columns
     df = df.rename(columns={
         'שם בית עסק': 'location',
         'סכום מימוש תקציב': 'usage_amount',
         'תאריך': 'transaction_date',
-        'הטענה': 'recharge_amount',  # עדכון המיפוי בהתאם
+        'הטענה': 'recharge_amount',  # Update the mapping according to the current columns
         'מספר אסמכתא': 'reference_number'
     })
 
-    # בדיקה אם העמודות קיימות
+    # Check if the columns exist
     expected_columns = ['transaction_date', 'location', 'usage_amount', 'recharge_amount',
                         'reference_number']
     missing_columns = [col for col in expected_columns if col not in df.columns]
@@ -1088,25 +1031,19 @@ def convert_coupon_data(file_path):
         print(f"Missing columns in DataFrame: {missing_columns}")
         for col in missing_columns:
             if col in ['recharge_amount', 'usage_amount']:
-                df[col] = 0.0  # הגדרת ערך ברירת מחדל ל-0.0
+                df[col] = 0.0  # Set default value to 0.0
             else:
-                df[col] = None  # או ערך ברירת מחדל מתאים
+                df[col] = None  # Or set default value to None
 
-    # סידור העמודות
+    # Reorder columns
     df = df[['transaction_date', 'location', 'usage_amount', 'recharge_amount', 'reference_number']]
 
-    # המרת תאריך עם פורמט מותאם
+    # Convert transaction date with custom format
     df['transaction_date'] = pd.to_datetime(df['transaction_date'], format='%H:%M %d/%m/%Y', errors='coerce')
 
-    # החלפת NaT ב-None
+    # Replace NaT with None
     print(df['transaction_date'])
     df['transaction_date'] = df['transaction_date'].where(pd.notnull(df['transaction_date']), None)
-
-    # שמירת ה-DataFrame כ-Excel
-    #save_directory = "/Users/itaykarkason/Desktop/coupon_manager_project/automatic_coupon_update/input_html"
-    #xlsx_filename = f"coupon_test.xlsx"
-    #xlsx_path = os.path.join(save_directory, xlsx_filename)
-    #df.to_excel(xlsx_path, index=False)
 
     return df
 
@@ -1163,16 +1100,16 @@ def send_html_email(
 
 def send_email(sender_email, sender_name, recipient_email, recipient_name, subject, html_content):
     """
-    שליחת מייל כללי.
+    Sends a general email.
 
-    :param sender_email: כתובת המייל של השולח
-    :param sender_name: שם השולח
-    :param recipient_email: כתובת המייל של הנמען
-    :param recipient_name: שם הנמען
-    :param subject: נושא המייל
-    :param html_content: תוכן המייל בפורמט HTML
+    :param sender_email: Sender's email address
+    :param sender_name: Sender's name
+    :param recipient_email: Recipient's email address
+    :param recipient_name: Recipient's name
+    :param subject: Subject of the email
+    :param html_content: HTML content of the email
     """
-    # הוספת ה-API key ישירות בתוך הפונקציה
+    # Add the API key directly within the function
     api_key = BREVO_API_KEY
 
     try:
@@ -1197,16 +1134,16 @@ def allowed_file(filename):
 def require_login(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        # רשימת נתיבים ציבוריים
+        # List of public routes
         allowed_routes = ['login', 'register', 'static']
 
-        # אם המשתמש לא מחובר, הפנה אותו לדף התחברות
+        # If the user is not logged in, redirect them to the login page
         if not current_user.is_authenticated:
             return redirect(url_for('login'))
 
-        # בדוק אם request.endpoint קיים לפני גישה ואם הנתיב לא בנתיבים הציבוריים
+        # Check if request.endpoint exists before accessing it and if the path is not in the public routes
         if request.endpoint and not request.endpoint.startswith('static.') and request.endpoint not in allowed_routes:
-            # אם הנתיב אינו ציבורי והוא לא מחובר, החזר הפנייה ל-login
+            # If the path is not public and the user is not logged in, return to login
             return redirect(url_for('login'))
 
         return func(*args, **kwargs)
@@ -1239,22 +1176,22 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
     from datetime import datetime
 
     """
-    פונקציה לקבלת פרטי קופון באמצעות GPT-4o.
+    Function to extract coupon details using GPT-4o.
 
     Parameters:
-        coupon_text (str): טקסט המכיל את פרטי הקופון.
-        companies_list (list): רשימת החברות הקיימות במסד הנתונים.
+        coupon_text (str): Text containing coupon details.
+        companies_list (list): List of existing companies in the database.
 
     Returns:
-        tuple: טבלת DataFrame עם פרטי הקופון התואם לסכמת ה-JSON שהוגדרה, ו-DataFrame נוסף עם פרטי העלות והשער.
+        tuple: DataFrame with coupon details matching the JSON schema, and another DataFrame with pricing and exchange rate.
     """
-    # הגדרת מפתח ה-API
+    # Set the API key
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    # המרת רשימת החברות למחרוזת
+    # Convert companies list to string
     companies_str = ", ".join(companies_list)
 
-    # הגדרת סכמת JSON
+    # Define JSON schema
     tools = [
         {
             "type": "function",
@@ -1281,7 +1218,7 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
         }
     ]
 
-    # פרומפט למודל
+    # Define prompt
     prompt = f"""
     בהתבסס על המידע הבא:
     {coupon_text}
@@ -1310,7 +1247,7 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
     - אם לא מצויין בפועל מילים שאומרות בכמה הקופון נקנה. אז הערך של ״עלות״ צריך להיות 0. אם כתוב לדוגמא: ״קניתי ב88 שקל״, אז הערך של עלות יהיה 88.
     """
 
-    # קריאה ל-API של OpenAI
+    # Call the OpenAI API
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
@@ -1324,16 +1261,16 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
 
         response_data = response['choices'][0]['message']['tool_calls'][0]['function']['arguments']
 
-        # ניסיון לטעון כ-JSON
+        # Try to load as JSON
         try:
             coupon_data = json.loads(response_data)
         except json.JSONDecodeError:
             raise ValueError("השגיאה: הפלט שהתקבל אינו בפורמט JSON תקין.")
 
-        # המרת הפלט ל-DataFrame
+        # Convert the output to DataFrame
         coupon_df = pd.DataFrame([coupon_data])
 
-        # יצירת DataFrame נוסף עם פרטי העלות
+        # Create another DataFrame with pricing data
         pricing_data = {
             "prompt_tokens": response['usage']['prompt_tokens'],
             "completion_tokens": response['usage']['completion_tokens'],
@@ -1342,21 +1279,21 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
             "object": response['object'],
             "created": datetime.utcfromtimestamp(response['created']).strftime('%Y-%m-%d %H:%M:%S'),
             "model": response['model'],
-            # הוספת עמודות עבור הפרומפט והפלט
+            # Add columns for prompt and response
             "prompt_text": prompt,
             "response_text": json.dumps(coupon_data, ensure_ascii=False)
         }
 
-        # משיכת שער דולר עדכני
+        # Calculate exchange rate
         try:
             exchange_rate_response = requests.get("https://api.exchangerate-api.com/v4/latest/USD")
             exchange_rate_data = exchange_rate_response.json()
             usd_to_ils_rate = exchange_rate_data["rates"]["ILS"]
         except Exception as e:
             print(f"Error fetching exchange rate: {e}")
-            usd_to_ils_rate = 3.75  # ברירת מחדל
+            usd_to_ils_rate = 3.75  # Default value
 
-        # חישוב מחירים
+        # Calculate prices
         pricing_data["cost_usd"] = pricing_data["total_tokens"] * 0.00004
         pricing_data["cost_ils"] = pricing_data["cost_usd"] * usd_to_ils_rate
         pricing_data["exchange_rate"] = usd_to_ils_rate
@@ -1629,11 +1566,11 @@ def extract_coupon_detail_image_proccess(client_id, image_path, companies_list):
 
 def send_coupon_purchase_request_email(seller, buyer, coupon):
     """
-    שולח מייל למוכר כאשר לקוח מבקש לקנות קופון.
+    Sends an email to the seller when a buyer requests to purchase a coupon.
 
-    :param seller: אובייקט ה-User של המוכר
-    :param buyer: אובייקט ה-User של הקונה
-    :param coupon: אובייקט ה-Coupon שנדרש לקנייה
+    :param seller: The seller's User object
+    :param buyer: The buyer's User object
+    :param coupon: The Coupon object to be purchased
     """
     sender_email = SENDER_EMAIL
     sender_name = SENDER_NAME
@@ -1641,7 +1578,7 @@ def send_coupon_purchase_request_email(seller, buyer, coupon):
     recipient_name = f"{seller.first_name} {seller.last_name}"
     subject = "בקשה חדשה לקופון שלך"
 
-    # תבנית האימייל אמורה להיות ממוקמת ב-templates/emails/new_coupon_request.html
+    # The email template is expected to be in templates/emails/new_coupon_request.html
     html_content = render_template(
         'emails/new_coupon_request.html',
         seller=seller,
@@ -1726,9 +1663,9 @@ def process_coupons_excel(file_path, user):
     :param file_path: The path to the Excel file.
     :param user: The user who is uploading the coupons.
     :return: A tuple containing:
-       1) invalid_coupons: רשימת שגיאות בשורות שנכשלו/לא הוספו,
-       2) missing_optional_fields_messages: רשימת התראות על שדות אופציונליים חסרים,
-       3) new_coupons: רשימת אובייקטי Coupon שהתווספו בהצלחה לדאטהבייס.
+       1) invalid_coupons: List of errors in rows that failed to be added,
+       2) missing_optional_fields_messages: List of messages about missing optional fields,
+       3) new_coupons: List of Coupon objects that were successfully added to the database.
     """
     from app.models import Coupon, Company, Tag, coupon_tags
     from datetime import datetime
@@ -1766,7 +1703,7 @@ def process_coupons_excel(file_path, user):
                 purpose = row.get('מטרת הקופון', '') or ''
                 tags_field = row.get('תגיות', '') or ''
 
-                # *** שדות חדשים (החלף למפתחי-העמודה הנכונים כפי שיש לך באקסל, אם השמות שונים) ***
+                # *** New fields (replaced with keys from the Excel columns) ***
                 source_val = row.get('מאיפה קיבלת את הקופון', '') or ''
                 buyme_url_val = row.get('כתובת URL של הקופון ל-BuyMe', '') or ''
 
@@ -1879,8 +1816,8 @@ def process_coupons_excel(file_path, user):
                     status='פעיל',  # Default status
                     is_one_time=is_one_time,
                     purpose=purpose,
-                    source=source_val,                # הערך החדש
-                    buyme_coupon_url=buyme_url_val    # הערך החדש
+                    source=source_val,                # The new value
+                    buyme_coupon_url=buyme_url_val    # The new value
                 )
                 new_coupon.tags.append(most_common_tag)
                 db.session.add(new_coupon)
@@ -1924,17 +1861,17 @@ def process_coupons_excel(file_path, user):
 def complete_transaction(transaction):
     try:
         coupon = transaction.coupon
-        # העברת הבעלות על הקופון לקונה
+        # Transfer ownership of the coupon to the buyer
         coupon.user_id = transaction.buyer_id
-        # הקופון כבר לא למכירה
+        # The coupon is no longer for sale
         coupon.is_for_sale = False
-        # הקופון כעת זמין שוב לשימוש
+        # The coupon is now available again
         coupon.is_available = True
 
-        # עדכון סטטוס העסקה
+        # Update transaction status
         transaction.status = 'הושלם'
 
-        # אפשר להוסיף התראות לשני הצדדים, רישום לוג, וכדומה
+        # Add notifications for both parties, log, etc.
         notification_buyer = Notification(
             user_id=transaction.buyer_id,
             message='הקופון הועבר לחשבונך.',
@@ -1958,11 +1895,11 @@ def complete_transaction(transaction):
 
 
 # -----------------------------------------------------------------------------
-# פונקציה לזיהוי התגית הנפוצה ביותר עבור חברה נתונה
+# Function to get the most common tag for a given company
 # -----------------------------------------------------------------------------
 def get_most_common_tag_for_company(company_name):
     """
-    מציאת התגית הנפוצה ביותר בקופונים של החברה עם השם company_name
+    Finds the most common tag in coupons for the company with the given name
     """
     results = db.session.query(Tag, func.count(Tag.id).label('tag_count')) \
         .join(coupon_tags, Tag.id == coupon_tags.c.tag_id) \
@@ -1973,11 +1910,11 @@ def get_most_common_tag_for_company(company_name):
         .all()
 
     if results:
-        # התגית הראשונה ברשימה היא הנפוצה ביותר
-        #print("[DEBUG] get_most_common_tag_for_company results =>", results)  # הדפסה לקונסול
+        # The first item in the list is the most common tag
+        #print("[DEBUG] get_most_common_tag_for_company results =>", results)  # Debug output
         return results[0][0]
     else:
-        # אין תגיות משויכות לחברה זו
+        # No tags match this company
         return None
 
 
@@ -1997,10 +1934,6 @@ def get_public_ip():
 
 
 def get_geo_location(ip_address):
-    # טוען משתני סביבה מקובץ .env
-    """
-    פונקציה לשליפת מידע גיאוגרפי מבוסס IP באמצעות ipinfo.io.
-    """
     if not ip_address or not API_KEY:
         return {
             "city": None,
@@ -2072,21 +2005,21 @@ def send_password_reset_email(user):
 
 def generate_password_reset_token(email, expiration=3600):
     """
-    יוצרת טוקן מסוג Time-Limited עבור שחזור סיסמה.
-    :param email: האימייל שאליו משוייך הטוקן
-    :param expiration: משך התוקף בשניות (ברירת מחדל: 3600 = שעה)
-    :return: מחרוזת טוקן חתום
+    Creates a Time-Limited token for password reset.
+    :param email: The email to which the token is linked
+    :param expiration: Token validity duration in seconds (default: 3600 = 1 hour)
+    :return: Signed token
     """
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     return s.dumps(email, salt=current_app.config['SECURITY_PASSWORD_SALT'])
 
 def confirm_password_reset_token(token, expiration=3600):
     """
-    בודקת את תקינות הטוקן ותוקפו עבור שחזור סיסמה.
+    Checks the validity of the token and its expiration date for password reset.
 
-    :param token: המחרוזת שהגיעה ב-URL
-    :param expiration: פג תוקף בשניות (ברירת מחדל: 3600 = שעה)
-    :return: כתובת האימייל אם תקין, אחרת יזרק חריג (Exception)
+    :param token: The token received in the URL
+    :param expiration: Token validity duration in seconds (default: 3600 = 1 hour)
+    :return: Email address if valid, otherwise raises an exception
     """
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     email = s.loads(
@@ -2101,11 +2034,11 @@ def confirm_password_reset_token(token, expiration=3600):
 def parse_user_usage_text(usage_text, user):
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    # שליפת רשימת החברות המותרות מהמערכת
-    companies = {c.name.lower(): c.name for c in Company.query.all()}  # מילון לשמירה על התאמה בשם
+    # Retrieve list of allowed companies from the system
+    companies = {c.name.lower(): c.name for c in Company.query.all()}  # Dictionary for easy lookup
     companies_str = ", ".join(companies.keys())
 
-    # פרומפט מותאם שמכריח שימוש בחברות הקיימות בלבד
+    # Prompt that requires using only existing companies
     prompt = f"""
     להלן טקסט המתאר שימוש בקופונים:
     \"\"\"{usage_text}\"\"\"
@@ -2159,7 +2092,7 @@ def parse_user_usage_text(usage_text, user):
       {{"company": "קרפור", "amount_used": 75, "coupon_value": null, "additional_info": "Grocery shopping"}}
     ]
     """
-    # קריאה ל-GPT
+    # Call the GPT API
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
@@ -2208,23 +2141,23 @@ def parse_user_usage_text(usage_text, user):
             ]
         )
 
-        # חילוץ ה-arguments
+        # Extract the arguments
         content = response["choices"][0]["message"]["function_call"]["arguments"]
 
-        # ניסיון להמיר את התשובה ל-JSON
+        # Try to convert the response to JSON
         try:
             usage_data = json.loads(content)
             usage_list = usage_data.get("usages", [])
         except json.JSONDecodeError:
             usage_list = []
 
-        # סינון רשומות עם חברות שאינן ברשימה
+        # Filter out companies not in the list
         print(usage_list)
 
-        # יצירת DataFrame
+        # Create DataFrame
         usage_df = pd.DataFrame(usage_list)
 
-        # עיבוד מידע נוסף עבור חישוב עלויות
+        # Process additional information for cost calculation
         usage_record = {
             "id": response["id"],
             "object": response["object"],
@@ -2233,9 +2166,9 @@ def parse_user_usage_text(usage_text, user):
             "prompt_tokens": response["usage"]["prompt_tokens"],
             "completion_tokens": response["usage"]["completion_tokens"],
             "total_tokens": response["usage"]["total_tokens"],
-            "cost_usd": 0.0,  # תחשב לפי הנוסחה שלך
+            "cost_usd": 0.0,  # Calculate based on your formula
             "cost_ils": 0.0,
-            "exchange_rate": 3.75,  # נניח
+            "exchange_rate": 3.75,
             "prompt_text": prompt,
             "response_text": content
         }
@@ -2244,12 +2177,12 @@ def parse_user_usage_text(usage_text, user):
         return usage_df, pricing_df
 
     except openai.error.RateLimitError:
-        # **🚨 טיפול במקרה של חריגה מהמכסה 🚨**
+        # **🚨 Handling case of exceeding usage limit 🚨**
         error_message = "⚠️ אזהרה: הגעת למכסת השימוש שלך ב-OpenAI. יש לפנות למנהל התוכנה להמשך טיפול."
-        flash(error_message, "warning")  # הודעה למשתמש
+        flash(error_message, "warning")
         print(error_message)
 
-        # **📧 שליחת מייל אוטומטי ל-2 נמענים:**
+        # **📧 Sending automatic email to 2 admins:**
         recipients = ["couponmasteril2@gmail.com", "itayk93@gmail.com"]
         for recipient in recipients:
             send_email(
@@ -2272,14 +2205,12 @@ def parse_user_usage_text(usage_text, user):
         return pd.DataFrame(), pd.DataFrame()
 
     except openai.error.OpenAIError as e:
-        # טיפול בשגיאות אחרות של OpenAI
         error_message = f"❌ שגיאת OpenAI: {str(e)}. יש לפנות למנהל התוכנה."
         flash(error_message, "danger")
         print(error_message)
         return pd.DataFrame(), pd.DataFrame()
 
     except Exception as e:
-        # טיפול בשגיאות כלליות
         error_message = f"❌ שגיאה כללית: {str(e)}. יש לפנות למנהל התוכנה."
         flash(error_message, "danger")
         print(error_message)
@@ -2291,14 +2222,14 @@ def decrypt_coupon_code(encrypted_code):
         encryption_key = os.getenv("ENCRYPTION_KEY")
         if not encryption_key:
             logging.error("ENCRYPTION_KEY not found in environment variables.")
-            return None  # מחזיר None אם המפתח חסר
+            return None  # Return None if key is missing
 
-        # הפעלת אלגוריתם הפענוח שלך
+        # Use your decryption function
         decrypted_code = some_decryption_function(encrypted_code, encryption_key)
         return decrypted_code
     except Exception as e:
         logging.error(f"Error decrypting coupon code: {e}")
-        return None  # מחזיר None במקום להפעיל flash()
+        return None  # Return None instead of flashing a message
 
 def get_greeting():
     israel_tz = pytz.timezone('Asia/Jerusalem')
@@ -2314,27 +2245,27 @@ def get_greeting():
 
 def has_feature_access(feature_name, user):
     """
-    בודק את גישת המשתמש לפיצ'ר מסוים לפי טבלת feature_access:
-    - אם אין שורה עבור feature_name => חזור False (סגור לכולם).
-    - אם access_mode='V' => חזור True (פתוח לכולם).
-    - אם access_mode='Admin' => חזור True רק אם user.is_admin.
-    - אחרת חזור False.
+    Checks user's access to a specific feature based on feature_access table:
+    - If there's no row for feature_name => return False (closed to everyone)
+    - If access_mode='V' => return True (open to everyone)
+    - If access_mode='Admin' => return True only if user.is_admin
+    - Otherwise return False
     """
     from app.models import FeatureAccess
 
     feature = FeatureAccess.query.filter_by(feature_name=feature_name).first()
     if not feature:
-        # אם אין רשומה => סגור
+        # If no record exists => closed
         return False
 
     mode = feature.access_mode
 
-    # אם המשתמש אנונימי (לא מחובר)
+    # If the user is anonymous (not logged in)
     if not user.is_authenticated:
-        # אם הפיצ'ר הוא 'V' (פתוח לכולם) => אפשר לאפשר גם לאנונימי
+        # If the feature is 'V' (open to everyone) => allow it for anonymous users too
         return (mode == 'V')
 
-    # אם המשתמש מחובר:
+    # If the user is logged in:
     if mode == 'V':
         return True
     elif mode == 'Admin':

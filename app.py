@@ -11,14 +11,14 @@ from dotenv import load_dotenv
 from app.extensions import db, login_manager, csrf
 from app.models import User, Tag
 
-# טעינת משתני סביבה
+# Loading environment variables
 load_dotenv()
 
 app = Flask(__name__)
-# הגדרת הרמה של ה-logger של האפליקציה עצמה
+# Setting the application's logger level
 app.logger.setLevel(logging.DEBUG)
 
-# הגדרות תצורה
+# Configuration settings
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -27,21 +27,21 @@ app.config['WTF_CSRF_ENABLED'] = True
 app.config['SECURITY_PASSWORD_SALT'] = os.getenv('SECURITY_PASSWORD_SALT')
 ALLOWED_EXTENSIONS = {'xlsx'}
 
-# 🔥 הוסף כאן את הגדרות ה-Session וה-Cookies 🔥
+# 🔥 Add Session and Cookies settings here 🔥
 from datetime import timedelta
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 app.config['SESSION_PERMANENT'] = True
-app.config['SESSION_TYPE'] = "filesystem"  # אפשר גם Redis/Memcached
+app.config['SESSION_TYPE'] = "filesystem"  # Can also use Redis/Memcached
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
-app.config['SESSION_COOKIE_SECURE'] = True  # True אם האתר עובד עם HTTPS
+app.config['SESSION_COOKIE_SECURE'] = True  # True if the site works with HTTPS
 app.config['REMEMBER_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
-# אתחול הרחבות
+# Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
 login_manager.init_app(app)
-login_manager.login_view = 'auth.login'  # נניח שה-login route נמצא ב-auth_routes
+login_manager.login_view = 'auth.login'  # Assuming the login route is in auth_routes
 csrf.init_app(app)
 
 import logging
@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ייבוא ה-Blueprints
+# Import Blueprints
 from app.routes.auth_routes import auth_bp
 from app.routes.profile_routes import profile_bp
 from app.routes.coupons_routes import coupons_bp
@@ -65,7 +65,7 @@ from app.routes.export_routes import export_bp
 from app.routes.uploads_routes import uploads_bp
 from app.routes.admin_routes import admin_bp
 
-# רישום ה-Blueprints
+# Register Blueprints
 """""""""
 app.register_blueprint(auth_bp)
 app.register_blueprint(profile_bp)
@@ -88,13 +88,13 @@ app.register_blueprint(export_bp, url_prefix='/export')
 app.register_blueprint(uploads_bp, url_prefix='/uploads')
 app.register_blueprint(admin_bp, url_prefix='/admin')
 
-# יצירת תיקיית instance אם לא קיימת
+# Create instance folder if it doesn't exist
 if not os.path.exists('instance'):
     os.makedirs('instance')
 
 with app.app_context():
     db.create_all()
-    # תגיות מוגדרות מראש
+    # Predefined tags
     predefined_tags = [
         {'name': 'מבצע', 'count': 10},
         {'name': 'הנחה', 'count': 8},
@@ -105,23 +105,21 @@ with app.app_context():
         if not tag:
             tag = Tag(name=tag_data['name'], count=tag_data['count'])
             db.session.add(tag)
-            logging.info(f"נוספה תגית חדשה: {tag.name}")
+            logging.info(f"New tag added: {tag.name}")
         else:
             if tag.count != tag_data['count']:
                 tag.count = tag_data['count']
-                logging.info(f"עודכנה ספירת תגית: {tag.name} ל-{tag.count}")
+                logging.info(f"Tag count updated: {tag.name} to {tag.count}")
     db.session.commit()
 
 try:
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    logging.info(f"יצירת תיקיית ההעלאה: {app.config['UPLOAD_FOLDER']}")
+    logging.info(f"Upload folder created: {app.config['UPLOAD_FOLDER']}")
 except Exception as e:
-    logging.error(f"שגיאה ביצירת תיקיית ההעלאה: {e}")
+    logging.error(f"Error creating upload folder: {e}")
 
-# הגדרת Scheduler
+# Configure Scheduler
 scheduler = BackgroundScheduler()
-
-
 
 if __name__ == '__main__':
     if not app.debug or os.environ.get("FLASK_ENV") == "production":

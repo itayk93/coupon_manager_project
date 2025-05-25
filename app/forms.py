@@ -2,26 +2,26 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
 
-# WTForms - שדות (Fields)
+# WTForms - Fields
 from wtforms import (
     StringField, PasswordField, SubmitField, BooleanField, DecimalField,
     DateField, TextAreaField, SelectField, SelectMultipleField, HiddenField,
     IntegerField, FloatField, FieldList, FormField, RadioField
 )
 
-# WTForms - וולידציות (Validators)
+# WTForms - Validators
 from wtforms.validators import (
     DataRequired, Optional, Email, EqualTo, InputRequired, Length,
     NumberRange, Regexp, ValidationError, URL
 )
 
-# WTForms - ווידג'טים (Widgets)
+# WTForms - Widgets
 from wtforms import widgets
 
-# ייבוא משלים
-from wtforms.fields import DateField  # ייבוא נוסף של שדה תאריך
+# Additional imports
+from wtforms.fields import DateField  # Additional date field import
 
-# מודלים נוספים
+# Additional models
 from app.models import Coupon
 
 
@@ -680,7 +680,7 @@ class ManageCouponTagForm(FlaskForm):
 
 class UserProfileForm(FlaskForm):
     """
-    טופס לעדכון פרופיל משתמש (תיאור קצר + אפשרות להעלאת תמונה).
+    Form for updating user profile (short description + option to upload an image).
     """
     profile_description = TextAreaField('ספר על עצמך בקצרה', validators=[Optional()])
     profile_image = FileField(
@@ -695,7 +695,7 @@ class UserProfileForm(FlaskForm):
 
 class RateUserForm(FlaskForm):
     """
-    טופס דירוג משתמש + הוספת הערה (בפעם אחת).
+    User rating form + comment addition (all at once).
     """
     rating = IntegerField('דירוג (1-5)', validators=[
         DataRequired(message='חובה לתת דירוג'),
@@ -798,7 +798,7 @@ class CoffeeOfferForm(FlaskForm):
     discount_percent = DecimalField(
         "אחוז הנחה",
         validators=[Optional(), NumberRange(min=0, max=100)],
-        default=None  # שים None במקום 0 כדי לא להכניס ערך אוטומטי
+        default=None  # Use None instead of 0 to avoid automatic value
     )
     customer_group = SelectField("דרגת חבר מועדון", choices=[("Connoisseur", "Connoisseur"), ("Expert", "Expert"),
                                                              ("Ambassador", "Ambassador")], validators=[Optional()])
@@ -806,12 +806,12 @@ class CoffeeOfferForm(FlaskForm):
     expiration_date = DateField("תאריך תפוגה", format="%Y-%m-%d", validators=[DataRequired()])
     description = TextAreaField("תיאור", validators=[Optional()])
 
-    # ✅ השדות החסרים:
+    # ✅ Missing fields:
     is_buy_offer = BooleanField("האם מדובר בבקשת רכישה?")
     desired_discount = DecimalField("אחוז הנחה מבוקש", validators=[Optional(), NumberRange(min=0, max=100)])
     buyer_description = TextAreaField("תיאור הבקשה", validators=[Optional()])
 
-    offer_type = HiddenField("offer_type")  # כדי לאחסן אם מדובר במוכר או קונה
+    offer_type = HiddenField("offer_type")  # To store whether it's a seller or buyer
 
 
 
@@ -833,7 +833,7 @@ class DeleteOfferForm(FlaskForm):
 
 
 class ConfirmTransferForm(FlaskForm):
-    """טופס אישור העברה כספית על ידי הקונה"""
+    """Form for confirming monetary transfer by the buyer"""
     submit = SubmitField('אשר העברה')
 
 
@@ -858,7 +858,7 @@ class ApproveCoffeeTransactionForm(FlaskForm):
 # הוסף את הטפסים הבאים לקובץ forms.py שלך
 
 class EditTagForm(FlaskForm):
-    """טופס לעריכת שם תגית"""
+    """Form for editing tag name"""
     name = StringField(
         'שם חדש לתגית',
         validators=[
@@ -870,7 +870,7 @@ class EditTagForm(FlaskForm):
 
 
 class TransferCouponsForm(FlaskForm):
-    """טופס להעברת קופונים מתגית אחת לאחרת"""
+    """Form for transferring coupons from one tag to another"""
     source_tag_id = HiddenField('מזהה תגית מקור', validators=[DataRequired()])
     target_tag_id = SelectField(
         'העבר קופונים לתגית',

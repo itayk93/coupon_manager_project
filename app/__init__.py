@@ -11,22 +11,22 @@ from scheduler_config import configure_scheduler
 from app.helpers import has_feature_access
 
 
-# ייבוא הגדרות ו"הרחבות"
+# Import configurations and "extensions"
 from app.config import Config
 from app.extensions import db, login_manager, csrf, migrate
 
-# מודלים לדוגמה
+# Example models
 from app.models import User, Coupon
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler()
 
-# ייבוא ה-Scheduler
-from scheduler_config import configure_scheduler  # ← שינוי הייבוא בהתאם למיקום הקובץ
+# Import the Scheduler
+from scheduler_config import configure_scheduler  # ← Changed import according to file location
 
 def create_app():
-    # טוען משתני סביבה (ליתר ביטחון, אפשר גם ב-wsgi.py)
+    # Load environment variables (for extra safety, can also be in wsgi.py)
     load_dotenv()
 
     import os
@@ -35,29 +35,29 @@ def create_app():
     app = Flask(__name__, static_folder='static', template_folder='templates')
 
     app.config['GA_TRACKING_ID'] = os.getenv("GA_TRACKING_ID", "")
-    app.config['CLARITY_PROJECT_ID'] = os.getenv("CLARITY_PROJECT_ID", "")  # ✅ תיקון כאן!
+    app.config['CLARITY_PROJECT_ID'] = os.getenv("CLARITY_PROJECT_ID", "")
 
     @app.context_processor
     def inject_tracking_ids():
         return dict(
             ga_tracking_id=app.config['GA_TRACKING_ID'],
-            clarity_project_id=app.config['CLARITY_PROJECT_ID']  # ✅ עכשיו זה נטען נכון
+            clarity_project_id=app.config['CLARITY_PROJECT_ID']
         )
 
 
-    # טוען קונפיגורציה (Config) מהקובץ config.py
+    # Load configuration (Config) from config.py
     app.config.from_object(Config)
 
-    # הגדרת רמת הלוגים (debug וכו')
+    # Set log level (debug etc.)
     app.logger.setLevel(logging.DEBUG)
 
 
-    # אתחול ההרחבות
+    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_message = "עליך להתחבר כדי לגשת לעמוד זה"
-    login_manager.login_message_category = "warning"  # אפשר לשנות ל-'info', 'danger', 'success'
+    login_manager.login_message_category = "warning"  # Can be changed to 'info', 'danger', 'success'
     login_manager.login_view = 'auth.login'
     csrf.init_app(app)
 
@@ -65,11 +65,11 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # רישום פילטר לזמן ישראל
+    # Register Israel time filter
     from app.routes.coupons_routes import to_israel_time_filter
     app.add_template_filter(to_israel_time_filter, 'to_israel_time')
 
-    # רישום Blueprints
+    # Register Blueprints
     from app.routes.auth_routes import auth_bp
     from app.routes.profile_routes import profile_bp
     from app.routes.coupons_routes import coupons_bp
@@ -87,7 +87,7 @@ def create_app():
     from app.extensions import google_bp
     # from app.routes.profile_routes import profile_bp
 
-    app.register_blueprint(google_bp, url_prefix="/login")  # ✅ הוספנו את Google Login כאן!
+    app.register_blueprint(google_bp, url_prefix="/login")  # ✅ Added Google Login here!
     app.register_blueprint(profile_bp)
     app.register_blueprint(coupons_bp)
     app.register_blueprint(marketplace_bp)
@@ -105,22 +105,22 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/auth")
 
 
-    # אם צריך - יצירת תיקיית instance
+    # If needed - create instance folder
     if not os.path.exists('instance'):
         os.makedirs('instance')
 
-    # הרצת פעולות עם context
+    # Run operations with context
     with app.app_context():
         db.create_all()
 
-        # יצירת תיקיית העלאות
+        # Create uploads folder
         try:
             os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
             logger.info(f"יצירת תיקיית ההעלאה: {app.config['UPLOAD_FOLDER']}")
         except Exception as e:
             logger.error(f"שגיאה ביצירת תיקיית ההעלאה: {e}")
 
-    # 📌 קרא למתזמן **רק אחרי שהאפליקציה נטענה**
+    # 📌 Call the scheduler **only after the application is loaded**
     from scheduler_config import configure_scheduler
     configure_scheduler()
 
@@ -132,8 +132,8 @@ def create_app():
 
 
 def send_expiration_warnings():
-    """שולחת התראות על קופונים שעומדים לפוג, תוך שימוש בקונטקסט של Flask."""
-    from app import create_app  # טעינת האפליקציה
+    """Sends notifications about coupons that are about to expire, using Flask context."""
+    from app import create_app  # Load the application
     app = create_app()
 
     with app.app_context():
@@ -161,7 +161,7 @@ def send_expiration_warnings():
                         days_left=30
                     )
 
-                    # שליחת המייל
+                    # Send email
                     send_email(
                         sender_email="noreply@couponmasteril.com",
                         sender_name="Coupon Master",
