@@ -17,8 +17,8 @@ def get_client_ip():
     """
     מחזיר את כתובת ה-IP של המשתמש (במידת האפשר).
     """
-    if request.headers.get('X-Forwarded-For'):
-        return request.headers['X-Forwarded-For'].split(',')[0].strip()
+    if request.headers.get("X-Forwarded-For"):
+        return request.headers["X-Forwarded-For"].split(",")[0].strip()
     return request.remote_addr
 
 
@@ -27,7 +27,7 @@ def parse_user_agent():
     ניתוח דפדפן ומכשיר בסיסי מתוך ה-User-Agent.
     אפשר להרחיב עם ספרייה כמו 'user_agents' למידע מפורט יותר.
     """
-    ua_string = request.headers.get('User-Agent', '')
+    ua_string = request.headers.get("User-Agent", "")
     device = "Desktop"
     browser = "UnknownBrowser"
 
@@ -64,7 +64,10 @@ def register_user():
 
     existing_user = User.query.filter_by(email=email).first()
     if existing_user:
-        return jsonify({"message": "User already exists", "user_id": existing_user.id}), 200
+        return (
+            jsonify({"message": "User already exists", "user_id": existing_user.id}),
+            200,
+        )
 
     new_user = User(email=email)
     db.session.add(new_user)
@@ -92,9 +95,7 @@ def consent():
         return jsonify({"error": "User not found"}), 404
 
     new_consent = UserConsent(
-        user_id=user_id,
-        consent_status=consent_status,
-        version=version
+        user_id=user_id, consent_status=consent_status, version=version
     )
     db.session.add(new_consent)
     db.session.commit()
@@ -198,7 +199,9 @@ def track_event():
         browser=browser,
         geo_location="",  # למילוי ע"י שירות חיצוני אם תרצה
         duration=data.get("duration"),
-        extra_metadata=json.dumps(data.get("metadata")) if data.get("metadata") else None
+        extra_metadata=json.dumps(data.get("metadata"))
+        if data.get("metadata")
+        else None,
     )
     db.session.add(activity)
     db.session.commit()
@@ -232,7 +235,7 @@ def delete_user_data():
     # אם המשתמש שמבצע את הבקשה הוא המשתמש שנמחק, ננתק ונפנה למסך התחברות
     if current_user.is_authenticated and current_user.id == int(user_id):
         logout_user()
-        return redirect(url_for('auth.login'))
+        return redirect(url_for("auth.login"))
     else:
         return jsonify({"message": "User data deleted successfully"}), 200
 
@@ -246,31 +249,37 @@ def get_all_activities():
     if current_user.is_authenticated:
         user_consent = UserConsent.query.filter_by(user_id=current_user.id).first()
         if not (user_consent and user_consent.consent_status):
-            return jsonify({"message": "User did not consent. Activities not returned."}), 403
+            return (
+                jsonify({"message": "User did not consent. Activities not returned."}),
+                403,
+            )
 
     # שליפת פעילויות של משתמשים שנתנו הסכמה בלבד
     activities = (
-        UserActivity.query
-        .join(UserConsent, UserActivity.user_id == UserConsent.user_id)
+        UserActivity.query.join(
+            UserConsent, UserActivity.user_id == UserConsent.user_id
+        )
         .filter(UserConsent.consent_status == True)
         .all()
     )
 
     result = []
     for a in activities:
-        result.append({
-            "activity_id": a.activity_id,
-            "user_id": a.user_id,
-            "action": a.action,
-            "coupon_id": a.coupon_id,
-            "timestamp": a.timestamp.isoformat(),
-            "ip_address": a.ip_address,
-            "device": a.device,
-            "browser": a.browser,
-            "geo_location": a.geo_location,
-            "duration": a.duration,
-            "metadata": a.extra_metadata
-        })
+        result.append(
+            {
+                "activity_id": a.activity_id,
+                "user_id": a.user_id,
+                "action": a.action,
+                "coupon_id": a.coupon_id,
+                "timestamp": a.timestamp.isoformat(),
+                "ip_address": a.ip_address,
+                "device": a.device,
+                "browser": a.browser,
+                "geo_location": a.geo_location,
+                "duration": a.duration,
+                "metadata": a.extra_metadata,
+            }
+        )
     return jsonify(result), 200
 
 
@@ -286,13 +295,13 @@ def analytics_summary():
     if current_user.is_authenticated:
         user_consent = UserConsent.query.filter_by(user_id=current_user.id).first()
         if not (user_consent and user_consent.consent_status):
-            return jsonify({"message": "User did not consent. Summary not returned."}), 403
+            return (
+                jsonify({"message": "User did not consent. Summary not returned."}),
+                403,
+            )
 
     action_counts = (
-        db.session.query(
-            UserActivity.action,
-            func.count(UserActivity.action)
-        )
+        db.session.query(UserActivity.action, func.count(UserActivity.action))
         .join(UserConsent, UserActivity.user_id == UserConsent.user_id)
         .filter(UserConsent.consent_status == True)
         .group_by(UserActivity.action)
@@ -310,8 +319,9 @@ def analytics_summary():
     viewed_coupons = (
         db.session.query(UserActivity.coupon_id)
         .join(UserConsent, UserActivity.user_id == UserConsent.user_id)
-        .filter(UserConsent.consent_status == True,
-                UserActivity.action == "view_coupon")
+        .filter(
+            UserConsent.consent_status == True, UserActivity.action == "view_coupon"
+        )
         .distinct()
         .count()
     )
@@ -319,8 +329,9 @@ def analytics_summary():
     redeemed_coupons = (
         db.session.query(UserActivity.coupon_id)
         .join(UserConsent, UserActivity.user_id == UserConsent.user_id)
-        .filter(UserConsent.consent_status == True,
-                UserActivity.action == "redeem_coupon")
+        .filter(
+            UserConsent.consent_status == True, UserActivity.action == "redeem_coupon"
+        )
         .distinct()
         .count()
     )
@@ -329,6 +340,6 @@ def analytics_summary():
         "action_counts": {action: count for action, count in action_counts},
         "active_users": active_users,
         "viewed_coupons": viewed_coupons,
-        "redeemed_coupons": redeemed_coupons
+        "redeemed_coupons": redeemed_coupons,
     }
     return jsonify(data), 200

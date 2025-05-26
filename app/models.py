@@ -20,7 +20,7 @@ from sqlalchemy import Column, Integer, String  # Add the missing import
 load_dotenv()
 
 # Load the encryption key from environment variables
-ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
+ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY")
 if not ENCRYPTION_KEY:
     raise ValueError("No ENCRYPTION_KEY set for encryption")
 
@@ -29,6 +29,7 @@ cipher_suite = Fernet(ENCRYPTION_KEY.encode())
 
 class EncryptedString(TypeDecorator):
     """Encrypted String Type for SQLAlchemy."""
+
     impl = String
 
     def process_bind_param(self, value, dialect):
@@ -52,13 +53,24 @@ class EncryptedString(TypeDecorator):
                 print(f"Error decrypting value: {value} - {e}")
         return value
 
+
 # Association table for Coupon and Tag (many-to-many)
 coupon_tags = db.Table(
-    'coupon_tags',
+    "coupon_tags",
     db.metadata,  # Ensure you're using Flask-SQLAlchemy's metadata
-    db.Column('coupon_id', db.Integer, db.ForeignKey('coupon.id', ondelete='CASCADE'), primary_key=True),
-    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id', ondelete='CASCADE'), primary_key=True),
-    extend_existing=True  # Allows redefining the table if it already exists
+    db.Column(
+        "coupon_id",
+        db.Integer,
+        db.ForeignKey("coupon.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    db.Column(
+        "tag_id",
+        db.Integer,
+        db.ForeignKey("tag.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    extend_existing=True,  # Allows redefining the table if it already exists
 )
 
 
@@ -66,11 +78,14 @@ class User(UserMixin, db.Model):
     """
     Users table.
     """
-    __tablename__ = 'users'
+
+    __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    google_id = db.Column(db.String(50), unique=True, nullable=True)  # ✅ This is the new field
+    google_id = db.Column(
+        db.String(50), unique=True, nullable=True
+    )  # ✅ This is the new field
     password = db.Column(db.String(256), nullable=False)
     first_name = db.Column(db.String(150), nullable=False)
     last_name = db.Column(db.String(150), nullable=False)
@@ -96,24 +111,29 @@ class User(UserMixin, db.Model):
     dismissed_expiring_alert_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships
-    notifications = db.relationship('Notification', back_populates='user', lazy=True)
-    coupons = db.relationship('Coupon', back_populates='user', lazy=True)
-    coupon_requests = db.relationship('CouponRequest', back_populates='user', lazy=True)
+    notifications = db.relationship("Notification", back_populates="user", lazy=True)
+    coupons = db.relationship("Coupon", back_populates="user", lazy=True)
+    coupon_requests = db.relationship("CouponRequest", back_populates="user", lazy=True)
     transactions_sold = db.relationship(
-        'Transaction',
-        foreign_keys='Transaction.seller_id',
-        back_populates='seller',
-        lazy=True
+        "Transaction",
+        foreign_keys="Transaction.seller_id",
+        back_populates="seller",
+        lazy=True,
     )
     transactions_bought = db.relationship(
-        'Transaction',
-        foreign_keys='Transaction.buyer_id',
-        back_populates='buyer',
-        lazy=True
+        "Transaction",
+        foreign_keys="Transaction.buyer_id",
+        back_populates="buyer",
+        lazy=True,
     )
 
     # New: Relationship to ratings table (for this user as the "receiver" of the rating)
-    received_ratings = db.relationship('UserRating', foreign_keys='UserRating.rated_user_id', back_populates='rated_user', lazy=True)
+    received_ratings = db.relationship(
+        "UserRating",
+        foreign_keys="UserRating.rated_user_id",
+        back_populates="rated_user",
+        lazy=True,
+    )
 
     # Function to calculate how many coupons the user has sold
     @property
@@ -121,7 +141,10 @@ class User(UserMixin, db.Model):
         # For example, in Transaction the final status is 'Completed' / 'Approved' / 'Closed'
         # We can check transaction.status == 'Completed'
         from app.models import Transaction
-        sold_transactions = Transaction.query.filter_by(seller_id=self.id, status='הושלמה').all()
+
+        sold_transactions = Transaction.query.filter_by(
+            seller_id=self.id, status="הושלמה"
+        ).all()
         return len(sold_transactions)
 
     @property
@@ -132,7 +155,11 @@ class User(UserMixin, db.Model):
         if not self.created_at:
             return 0
         now_naive = datetime.now().replace(tzinfo=None)
-        created_at_naive = self.created_at.replace(tzinfo=None) if self.created_at.tzinfo else self.created_at
+        created_at_naive = (
+            self.created_at.replace(tzinfo=None)
+            if self.created_at.tzinfo
+            else self.created_at
+        )
         delta = now_naive - created_at_naive
         return delta.days
 
@@ -156,25 +183,27 @@ class User(UserMixin, db.Model):
         """Generate a token for password change confirmation."""
         from itsdangerous import URLSafeTimedSerializer
         from flask import current_app
-        
+
         s = URLSafeTimedSerializer(
-            current_app.config['SECRET_KEY'],
-            salt='password-change'  # Using a constant string for salt
+            current_app.config["SECRET_KEY"],
+            salt="password-change",  # Using a constant string for salt
         )
-        return s.dumps({'user_id': self.id})  # Removed .decode('utf-8') as it's already a string
+        return s.dumps(
+            {"user_id": self.id}
+        )  # Removed .decode('utf-8') as it's already a string
 
     def verify_password_change_token(self, token, expiration=3600):
         """Verify the password change token."""
         from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
         from flask import current_app
-        
+
         s = URLSafeTimedSerializer(
-            current_app.config['SECRET_KEY'],
-            salt='password-change'  # Same salt as in generate_password_change_token
+            current_app.config["SECRET_KEY"],
+            salt="password-change",  # Same salt as in generate_password_change_token
         )
         try:
             data = s.loads(token, max_age=expiration)
-            if data.get('user_id') != self.id:
+            if data.get("user_id") != self.id:
                 return False
             return True
         except (SignatureExpired, BadSignature):
@@ -185,20 +214,22 @@ class Tag(db.Model):
     """
     Tags table (for classifying coupons, for example).
     """
-    __tablename__ = 'tag'
+
+    __tablename__ = "tag"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
     count = db.Column(db.Integer, default=0)
 
-    coupons = db.relationship('Coupon', secondary=coupon_tags, back_populates='tags')
+    coupons = db.relationship("Coupon", secondary=coupon_tags, back_populates="tags")
 
 
 class Coupon(db.Model):
     """
     Coupons table.
     """
-    __tablename__ = 'coupon'
+
+    __tablename__ = "coupon"
 
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(EncryptedString(255), nullable=False, unique=True)
@@ -208,33 +239,45 @@ class Coupon(db.Model):
     company = db.Column(db.String(100), nullable=False)
     expiration = db.Column(db.Date, nullable=True)  # Expiration date
     source = db.Column(db.String(255), nullable=True)  # New field for coupon source
-    buyme_coupon_url = db.Column(EncryptedString(255), nullable=True)     # >>> NEW FIELD: BuyMe Coupon URL <<<
-    date_added = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    buyme_coupon_url = db.Column(
+        EncryptedString(255), nullable=True
+    )  # >>> NEW FIELD: BuyMe Coupon URL <<<
+    date_added = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     used_value = db.Column(db.Float, default=0.0, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default='פעיל')
+    status = db.Column(db.String(20), nullable=False, default="פעיל")
     is_available = db.Column(db.Boolean, default=True)
     is_for_sale = db.Column(db.Boolean, default=False)
     is_one_time = db.Column(db.Boolean, default=False)
     purpose = db.Column(db.String(255), nullable=True)
-    exclude_saving = db.Column(db.Boolean, default=False, nullable=False)  # Indicates whether to exclude from calculation
-    auto_download_details = db.Column(db.Text, nullable=True)  # Can change data type as needed
+    exclude_saving = db.Column(
+        db.Boolean, default=False, nullable=False
+    )  # Indicates whether to exclude from calculation
+    auto_download_details = db.Column(
+        db.Text, nullable=True
+    )  # Can change data type as needed
 
     # Relationships
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    user = db.relationship('User', back_populates='coupons')
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user = db.relationship("User", back_populates="coupons")
 
-    tags = db.relationship('Tag', secondary=coupon_tags, back_populates='coupons')
-    usages = db.relationship('CouponUsage', backref='coupon', lazy=True, cascade='all, delete-orphan')
+    tags = db.relationship("Tag", secondary=coupon_tags, back_populates="coupons")
+    usages = db.relationship(
+        "CouponUsage", backref="coupon", lazy=True, cascade="all, delete-orphan"
+    )
 
     # Relevant for specific coupons
-    cvv = db.Column(EncryptedString(4), nullable=True)       # Maximum length 4 (3 or 4 digits)
-    card_exp = db.Column(EncryptedString(5), nullable=True)  # Maximum length 5 (format "MM/YY")
+    cvv = db.Column(
+        EncryptedString(4), nullable=True
+    )  # Maximum length 4 (3 or 4 digits)
+    card_exp = db.Column(
+        EncryptedString(5), nullable=True
+    )  # Maximum length 5 (format "MM/YY")
 
     # **Adding the multipass_transactions relationship**
     multipass_transactions = db.relationship(
-        'CouponTransaction',
-        back_populates='coupon',
-        cascade='all, delete-orphan'
+        "CouponTransaction", back_populates="coupon", cascade="all, delete-orphan"
     )
 
     # Fields for tracking reminders
@@ -286,12 +329,17 @@ class CouponUsage(db.Model):
     """
     Table for recording coupon usage actions (partial or full).
     """
-    __tablename__ = 'coupon_usage'
+
+    __tablename__ = "coupon_usage"
     id = db.Column(db.Integer, primary_key=True)
-    coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=False)
+    coupon_id = db.Column(db.Integer, db.ForeignKey("coupon.id"), nullable=False)
     used_amount = db.Column(db.Float, nullable=False)
-    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    action = db.Column(db.String(50), nullable=True)     # For example: "redeem", "partial_use"
+    timestamp = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    action = db.Column(
+        db.String(50), nullable=True
+    )  # For example: "redeem", "partial_use"
     details = db.Column(db.String(255), nullable=True)
 
 
@@ -299,34 +347,42 @@ class Notification(db.Model):
     """
     Notifications table.
     """
-    __tablename__ = 'notifications'
+
+    __tablename__ = "notifications"
 
     id = db.Column(db.Integer, primary_key=True)
     message = db.Column(db.String(255), nullable=False)
     link = db.Column(db.String(255), nullable=True)
-    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    timestamp = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     viewed = db.Column(db.Boolean, default=False)
     hide_from_view = db.Column(db.Boolean, default=False, nullable=False)
     shown = db.Column(db.Boolean, default=False, nullable=False)
 
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    user = db.relationship('User', back_populates='notifications', lazy=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user = db.relationship("User", back_populates="notifications", lazy=True)
 
 
 class Transaction(db.Model):
     """
     Transactions table (buying/selling coupons between users).
     """
-    __tablename__ = 'transactions'
+
+    __tablename__ = "transactions"
 
     id = db.Column(db.Integer, primary_key=True)
-    coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id', ondelete='CASCADE'), nullable=False)
-    seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    buyer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    status = db.Column(db.String(20), nullable=False, default='ממתין לאישור המוכר')
+    coupon_id = db.Column(
+        db.Integer, db.ForeignKey("coupon.id", ondelete="CASCADE"), nullable=False
+    )
+    seller_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    buyer_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    status = db.Column(db.String(20), nullable=False, default="ממתין לאישור המוכר")
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     source = db.Column(db.String(50), nullable=True)
-    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    timestamp = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     buyer_phone = db.Column(db.String(20), nullable=True)
     seller_phone = db.Column(db.String(20), nullable=True)
     seller_confirmed = db.Column(db.Boolean, default=False)
@@ -347,38 +403,46 @@ class Transaction(db.Model):
 
     # Relationships
     coupon = db.relationship(
-        'Coupon',
-        backref=db.backref('transactions', cascade='all, delete-orphan', passive_deletes=True),
-        lazy=True
+        "Coupon",
+        backref=db.backref(
+            "transactions", cascade="all, delete-orphan", passive_deletes=True
+        ),
+        lazy=True,
     )
-    seller = db.relationship('User', foreign_keys=[seller_id], back_populates='transactions_sold', lazy=True)
-    buyer = db.relationship('User', foreign_keys=[buyer_id], back_populates='transactions_bought', lazy=True)
+    seller = db.relationship(
+        "User", foreign_keys=[seller_id], back_populates="transactions_sold", lazy=True
+    )
+    buyer = db.relationship(
+        "User", foreign_keys=[buyer_id], back_populates="transactions_bought", lazy=True
+    )
 
 
 class CouponRequest(db.Model):
     """
     Coupon requests table (users requesting specific coupons).
     """
-    __tablename__ = 'coupon_requests'
+
+    __tablename__ = "coupon_requests"
     id = db.Column(db.Integer, primary_key=True)
     company = db.Column(db.String(100), nullable=False)
     other_company = db.Column(db.String(100), nullable=True)  # New field
-    code = db.Column(db.String(255), nullable=True)           # Can be NULL
+    code = db.Column(db.String(255), nullable=True)  # Can be NULL
     value = db.Column(db.Float, nullable=False)
     cost = db.Column(db.Float, nullable=False)
-    description = db.Column(db.Text, nullable=True)          # Description field
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    description = db.Column(db.Text, nullable=True)  # Description field
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     date_requested = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     fulfilled = db.Column(db.Boolean, default=False)
 
-    user = db.relationship('User', back_populates='coupon_requests')
+    user = db.relationship("User", back_populates="coupon_requests")
 
 
 class Company(db.Model):
     """
     Companies table (to store logo images, for example).
     """
-    __tablename__ = 'companies'
+
+    __tablename__ = "companies"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     image_path = db.Column(db.String(200), nullable=False)
@@ -391,25 +455,25 @@ class Company(db.Model):
 def update_coupon_status(coupon):
     try:
         current_date = datetime.now(timezone.utc).date()
-        status = 'פעיל'
+        status = "פעיל"
 
         if coupon.expiration:
             expiration_date = coupon.expiration
             if current_date > expiration_date:
-                status = 'פג תוקף'
+                status = "פג תוקף"
                 # Create notification for expired coupon
-                """""""""
+                """""" """
                 notification = Notification(
                     user_id=coupon.user_id,
                     message=f"הקופון {coupon.code} פג תוקף.",
                     link=url_for('coupon_detail', id=coupon.id)
                 )
                 db.session.add(notification)
-                """""""""
+                """ """"""
 
         if coupon.used_value >= coupon.value:
-            status = 'נוצל'
-            """""""""
+            status = "נוצל"
+            """""" """
             # Create notification for fully used coupon
             notification = Notification(
                 user_id=coupon.user_id,
@@ -417,7 +481,7 @@ def update_coupon_status(coupon):
                 link=url_for('coupon_detail', id=coupon.id)
             )
             db.session.add(notification)
-            """""""""
+            """ """"""
 
         if coupon.status != status:
             coupon.status = status
@@ -430,29 +494,33 @@ class CouponTransaction(db.Model):
     """
     "Transactions" table (or log) for multi-use coupon usage.
     """
-    __tablename__ = 'coupon_transaction'
+
+    __tablename__ = "coupon_transaction"
 
     id = db.Column(db.Integer, primary_key=True)
-    coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=False)
+    coupon_id = db.Column(db.Integer, db.ForeignKey("coupon.id"), nullable=False)
     transaction_date = db.Column(db.DateTime, nullable=True)
     location = db.Column(db.String(255), nullable=True)
     recharge_amount = db.Column(db.Float, nullable=True)
     usage_amount = db.Column(db.Float, nullable=True)
     reference_number = db.Column(db.String(100), nullable=True)
-    source = db.Column(db.String(50), nullable=False, default='User')
+    source = db.Column(db.String(50), nullable=False, default="User")
 
-    coupon = db.relationship('Coupon', back_populates='multipass_transactions')
+    coupon = db.relationship("Coupon", back_populates="multipass_transactions")
 
 
 class GptUsage(db.Model):
     """
     Table for recording GPT usage by users.
     """
-    __tablename__ = 'gpt_usage'
+
+    __tablename__ = "gpt_usage"
 
     gpt_usage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    created = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     id = db.Column(db.String(255))
     object = db.Column(db.String(255))
     model = db.Column(db.String(255))
@@ -465,18 +533,21 @@ class GptUsage(db.Model):
     prompt_text = db.Column(db.Text, nullable=True)
     response_text = db.Column(db.Text, nullable=True)
 
-    user = db.relationship('User', backref='gpt_usage_records')
+    user = db.relationship("User", backref="gpt_usage_records")
 
 
 class UserConsent(db.Model):
     """
     Consent table for data collection.
     """
+
     __tablename__ = "user_consents"
 
     consent_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)  # Made optional
-    ip_address = db.Column(db.String(45), nullable=True) 
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=True
+    )  # Made optional
+    ip_address = db.Column(db.String(45), nullable=True)
     consent_status = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     version = db.Column(db.String(50), default="1.0")
@@ -488,18 +559,23 @@ class UserActivity(db.Model):
     """
     User activity table (Events, Trackers, etc.).
     """
+
     __tablename__ = "user_activities"
 
     activity_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-    action = db.Column(db.String(100), nullable=False)  # Such as: "view_coupon", "redeem_coupon"
-    coupon_id = db.Column(db.Integer, nullable=True)    # Coupon identifier
+    action = db.Column(
+        db.String(100), nullable=False
+    )  # Such as: "view_coupon", "redeem_coupon"
+    coupon_id = db.Column(db.Integer, nullable=True)  # Coupon identifier
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     ip_address = db.Column(db.String(45), nullable=True)
-    device = db.Column(db.String(50), nullable=True)    # "Desktop", "Mobile"
+    device = db.Column(db.String(50), nullable=True)  # "Desktop", "Mobile"
     browser = db.Column(db.String(50), nullable=True)
     geo_location = db.Column(db.String(100), nullable=True)
-    duration = db.Column(db.Integer, nullable=True)     # Duration of action in seconds, if relevant
+    duration = db.Column(
+        db.Integer, nullable=True
+    )  # Duration of action in seconds, if relevant
     extra_metadata = db.Column(db.Text, nullable=True)  # JSON or additional text
 
     user = db.relationship("User", back_populates="activities")
@@ -509,6 +585,7 @@ class OptOut(db.Model):
     """
     Opt-Out table: Users who requested to stop data collection.
     """
+
     __tablename__ = "opt_outs"
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
@@ -527,49 +604,69 @@ class UserRating(db.Model):
     - created_at: date of rating/comment.
     - Limitation: Each user can rate another user only once => We'll handle this in the Route logic.
     """
-    __tablename__ = 'user_ratings'
+
+    __tablename__ = "user_ratings"
 
     id = db.Column(db.Integer, primary_key=True)
-    rated_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    rating_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    rated_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    rating_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     rating_value = db.Column(db.Integer, nullable=False)
     rating_comment = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    rated_user = db.relationship('User', foreign_keys=[rated_user_id], back_populates='received_ratings')
-    rating_user = db.relationship('User', foreign_keys=[rating_user_id], lazy=True)
+    rated_user = db.relationship(
+        "User", foreign_keys=[rated_user_id], back_populates="received_ratings"
+    )
+    rating_user = db.relationship("User", foreign_keys=[rating_user_id], lazy=True)
 
     def __repr__(self):
         return f"<UserRating from {self.rating_user_id} to {self.rated_user_id} = {self.rating_value}>"
 
 
 class UserReview(db.Model):
-    __tablename__ = 'user_reviews'
+    __tablename__ = "user_reviews"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # Who gave the review
-    reviewed_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # User receiving the review
-    transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=True)  # New column
-    coffee_transaction = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=True)
+    reviewer_id = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=False
+    )  # Who gave the review
+    reviewed_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=False
+    )  # User receiving the review
+    transaction_id = db.Column(
+        db.Integer, db.ForeignKey("transactions.id"), nullable=True
+    )  # New column
+    coffee_transaction = db.Column(
+        db.Integer, db.ForeignKey("transactions.id"), nullable=True
+    )
     rating = db.Column(db.Integer, nullable=True)  # Rating 1-5
-    comment = db.Column(db.Text, nullable=True)    # Text comment
+    comment = db.Column(db.Text, nullable=True)  # Text comment
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
-        db.UniqueConstraint('reviewer_id', 'reviewed_user_id', 'transaction_id', name='user_reviews_unique_review'),
+        db.UniqueConstraint(
+            "reviewer_id",
+            "reviewed_user_id",
+            "transaction_id",
+            name="user_reviews_unique_review",
+        ),
     )
 
-    reviewer = db.relationship("User", foreign_keys=[reviewer_id], backref="reviews_given")
-    reviewed_user = db.relationship("User", foreign_keys=[reviewed_user_id], backref="reviews_received")
+    reviewer = db.relationship(
+        "User", foreign_keys=[reviewer_id], backref="reviews_given"
+    )
+    reviewed_user = db.relationship(
+        "User", foreign_keys=[reviewed_user_id], backref="reviews_received"
+    )
 
 
 class AdminMessage(db.Model):
-    __tablename__ = 'admin_messages'
+    __tablename__ = "admin_messages"
 
     id = db.Column(db.Integer, primary_key=True)
     message_text = db.Column(db.Text, nullable=False)
-    link_url = db.Column(db.String(255), nullable=True)   # Optional link
+    link_url = db.Column(db.String(255), nullable=True)  # Optional link
     link_text = db.Column(db.String(255), nullable=True)  # Button text
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

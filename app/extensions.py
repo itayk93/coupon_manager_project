@@ -17,5 +17,9 @@ google_bp = make_google_blueprint(
     client_secret=os.getenv("GOOGLE_OAUTH_CLIENT_SECRET"),
     redirect_to="auth.google_callback",
     offline=True,
-    scope=["openid", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"]
+    scope=[
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+    ],
 )

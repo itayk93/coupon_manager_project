@@ -6,7 +6,8 @@ from sqlalchemy.sql import text
 from app.extensions import db
 from app.models import Company, Coupon
 from app.helpers import send_email  # Make sure you have a send_email function
-                                    # in app.helpers or another appropriate file
+
+# in app.helpers or another appropriate file
 from sqlalchemy import text
 from app.extensions import db
 
@@ -18,7 +19,8 @@ def update_company_counts_and_send_email_old(app):
     with app.app_context():
         try:
             # 1. Update the company_count column
-            update_query = text("""
+            update_query = text(
+                """
                 UPDATE companies c
                 SET company_count = COALESCE(subquery.company_count, 0)
                 FROM (
@@ -28,12 +30,15 @@ def update_company_counts_and_send_email_old(app):
                     GROUP BY c.id
                 ) AS subquery
                 WHERE c.id = subquery.id;
-            """)
+            """
+            )
             db.session.execute(update_query)
             db.session.commit()
 
             # 2. Fetch updated data
-            updated_companies = Company.query.order_by(Company.company_count.desc()).all()
+            updated_companies = Company.query.order_by(
+                Company.company_count.desc()
+            ).all()
 
             # 3. Build HTML content for email
             html_rows = []
@@ -77,6 +82,7 @@ def update_company_counts_and_send_email_old(app):
             db.session.rollback()
             logging.error(f"Error in update_company_counts_and_send_email: {e}")
 
+
 def update_company_counts_and_send_email(app):
     """
     Updates the coupon count for each company and sends an email report showing
@@ -90,7 +96,8 @@ def update_company_counts_and_send_email(app):
     with app.app_context():
         try:
             # 1. Update the company_count column in the companies table
-            update_query = text("""
+            update_query = text(
+                """
                 UPDATE companies c
                 SET company_count = COALESCE(subquery.company_count, 0)
                 FROM (
@@ -100,12 +107,14 @@ def update_company_counts_and_send_email(app):
                     GROUP BY c.id
                 ) AS subquery
                 WHERE c.id = subquery.id;
-            """)
+            """
+            )
             db.session.execute(update_query)
             db.session.commit()
 
             # 2. Fetch statistics from the coupon table with appropriate conversions
-            stats_query = text("""
+            stats_query = text(
+                """
                 SELECT
                     company,
                     COUNT(*) AS coupon_count,
@@ -116,7 +125,8 @@ def update_company_counts_and_send_email(app):
                 FROM coupon
                 GROUP BY company
                 ORDER BY coupon_count DESC;  -- מיון לפי סה"כ קופונים
-            """)
+            """
+            )
             # Using .mappings() to get results as dictionaries (dict)
             coupon_stats = db.session.execute(stats_query).mappings().all()
 
@@ -187,12 +197,22 @@ def update_company_counts_and_send_email(app):
                     <tbody>
             """
             for row in coupon_stats:
-                company = row['company']
-                coupon_count = row['coupon_count']
-                avg_cost = row['avg_cost'] if row['avg_cost'] is not None else "N/A"
-                avg_coupon_value = row['avg_coupon_value'] if row['avg_coupon_value'] is not None else "N/A"
-                avg_discount = row['avg_discount'] if row['avg_discount'] is not None else "N/A"
-                last_added = row['last_added'].strftime("%Y-%m-%d %H:%M:%S") if row['last_added'] else "N/A"
+                company = row["company"]
+                coupon_count = row["coupon_count"]
+                avg_cost = row["avg_cost"] if row["avg_cost"] is not None else "N/A"
+                avg_coupon_value = (
+                    row["avg_coupon_value"]
+                    if row["avg_coupon_value"] is not None
+                    else "N/A"
+                )
+                avg_discount = (
+                    row["avg_discount"] if row["avg_discount"] is not None else "N/A"
+                )
+                last_added = (
+                    row["last_added"].strftime("%Y-%m-%d %H:%M:%S")
+                    if row["last_added"]
+                    else "N/A"
+                )
                 html_content += f"""
                       <tr>
                         <td>{company}</td>
@@ -226,14 +246,18 @@ def update_company_counts_and_send_email(app):
                 html_content=html_content,
             )
 
-            logging.info("Daily company update and coupon statistics email sent successfully.")
+            logging.info(
+                "Daily company update and coupon statistics email sent successfully."
+            )
 
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error in update_company_counts_and_send_email: {e}")
 
+
 def get_coupons_expiring_in_30_days():
-    query = text("""SELECT * 
+    query = text(
+        """SELECT * 
 FROM coupon 
 WHERE expiration IS NOT NULL
 AND TO_DATE(expiration, 'YYYY-MM-DD') 
@@ -241,7 +265,8 @@ AND TO_DATE(expiration, 'YYYY-MM-DD')
 AND reminder_sent_30_days = FALSE
 AND status = 'פעיל'   -- רק קופונים פעילים
 AND is_for_sale = FALSE;  -- לא למכירה
-""")
+"""
+    )
     result = db.session.execute(query)
     return result.fetchall()  # Or other processing
 
@@ -252,6 +277,7 @@ from sqlalchemy.sql import text
 from app.extensions import db
 
 from app import create_app
+
 
 def load_status():
     """
@@ -265,17 +291,20 @@ def load_status():
         result = db.session.execute(query, {"today": today}).fetchone()
         return result[0] if result else False  # אם אין רשומה להיום, נחזיר False
 
+
 def save_status(was_sent):
     """
     שומר בטבלה את מצב השליחה עבור התאריך הנוכחי.
     משתמש ב-UPSERT (INSERT ... ON CONFLICT) כך שהרשומה תתעדכן אם היא קיימת.
     """
     today = datetime.date.today()
-    query = text("""
+    query = text(
+        """
         INSERT INTO daily_email_status (date, process, was_sent)
         VALUES (:today, 'default', :was_sent)
         ON CONFLICT (date, process) DO UPDATE SET was_sent = EXCLUDED.was_sent;
-    """)
+    """
+    )
     try:
         db.session.execute(query, {"today": today, "was_sent": was_sent})
         db.session.commit()
@@ -284,10 +313,12 @@ def save_status(was_sent):
         db.session.rollback()
         logging.error("Error updating email status: %s", e)
 
+
 import datetime
 from sqlalchemy.sql import text
 from app.extensions import db
 import logging
+
 
 def load_process_status(process):
     """
@@ -295,9 +326,12 @@ def load_process_status(process):
     מחזיר True אם תהליך זה כבר בוצע היום, אחרת False.
     """
     today = datetime.date.today()
-    query = text("SELECT was_sent FROM daily_email_status WHERE date = :today AND process = :process")
+    query = text(
+        "SELECT was_sent FROM daily_email_status WHERE date = :today AND process = :process"
+    )
     result = db.session.execute(query, {"today": today, "process": process}).fetchone()
     return result[0] if result else False
+
 
 def save_process_status_old(process, was_sent):
     """
@@ -305,15 +339,21 @@ def save_process_status_old(process, was_sent):
     משתמש ב-UPsert (INSERT ... ON CONFLICT) כדי לעדכן או להוסיף את הרשומה.
     """
     today = datetime.date.today()
-    query = text("""
+    query = text(
+        """
         INSERT INTO daily_email_status (date, process, was_sent)
         VALUES (:today, :process, :was_sent)
         ON CONFLICT (date, process) DO UPDATE SET was_sent = EXCLUDED.was_sent;
-    """)
+    """
+    )
     try:
-        db.session.execute(query, {"today": today, "process": process, "was_sent": was_sent})
+        db.session.execute(
+            query, {"today": today, "process": process, "was_sent": was_sent}
+        )
         db.session.commit()
-        logging.info("Updated status for process '%s' for date %s: %s", process, today, was_sent)
+        logging.info(
+            "Updated status for process '%s' for date %s: %s", process, today, was_sent
+        )
     except Exception as e:
         db.session.rollback()
         logging.error("Error updating status for process '%s': %s", process, e)
@@ -326,19 +366,31 @@ def save_process_status(process, was_sent):
     """
     today = datetime.date.today()
     existing = db.session.execute(
-        text("SELECT * FROM daily_email_status WHERE date = :today AND process = :process"),
-        {"today": today, "process": process}
+        text(
+            "SELECT * FROM daily_email_status WHERE date = :today AND process = :process"
+        ),
+        {"today": today, "process": process},
     ).fetchone()
 
     if existing:
-        update_query = text("UPDATE daily_email_status SET was_sent = :was_sent WHERE date = :today AND process = :process")
-        db.session.execute(update_query, {"today": today, "process": process, "was_sent": was_sent})
+        update_query = text(
+            "UPDATE daily_email_status SET was_sent = :was_sent WHERE date = :today AND process = :process"
+        )
+        db.session.execute(
+            update_query, {"today": today, "process": process, "was_sent": was_sent}
+        )
     else:
-        insert_query = text("INSERT INTO daily_email_status (date, process, was_sent) VALUES (:today, :process, :was_sent)")
-        db.session.execute(insert_query, {"today": today, "process": process, "was_sent": was_sent})
+        insert_query = text(
+            "INSERT INTO daily_email_status (date, process, was_sent) VALUES (:today, :process, :was_sent)"
+        )
+        db.session.execute(
+            insert_query, {"today": today, "process": process, "was_sent": was_sent}
+        )
     try:
         db.session.commit()
-        logging.info("Updated status for process '%s' for date %s: %s", process, today, was_sent)
+        logging.info(
+            "Updated status for process '%s' for date %s: %s", process, today, was_sent
+        )
     except Exception as e:
         db.session.rollback()
         logging.error("Error updating status for process '%s': %s", process, e)

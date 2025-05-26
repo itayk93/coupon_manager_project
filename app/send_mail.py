@@ -2,6 +2,7 @@ import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 from pprint import pprint
 
+
 def send_html_email(
     api_key: str,
     sender_email: str,
@@ -9,7 +10,7 @@ def send_html_email(
     recipient_email: str,
     recipient_name: str,
     subject: str,
-    html_content: str
+    html_content: str,
 ):
     """
     Sends an HTML email using the Brevo (SendinBlue) API.
@@ -29,17 +30,19 @@ def send_html_email(
     """
     # Configure API key authorization
     configuration = sib_api_v3_sdk.Configuration()
-    configuration.api_key['api-key'] = api_key
+    configuration.api_key["api-key"] = api_key
 
     # Create an instance of the TransactionalEmailsApi
-    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
+        sib_api_v3_sdk.ApiClient(configuration)
+    )
 
     # Define the email parameters
     send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
         to=[{"email": recipient_email, "name": recipient_name}],
         sender={"email": sender_email, "name": sender_name},
         subject=subject,
-        html_content=html_content
+        html_content=html_content,
     )
 
     try:
@@ -48,5 +51,8 @@ def send_html_email(
         pprint(api_response)
         return api_response
     except ApiException as e:
-        print("Exception when calling TransactionalEmailsApi->send_transac_email: %s\n" % e)
+        print(
+            "Exception when calling TransactionalEmailsApi->send_transac_email: %s\n"
+            % e
+        )
         return None

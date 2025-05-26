@@ -23,27 +23,30 @@ logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler()
 
 # Import the Scheduler
-from scheduler_config import configure_scheduler  # ← Changed import according to file location
+from scheduler_config import (
+    configure_scheduler,
+)  # ← Changed import according to file location
+
 
 def create_app():
     # Load environment variables (for extra safety, can also be in wsgi.py)
     load_dotenv()
 
     import os
-    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
-    app = Flask(__name__, static_folder='static', template_folder='templates')
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
-    app.config['GA_TRACKING_ID'] = os.getenv("GA_TRACKING_ID", "")
-    app.config['CLARITY_PROJECT_ID'] = os.getenv("CLARITY_PROJECT_ID", "")
+    app = Flask(__name__, static_folder="static", template_folder="templates")
+
+    app.config["GA_TRACKING_ID"] = os.getenv("GA_TRACKING_ID", "")
+    app.config["CLARITY_PROJECT_ID"] = os.getenv("CLARITY_PROJECT_ID", "")
 
     @app.context_processor
     def inject_tracking_ids():
         return dict(
-            ga_tracking_id=app.config['GA_TRACKING_ID'],
-            clarity_project_id=app.config['CLARITY_PROJECT_ID']
+            ga_tracking_id=app.config["GA_TRACKING_ID"],
+            clarity_project_id=app.config["CLARITY_PROJECT_ID"],
         )
-
 
     # Load configuration (Config) from config.py
     app.config.from_object(Config)
@@ -51,14 +54,15 @@ def create_app():
     # Set log level (debug etc.)
     app.logger.setLevel(logging.DEBUG)
 
-
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_message = "עליך להתחבר כדי לגשת לעמוד זה"
-    login_manager.login_message_category = "warning"  # Can be changed to 'info', 'danger', 'success'
-    login_manager.login_view = 'auth.login'
+    login_manager.login_message_category = (
+        "warning"  # Can be changed to 'info', 'danger', 'success'
+    )
+    login_manager.login_view = "auth.login"
     csrf.init_app(app)
 
     @login_manager.user_loader
@@ -67,7 +71,8 @@ def create_app():
 
     # Register Israel time filter
     from app.routes.coupons_routes import to_israel_time_filter
-    app.add_template_filter(to_israel_time_filter, 'to_israel_time')
+
+    app.add_template_filter(to_israel_time_filter, "to_israel_time")
 
     # Register Blueprints
     from app.routes.auth_routes import auth_bp
@@ -85,6 +90,7 @@ def create_app():
     from app.routes.admin_routes.admin_dashboard_routes import admin_dashboard_bp
     from app.routes.admin_routes.admin_messages_routes import admin_messages_bp
     from app.extensions import google_bp
+
     # from app.routes.profile_routes import profile_bp
 
     app.register_blueprint(google_bp, url_prefix="/login")  # ✅ Added Google Login here!
@@ -98,16 +104,15 @@ def create_app():
     app.register_blueprint(admin_tags_bp)
     app.register_blueprint(admin_companies_bp)
     app.register_blueprint(admin_coupon_tags_bp)
-    app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(admin_bp, url_prefix="/admin")
     # app.register_blueprint(profile_bp, url_prefix='/')
     app.register_blueprint(admin_dashboard_bp, url_prefix="/admin")
     app.register_blueprint(admin_messages_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
 
-
     # If needed - create instance folder
-    if not os.path.exists('instance'):
-        os.makedirs('instance')
+    if not os.path.exists("instance"):
+        os.makedirs("instance")
 
     # Run operations with context
     with app.app_context():
@@ -115,13 +120,14 @@ def create_app():
 
         # Create uploads folder
         try:
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
             logger.info(f"יצירת תיקיית ההעלאה: {app.config['UPLOAD_FOLDER']}")
         except Exception as e:
             logger.error(f"שגיאה ביצירת תיקיית ההעלאה: {e}")
 
     # 📌 Call the scheduler **only after the application is loaded**
     from scheduler_config import configure_scheduler
+
     configure_scheduler()
 
     @app.context_processor
@@ -134,31 +140,35 @@ def create_app():
 def send_expiration_warnings():
     """Sends notifications about coupons that are about to expire, using Flask context."""
     from app import create_app  # Load the application
+
     app = create_app()
 
     with app.app_context():
         from app.models import Coupon
+
         today = datetime.utcnow().date()
         one_month_ahead = today + timedelta(days=30)
 
         coupons_month = Coupon.query.filter(
-            Coupon.expiration == one_month_ahead.strftime('%Y-%m-%d'),
-            Coupon.reminder_sent_30_days == False
+            Coupon.expiration == one_month_ahead.strftime("%Y-%m-%d"),
+            Coupon.reminder_sent_30_days == False,
         ).all()
-        
+
         for coupon in coupons_month:
             user = coupon.user
             if user:
                 try:
                     expiration_date = coupon.expiration
-                    coupon_detail_link = request.host_url.rstrip('/') + url_for('coupon_detail', id=coupon.id)
+                    coupon_detail_link = request.host_url.rstrip("/") + url_for(
+                        "coupon_detail", id=coupon.id
+                    )
                     html_content = render_template(
-                        'emails/coupon_expiration_warning.html',
+                        "emails/coupon_expiration_warning.html",
                         user=user,
                         coupon=coupon,
                         expiration_date=expiration_date,
                         coupon_detail_link=coupon_detail_link,
-                        days_left=30
+                        days_left=30,
                     )
 
                     # Send email
@@ -168,13 +178,17 @@ def send_expiration_warnings():
                         recipient_email=user.email,
                         recipient_name=f"{user.first_name} {user.last_name}",
                         subject="התראה על תפוגת קופון - 30 יום נותרו",
-                        html_content=html_content
+                        html_content=html_content,
                     )
 
                     coupon.reminder_sent_30_days = True
                     db.session.commit()
-                    logger.info(f"Sent 30-day expiration warning for coupon {coupon.code} to {user.email}")
+                    logger.info(
+                        f"Sent 30-day expiration warning for coupon {coupon.code} to {user.email}"
+                    )
 
                 except Exception as e:
-                    logger.error(f"Error sending 30-day expiration warning for coupon {coupon.code}: {e}")
+                    logger.error(
+                        f"Error sending 30-day expiration warning for coupon {coupon.code}: {e}"
+                    )
                     db.session.rollback()

@@ -2,8 +2,13 @@
 
 import os
 from flask import (
-    Blueprint, render_template, request, redirect,
-    url_for, flash, current_app
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    current_app,
 )
 from flask_login import login_required, current_user
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
@@ -18,60 +23,61 @@ from app.models import User
 from app.helpers import (
     send_email,
     send_password_reset_email,
-    generate_confirmation_token
+    generate_confirmation_token,
 )
 
-admin_users_bp = Blueprint('admin_users_bp', __name__, url_prefix='/users')
+admin_users_bp = Blueprint("admin_users_bp", __name__, url_prefix="/users")
 
-@admin_users_bp.route('/', methods=['GET'])
+
+@admin_users_bp.route("/", methods=["GET"])
 @login_required
 def manage_users():
     """ עמוד המציג את כל המשתמשים (אדמין בלבד). """
     if not current_user.is_admin:
-        flash('אין לך הרשאה לצפות בעמוד זה.', 'danger')
-        return redirect(url_for('profile.index'))
+        flash("אין לך הרשאה לצפות בעמוד זה.", "danger")
+        return redirect(url_for("profile.index"))
 
     users = User.query.order_by(User.id.asc()).all()
-    return render_template('admin/admin_manage_users.html', users=users)
+    return render_template("admin/admin_manage_users.html", users=users)
 
     users = User.query.order_by(User.id.asc()).all()
-    return render_template('admin/admin_manage_users.html', users=users)
+    return render_template("admin/admin_manage_users.html", users=users)
 
-@admin_users_bp.route('/reset_password', methods=['POST'])
+
+@admin_users_bp.route("/reset_password", methods=["POST"])
 @login_required
 def reset_user_password():
     """
     שליחת מייל שחזור סיסמה למשתמש (אדמין בלבד).
     """
     if not current_user.is_admin:
-        flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
-        return redirect(url_for('profile.index'))
+        flash("אין לך הרשאה לבצע פעולה זו.", "danger")
+        return redirect(url_for("profile.index"))
 
-    user_id = request.form.get('user_id', type=int)
+    user_id = request.form.get("user_id", type=int)
     user = User.query.get(user_id)
     if not user:
-        flash('המשתמש לא נמצא.', 'danger')
-        return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
+        flash("המשתמש לא נמצא.", "danger")
+        return redirect(url_for("admin_bp.admin_users_bp.manage_users"))
 
     # -- כאן אתה יכול לקרוא לפונקציה הקיימת לשליחת מייל שחזור --
     send_password_reset_email(user)
-    flash(f'נשלח מייל שחזור סיסמה לכתובת {user.email}.', 'success')
-    return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
+    flash(f"נשלח מייל שחזור סיסמה לכתובת {user.email}.", "success")
+    return redirect(url_for("admin_bp.admin_users_bp.manage_users"))
 
 
-
-@admin_users_bp.route('/update_slots_automatic_coupons', methods=['POST'])
+@admin_users_bp.route("/update_slots_automatic_coupons", methods=["POST"])
 @login_required
 def update_slots_automatic_coupons():
     """
     מעדכן את כמות slots_automatic_coupons של המשתמש.
     """
     if not current_user.is_admin:
-        flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
-        return redirect(url_for('profile.index'))
+        flash("אין לך הרשאה לבצע פעולה זו.", "danger")
+        return redirect(url_for("profile.index"))
 
-    user_id = request.form.get('user_id', type=int)
-    new_slots = request.form.get('slots_automatic_coupons', type=int)
+    user_id = request.form.get("user_id", type=int)
+    new_slots = request.form.get("slots_automatic_coupons", type=int)
 
     user = User.query.get(user_id)
     if user:
@@ -81,15 +87,16 @@ def update_slots_automatic_coupons():
     else:
         flash("משתמש לא נמצא.", "error")
 
-    return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
+    return redirect(url_for("admin_bp.admin_users_bp.manage_users"))
 
-@admin_users_bp.route('/initiate_delete_user', methods=['POST'])
+
+@admin_users_bp.route("/initiate_delete_user", methods=["POST"])
 @login_required
 def initiate_delete_user():
     """
     פותח תהליך מחיקה - שולח למשתמש מייל עם לינק 'confirm_delete_user/<token>'.
     """
-    user_id = request.form.get('user_id', type=int)
+    user_id = request.form.get("user_id", type=int)
     user = User.query.get(user_id)
     if not user:
         flash("משתמש לא נמצא.", "error")
@@ -110,14 +117,15 @@ def initiate_delete_user():
         return redirect_after_deletion()
 
     # יצירת טוקן
-    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-    token = s.dumps({'user_id': user.id}, salt='delete-user-salt')
+    s = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+    token = s.dumps({"user_id": user.id}, salt="delete-user-salt")
 
     # שליחת מייל
     send_delete_confirmation_email(user, token)
 
     flash("נשלח מייל למשתמש לצורך אישור מחיקה.", "info")
     return redirect_after_deletion()
+
 
 def redirect_after_deletion():
     """
@@ -126,38 +134,40 @@ def redirect_after_deletion():
     אחרת -> חזרה לעמוד ההתחברות
     """
     if current_user.is_authenticated and current_user.is_admin:
-        return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
+        return redirect(url_for("admin_bp.admin_users_bp.manage_users"))
     else:
         # מסך התחברות
-        return redirect(url_for('auth.login'))
+        return redirect(url_for("auth.login"))
+
 
 from flask_login import logout_user
 
-@admin_users_bp.route('/confirm_delete_user/<token>', methods=['GET'])
+
+@admin_users_bp.route("/confirm_delete_user/<token>", methods=["GET"])
 def confirm_delete_user(token):
-    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    s = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
     try:
-        data = s.loads(token, salt='delete-user-salt', max_age=259200)
-        user_id = data.get('user_id')
+        data = s.loads(token, salt="delete-user-salt", max_age=259200)
+        user_id = data.get("user_id")
     except SignatureExpired:
         flash("זמן האישור פג תוקף.", "error")
-        return redirect(url_for('auth.login'))
+        return redirect(url_for("auth.login"))
     except BadSignature:
         flash("קישור לא חוקי או טוקן פגום.", "error")
-        return redirect(url_for('auth.login'))
+        return redirect(url_for("auth.login"))
 
     user = User.query.get(user_id)
     if not user:
         flash("משתמש לא נמצא.", "error")
-        return redirect(url_for('auth.login'))
+        return redirect(url_for("auth.login"))
 
     if user.is_admin:
         flash("לא ניתן למחוק חשבון אדמין.", "error")
-        return redirect(url_for('auth.login'))
+        return redirect(url_for("auth.login"))
 
     if user.is_deleted:
         flash("המשתמש כבר נמחק בעבר.", "info")
-        return redirect(url_for('auth.login'))
+        return redirect(url_for("auth.login"))
 
     # שינוי הפרטים -> Deleted user
     now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -166,7 +176,7 @@ def confirm_delete_user(token):
     user.last_name = f"User_{now_str}"
     user.is_confirmed = False
     user.is_deleted = True
-    user.password = ''.join(random.choices(string.ascii_letters + string.digits, k=60))
+    user.password = "".join(random.choices(string.ascii_letters + string.digits, k=60))
 
     db.session.commit()
 
@@ -175,29 +185,31 @@ def confirm_delete_user(token):
     # אם המשתמש שמחק הוא אותו user, נבצע logout
     if current_user.is_authenticated and current_user.id == user.id:
         logout_user()
-    
+
     # תמיד נפנה למסך ההתחברות
-    return redirect(url_for('auth.login'))
+    return redirect(url_for("auth.login"))
 
 
 def send_delete_confirmation_email(user, token):
     """
     שולח מייל עם לינק למחיקת המשתמש ומספק לוגים למעקב.
     """
-    deletion_link = request.host_url.rstrip('/') + url_for(
-        'admin_bp.admin_users_bp.confirm_delete_user',
-        token=token
+    deletion_link = request.host_url.rstrip("/") + url_for(
+        "admin_bp.admin_users_bp.confirm_delete_user", token=token
     )
     subject = "אישור מחיקת חשבון ב-Coupon Master"
 
     # רנדר תבנית המייל
-    html_content = render_template('emails/account_delete_confirmation.html',
-                                   user=user, deletion_link=deletion_link)
+    html_content = render_template(
+        "emails/account_delete_confirmation.html",
+        user=user,
+        deletion_link=deletion_link,
+    )
 
-    sender_email = 'noreply@couponmasteril.com'
-    sender_name = 'Coupon Master'
+    sender_email = "noreply@couponmasteril.com"
+    sender_name = "Coupon Master"
     recipient_email = user.email
-    recipient_name = user.first_name or 'משתמש יקר'
+    recipient_name = user.first_name or "משתמש יקר"
 
     try:
         current_app.logger.info(f"ניסיון לשליחת מייל מחיקת משתמש ל-{recipient_email}")
@@ -209,51 +221,61 @@ def send_delete_confirmation_email(user, token):
             recipient_email=recipient_email,
             recipient_name=recipient_name,
             subject=subject,
-            html_content=html_content
+            html_content=html_content,
         )
 
         if response:
-            current_app.logger.info(f"מייל למחיקת משתמש נשלח בהצלחה ל-{recipient_email}. תשובת השרת: {response}")
+            current_app.logger.info(
+                f"מייל למחיקת משתמש נשלח בהצלחה ל-{recipient_email}. תשובת השרת: {response}"
+            )
         else:
-            current_app.logger.warning(f"מייל למחיקת משתמש **לא נשלח** ל-{recipient_email}. תשובת השרת: None")
+            current_app.logger.warning(
+                f"מייל למחיקת משתמש **לא נשלח** ל-{recipient_email}. תשובת השרת: None"
+            )
 
     except Exception as e:
-        current_app.logger.error(f"שגיאה בשליחת מייל למחיקת משתמש ל-{recipient_email}: {e}")
+        current_app.logger.error(
+            f"שגיאה בשליחת מייל למחיקת משתמש ל-{recipient_email}: {e}"
+        )
 
-@admin_users_bp.route('/resend_confirmation_email', methods=['POST'])
+
+@admin_users_bp.route("/resend_confirmation_email", methods=["POST"])
 @login_required
 def resend_confirmation_email():
     """
     שולח מייל אישור מחדש למשתמש שאינו מאושר (אדמין בלבד).
     """
     if not current_user.is_admin:
-        flash('אין לך הרשאה לבצע פעולה זו.', 'danger')
-        return redirect(url_for('profile.index'))
+        flash("אין לך הרשאה לבצע פעולה זו.", "danger")
+        return redirect(url_for("profile.index"))
 
-    user_id = request.form.get('user_id', type=int)
+    user_id = request.form.get("user_id", type=int)
     user = User.query.get(user_id)
     if not user:
         flash("משתמש לא נמצא.", "error")
-        return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
+        return redirect(url_for("admin_bp.admin_users_bp.manage_users"))
 
     if user.is_confirmed:
         flash("המשתמש כבר אישר את חשבונו.", "info")
-        return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
+        return redirect(url_for("admin_bp.admin_users_bp.manage_users"))
 
     # יצירת טוקן אישור
     token = generate_confirmation_token(user.email)
-    confirm_url = request.host_url.rstrip('/') + url_for('auth.confirm_email', token=token)
-    
+    confirm_url = request.host_url.rstrip("/") + url_for(
+        "auth.confirm_email", token=token
+    )
+
     # רינדור התבנית של מייל אישור (בדומה לשליחת המייל בהרשמה)
-    html = render_template('emails/account_confirmation.html',
-                           user=user, confirmation_link=confirm_url)
+    html = render_template(
+        "emails/account_confirmation.html", user=user, confirmation_link=confirm_url
+    )
 
     # פרטי השולח והנמען (עדכן במידת הצורך)
-    sender_email = 'noreply@couponmasteril.com'
-    sender_name = 'Coupon Master'
+    sender_email = "noreply@couponmasteril.com"
+    sender_name = "Coupon Master"
     recipient_email = user.email
-    recipient_name = user.first_name or 'משתמש יקר'
-    subject = 'אישור חשבון ב-Coupon Master'
+    recipient_name = user.first_name or "משתמש יקר"
+    subject = "אישור חשבון ב-Coupon Master"
 
     try:
         send_email(
@@ -262,11 +284,11 @@ def resend_confirmation_email():
             recipient_email=recipient_email,
             recipient_name=recipient_name,
             subject=subject,
-            html_content=html
+            html_content=html,
         )
-        flash(f'נשלח מייל אישור מחדש לכתובת {user.email}.', 'success')
+        flash(f"נשלח מייל אישור מחדש לכתובת {user.email}.", "success")
     except Exception as e:
         current_app.logger.error(f"שגיאה בשליחת מייל אישור מחדש ל-{user.email}: {e}")
-        flash('אירעה שגיאה בשליחת המייל. אנא נסה שוב מאוחר יותר.', 'error')
+        flash("אירעה שגיאה בשליחת המייל. אנא נסה שוב מאוחר יותר.", "error")
 
-    return redirect(url_for('admin_bp.admin_users_bp.manage_users'))
+    return redirect(url_for("admin_bp.admin_users_bp.manage_users"))

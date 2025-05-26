@@ -17,14 +17,16 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
 if not SUPABASE_URL or not SUPABASE_KEY:
-    raise ValueError("❌ שגיאה: יש להגדיר את SUPABASE_URL ואת SUPABASE_ANON_KEY בקובץ .env")
+    raise ValueError(
+        "❌ שגיאה: יש להגדיר את SUPABASE_URL ואת SUPABASE_ANON_KEY בקובץ .env"
+    )
 
 
 def fetch_data() -> pd.DataFrame:
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     url = f"{SUPABASE_URL}/rest/v1/coupon"
     response = requests.get(url, headers=headers)
@@ -45,11 +47,15 @@ def calculate_discount(df: pd.DataFrame) -> pd.DataFrame:
     """
     מחשב את עמודת discount_percentage אם היא לא קיימת או ריקה
     """
-    if "discount_percentage" not in df.columns or df["discount_percentage"].isnull().all():
+    if (
+        "discount_percentage" not in df.columns
+        or df["discount_percentage"].isnull().all()
+    ):
         df["discount_percentage"] = df.apply(
             lambda row: ((row["value"] - row["cost"]) / row["value"] * 100)
-            if row.get("value", 0) != 0 else None,
-            axis=1
+            if row.get("value", 0) != 0
+            else None,
+            axis=1,
         )
 
     # עיגול לשתי ספרות אחרי הנקודה
@@ -64,15 +70,16 @@ def set_layout(fig):
     רק מאפשרים אוטומציה ושוליים.
     """
     fig.update_layout(
-        autosize=True,
-        margin=dict(l=20, r=20, t=50, b=40),
+        autosize=True, margin=dict(l=20, r=20, t=50, b=40),
     )
 
 
 def plot_coupon_usage(df: pd.DataFrame):
     usage = df.groupby(["company", "status"])["id"].count().reset_index(name="count")
     total_usage = usage.groupby("company")["count"].sum().reset_index(name="total")
-    companies_order = total_usage.sort_values("total", ascending=False)["company"].tolist()
+    companies_order = total_usage.sort_values("total", ascending=False)[
+        "company"
+    ].tolist()
 
     fig = px.bar(
         usage,
@@ -82,12 +89,9 @@ def plot_coupon_usage(df: pd.DataFrame):
         title="שימוש בקופונים לפי חברה",
         labels={"company": "חברה", "count": "מספר קופונים", "status": "סטטוס"},
         category_orders={"company": companies_order},
-        template="plotly_white"
+        template="plotly_white",
     )
-    fig.update_layout(
-        title={'x': 0.5},
-        xaxis_tickangle=-45
-    )
+    fig.update_layout(title={"x": 0.5}, xaxis_tickangle=-45)
     set_layout(fig)
     return fig
 
@@ -104,13 +108,10 @@ def plot_discount_distribution(df: pd.DataFrame):
         labels={"company": "חברה", "discount_percentage": "אחוז הנחה ממוצע"},
         template="plotly_white",
         color="discount_percentage",
-        color_continuous_scale="Oranges"
+        color_continuous_scale="Oranges",
     )
-    fig.update_layout(
-        title={'x': 0.5},
-        xaxis_tickangle=-45
-    )
-    fig.update_traces(hovertemplate='אחוז הנחה ממוצע: %{y:.2f}%<extra></extra>')
+    fig.update_layout(title={"x": 0.5}, xaxis_tickangle=-45)
+    fig.update_traces(hovertemplate="אחוז הנחה ממוצע: %{y:.2f}%<extra></extra>")
 
     set_layout(fig)
     return fig
@@ -139,13 +140,10 @@ def plot_active_users(df: pd.DataFrame):
         template="plotly_white",
         color="coupon_count",
         color_continuous_scale="Viridis",
-        category_orders={"user_id": user_usage["user_id"].tolist()}  # שמירה על סדר
+        category_orders={"user_id": user_usage["user_id"].tolist()},  # שמירה על סדר
     )
 
-    fig.update_layout(
-        title={'x': 0.5},
-        xaxis_tickangle=-45
-    )
+    fig.update_layout(title={"x": 0.5}, xaxis_tickangle=-45)
 
     set_layout(fig)
     return fig
@@ -162,13 +160,13 @@ def plot_cost_details(df: pd.DataFrame):
         y=df["cost"],
         name="כולל outliers",
         boxpoints="all",
-        marker=dict(color="rgba(222,45,38,0.8)")
+        marker=dict(color="rgba(222,45,38,0.8)"),
     )
     trace_without = go.Box(
         y=df_filtered["cost"],
         name="ללא outliers",
         boxpoints=False,
-        marker=dict(color="rgba(55,128,191,0.8)")
+        marker=dict(color="rgba(55,128,191,0.8)"),
     )
 
     fig = go.Figure(data=[trace_without, trace_with])
@@ -188,26 +186,30 @@ def plot_cost_details(df: pd.DataFrame):
                         method="update",
                         args=[
                             {"visible": [True, False]},
-                            {"title": "תשלום עבור קופונים - התפלגות המחירים (ללא outliers)"}
-                        ]
+                            {
+                                "title": "תשלום עבור קופונים - התפלגות המחירים (ללא outliers)"
+                            },
+                        ],
                     ),
                     dict(
                         label="כולל outliers",
                         method="update",
                         args=[
                             {"visible": [False, True]},
-                            {"title": "תשלום עבור קופונים - התפלגות המחירים (כולל outliers)"}
-                        ]
-                    )
+                            {
+                                "title": "תשלום עבור קופונים - התפלגות המחירים (כולל outliers)"
+                            },
+                        ],
+                    ),
                 ],
                 pad={"r": 10, "t": 10},
                 showactive=True,
                 x=1.0,
                 xanchor="right",
                 y=1.15,
-                yanchor="top"
+                yanchor="top",
             )
-        ]
+        ],
     )
     set_layout(fig)
     return fig
@@ -218,8 +220,12 @@ def plot_coupons_by_month(df: pd.DataFrame):
         return None
     df = df.copy()
     df["year_month"] = df["date_added"].dt.to_period("M").astype(str)
-    month_counts = df.groupby("year_month")["id"].count().reset_index(name="coupon_count")
-    month_counts["year_month_dt"] = pd.to_datetime(month_counts["year_month"], format="%Y-%m")
+    month_counts = (
+        df.groupby("year_month")["id"].count().reset_index(name="coupon_count")
+    )
+    month_counts["year_month_dt"] = pd.to_datetime(
+        month_counts["year_month"], format="%Y-%m"
+    )
     month_counts = month_counts.sort_values("year_month_dt")
 
     fig = px.bar(
@@ -230,12 +236,9 @@ def plot_coupons_by_month(df: pd.DataFrame):
         labels={"year_month": "חודש", "coupon_count": "כמות קופונים"},
         template="plotly_white",
         color="coupon_count",
-        color_continuous_scale="Blues"
+        color_continuous_scale="Blues",
     )
-    fig.update_layout(
-        title={'x': 0.5},
-        xaxis_tickangle=-45
-    )
+    fig.update_layout(title={"x": 0.5}, xaxis_tickangle=-45)
     set_layout(fig)
     return fig
 
@@ -246,7 +249,9 @@ def plot_discount_by_month(df: pd.DataFrame):
     df = df.copy()
     df["year_month"] = df["date_added"].dt.to_period("M").astype(str)
 
-    discount_by_month = df.groupby("year_month")["discount_percentage"].mean().reset_index()
+    discount_by_month = (
+        df.groupby("year_month")["discount_percentage"].mean().reset_index()
+    )
     discount_by_month = discount_by_month.sort_values("year_month")
 
     fig = px.bar(
@@ -257,16 +262,13 @@ def plot_discount_by_month(df: pd.DataFrame):
         labels={"year_month": "חודש", "discount_percentage": "אחוז הנחה ממוצע"},
         template="plotly_white",
         color="discount_percentage",
-        color_continuous_scale="Blues"
+        color_continuous_scale="Blues",
     )
 
     # עיגול ערכים לשתי ספרות והצגה נכונה ב-hover
     fig.update_traces(hovertemplate="אחוז הנחה ממוצע: %{y:.2f}%<extra></extra>")
 
-    fig.update_layout(
-        title={'x': 0.5},
-        xaxis_tickangle=-45
-    )
+    fig.update_layout(title={"x": 0.5}, xaxis_tickangle=-45)
 
     set_layout(fig)
     return fig
@@ -275,22 +277,38 @@ def plot_discount_by_month(df: pd.DataFrame):
 def plot_avg_value_cost_by_company(df: pd.DataFrame):
     if "company" not in df.columns:
         return None
-    agg = df.groupby("company").agg({'value': 'mean', 'cost': 'mean'}).reset_index()
+    agg = df.groupby("company").agg({"value": "mean", "cost": "mean"}).reset_index()
     agg = agg.sort_values("value", ascending=False)
 
-    fig = go.Figure(data=[
-        go.Bar(name='ערך ממוצע', x=agg["company"], y=agg["value"], marker_color='rgb(55, 83, 109)'),
-        go.Bar(name='עלות ממוצע', x=agg["company"], y=agg["cost"], marker_color='rgb(26, 118, 255)')
-    ])
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                name="ערך ממוצע",
+                x=agg["company"],
+                y=agg["value"],
+                marker_color="rgb(55, 83, 109)",
+            ),
+            go.Bar(
+                name="עלות ממוצע",
+                x=agg["company"],
+                y=agg["cost"],
+                marker_color="rgb(26, 118, 255)",
+            ),
+        ]
+    )
 
     companies = agg["company"].tolist()
     buttons = [
         dict(
             label="כל החברות",
             method="update",
-            args=[{"x": [agg["company"], agg["company"]],
-                   "y": [agg["value"], agg["cost"]]},
-                  {"title": "ערך וקופון ממוצע לכל החברות"}]
+            args=[
+                {
+                    "x": [agg["company"], agg["company"]],
+                    "y": [agg["value"], agg["cost"]],
+                },
+                {"title": "ערך וקופון ממוצע לכל החברות"},
+            ],
         )
     ]
     for comp in companies:
@@ -299,27 +317,30 @@ def plot_avg_value_cost_by_company(df: pd.DataFrame):
             dict(
                 label=comp,
                 method="update",
-                args=[{"x": [[comp], [comp]],
-                       "y": [filtered["value"], filtered["cost"]]},
-                      {"title": f"ערך וקופון ממוצע עבור {comp}"}]
+                args=[
+                    {"x": [[comp], [comp]], "y": [filtered["value"], filtered["cost"]]},
+                    {"title": f"ערך וקופון ממוצע עבור {comp}"},
+                ],
             )
         )
 
     fig.update_layout(
-        barmode='group',
+        barmode="group",
         title="ערך וקופון ממוצע לפי חברה",
         xaxis_title="חברה",
-        yaxis_title="בש\"ח",
-        updatemenus=[dict(
-            type="dropdown",
-            direction="down",
-            showactive=True,
-            x=1.0,
-            xanchor="right",
-            y=1.15,
-            yanchor="top",
-            buttons=buttons
-        )]
+        yaxis_title='בש"ח',
+        updatemenus=[
+            dict(
+                type="dropdown",
+                direction="down",
+                showactive=True,
+                x=1.0,
+                xanchor="right",
+                y=1.15,
+                yanchor="top",
+                buttons=buttons,
+            )
+        ],
     )
     set_layout(fig)
     return fig
@@ -329,7 +350,12 @@ def plot_usage_vs_discount(df: pd.DataFrame):
     if "value" not in df.columns:
         return None
     df = df.copy()
-    df["usage_percentage"] = df.apply(lambda row: (row["used_value"] / row["value"] * 100) if row["value"] != 0 else 0, axis=1)
+    df["usage_percentage"] = df.apply(
+        lambda row: (row["used_value"] / row["value"] * 100)
+        if row["value"] != 0
+        else 0,
+        axis=1,
+    )
 
     fig = px.scatter(
         df,
@@ -339,11 +365,9 @@ def plot_usage_vs_discount(df: pd.DataFrame):
         title="שיעור שימוש בקופונים לעומת אחוז הנחה",
         labels={"discount_percentage": "אחוז הנחה", "usage_percentage": "אחוז שימוש"},
         template="plotly_white",
-        hover_data=["code"]
+        hover_data=["code"],
     )
-    fig.update_layout(
-        title={'x': 0.5}
-    )
+    fig.update_layout(title={"x": 0.5})
     set_layout(fig)
     return fig
 
@@ -359,12 +383,9 @@ def plot_discount_distribution_hist(df: pd.DataFrame):
         title="התפלגות אחוזי הנחה בקופונים",
         labels={"discount_percentage": "אחוז הנחה", "count": "מספר קופונים"},
         template="plotly_white",
-        color_discrete_sequence=["indianred"]
+        color_discrete_sequence=["indianred"],
     )
-    fig.update_layout(
-        title={'x': 0.5},
-        xaxis_tickangle=-45
-    )
+    fig.update_layout(title={"x": 0.5}, xaxis_tickangle=-45)
     set_layout(fig)
     return fig
 
@@ -384,15 +405,17 @@ def plot_drill_down_analysis(df: pd.DataFrame):
             marker=dict(size=8),
             name=company,
             text=df_company["id"],
-            hovertemplate=("קופון: %{text}<br>" +
-                           "תשלום: %{x}<br>" +
-                           "אחוז הנחה: %{y:.2f}%<extra></extra>")
+            hovertemplate=(
+                "קופון: %{text}<br>"
+                + "תשלום: %{x}<br>"
+                + "אחוז הנחה: %{y:.2f}%<extra></extra>"
+            ),
         )
         traces.append(trace)
 
     fig = go.Figure(data=traces)
     for i, trace in enumerate(fig.data):
-        trace.visible = (i == 0)
+        trace.visible = i == 0
 
     buttons = []
     for i, company in enumerate(companies):
@@ -401,8 +424,10 @@ def plot_drill_down_analysis(df: pd.DataFrame):
         button = dict(
             label=company,
             method="update",
-            args=[{"visible": visibility},
-                  {"title": f"Drill Down Analysis: {company}"}]
+            args=[
+                {"visible": visibility},
+                {"title": f"Drill Down Analysis: {company}"},
+            ],
         )
         buttons.append(button)
 
@@ -410,15 +435,17 @@ def plot_drill_down_analysis(df: pd.DataFrame):
         title=f"Drill Down Analysis: {companies[0]}",
         xaxis_title="תשלום (מחיר הקופון)",
         yaxis_title="אחוז הנחה",
-        updatemenus=[{
-            "buttons": buttons,
-            "direction": "down",
-            "showactive": True,
-            "x": 1,
-            "xanchor": "right",
-            "y": 1,
-            "yanchor": "top"
-        }]
+        updatemenus=[
+            {
+                "buttons": buttons,
+                "direction": "down",
+                "showactive": True,
+                "x": 1,
+                "xanchor": "right",
+                "y": 1,
+                "yanchor": "top",
+            }
+        ],
     )
     set_layout(fig)
     return fig
@@ -438,11 +465,9 @@ def plot_user_coupon_count(df: pd.DataFrame):
         labels={"user_id": "משתמש", "coupon_count": "כמות קופונים"},
         template="plotly_white",
         color="coupon_count",
-        color_continuous_scale="Blues"
+        color_continuous_scale="Blues",
     )
-    fig.update_layout(
-        title={'x': 0.5}
-    )
+    fig.update_layout(title={"x": 0.5})
     set_layout(fig)
     return fig
 
@@ -461,11 +486,9 @@ def plot_user_max_discount(df: pd.DataFrame):
         labels={"user_id": "משתמש", "discount_percentage": "אחוז הנחה"},
         template="plotly_white",
         color="discount_percentage",
-        color_continuous_scale="Oranges"
+        color_continuous_scale="Oranges",
     )
-    fig.update_layout(
-        title={'x': 0.5}
-    )
+    fig.update_layout(title={"x": 0.5})
     set_layout(fig)
     return fig
 
@@ -485,11 +508,9 @@ def plot_user_sold_coupons(df: pd.DataFrame):
         labels={"user_id": "משתמש", "sold_count": "קופונים שנמכרו"},
         template="plotly_white",
         color="sold_count",
-        color_continuous_scale="Greens"
+        color_continuous_scale="Greens",
     )
-    fig.update_layout(
-        title={'x': 0.5}
-    )
+    fig.update_layout(title={"x": 0.5})
     set_layout(fig)
     return fig
 
@@ -501,11 +522,13 @@ def generate_dashboard_content(fig_divs):
     content = '<div class="grid-container">\n'
     for div in fig_divs:
         content += f'<div class="chart-container">{div}</div>\n'
-    content += '</div>\n'
+    content += "</div>\n"
     return content
 
 
-def generate_full_dashboard(dashboards: dict, unique_users: list, output_filename="dashboard.html"):
+def generate_full_dashboard(
+    dashboards: dict, unique_users: list, output_filename="dashboard.html"
+):
     """
     מייצר קובץ HTML סופי הכולל תפריט לבחירת משתמש (או "כל המשתמשים"),
     ומציג את הגרפים בשני טורים. כעת הוספנו CSS רספונסיבי כדי שהגרף יתאים לתיבה.
@@ -527,10 +550,12 @@ def generate_full_dashboard(dashboards: dict, unique_users: list, output_filenam
     dashboards_html = '<div class="dashboard-container">\n'
     dashboards_html += '<div id="dashboardContainer">\n'
     for key, content in dashboards.items():
-        dashboards_html += f'<div id="dashboard_{key}" class="dashboard" style="display:none;">\n'
+        dashboards_html += (
+            f'<div id="dashboard_{key}" class="dashboard" style="display:none;">\n'
+        )
         dashboards_html += content
-        dashboards_html += '</div>\n'
-    dashboards_html += '</div>\n</div>\n'
+        dashboards_html += "</div>\n"
+    dashboards_html += "</div>\n</div>\n"
 
     # CSS מעודכן – הגרפים יתפסו 100% מגודל התיבה, לא יגלשו
     html = f"""<!DOCTYPE html>
@@ -646,55 +671,146 @@ def main():
         fig_divs = []
         fig1 = plot_coupon_usage(df)
         if fig1:
-            fig_divs.append(plotly_plot(fig1, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+            fig_divs.append(
+                plotly_plot(
+                    fig1,
+                    include_plotlyjs=False,
+                    output_type="div",
+                    config={"responsive": True},
+                )
+            )
 
         fig2 = plot_discount_distribution(df)
         if fig2:
-            fig_divs.append(plotly_plot(fig2, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+            fig_divs.append(
+                plotly_plot(
+                    fig2,
+                    include_plotlyjs=False,
+                    output_type="div",
+                    config={"responsive": True},
+                )
+            )
 
         fig3 = plot_active_users(df)
         if fig3:
-            fig_divs.append(plotly_plot(fig3, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+            fig_divs.append(
+                plotly_plot(
+                    fig3,
+                    include_plotlyjs=False,
+                    output_type="div",
+                    config={"responsive": True},
+                )
+            )
 
         fig4 = plot_cost_details(df)
         if fig4:
-            fig_divs.append(plotly_plot(fig4, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+            fig_divs.append(
+                plotly_plot(
+                    fig4,
+                    include_plotlyjs=False,
+                    output_type="div",
+                    config={"responsive": True},
+                )
+            )
 
         fig5 = plot_coupons_by_month(df)
         if fig5:
-            fig_divs.append(plotly_plot(fig5, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+            fig_divs.append(
+                plotly_plot(
+                    fig5,
+                    include_plotlyjs=False,
+                    output_type="div",
+                    config={"responsive": True},
+                )
+            )
 
         fig6 = plot_discount_by_month(df)
         if fig6:
-            fig_divs.append(plotly_plot(fig6, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+            fig_divs.append(
+                plotly_plot(
+                    fig6,
+                    include_plotlyjs=False,
+                    output_type="div",
+                    config={"responsive": True},
+                )
+            )
 
         fig7 = plot_avg_value_cost_by_company(df)
         if fig7:
-            fig_divs.append(plotly_plot(fig7, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+            fig_divs.append(
+                plotly_plot(
+                    fig7,
+                    include_plotlyjs=False,
+                    output_type="div",
+                    config={"responsive": True},
+                )
+            )
 
         fig8 = plot_usage_vs_discount(df)
         if fig8:
-            fig_divs.append(plotly_plot(fig8, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+            fig_divs.append(
+                plotly_plot(
+                    fig8,
+                    include_plotlyjs=False,
+                    output_type="div",
+                    config={"responsive": True},
+                )
+            )
 
         fig9 = plot_discount_distribution_hist(df)
         if fig9:
-            fig_divs.append(plotly_plot(fig9, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+            fig_divs.append(
+                plotly_plot(
+                    fig9,
+                    include_plotlyjs=False,
+                    output_type="div",
+                    config={"responsive": True},
+                )
+            )
 
         fig10 = plot_drill_down_analysis(df)
         if fig10:
-            fig_divs.append(plotly_plot(fig10, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+            fig_divs.append(
+                plotly_plot(
+                    fig10,
+                    include_plotlyjs=False,
+                    output_type="div",
+                    config={"responsive": True},
+                )
+            )
 
         # גרפים כלליים - רק בלשונית "all"
         if key == "all":
             fig11 = plot_user_coupon_count(df_all)
             if fig11:
-                fig_divs.append(plotly_plot(fig11, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+                fig_divs.append(
+                    plotly_plot(
+                        fig11,
+                        include_plotlyjs=False,
+                        output_type="div",
+                        config={"responsive": True},
+                    )
+                )
             fig12 = plot_user_max_discount(df_all)
             if fig12:
-                fig_divs.append(plotly_plot(fig12, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+                fig_divs.append(
+                    plotly_plot(
+                        fig12,
+                        include_plotlyjs=False,
+                        output_type="div",
+                        config={"responsive": True},
+                    )
+                )
             fig13 = plot_user_sold_coupons(df_all)
             if fig13:
-                fig_divs.append(plotly_plot(fig13, include_plotlyjs=False, output_type='div', config={'responsive': True}))
+                fig_divs.append(
+                    plotly_plot(
+                        fig13,
+                        include_plotlyjs=False,
+                        output_type="div",
+                        config={"responsive": True},
+                    )
+                )
 
         dashboards[key] = generate_dashboard_content(fig_divs)
 
