@@ -40,32 +40,32 @@
     </div>
 
     <!-- Instructions panel with gender sensitivity - hidden by default -->
-    <div class="instructions-panel" id="instructions-panel" style="display: none;">
-        <h3 class="instructions-title">
+    <div class="instructions-panel" id="instructions-panel" style="display: block;">
+        <h3 class="instructions-title" data-asw-org-font-size="19" style="font-size: 19px;">
             <i class="fa fa-question-circle" aria-hidden="true"></i>
             איך להוסיף קופון?
         </h3>
-        <ol class="instructions-list">
+        <ol class="instructions-list" data-asw-org-font-size="16" style="font-size: 16px;">
             {% if current_user.gender == "female" %}
-            <li>מלאי את פרטי הקופון בטופס למטה.</li>
-            <li>חובה למלא את שם החברה, קוד הקופון, ערך הקופון ועלות הקופון.</li>
-            <li>אם יש לך תאריך תפוגה, הזני אותו בשדה המתאים.</li>
-            <li>אם יש לך פרטי כרטיס, סמני את התיבה המתאימה והזני את הפרטים.</li>
-            <li>לחצי על "הוספת הקופון לארנק" כשסיימת.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">מלאי את פרטי הקופון בטופס למטה.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">חובה למלא את שם החברה, קוד הקופון, כמה הקופון שווה בפועל וכמה שילמת על הקופון.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">אם יש לך תאריך תפוגה, הזני אותו בשדה המתאים.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">אם יש לך פרטי כרטיס (תוקף כרטיס ו-CVV), סמני את התיבה המתאימה והזני את הפרטים.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">לחצי על "הוספת הקופון לארנק" כשסיימת.</li>
             {% else %}
-            <li>מלא את פרטי הקופון בטופס למטה.</li>
-            <li>חובה למלא את שם החברה, קוד הקופון, ערך הקופון ועלות הקופון.</li>
-            <li>אם יש לך תאריך תפוגה, הזן אותו בשדה המתאים.</li>
-            <li>אם יש לך פרטי כרטיס, סמן את התיבה המתאימה והזן את הפרטים.</li>
-            <li>לחץ על "הוספת הקופון לארנק" כשסיימת.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">מלא את פרטי הקופון בטופס למטה.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">חובה למלא את שם החברה, קוד הקופון, כמה הקופון שווה בפועל וכמה שילמת על הקופון.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">אם יש לך תאריך תפוגה, הזן אותו בשדה המתאים.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">אם יש לך פרטי כרטיס (תוקף כרטיס ו-CVV), סמן את התיבה המתאימה והזן את הפרטים.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">לחץ על "הוספת הקופון לארנק" כשסיימת.</li>
             {% endif %}
         </ol>
         <div class="important-note">
             <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
             {% if current_user.gender == "female" %}
-            <span>שימי לב: שדות עם כוכבית (*) הם שדות חובה.</span>
+            <span data-asw-org-font-size="16" style="font-size: 16px;">שימי לב: שדות עם כוכבית (*) הם שדות חובה.</span>
             {% else %}
-            <span>שים לב: שדות עם כוכבית (*) הם שדות חובה.</span>
+            <span data-asw-org-font-size="16" style="font-size: 16px;">שים לב: שדות עם כוכבית (*) הם שדות חובה.</span>
             {% endif %}
         </div>
     </div>
