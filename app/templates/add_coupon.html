@@ -6,6 +6,10 @@
 {% endblock %}
 
 {% block content %}
+<!-- Add Shepherd.js CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/css/shepherd.css"/>
+<script src="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/js/shepherd.min.js"></script>
+
 <section class="add-coupon">
     <h2 class="section-title">הוספת קופון חדש</h2>
     
@@ -83,63 +87,6 @@
         </div>
       {% endif %}
     {% endwith %}
-
-    {# Automatic form section - commented out but preserved for future use #}
-    {#
-    {% if not show_coupon_form %}
-        {% if current_user.slots_automatic_coupons > 0 %}
-        <!-- Automatic SMS input form -->
-        <form method="post" class="sms-form">
-            {{ sms_form.hidden_tag() }}
-            <!-- SMS Text Field -->
-            <div class="form-group center-text">
-                {{ sms_form.sms_text.label(class="form-label") }}
-                {{ sms_form.sms_text(class="input-field", placeholder="כאן מכניסים את תוכן ההודעה") }}
-                {% for error in sms_form.sms_text.errors %}
-                    <div class="error">{{ error }}</div>
-                {% endfor %}
-            </div>
-            <div class="form-group" style="position: relative;">
-                <!-- Mobile supporting text -->
-                <div class="slots-info-mobile center-text">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
-                </div>
-                
-                <!-- Wrapper for "Next" button and tooltip -->
-                <div class="mobile-buttons-container">
-                    {{ sms_form.submit_sms(class="submit-button") }}
-                    <div class="tooltip-container">
-                        <button type="button" class="tooltip-button-mobile" aria-label="מידע נוסף">❔</button>
-                        <div class="mobile-tooltip">
-                            יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
-                            <span class="close-tooltip">×</span>
-                        </div>
-                    </div>
-                </div>                
-                            
-                <!-- Desktop tooltip (appears on hover) -->
-                <div class="tooltip">
-                    יש לך עוד {{ current_user.slots_automatic_coupons }} סלוטים זמינים למילוי אוטומטי.
-                </div>
-            </div>
-        </form>
-        {% else %}
-        <div class="no-slots-message center-text">
-            <p>אין לך מספיק סלוטים להזנת קופונים אוטומטית. אנא רכש סלוטים נוספים או הזן קופון ידנית.</p>
-        </div>
-        {% endif %}
-        <!-- Manual entry option -->
-        <div class="manual-entry center-text">
-            <div class="section-divider">
-                <span>או</span>
-            </div>
-            <p>הזן באופן ידני את הפרטים של הקופון</p>
-            <a href="{{ url_for('coupons.add_coupon', manual='true') }}" class="secondary-button">
-                <i class="fa fa-edit" aria-hidden="true"></i> הזנת פרטים באופן ידני
-            </a>
-        </div>
-    {% else %}
-    #}
 
     <!-- Manual coupon entry form -->
     <form method="post" enctype="multipart/form-data" class="manual-coupon-form">
@@ -298,20 +245,6 @@
             </div>
         </div>
     </form>
-    
-    {# Back to automatic entry button - commented out but preserved for future use #}
-    {#
-    <div class="manual-entry center-text">
-        <div class="section-divider">
-            <span>או</span>
-        </div>
-        <p>חזרה למסך הזנת קופון באופן אוטומטית:</p>
-        <a href="{{ url_for('coupons.add_coupon') }}" class="secondary-button">
-            <i class="fa fa-arrow-left" aria-hidden="true"></i> חזור להזנת קופון אוטומטית
-        </a>
-    </div>
-    {% endif %}
-    #}
 </section>
 {% endblock %}
 
@@ -319,6 +252,273 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Add close tour button
+    const closeButton = document.createElement('button');
+    closeButton.className = 'close-tour-button';
+    closeButton.innerHTML = 'לסגירת ההדרכה';
+    closeButton.style.display = 'none'; // Initially hidden
+    document.body.appendChild(closeButton);
+
+    // Add reopen tour button
+    const reopenButton = document.createElement('button');
+    reopenButton.className = 'reopen-tour-button';
+    reopenButton.innerHTML = '<i class="fas fa-question-circle"></i>';
+    reopenButton.title = 'פתח הדרכה';
+    reopenButton.style.display = 'none'; // Initially hidden
+    document.body.appendChild(reopenButton);
+
+    // Initialize Shepherd tour
+    const tour = new Shepherd.Tour({
+        defaultStepOptions: {
+            classes: 'shepherd-theme-custom',
+            scrollTo: true,
+            cancelIcon: {
+                enabled: true
+            },
+            useModalOverlay: true
+        },
+        useModalOverlay: true
+    });
+
+    // Set gender-specific text
+    const isFemale = "{{ 'true' if current_user.gender == 'female' else 'false' }}" === 'true';
+    const genderText = {
+        choose: isFemale ? 'בחרי' : 'בחר',
+        enter: isFemale ? 'הזיני' : 'הזן',
+        mark: isFemale ? 'סמני' : 'סמן',
+        click: isFemale ? 'לחצי' : 'לחץ',
+        you: isFemale ? 'לך' : 'לך',
+        can: isFemale ? 'תוכלי' : 'תוכל'
+    };
+
+    // Add steps to the tour
+    tour.addStep({
+        id: 'company_details',
+        text: `שלב ראשון: ${genderText.choose} את החברה שאליה שייך הקופון. אם החברה לא מופיעה ברשימה, ניתן לבחור באפשרות ״אחר״ ולהזין את שם החברה באופן ידני.`,
+        title: 'בחירת חברה',
+        attachTo: {
+            element: '#company_select',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'הבא',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'code',
+        text: `${genderText.enter} את קוד הקופון. זהו שדה חובה`,
+        title: 'קוד קופון',
+        attachTo: {
+            element: '#code',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'הבא',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'cost',
+        text: `${genderText.enter} כמה שילמת על הקופון.`,
+        title: 'מחיר הקופון',
+        attachTo: {
+            element: '#coupon_cost',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'הבא',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'discount',
+        text: `${genderText.enter} את אחוז ההנחה של הקופון (השדה אינו חובה)`,
+        title: 'אחוז הנחה',
+        attachTo: {
+            element: '#discount_percentage_input',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'הבא',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'value',
+        text: `${genderText.enter} את הסכום שהקופון עלה ${genderText.you} בפועל`,
+        title: 'ערך הקופון',
+        attachTo: {
+            element: '#desired_value',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'הבא',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'expiration',
+        text: `אם יש לקופון תאריך תפוגה, ${genderText.enter} אותו כאן`,
+        title: 'תאריך תפוגה',
+        attachTo: {
+            element: '#expiration',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'הבא',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'description',
+        text: `אם יש ${genderText.you} הערות נוספות על הקופון, ${genderText.can} להזין אותן כאן`,
+        title: 'תיאור',
+        attachTo: {
+            element: '#description',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'הבא',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'source',
+        text: `כאן ${genderText.can} לכתוב מאיפה השגת ${genderText.you} את הקופון, למקרה שהמוכר בחנות ישאל אותך במעמד הקניה`,
+        title: 'מקור הקופון',
+        attachTo: {
+            element: '#source',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'הבא',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'card_info',
+        text: `אם הקופון כולל פרטי כרטיס (CVV ותוקף), ${genderText.mark} את התיבה ו${genderText.enter} את הפרטים`,
+        title: 'פרטי כרטיס',
+        attachTo: {
+            element: '#include_card_info',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'הבא',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'one_time',
+        text: `אם זהו קופון חד פעמי, ${genderText.mark} את התיבה ו${genderText.enter} את המטרה שלשמה קנית את הקופון (למשל - קפה חינם)`,
+        title: 'קופון חד-פעמי',
+        attachTo: {
+            element: '#is_one_time',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'הבא',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'submit',
+        text: `לאחר שמילאת את כל השדות הנדרשים, ${genderText.click} על כפתור "הוספת הקופון לארנק"`,
+        title: 'סיום',
+        attachTo: {
+            element: '#submit_coupon_button',
+            on: 'top'
+        },
+        buttons: [
+            {
+                text: 'סיים',
+                action: tour.complete
+            }
+        ]
+    });
+
+    // Handle tour completion
+    tour.on('complete', () => {
+        closeButton.style.display = 'none';
+        reopenButton.style.display = 'block';
+        // Save that user has seen the tour
+        localStorage.setItem('hasSeenAddCouponTour', 'true');
+    });
+
+    tour.on('start', () => {
+        closeButton.style.display = 'block';
+        reopenButton.style.display = 'none';
+    });
+
+    // Handle close button click
+    closeButton.addEventListener('click', () => {
+        tour.complete();
+        localStorage.setItem('hasSeenAddCouponTour', 'true');
+        closeButton.style.display = 'none';
+        reopenButton.style.display = 'block';
+    });
+
+    // Handle reopen button click
+    reopenButton.addEventListener('click', () => {
+        tour.start();
+    });
+
+    // Check if this is the first visit
+    const hasSeenTour = localStorage.getItem('hasSeenAddCouponTour') === 'true';
+    
+    if (!hasSeenTour) {
+        // First visit - show tour automatically
+        tour.start();
+        closeButton.style.display = 'block';
+        reopenButton.style.display = 'none';
+    } else {
+        // Not first visit - show only reopen button
+        reopenButton.style.display = 'block';
+        closeButton.style.display = 'none';
+    }
+
+    // Add event listener for tour state changes
+    tour.on('show', () => {
+        closeButton.style.display = 'block';
+        reopenButton.style.display = 'none';
+    });
+
+    tour.on('hide', () => {
+        closeButton.style.display = 'none';
+        reopenButton.style.display = 'block';
+    });
+
     // Toggle instructions panel
     const helpButton = document.getElementById('toggle-instructions');
     const instructionsPanel = document.getElementById('instructions-panel');
@@ -1231,6 +1431,191 @@ textarea.input-field {
         max-height: 500px;
         opacity: 1;
     }
+}
+
+/* Shepherd Tour Custom Styles */
+.shepherd-text {
+    direction: rtl !important;
+    text-align: right !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+    color: #333 !important;
+}
+
+.shepherd-footer {
+    direction: rtl !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 1rem !important;
+    background: #f8f9fa !important;
+    border-top: 1px solid #e9ecef !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+.shepherd-button {
+    background-color: var(--primary-color) !important;
+    border: none !important;
+    border-radius: 6px !important;
+    color: white !important;
+    cursor: pointer !important;
+    margin: 0 0.5rem !important;
+    padding: 0.6rem 1.5rem !important;
+    transition: all 0.3s ease !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.shepherd-button:not(:disabled):hover {
+    background-color: var(--primary-hover) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15) !important;
+}
+
+.shepherd-button.shepherd-button-secondary {
+    background-color: #6c757d !important;
+}
+
+.shepherd-button.shepherd-button-secondary:not(:disabled):hover {
+    background-color: #5a6268 !important;
+}
+
+.shepherd-cancel-icon {
+    background: transparent !important;
+    border: none !important;
+    color: white !important;
+    font-size: 1.5em !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+    margin: 0 !important;
+    padding: 0.5rem !important;
+    transition: all 0.3s ease !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.shepherd-cancel-icon:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+}
+
+.shepherd-has-title .shepherd-content .shepherd-header {
+    background-color: var(--primary-color) !important;
+    padding: 1.2rem !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.shepherd-title {
+    color: white !important;
+    font-size: 1.2em !important;
+    font-weight: bold !important;
+    display: block !important;
+    margin-bottom: 0.3rem !important;
+}
+
+.shepherd-content {
+    border-radius: 8px !important;
+    padding: 0 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    border: none !important;
+    max-width: 400px !important;
+    overflow: hidden !important;
+}
+
+.shepherd-text {
+    padding: 1.2em !important;
+    background: white !important;
+}
+
+.shepherd-footer {
+    padding: 1rem !important;
+    border-top: 1px solid #e9ecef !important;
+    background: #f8f9fa !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+/* Progress indicator */
+.shepherd-progress {
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    padding: 0.5rem 1rem !important;
+    background: rgba(0,0,0,0.1) !important;
+    color: white !important;
+    font-size: 0.9em !important;
+    border-radius: 0 8px 0 8px !important;
+}
+
+/* Close tour button */
+.close-tour-button {
+    position: fixed !important;
+    bottom: 1rem !important;
+    right: 1rem !important;
+    background: rgba(255,255,255,0.9) !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 0.5rem 1rem !important;
+    color: #dc3545 !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    z-index: 10000 !important;
+}
+
+.close-tour-button:hover {
+    background: white !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Reopen tour button */
+.reopen-tour-button {
+    position: fixed !important;
+    bottom: 1rem !important;
+    right: 1rem !important;
+    background: rgba(255,255,255,0.9) !important;
+    border: none !important;
+    border-radius: 50% !important;
+    width: 40px !important;
+    height: 40px !important;
+    color: var(--primary-color) !important;
+    font-size: 1.2em !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    z-index: 10000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.reopen-tour-button:hover {
+    background: white !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    transform: translateY(-1px) !important;
+}
+
+.reopen-tour-button i {
+    font-size: 1.2em !important;
+}
+
+/* Fix for overlay issue */
+.shepherd-modal-overlay-container {
+    z-index: 9999 !important;
+}
+
+.shepherd-element {
+    z-index: 10000 !important;
+}
+
+.shepherd-modal-overlay-container.shepherd-modal-is-visible {
+    opacity: 0.5 !important;
 }
 </style>
 {% endblock %}

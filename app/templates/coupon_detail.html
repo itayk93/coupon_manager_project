@@ -2,6 +2,10 @@
 {% block title %}פרטי קופון{% endblock %}
 
 {% block content %}
+<!-- Add Shepherd.js CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/css/shepherd.css"/>
+<script src="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/js/shepherd.min.js"></script>
+
 <section class="coupon-detail-container">
     <div class="coupon-card-details">
         <div class="coupon-header">
@@ -383,7 +387,7 @@
                 </button>
             </form>
             <a href="{{ url_for('coupons.show_coupons') }}" class="action-button back-button fade-in-up">
-                <i class="fas fa-chevron-right"></i> חזור לקופונים
+                <i class="fas fa-chevron-right"></i> חזרה למסך הקופנים
             </a>
         </div>
 
@@ -405,11 +409,242 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.8/clipboard.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        // Add close tour button
+        const closeButton = document.createElement('button');
+        closeButton.className = 'close-tour-button';
+        closeButton.innerHTML = 'לסגירת ההדרכה';
+        closeButton.style.display = 'none'; // Initially hidden
+        document.body.appendChild(closeButton);
+
+        // Add reopen tour button
+        const reopenButton = document.createElement('button');
+        reopenButton.className = 'reopen-tour-button';
+        reopenButton.innerHTML = '<i class="fas fa-question-circle"></i>';
+        reopenButton.title = 'פתח הדרכה';
+        reopenButton.style.display = 'none'; // Initially hidden
+        document.body.appendChild(reopenButton);
+
+        // Initialize Shepherd tour
+        const tour = new Shepherd.Tour({
+            defaultStepOptions: {
+                classes: 'shepherd-theme-custom',
+                scrollTo: true,
+                cancelIcon: {
+                    enabled: true
+                },
+                useModalOverlay: true
+            },
+            useModalOverlay: true
+        });
+
+        // Set gender-specific text
+        const isFemale = "{{ 'true' if current_user.gender == 'female' else 'false' }}" === 'true';
+        const genderText = {
+            you: isFemale ? 'לך' : 'לך',
+            can: isFemale ? 'תוכלי' : 'תוכל',
+            see: isFemale ? 'תראי' : 'תראה',
+            click: isFemale ? 'לחצי' : 'לחץ'
+        };
+
+        // Add steps to the tour
+        tour.addStep({
+            id: 'coupon_header',
+            text: `כאן ${genderText.see} את פרטי הקופון הבסיסיים - שם החברה, לוגו, וסטטוס הקופון.`,
+            title: 'פרטי קופון',
+            attachTo: {
+                element: '.coupon-header',
+                on: 'bottom'
+            },
+            buttons: [
+                {
+                    text: 'הבא',
+                    action: tour.next
+                }
+            ]
+        });
+
+        tour.addStep({
+            id: 'tabs_intro',
+            text: `העמוד מחולק לשלושה טאבים. ${genderText.can} ללחוץ על כל טאב כדי לראות מידע שונה על הקופון.`,
+            title: 'טאבים',
+            attachTo: {
+                element: '.tabs',
+                on: 'bottom'
+            },
+            buttons: [
+                {
+                    text: 'הבא',
+                    action: tour.next
+                }
+            ]
+        });
+
+        tour.addStep({
+            id: 'tab1',
+            text: `בטאב "פרטי קופון" ${genderText.see} את כל המידע הבסיסי על הקופון - קוד, חברה, תוקף, CVV, ומטרת הקופון.`,
+            title: 'פרטי קופון',
+            attachTo: {
+                element: '[data-tab="tab1"]',
+                on: 'bottom'
+            },
+            buttons: [
+                {
+                    text: 'הבא',
+                    action: tour.next
+                }
+            ]
+        });
+
+        {% if not coupon.is_for_sale %}
+        tour.addStep({
+            id: 'tab2',
+            text: `בטאב "ערכים כספיים" ${genderText.see} את הערך המקורי של הקופון, כמה השתמשת בו, וכמה נשאר. יש גם גרף שמראה את זה בצורה ויזואלית.`,
+            title: 'ערכים כספיים',
+            attachTo: {
+                element: '[data-tab="tab2"]',
+                on: 'bottom'
+            },
+            buttons: [
+                {
+                    text: 'הבא',
+                    action: tour.next
+                }
+            ]
+        });
+        {% endif %}
+
+        tour.addStep({
+            id: 'tab3',
+            text: `בטאב "נתונים נוספים" ${genderText.see} מידע משלים כמו מקור הקופון, אחוז שימוש, תאריך הזנה, קטגוריה, וכמה חסכת.`,
+            title: 'נתונים נוספים',
+            attachTo: {
+                element: '[data-tab="tab3"]',
+                on: 'bottom'
+            },
+            buttons: [
+                {
+                    text: 'הבא',
+                    action: tour.next
+                }
+            ]
+        });
+
+        tour.addStep({
+            id: 'transaction_history',
+            text: `בטבלה הזו ${genderText.see} את כל ההיסטוריה של הקופון - מתי השתמשת בו, כמה השתמשת, ומה נשאר. ${genderText.can} גם למחוק רשומות אם צריך.`,
+            title: 'היסטוריית טעינה ושימושים',
+            attachTo: {
+                element: '.transaction-container',
+                on: 'top'
+            },
+            buttons: [
+                {
+                    text: 'הבא',
+                    action: tour.next
+                }
+            ]
+        });
+
+        tour.addStep({
+            id: 'update_button',
+            text: isFemale ? 
+                'אם סיימת להשתמש בקופון, ואת רוצה לעדכן את השימוש בו, תוכלי ללחוץ על הכפתור הזה ולעדכן ידנית את השימוש' :
+                'אם סיימת להשתמש בקופון, ואתה רוצה לעדכן את השימוש בו, תוכל ללחוץ על הכפתור הזה ולעדכן ידנית את השימוש',
+            title: 'עדכון שימוש',
+            attachTo: {
+                element: '.update-button',
+                on: 'top'
+            },
+            buttons: [
+                {
+                    text: 'הבא',
+                    action: tour.next
+                }
+            ]
+        });
+
+        tour.addStep({
+            id: 'edit_button',
+            text: isFemale ?
+                'אם את רוצה לערוך או לשנות את פרטי הקופון שהזנת, תלחצי על הכפתור הזה ותעברי למסך העריכה' :
+                'אם אתה רוצה לערוך או לשנות את פרטי הקופון שהזנת, תלחץ על הכפתור הזה ותעבור למסך העריכה',
+            title: 'עריכת קופון',
+            attachTo: {
+                element: '.edit-button',
+                on: 'top'
+            },
+            buttons: [
+                {
+                    text: 'הבא',
+                    action: tour.next
+                }
+            ]
+        });
+
+        tour.addStep({
+            id: 'delete_button',
+            text: isFemale ?
+                'אם את רוצה למחוק את הקופון לגמרי, תלחצי על הכפתור הזה למחיקה' :
+                'אם אתה רוצה למחוק את הקופון לגמרי, תלחץ על הכפתור הזה למחיקה',
+            title: 'מחיקת קופון',
+            attachTo: {
+                element: '.delete-button',
+                on: 'top'
+            },
+            buttons: [
+                {
+                    text: 'הבא',
+                    action: tour.next
+                }
+            ]
+        });
+
+        tour.addStep({
+            id: 'back_button',
+            text: `כדי לחזור למסך הראשי של הקופונים, ${genderText.can} ללחוץ על הכפתור הזה.`,
+            title: 'חזרה למסך הקופונים',
+            attachTo: {
+                element: '.back-button',
+                on: 'top'
+            },
+            buttons: [
+                {
+                    text: 'סיים',
+                    action: tour.complete
+                }
+            ]
+        });
+
+        // Handle tour completion
+        tour.on('complete', () => {
+            closeButton.style.display = 'none';
+            reopenButton.style.display = 'block';
+        });
+
+        tour.on('start', () => {
+            closeButton.style.display = 'block';
+            reopenButton.style.display = 'none';
+        });
+
+        // Handle close button click
+        closeButton.addEventListener('click', () => {
+            tour.complete();
+            localStorage.setItem('hasClosedCouponDetailTour', 'true');
+            closeButton.style.display = 'none';
+            reopenButton.style.display = 'block';
+        });
+
+        // Handle reopen button click
+        reopenButton.addEventListener('click', () => {
+            tour.start();
+        });
+
         // טאבים
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -630,6 +865,32 @@
 
         }
         {% endif %}
+
+        // Check if this is the first visit
+        const hasVisitedBefore = localStorage.getItem('hasVisitedCouponDetail') === 'true';
+        
+        if (!hasVisitedBefore) {
+            // First visit - show tour automatically
+            tour.start();
+            closeButton.style.display = 'block';
+            reopenButton.style.display = 'none';
+            localStorage.setItem('hasVisitedCouponDetail', 'true');
+        } else {
+            // Not first visit - show only reopen button
+            reopenButton.style.display = 'block';
+            closeButton.style.display = 'none';
+        }
+
+        // Add event listener for tour state changes
+        tour.on('show', () => {
+            closeButton.style.display = 'block';
+            reopenButton.style.display = 'none';
+        });
+
+        tour.on('hide', () => {
+            closeButton.style.display = 'none';
+            reopenButton.style.display = 'block';
+        });
 
     });
 </script>
@@ -1170,5 +1431,161 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
+/* Add Shepherd Tour Custom Styles */
+.shepherd-text {
+    direction: rtl !important;
+    text-align: right !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+    color: #333 !important;
+}
+
+.shepherd-footer {
+    direction: rtl !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 1rem !important;
+    background: #f8f9fa !important;
+    border-top: 1px solid #e9ecef !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+.shepherd-button {
+    background-color: var(--primary-color) !important;
+    border: none !important;
+    border-radius: 6px !important;
+    color: white !important;
+    cursor: pointer !important;
+    margin: 0 0.5rem !important;
+    padding: 0.6rem 1.5rem !important;
+    transition: all 0.3s ease !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.shepherd-button:not(:disabled):hover {
+    background-color: var(--primary-dark) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15) !important;
+}
+
+.shepherd-cancel-icon {
+    background: transparent !important;
+    border: none !important;
+    color: white !important;
+    font-size: 1.5em !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+    margin: 0 !important;
+    padding: 0.5rem !important;
+    transition: all 0.3s ease !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.shepherd-cancel-icon:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.shepherd-has-title .shepherd-content .shepherd-header {
+    background-color: var(--primary-color) !important;
+    padding: 1.2rem !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.shepherd-title {
+    color: white !important;
+    font-size: 1.2em !important;
+    font-weight: bold !important;
+    display: block !important;
+    margin-bottom: 0.3rem !important;
+}
+
+.shepherd-content {
+    border-radius: 8px !important;
+    padding: 0 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    border: none !important;
+    max-width: 400px !important;
+    overflow: hidden !important;
+}
+
+.shepherd-text {
+    padding: 1.2em !important;
+    background: white !important;
+}
+
+/* Close tour button */
+.close-tour-button {
+    position: fixed !important;
+    bottom: 1rem !important;
+    right: 1rem !important;
+    background: rgba(255,255,255,0.9) !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 0.5rem 1rem !important;
+    color: #dc3545 !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    z-index: 10000 !important;
+}
+
+.close-tour-button:hover {
+    background: white !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Fix for overlay issue */
+.shepherd-modal-overlay-container {
+    z-index: 9999 !important;
+}
+
+.shepherd-element {
+    z-index: 10000 !important;
+}
+
+.shepherd-modal-overlay-container.shepherd-modal-is-visible {
+    opacity: 0.5 !important;
+}
+
+/* Reopen tour button */
+.reopen-tour-button {
+    position: fixed !important;
+    bottom: 1rem !important;
+    right: 1rem !important;
+    background: rgba(255,255,255,0.9) !important;
+    border: none !important;
+    border-radius: 50% !important;
+    width: 40px !important;
+    height: 40px !important;
+    color: var(--primary-color) !important;
+    font-size: 1.2em !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    z-index: 10000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.reopen-tour-button:hover {
+    background: white !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    transform: translateY(-1px) !important;
+}
+
+.reopen-tour-button i {
+    font-size: 1.2em !important;
+}
 </style>
 {% endblock %}
