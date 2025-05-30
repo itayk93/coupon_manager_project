@@ -38,6 +38,7 @@ from app.models import (
     GptUsage,
     CouponTransaction,
     coupon_tags,
+    UserTourProgress,
 )
 from app.forms import (
     ProfileForm,
@@ -2033,6 +2034,7 @@ def add_coupon_old_12042025():
                         flash("אירעה שגיאה בעת הוספת הקופון. נסה שוב.", "danger")
                 else:
                     flash("הטופס אינו תקין. אנא בדוק את הנתונים שהזנת.", "danger")
+
         return render_template(
             "add_coupon.html",
             coupon_form=coupon_form,
@@ -3653,6 +3655,11 @@ def coupon_detail(id):
     # A flag that controls whether the "Multipass" button is shown.
     show_multipass_button = coupon.auto_download_details is not None
 
+    # Get tour progress and determine if tour should be shown
+    tour_progress = UserTourProgress.query.filter_by(user_id=current_user.id).first()
+    should_show_tour = tour_progress is None or tour_progress.coupon_detail_timestamp is None
+    coupon_detail_timestamp = tour_progress.coupon_detail_timestamp if tour_progress else None
+
     # ------------------------------------------------------------------
     # 3) Consolidate usage / transaction rows *exactly like before*.
     #    (Your original SQL kept; modified only for readability.)
@@ -3768,6 +3775,8 @@ def coupon_detail(id):
         cvv=coupon.cvv,
         card_exp=coupon.card_exp,
         show_multipass_button=show_multipass_button,
+        should_show_tour=should_show_tour,
+        coupon_detail_timestamp=coupon_detail_timestamp
     )
 
 
@@ -4981,7 +4990,7 @@ def review_usage_findings():
                     row_company, cpn.company.lower()
                 )
 
-                # לוקחים את הציון הגבוה ביותר
+                # לוקחים את הציון הגבוה ביותר מכל האלגוריתמים
                 similarity = max(ratio, partial_ratio, token_sort_ratio)
                 remaining_balance = cpn.value - cpn.used_value
 
@@ -5246,3 +5255,48 @@ def delete_transaction_record(source_table, record_id):
         flash("שגיאה בעת מחיקת הרשומה.", "danger")
 
     return redirect(url_for("coupons.coupon_detail", id=coupon.id))
+
+
+@coupons_bp.route("/update_coupon_detail_timestamp", methods=["POST"])
+@login_required
+def update_coupon_detail_timestamp():
+    try:
+        # Get the user's tour progress record
+        tour_progress = UserTourProgress.query.filter_by(user_id=current_user.id).first()
+        
+        if tour_progress:
+            # Update the timestamp
+            tour_progress.coupon_detail_timestamp = datetime.utcnow()
+            db.session.commit()
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'error': 'Tour progress record not found'}), 404
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@coupons_bp.route("/update_tour_progress", methods=["POST"])
+@login_required
+def update_tour_progress():
+    try:
+        # Get the user's tour progress record
+        tour_progress = UserTourProgress.query.filter_by(user_id=current_user.id).first()
+        if not tour_progress:
+            tour_progress = UserTourProgress(user_id=current_user.id)
+            db.session.add(tour_progress)
+        
+        # Set the timestamp based on tour type
+        tour_type = request.form.get('tour_type', 'add_coupon')
+        if tour_type == 'add_coupon':
+            tour_progress.add_coupon_timestamp = datetime.now(timezone.utc).replace(microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        elif tour_type == 'coupon_detail':
+            tour_progress.coupon_detail_timestamp = datetime.now(timezone.utc).replace(microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating tour progress: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500

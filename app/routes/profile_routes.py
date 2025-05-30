@@ -22,6 +22,7 @@ from app.models import (
     CouponRequest,
     GptUsage,
     CouponTransaction,
+    UserTourProgress,
 )
 from app.forms import (
     ProfileForm,
@@ -564,7 +565,45 @@ def index():
     show_review_modal = request.args.get("show_review_modal", "0") == "1"
 
     # --------------------------------------------------------------------------------
-    # 13. Return the completed template with all data
+    # 13. Check tour progress
+    # --------------------------------------------------------------------------------
+    tour_progress = UserTourProgress.query.filter_by(user_id=current_user.id).first()
+    if not tour_progress:
+        tour_progress = UserTourProgress(user_id=current_user.id)
+        db.session.add(tour_progress)
+        db.session.commit()
+
+    # Check if we need to show the tour
+    show_tour = tour_progress.index_timestamp is None
+
+    # --------------------------------------------------------------------------------
+    # 14. Handle tour completion
+    # --------------------------------------------------------------------------------
+    if request.method == "POST" and request.form.get("action") == "complete_tour":
+        try:
+            # Update tour progress
+            tour_progress = UserTourProgress.query.filter_by(user_id=current_user.id).first()
+            if not tour_progress:
+                tour_progress = UserTourProgress(user_id=current_user.id)
+                db.session.add(tour_progress)
+            
+            # Set the timestamp based on tour type
+            tour_type = request.form.get('tour_type', 'index')
+            if tour_type == 'index':
+                tour_progress.index_timestamp = datetime.now(timezone.utc).replace(microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+            elif tour_type == 'coupon_detail':
+                tour_progress.coupon_detail_timestamp = datetime.now(timezone.utc).replace(microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+            
+            db.session.commit()
+            
+            return jsonify({"success": True})
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error updating tour progress: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    # --------------------------------------------------------------------------------
+    # 15. Return the completed template with all data
     # --------------------------------------------------------------------------------
     return render_template(
         "index.html",
@@ -603,6 +642,8 @@ def index():
         admin_message=latest_message if show_admin_message else None,
         # Flag to show review modal
         show_review_modal=show_review_modal,
+        # Add tour progress flag
+        show_tour=show_tour,
     )
 
 

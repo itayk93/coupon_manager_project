@@ -625,6 +625,29 @@
         tour.on('complete', () => {
             closeButton.style.display = 'none';
             reopenButton.style.display = 'block';
+            
+            // Remove the modal overlay
+            const overlay = document.querySelector('.shepherd-modal-overlay-container');
+            if (overlay) {
+                overlay.remove();
+            }
+            
+            // Update timestamp when tour is completed
+            const formData = new FormData();
+            formData.append('tour_type', 'coupon_detail');
+            formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').content);
+            
+            fetch('/update_tour_progress', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Tour progress updated:', data);
+            })
+            .catch(error => {
+                console.error('Error updating tour progress:', error);
+            });
         });
 
         tour.on('start', () => {
@@ -638,6 +661,29 @@
             localStorage.setItem('hasClosedCouponDetailTour', 'true');
             closeButton.style.display = 'none';
             reopenButton.style.display = 'block';
+            
+            // Remove the modal overlay
+            const overlay = document.querySelector('.shepherd-modal-overlay-container');
+            if (overlay) {
+                overlay.remove();
+            }
+            
+            // Update timestamp when tour is closed
+            const formData = new FormData();
+            formData.append('tour_type', 'coupon_detail');
+            formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').content);
+            
+            fetch('/update_tour_progress', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Tour progress updated:', data);
+            })
+            .catch(error => {
+                console.error('Error updating tour progress:', error);
+            });
         });
 
         // Handle reopen button click
@@ -867,16 +913,18 @@
         {% endif %}
 
         // Check if this is the first visit
-        const hasVisitedBefore = localStorage.getItem('hasVisitedCouponDetail') === 'true';
+        const shouldShowTour = {{ 'true' if should_show_tour else 'false' }};
+        console.log('Should show tour:', shouldShowTour);
         
-        if (!hasVisitedBefore) {
+        if (shouldShowTour) {
+            console.log('Showing tour - first visit');
             // First visit - show tour automatically
             tour.start();
             closeButton.style.display = 'block';
             reopenButton.style.display = 'none';
-            localStorage.setItem('hasVisitedCouponDetail', 'true');
         } else {
-            // Not first visit - show only reopen button
+            console.log('Not showing tour - already visited');
+            // Already visited - show only reopen button
             reopenButton.style.display = 'block';
             closeButton.style.display = 'none';
         }

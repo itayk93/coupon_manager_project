@@ -472,8 +472,29 @@ document.addEventListener('DOMContentLoaded', function() {
     tour.on('complete', () => {
         closeButton.style.display = 'none';
         reopenButton.style.display = 'block';
-        // Save that user has seen the tour
-        localStorage.setItem('hasSeenAddCouponTour', 'true');
+        
+        // Remove the modal overlay
+        const overlay = document.querySelector('.shepherd-modal-overlay-container');
+        if (overlay) {
+            overlay.remove();
+        }
+        
+        // Update timestamp when tour is completed
+        const formData = new FormData();
+        formData.append('tour_type', 'add_coupon');
+        formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').content);
+        
+        fetch('/update_tour_progress', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Tour progress updated:', data);
+        })
+        .catch(error => {
+            console.error('Error updating tour progress:', error);
+        });
     });
 
     tour.on('start', () => {
@@ -484,9 +505,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle close button click
     closeButton.addEventListener('click', () => {
         tour.complete();
-        localStorage.setItem('hasSeenAddCouponTour', 'true');
+        localStorage.setItem('hasClosedAddCouponTour', 'true');
         closeButton.style.display = 'none';
         reopenButton.style.display = 'block';
+        
+        // Remove the modal overlay
+        const overlay = document.querySelector('.shepherd-modal-overlay-container');
+        if (overlay) {
+            overlay.remove();
+        }
+        
+        // Update timestamp when tour is closed
+        const formData = new FormData();
+        formData.append('tour_type', 'add_coupon');
+        formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').content);
+        
+        fetch('/update_tour_progress', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Tour progress updated:', data);
+        })
+        .catch(error => {
+            console.error('Error updating tour progress:', error);
+        });
     });
 
     // Handle reopen button click
@@ -495,15 +539,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Check if this is the first visit
-    const hasSeenTour = localStorage.getItem('hasSeenAddCouponTour') === 'true';
+    const shouldShowTour = {{ 'true' if not current_user.tour_progress or not current_user.tour_progress.add_coupon_timestamp else 'false' }};
+    console.log('Should show tour:', shouldShowTour);
     
-    if (!hasSeenTour) {
+    if (shouldShowTour) {
+        console.log('Showing tour - first visit');
         // First visit - show tour automatically
         tour.start();
         closeButton.style.display = 'block';
         reopenButton.style.display = 'none';
     } else {
-        // Not first visit - show only reopen button
+        console.log('Not showing tour - already visited');
+        // Already visited - show only reopen button
         reopenButton.style.display = 'block';
         closeButton.style.display = 'none';
     }

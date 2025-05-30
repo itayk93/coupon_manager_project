@@ -1597,7 +1597,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Add steps to the tour
     tour.addStep({
         id: 'welcome',
-        text: 'ברוכים הבאים ל-Coupon Master! בואו נתחיל את המסע שלכם לניהול קופונים בצורה חכמה.',
+        text: 'ברוכים הבאים ל-Coupon Master! בואו נראה צעד אחרי צעד כיצד להשתמש באתר.',
         title: 'ברוכים הבאים!',
         buttons: [
             {
@@ -1723,7 +1723,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Add new step for one-time coupons explanation
     tour.addStep({
         id: 'one-time-coupons',
-        text: '{{ "כאן תוכלי לראות את הקופונים החד פעמיים שברשותך. לכל קופון יש את קוד הקופון ואת המטרה שלו. למשל, קופון לקפה חינם ברולדין או שובר חד פעמי" if current_user.gender == "female" else "כאן תוכל לראות את הקופונים החד פעמיים שברשותך. לכל קופון יש את קוד הקופון ואת המטרה שלו. למשל, קופון לקפה חינם ברולדין או שובר חד פעמי" }}',
+        text: '{{ "כאן למטה תוכלי לראות את הקופונים החד פעמיים שברשותך. לכל קופון יש את קוד הקופון ואת המטרה שלו. למשל, קופון לקפה חינם ברולדין או שובר חד פעמי" if current_user.gender == "female" else "כאן למטה תוכל לראות את הקופונים החד פעמיים שברשותך. לכל קופון יש את קוד הקופון ואת המטרה שלו. למשל, קופון לקפה חינם ברולדין או שובר חד פעמי" }}',
         title: 'קופונים חד פעמיים',
         attachTo: {
             element: '.coupon-card-index-wrapper[data-is-one-time="true"]',
@@ -1787,7 +1787,26 @@ document.addEventListener("DOMContentLoaded", function() {
         document.body.classList.remove('tour-active');
         closeButton.style.display = 'none';
         reopenButton.style.display = 'block';
-        localStorage.setItem('hasSeenIndexTour', 'true');
+        
+        // Update tour progress in backend
+        fetch('{{ url_for("profile.index") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: 'action=complete_tour&csrf_token={{ csrf_token() }}'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                console.error('Failed to update tour progress');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating tour progress:', error);
+        });
+
         const menuButton = document.querySelector('.dropbtn');
         if (menuButton) {
             menuButton.style.zIndex = '';
@@ -1820,7 +1839,6 @@ document.addEventListener("DOMContentLoaded", function() {
     // Handle close button click
     closeButton.addEventListener('click', () => {
         tour.complete();
-        localStorage.setItem('hasSeenIndexTour', 'true');
         closeButton.style.display = 'none';
         reopenButton.style.display = 'block';
         const menuButton = document.querySelector('.dropbtn');
@@ -1834,19 +1852,17 @@ document.addEventListener("DOMContentLoaded", function() {
         tour.start();
     });
 
-    // Check if this is the first visit
-    const hasSeenTour = localStorage.getItem('hasSeenIndexTour') === 'true';
-    
-    if (!hasSeenTour) {
+    // Check if we need to show the tour based on backend flag
+    {% if show_tour %}
         // First visit - show tour automatically
         tour.start();
         closeButton.style.display = 'block';
         reopenButton.style.display = 'none';
-    } else {
+    {% else %}
         // Not first visit - show only reopen button
         reopenButton.style.display = 'block';
         closeButton.style.display = 'none';
-    }
+    {% endif %}
 
     // Add event listener for tour state changes
     tour.on('show', () => {

@@ -675,3 +675,18 @@ class FeatureAccess(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     feature_name = db.Column(db.String(255), nullable=False)
     access_mode = db.Column(db.String(50), default=None)
+
+
+class UserTourProgress(db.Model):
+    """
+    Table for tracking user tour progress across different pages.
+    """
+    __tablename__ = "user_tour_progress"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    index_timestamp = db.Column(db.DateTime(timezone=True), nullable=True)
+    coupon_detail_timestamp = db.Column(db.DateTime(timezone=True), nullable=True)
+    add_coupon_timestamp = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    user = db.relationship("User", backref=db.backref("tour_progress", uselist=False))
