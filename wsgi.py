@@ -23,10 +23,17 @@ def run_telegram_bot():
     except Exception as e:
         logger.error(f"Error running Telegram bot: {e}")
 
-if __name__ == '__main__':
-    # הפעלת בוט טלגרם בתהליך נפרד
+# הפעלת הבוט בתהליך נפרד
+if os.getenv('FLASK_ENV') != 'development':
+    logger.info('Starting Telegram bot in production mode...')
     bot_process = multiprocessing.Process(target=run_telegram_bot)
     bot_process.start()
+
+if __name__ == '__main__':
+    # הפעלת בוט טלגרם בתהליך נפרד (רק בסביבת פיתוח)
+    if os.getenv('FLASK_ENV') == 'development':
+        bot_process = multiprocessing.Process(target=run_telegram_bot)
+        bot_process.start()
     
     # הפעלת שרת Flask
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5001)))

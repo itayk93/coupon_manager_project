@@ -1028,15 +1028,16 @@ def connect_telegram():
         db.session.commit()
         
         # רישום הפעילות
+        activity_data = {
+            'user_id': str(current_user.id),  # המרה למחרוזת
+            'verification_code': verification_code,
+            'ip_address': request.remote_addr,
+            'device_info': request.user_agent.string
+        }
         log_user_activity(
             current_user.id,
             'telegram_verification_code_generated',
-            {
-                'user_id': current_user.id,
-                'verification_code': verification_code,
-                'ip_address': request.remote_addr,
-                'device_info': request.user_agent.string
-            }
+            activity_data
         )
         
         flash(f'קוד האימות שלך הוא: {verification_code}. שלח אותו לבוט כדי להתחבר.', 'success')
