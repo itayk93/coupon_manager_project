@@ -4977,7 +4977,7 @@ def review_usage_findings():
         # שולפים את כל הקופונים הפעילים של המשתמש
         all_user_coupons = [cpn for cpn in current_user.coupons if cpn.status == "פעיל"]
 
-        # מחפשים קופונים מתאימים לפי דמיון
+        # מחפשים קופונים מתאימים לפי דמיון לכל שימוש שזוהה
         for row in usage_list:
             row_company = row.get("company", "").lower()
             matched_coupons = []
@@ -5300,3 +5300,64 @@ def update_tour_progress():
         db.session.rollback()
         print(f"Error updating tour progress: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@coupons_bp.route("/api/my_coupons", methods=["GET"])
+@login_required
+def get_my_coupons():
+    """
+    API endpoint to get the first 3 coupons for the currently logged-in user.
+    
+    Returns:
+        JSON response containing the user's first 3 coupons
+    """
+    try:
+        # Get the current user's ID
+        user_id = current_user.id
+        
+        # Query the coupons for the current user with a limit of 3
+        coupons = Coupon.query.filter_by(user_id=user_id).limit(3).all()
+        
+        # Convert the coupons to a list of dictionaries
+        coupons_data = []
+        for coupon in coupons:
+            # Handle date formatting safely
+            expiration_date = None
+            if coupon.expiration:
+                if isinstance(coupon.expiration, str):
+                    expiration_date = coupon.expiration
+                else:
+                    expiration_date = coupon.expiration.isoformat()
+            
+            date_added = None
+            if coupon.date_added:
+                if isinstance(coupon.date_added, str):
+                    date_added = coupon.date_added
+                else:
+                    date_added = coupon.date_added.isoformat()
+            
+            coupon_dict = {
+                'id': coupon.id,
+                'code': coupon.code,
+                'description': coupon.description,
+                'value': coupon.value,
+                'cost': coupon.cost,
+                'company': coupon.company,
+                'expiration': expiration_date,
+                'status': coupon.status,
+                'is_available': coupon.is_available,
+                'is_for_sale': coupon.is_for_sale,
+                'date_added': date_added
+            }
+            coupons_data.append(coupon_dict)
+        
+        return jsonify({
+            'success': True,
+            'coupons': coupons_data
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
