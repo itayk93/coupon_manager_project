@@ -1007,14 +1007,11 @@ def connect_telegram():
         
         # שמירת הקוד במסד הנתונים
         telegram_user = TelegramUser.query.filter_by(user_id=current_user.id).first()
-        current_time = datetime.now(timezone.utc)
-        expiration_time = current_time + timedelta(minutes=10)
-        
         if not telegram_user:
             telegram_user = TelegramUser(
                 user_id=current_user.id,
                 verification_token=verification_code,
-                verification_expires_at=expiration_time,
+                verification_expires_at=datetime.utcnow() + timedelta(minutes=10),
                 is_verified=False,
                 ip_address=request.remote_addr,
                 device_info=request.user_agent.string
@@ -1022,7 +1019,7 @@ def connect_telegram():
             db.session.add(telegram_user)
         else:
             telegram_user.verification_token = verification_code
-            telegram_user.verification_expires_at = expiration_time
+            telegram_user.verification_expires_at = datetime.utcnow() + timedelta(minutes=10)
             telegram_user.is_verified = False
         
         try:
