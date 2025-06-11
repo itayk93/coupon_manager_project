@@ -58,17 +58,14 @@ def connect_telegram():
 def verify_telegram():
     """אימות משתמש טלגרם"""
     try:
-        logger.info("Received verification request")
         data = request.get_json()
         if not data:
-            logger.error("No data provided in request")
             return jsonify({'success': False, 'error': 'No data provided'}), 400
 
         # בדיקת שדות חובה
         required_fields = ['chat_id', 'token']
         missing_fields = [field for field in required_fields if field not in data]
         if missing_fields:
-            logger.error(f"Missing required fields: {missing_fields}")
             return jsonify({
                 'success': False,
                 'error': f'Missing required fields: {", ".join(missing_fields)}'
@@ -77,13 +74,10 @@ def verify_telegram():
         chat_id = data.get('chat_id')
         token = data.get('token')
         username = data.get('username')
-        
-        logger.info(f"Verifying token for chat_id: {chat_id}, username: {username}")
 
         # חיפוש משתמש לפי טוקן
         telegram_user = TelegramUser.query.filter_by(verification_token=token).first()
         if not telegram_user:
-            logger.error(f"Invalid verification token: {token}")
             return jsonify({
                 'success': False,
                 'error': 'Invalid verification code'
@@ -92,7 +86,6 @@ def verify_telegram():
         # בדיקת תאריך תפוגה
         current_time = datetime.now(timezone.utc)
         if telegram_user.verification_expires_at < current_time:
-            logger.error(f"Verification token expired for user {telegram_user.user_id}")
             return jsonify({
                 'success': False,
                 'error': 'Verification code has expired'
@@ -108,21 +101,20 @@ def verify_telegram():
 
         try:
             db.session.commit()
-            logger.info(f"Successfully verified user {telegram_user.user_id} with chat_id {chat_id}")
             return jsonify({
                 'success': True,
                 'message': 'Telegram account verified successfully'
             })
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Database error in verify_telegram: {str(e)}")
+            current_app.logger.error(f"Database error in verify_telegram: {str(e)}")
             return jsonify({
                 'success': False,
                 'error': 'Database error occurred'
             }), 500
 
     except Exception as e:
-        logger.error(f"Error in verify_telegram: {str(e)}")
+        current_app.logger.error(f"Error in verify_telegram: {str(e)}")
         return jsonify({
             'success': False,
             'error': 'Internal server error'

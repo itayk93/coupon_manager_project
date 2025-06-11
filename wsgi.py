@@ -1,8 +1,10 @@
 # wsgi.py
 import os
-import multiprocessing
 import logging
 from app import create_app
+from telegram_bot import run_bot
+import multiprocessing
+import signal
 import sys
 
 # הגדרת לוגר
@@ -17,35 +19,31 @@ def run_flask():
     app = create_app()
     return app
 
-def run_bot():
+def run_telegram_bot():
     """הפעלת בוט טלגרם"""
     try:
-        # מניעת הפעלה כפולה של הבוט
-        if os.environ.get('TELEGRAM_BOT_RUNNING'):
-            logger.info("Telegram bot is already running")
-            return
-
-        os.environ['TELEGRAM_BOT_RUNNING'] = '1'
-        from telegram_bot import run_bot as start_telegram_bot
-        logger.info("Starting Telegram bot...")
-        start_telegram_bot()
+        run_bot()
     except Exception as e:
-        logger.error(f"Error starting Telegram bot: {str(e)}")
-    finally:
-        os.environ.pop('TELEGRAM_BOT_RUNNING', None)
+        logger.error(f"Error in telegram bot process: {str(e)}")
+
+def signal_handler(signum, frame):
+    """טיפול בסיגנלים"""
+    logger.info(f"Received signal {signum}")
+    sys.exit(0)
 
 if __name__ == '__main__':
-    # הפעלת שרת Flask
+    # הגדרת handler לסיגנלים
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # יצירת אפליקציית Flask
     app = run_flask()
     
-    # הפעלת בוט טלגרם בתהליך נפרד רק אם אנחנו לא בסביבת פיתוח
+    # הפעלת בוט טלגרם בתהליך נפרד רק אם לא בסביבת פיתוח
     if os.environ.get('FLASK_ENV') != 'development':
-        bot_process = multiprocessing.Process(target=run_bot)
-        bot_process.daemon = True  # הגדרת התהליך כ-daemon כדי שיסגר אוטומטית כשהתהליך הראשי נסגר
+        bot_process = multiprocessing.Process(target=run_telegram_bot)
         bot_process.start()
+        logger.info("Started Telegram bot in separate process")
     
     # הפעלת שרת Flask
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
-else:
-    # עבור gunicorn
-    app = run_flask()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

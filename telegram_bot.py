@@ -24,7 +24,8 @@ API_URL = os.getenv('API_URL', 'https://couponmasteril.com')
 # הגדרת headers לבקשות HTTP
 HEADERS = {
     'User-Agent': 'TelegramBot/1.0',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
 }
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -56,40 +57,35 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id = update.effective_chat.id
         username = update.effective_user.username if update.effective_user else None
         
-        logger.info(f"Received verification code from user {username} (chat_id: {chat_id})")
+        logger.info(f"Sending verification request to {API_URL}/verify_telegram")
+        logger.info(f"Request data: chat_id={chat_id}, username={username}, token={code}")
         
-        # שליחת הבקשה לשרת
-        try:
-            response = requests.post(
-                f"{API_URL}/verify_telegram",
-                json={
-                    'chat_id': chat_id,
-                    'username': username,
-                    'token': code
-                },
-                headers=HEADERS,
-                timeout=10
-            )
+        response = requests.post(
+            f"{API_URL}/verify_telegram",
+            json={
+                'chat_id': chat_id,
+                'username': username,
+                'token': code
+            },
+            headers=HEADERS,
+            timeout=10
+        )
+        
+        logger.info(f"Server response status code: {response.status_code}")
+        logger.info(f"Server response content: {response.text}")
+        
+        if response.status_code == 200:
+            await update.message.reply_text("התחברת בהצלחה! 🎉\nמעכשיו תקבל עדכונים על קופונים חדשים ומועדפים.")
+        else:
+            try:
+                error_msg = response.json().get('error', 'אירעה שגיאה בהתחברות')
+            except:
+                error_msg = 'אירעה שגיאה בהתחברות'
+            await update.message.reply_text(f"שגיאה: {error_msg}")
             
-            logger.info(f"Server response status code: {response.status_code}")
-            logger.info(f"Server response content: {response.text}")
-            
-            if response.status_code == 200:
-                await update.message.reply_text("התחברת בהצלחה! 🎉\nמעכשיו תקבל עדכונים על קופונים חדשים ומועדפים.")
-            else:
-                try:
-                    error_data = response.json()
-                    error_msg = error_data.get('error', 'אירעה שגיאה בהתחברות')
-                except ValueError:
-                    error_msg = f'שגיאת שרת: {response.status_code}'
-                
-                logger.error(f"Verification failed: {error_msg}")
-                await update.message.reply_text(f"שגיאה: {error_msg}")
-                
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Network error: {str(e)}")
-            await update.message.reply_text("אירעה שגיאה בתקשורת עם השרת. אנא נסה שוב מאוחר יותר.")
-            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error: {str(e)}")
+        await update.message.reply_text("אירעה שגיאה בתקשורת עם השרת. אנא נסה שוב מאוחר יותר.")
     except Exception as e:
         logger.error(f"Error handling code: {str(e)}")
         await update.message.reply_text("אירעה שגיאה. אנא נסה שוב מאוחר יותר.")
@@ -113,7 +109,7 @@ def run_bot():
         
         # הפעלת הבוט
         logger.info("הבוט פועל...")
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
+        application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
         
     except Exception as e:
         logger.error(f"Error running bot: {str(e)}")
