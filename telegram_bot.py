@@ -24,8 +24,7 @@ API_URL = os.getenv('API_URL', 'https://couponmasteril.com')
 # הגדרת headers לבקשות HTTP
 HEADERS = {
     'User-Agent': 'TelegramBot/1.0',
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Content-Type': 'application/json'
 }
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -109,7 +108,7 @@ def run_bot():
         
         # הפעלת הבוט
         logger.info("הבוט פועל...")
-        application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
         
     except Exception as e:
         logger.error(f"Error running bot: {str(e)}")
