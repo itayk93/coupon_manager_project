@@ -75,50 +75,38 @@ def verify_telegram():
         token = data.get('token')
         username = data.get('username')
 
-        # חיפוש משתמש לפי טוקן
+        # חיפוש משתמש לפי קוד האימות
         telegram_user = TelegramUser.query.filter_by(verification_token=token).first()
         if not telegram_user:
-            return jsonify({
-                'success': False,
-                'error': 'Invalid verification code'
-            }), 400
+            return jsonify({'success': False, 'error': 'Invalid verification code'}), 400
 
-        # בדיקת תאריך תפוגה
+        # בדיקת תפוגת הקוד
         current_time = datetime.now(timezone.utc)
-        if telegram_user.verification_expires_at < current_time:
-            return jsonify({
-                'success': False,
-                'error': 'Verification code has expired'
-            }), 400
-
-        # עדכון פרטי המשתמש
-        telegram_user.telegram_chat_id = chat_id
-        telegram_user.telegram_username = username
-        telegram_user.is_verified = True
-        telegram_user.last_interaction = current_time
-        telegram_user.verification_token = None  # ניקוי הטוקן לאחר אימות מוצלח
-        telegram_user.verification_expires_at = None  # ניקוי תאריך התפוגה
+        if telegram_user.verification_expires_at and telegram_user.verification_expires_at < current_time:
+            return jsonify({'success': False, 'error': 'Verification code has expired'}), 400
 
         try:
+            # עדכון פרטי המשתמש
+            telegram_user.telegram_chat_id = chat_id
+            telegram_user.telegram_username = username
+            telegram_user.is_verified = True
+            telegram_user.last_interaction = current_time
+            
+            # מחיקת קוד האימות
+            telegram_user.verification_token = None
+            telegram_user.verification_expires_at = None
+            
             db.session.commit()
-            return jsonify({
-                'success': True,
-                'message': 'Telegram account verified successfully'
-            })
+            return jsonify({'success': True, 'message': 'Telegram account verified successfully'})
+            
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Database error in verify_telegram: {str(e)}")
-            return jsonify({
-                'success': False,
-                'error': 'Database error occurred'
-            }), 500
+            logger.error(f"Database error in verify_telegram: {str(e)}")
+            return jsonify({'success': False, 'error': 'Database error occurred'}), 500
 
     except Exception as e:
-        current_app.logger.error(f"Error in verify_telegram: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'Internal server error'
-        }), 500
+        logger.error(f"Error in verify_telegram: {str(e)}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @telegram_bp.route('/api/telegram_coupons', methods=['POST'])
 def get_telegram_coupons():
