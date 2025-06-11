@@ -2,8 +2,9 @@
 import os
 import multiprocessing
 import logging
-from app import create_app
-from telegram_bot import run_bot
+from app import create_app, db
+from app.telegram_bot import start_bot
+from datetime import datetime, timezone
 
 # הגדרת לוגר
 logging.basicConfig(
@@ -12,24 +13,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# יצירת מופע Flask
+# יצירת אפליקציית Flask
 app = create_app()
 
-def run_telegram_bot():
-    """הפעלת בוט טלגרם"""
-    try:
-        logger.info('Starting Telegram bot...')
-        run_bot()
-    except Exception as e:
-        logger.error(f"Error running Telegram bot: {e}")
+def run_flask():
+    """הפעלת שרת ה-Flask"""
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
 
-# הפעלת הבוט בתהליך נפרד רק אם אנחנו לא בסביבת פיתוח
-if os.getenv('FLASK_ENV') != 'development':
-    logger.info('Starting Telegram bot in production mode...')
-    bot_process = multiprocessing.Process(target=run_telegram_bot)
-    bot_process.daemon = True  # הגדרת התהליך כ-daemon כדי שיסגר אוטומטית כשהתהליך הראשי נסגר
-    bot_process.start()
+def run_bot():
+    """הפעלת בוט הטלגרם"""
+    try:
+        logger.info("Starting Telegram bot...")
+        start_bot()
+    except Exception as e:
+        logger.error(f"Error starting bot: {str(e)}")
 
 if __name__ == '__main__':
-    # הפעלת שרת Flask
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5001)))
+    # הפעלת הבוט בתהליך נפרד
+    bot_process = multiprocessing.Process(target=run_bot)
+    bot_process.start()
+    
+    # הפעלת שרת ה-Flask
+    run_flask()

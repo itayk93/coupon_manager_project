@@ -84,7 +84,8 @@ def verify_telegram():
             }), 400
 
         # בדיקת תאריך תפוגה
-        if telegram_user.verification_expires_at < datetime.utcnow():
+        current_time = datetime.now(timezone.utc)
+        if telegram_user.verification_expires_at < current_time:
             return jsonify({
                 'success': False,
                 'error': 'Verification code has expired'
@@ -94,7 +95,7 @@ def verify_telegram():
         telegram_user.telegram_chat_id = chat_id
         telegram_user.telegram_username = username
         telegram_user.is_verified = True
-        telegram_user.last_interaction = datetime.utcnow()
+        telegram_user.last_interaction = current_time
         telegram_user.verification_token = None  # ניקוי הטוקן לאחר אימות מוצלח
         telegram_user.verification_expires_at = None  # ניקוי תאריך התפוגה
 
