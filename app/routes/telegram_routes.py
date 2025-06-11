@@ -56,51 +56,68 @@ def connect_telegram():
 
 @telegram_bp.route('/verify_telegram', methods=['POST'])
 def verify_telegram():
-    """מאמת את המשתמש מול בוט טלגרם"""
+    """אימות משתמש טלגרם"""
     try:
         data = request.get_json()
         if not data:
             return jsonify({'success': False, 'error': 'No data provided'}), 400
 
+        # בדיקת שדות חובה
+        required_fields = ['chat_id', 'token']
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return jsonify({
+                'success': False,
+                'error': f'Missing required fields: {", ".join(missing_fields)}'
+            }), 400
+
         chat_id = data.get('chat_id')
-        username = data.get('username')
         token = data.get('token')
+        username = data.get('username')
 
-        if not all([chat_id, token]):
-            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
-
-        # חיפוש המשתמש לפי קוד האימות
-        telegram_user = TelegramUser.query.filter_by(
-            verification_token=token,
-            is_verified=False
-        ).first()
-
+        # חיפוש משתמש לפי טוקן
+        telegram_user = TelegramUser.query.filter_by(verification_token=token).first()
         if not telegram_user:
-            return jsonify({'success': False, 'error': 'Invalid or expired verification code'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'Invalid verification code'
+            }), 400
 
-        # בדיקה שהקוד לא פג תוקף
-        if telegram_user.verification_expires_at < datetime.now(timezone.utc):
-            return jsonify({'success': False, 'error': 'Verification code has expired'}), 400
+        # בדיקת תאריך תפוגה
+        if telegram_user.verification_expires_at < datetime.utcnow():
+            return jsonify({
+                'success': False,
+                'error': 'Verification code has expired'
+            }), 400
 
         # עדכון פרטי המשתמש
         telegram_user.telegram_chat_id = chat_id
         telegram_user.telegram_username = username
         telegram_user.is_verified = True
-        telegram_user.verified_at = datetime.now(timezone.utc)
-        telegram_user.verification_token = None
-        telegram_user.verification_expires_at = None
+        telegram_user.last_interaction = datetime.utcnow()
+        telegram_user.verification_token = None  # ניקוי הטוקן לאחר אימות מוצלח
+        telegram_user.verification_expires_at = None  # ניקוי תאריך התפוגה
 
-        db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'message': 'Successfully connected to Telegram bot'
-        })
+        try:
+            db.session.commit()
+            return jsonify({
+                'success': True,
+                'message': 'Telegram account verified successfully'
+            })
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Database error in verify_telegram: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'Database error occurred'
+            }), 500
 
     except Exception as e:
-        logger.error(f"Error in verify_telegram: {str(e)}")
-        db.session.rollback()
-        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+        current_app.logger.error(f"Error in verify_telegram: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Internal server error'
+        }), 500
 
 @telegram_bp.route('/api/telegram_coupons', methods=['POST'])
 def get_telegram_coupons():

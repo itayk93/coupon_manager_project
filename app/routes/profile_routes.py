@@ -1005,14 +1005,13 @@ def connect_telegram():
         # יצירת קוד אימות אקראי
         verification_code = ''.join(random.choices('0123456789', k=6))
         
-        # שמירת הקוד בדאטהבייס
+        # שמירת הקוד במסד הנתונים
         telegram_user = TelegramUser.query.filter_by(user_id=current_user.id).first()
         if not telegram_user:
             telegram_user = TelegramUser(
                 user_id=current_user.id,
-                telegram_chat_id=None,
                 verification_token=verification_code,
-                verification_expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+                verification_expires_at=datetime.utcnow() + timedelta(minutes=10),
                 is_verified=False,
                 ip_address=request.remote_addr,
                 device_info=request.user_agent.string
@@ -1020,30 +1019,21 @@ def connect_telegram():
             db.session.add(telegram_user)
         else:
             telegram_user.verification_token = verification_code
-            telegram_user.verification_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+            telegram_user.verification_expires_at = datetime.utcnow() + timedelta(minutes=10)
             telegram_user.is_verified = False
-            telegram_user.ip_address = request.remote_addr
-            telegram_user.device_info = request.user_agent.string
         
-        db.session.commit()
+        try:
+            db.session.commit()
+            flash(f'קוד האימות שלך הוא: {verification_code}. שלח אותו לבוט כדי להתחבר.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Database error in connect_telegram: {str(e)}")
+            flash('אירעה שגיאה ביצירת קוד האימות. אנא נסה שוב מאוחר יותר.', 'error')
+            return redirect(url_for('profile.user_profile', user_id=current_user.id))
         
-        # רישום הפעילות
-        activity_data = {
-            'user_id': str(current_user.id),  # המרה למחרוזת
-            'verification_code': verification_code,
-            'ip_address': request.remote_addr,
-            'device_info': request.user_agent.string
-        }
-        log_user_activity(
-            current_user.id,
-            'telegram_verification_code_generated',
-            activity_data
-        )
-        
-        flash(f'קוד האימות שלך הוא: {verification_code}. שלח אותו לבוט כדי להתחבר.', 'success')
         return redirect(url_for('profile.user_profile', user_id=current_user.id))
+        
     except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error generating verification code: {str(e)}")
+        current_app.logger.error(f"Error in connect_telegram: {str(e)}")
         flash('אירעה שגיאה ביצירת קוד האימות. אנא נסה שוב מאוחר יותר.', 'error')
         return redirect(url_for('profile.user_profile', user_id=current_user.id))
