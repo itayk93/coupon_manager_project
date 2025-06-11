@@ -12,10 +12,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def run_flask():
-    """הפעלת שרת Flask"""
-    app = create_app()
-    return app
+# יצירת מופע Flask
+app = create_app()
 
 def run_telegram_bot():
     """הפעלת בוט טלגרם"""
@@ -26,9 +24,6 @@ def run_telegram_bot():
         logger.error(f"Error running Telegram bot: {e}")
 
 if __name__ == '__main__':
-    # הפעלת שרת Flask
-    app = run_flask()
-    
     # הפעלת בוט טלגרם בתהליך נפרד
     bot_process = multiprocessing.Process(target=run_telegram_bot)
     bot_process.start()
