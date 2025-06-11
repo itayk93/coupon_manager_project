@@ -136,6 +136,9 @@ def create_app():
     def utility_processor():
         return dict(has_feature_access=has_feature_access)
 
+    # עקיפת בדיקת CSRF עבור routes של טלגרם
+    csrf.exempt(telegram_bp)
+
     return app
 
 

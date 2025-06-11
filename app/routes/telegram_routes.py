@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
 from flask_login import login_required, current_user
-from app.models import TelegramUser
+from app.models import TelegramUser, User
 from app.extensions import db
 import secrets
 from datetime import datetime, timezone, timedelta
@@ -56,73 +56,94 @@ def connect_telegram():
 
 @telegram_bp.route('/verify_telegram', methods=['POST'])
 def verify_telegram():
-    """מאמת את קוד האימות מהבוט"""
+    """מאמת את המשתמש מול בוט טלגרם"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+
         chat_id = data.get('chat_id')
         username = data.get('username')
         token = data.get('token')
-        
-        logger.info(f"Verifying token: {token} for chat_id: {chat_id}")
-        
+
         if not all([chat_id, token]):
             return jsonify({'success': False, 'error': 'Missing required fields'}), 400
-            
-        # חיפוש המשתמש לפי הטוקן
-        telegram_user = TelegramUser.query.filter_by(verification_token=token).first()
-        
+
+        # חיפוש המשתמש לפי קוד האימות
+        telegram_user = TelegramUser.query.filter_by(
+            verification_token=token,
+            is_verified=False
+        ).first()
+
         if not telegram_user:
-            logger.error(f"Token not found: {token}")
-            return jsonify({'success': False, 'error': 'Invalid token'}), 400
-            
-        if telegram_user.is_blocked():
-            logger.error(f"User is blocked: {telegram_user.user_id}")
-            return jsonify({'success': False, 'error': 'Too many attempts. Please try again later.'}), 429
-            
+            return jsonify({'success': False, 'error': 'Invalid or expired verification code'}), 400
+
+        # בדיקה שהקוד לא פג תוקף
         if telegram_user.verification_expires_at < datetime.now(timezone.utc):
-            logger.error(f"Token expired: {token}")
-            return jsonify({'success': False, 'error': 'Token expired'}), 400
-            
+            return jsonify({'success': False, 'error': 'Verification code has expired'}), 400
+
         # עדכון פרטי המשתמש
         telegram_user.telegram_chat_id = chat_id
         telegram_user.telegram_username = username
         telegram_user.is_verified = True
-        telegram_user.reset_verification_attempts()
-        telegram_user.last_interaction = datetime.now(timezone.utc)
-        
+        telegram_user.verified_at = datetime.now(timezone.utc)
+        telegram_user.verification_token = None
+        telegram_user.verification_expires_at = None
+
         db.session.commit()
-        
-        logger.info(f"Successfully verified user: {telegram_user.user_id}")
+
         return jsonify({
             'success': True,
             'message': 'Successfully connected to Telegram bot'
         })
-        
+
     except Exception as e:
         logger.error(f"Error in verify_telegram: {str(e)}")
+        db.session.rollback()
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @telegram_bp.route('/api/telegram_coupons', methods=['POST'])
 def get_telegram_coupons():
-    data = request.get_json()
-    chat_id = data.get('chat_id')
-    if not chat_id:
-        return jsonify({'success': False, 'error': 'Missing chat_id'}), 400
-    telegram_user = TelegramUser.query.filter_by(telegram_chat_id=chat_id, is_verified=True).first()
-    if not telegram_user:
-        return jsonify({'success': False, 'error': 'User not verified'}), 403
-    user = telegram_user.user
-    coupons = user.coupons if user else []
-    def coupon_to_dict(c):
-        return {
-            'id': c.id,
-            'code': c.code,
-            'description': c.description,
-            'value': c.value,
-            'cost': c.cost,
-            'company': c.company,
-            'expiration': c.expiration.isoformat() if c.expiration else None,
-            'status': c.status,
-            'is_available': c.is_available
-        }
-    return jsonify({'success': True, 'coupons': [coupon_to_dict(c) for c in coupons]}) 
+    """מחזיר את הקופונים של המשתמש"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+        chat_id = data.get('chat_id')
+        if not chat_id:
+            return jsonify({'success': False, 'error': 'Missing chat_id'}), 400
+
+        # חיפוש המשתמש לפי chat_id
+        telegram_user = TelegramUser.query.filter_by(
+            telegram_chat_id=chat_id,
+            is_verified=True
+        ).first()
+
+        if not telegram_user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+
+        # קבלת הקופונים של המשתמש
+        user = User.query.get(telegram_user.user_id)
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+
+        coupons = []
+        for coupon in user.coupons:
+            coupons.append({
+                'code': coupon.code,
+                'value': coupon.value,
+                'company': coupon.company.name if coupon.company else 'Unknown',
+                'expiration': coupon.expiration_date.strftime('%Y-%m-%d') if coupon.expiration_date else None,
+                'status': coupon.status,
+                'is_available': coupon.is_available
+            })
+
+        return jsonify({
+            'success': True,
+            'coupons': coupons
+        })
+
+    except Exception as e:
+        logger.error(f"Error in get_telegram_coupons: {str(e)}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500 
