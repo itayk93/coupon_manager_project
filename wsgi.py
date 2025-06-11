@@ -26,13 +26,13 @@ def start_telegram_bot():
     except Exception as e:
         logger.error(f"Error starting Telegram bot: {str(e)}")
 
-# הפעלת הבוט רק אם הדגל מופעל
-if ENABLE_BOT:
-    # הפעלת הבוט בתהליך נפרד
-    bot_process = multiprocessing.Process(target=start_telegram_bot)
-    bot_process.daemon = True  # התהליך ייסגר כשהאפליקציה נסגרת
-    bot_process.start()
-
 if __name__ == '__main__':
+    # הפעלת הבוט רק אם הדגל מופעל
+    if ENABLE_BOT:
+        # הפעלת הבוט בתהליך נפרד
+        bot_process = multiprocessing.Process(target=start_telegram_bot)
+        bot_process.daemon = True  # התהליך ייסגר כשהאפליקציה נסגרת
+        bot_process.start()
+    
     # הפעלת שרת Flask
     app.run(host='0.0.0.0', port=10000)
