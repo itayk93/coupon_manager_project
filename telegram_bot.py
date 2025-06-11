@@ -25,7 +25,8 @@ TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME')
 # הגדרת headers לכל הבקשות
 HEADERS = {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'  # הוספת header זה עוקף את בדיקת ה-CSRF
 }
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -182,7 +183,7 @@ def run_bot():
     
     # הפעלת הבוט
     logger.info('הבוט פועל...')
-    app.run_polling()
+    app.run_polling(drop_pending_updates=True)  # הוספת drop_pending_updates כדי למנוע שגיאות Conflict
 
 if __name__ == '__main__':
     run_bot() 
