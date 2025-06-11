@@ -1,8 +1,9 @@
 # app/models.py
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
+import secrets
 
 from flask import url_for
 from flask_login import UserMixin
@@ -690,3 +691,97 @@ class UserTourProgress(db.Model):
     add_coupon_timestamp = db.Column(db.DateTime(timezone=True), nullable=True)
 
     user = db.relationship("User", backref=db.backref("tour_progress", uselist=False))
+
+
+class TelegramUser(db.Model):
+    """
+    טבלה המקשרת בין משתמשי המערכת לבוט הטלגרם
+    """
+    __tablename__ = "telegram_users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    telegram_chat_id = db.Column(db.BigInteger, unique=True, nullable=False)
+    telegram_username = db.Column(db.String(255))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    last_interaction = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # שדות אבטחה
+    verification_token = db.Column(db.String(255), nullable=False)
+    verification_expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    is_verified = db.Column(db.Boolean, default=False)
+    verification_attempts = db.Column(db.Integer, default=0)
+    last_verification_attempt = db.Column(db.DateTime(timezone=True))
+    blocked_until = db.Column(db.DateTime(timezone=True))
+    ip_address = db.Column(db.String(45))
+    device_info = db.Column(db.Text)
+
+    # קשר למשתמש
+    user = db.relationship("User", backref=db.backref("telegram_user", uselist=False))
+
+    def __repr__(self):
+        return f"<TelegramUser {self.telegram_chat_id}>"
+
+    def is_blocked(self):
+        """בודק האם המשתמש חסום"""
+        if self.blocked_until and self.blocked_until > datetime.now(timezone.utc):
+            return True
+        return False
+
+    def increment_verification_attempts(self):
+        """מגדיל את מספר ניסיונות האימות"""
+        self.verification_attempts += 1
+        self.last_verification_attempt = datetime.now(timezone.utc)
+        
+        # אם יש יותר מדי ניסיונות, חוסם זמנית
+        if self.verification_attempts >= 5:
+            self.blocked_until = datetime.now(timezone.utc) + timedelta(hours=24)
+        
+        db.session.commit()
+
+    def reset_verification_attempts(self):
+        """מאפס את מספר ניסיונות האימות"""
+        self.verification_attempts = 0
+        self.blocked_until = None
+        db.session.commit()
+
+    def generate_verification_token(self):
+        """מייצר טוקן אימות חדש"""
+        self.verification_token = secrets.token_urlsafe(32)
+        self.verification_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+        db.session.commit()
+        return self.verification_token
+
+    def verify_token(self, token):
+        """בודק האם הטוקן תקף"""
+        if self.is_blocked():
+            return False
+        
+        if (self.verification_token == token and 
+            self.verification_expires_at > datetime.now(timezone.utc)):
+            self.is_verified = True
+            self.reset_verification_attempts()
+            db.session.commit()
+            return True
+        
+        self.increment_verification_attempts()
+        return False
+
+
+class TelegramUserAuditLog(db.Model):
+    """
+    טבלת לוג לשינויים בטבלת telegram_users
+    """
+    __tablename__ = "telegram_users_audit_log"
+
+    id = db.Column(db.Integer, primary_key=True)
+    telegram_user_id = db.Column(db.Integer, nullable=False)
+    action = db.Column(db.String(50), nullable=False)
+    changed_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    changed_by = db.Column(db.Integer)
+    old_values = db.Column(db.JSON)
+    new_values = db.Column(db.JSON)
+
+    def __repr__(self):
+        return f"<TelegramUserAuditLog {self.id}>"

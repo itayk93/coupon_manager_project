@@ -48,9 +48,30 @@
 
     <!-- # Profile description section with improved styling -->
     <div class="profile-description">
-        <h3>תיאור פרופיל</h3>
-        <p>{{ user.profile_description or 'אין תיאור פרופיל' }}</p>
+        <h3 data-asw-org-font-size="22" style="font-size: 22px;">תיאור פרופיל</h3>
+        <p data-asw-org-font-size="16" style="font-size: 16px;">אין תיאור פרופיל</p>
     </div>
+
+    <!-- Telegram Bot Connection -->
+    {% if is_admin %}
+    <div class="telegram-connection">
+        <h3><i class="fa fa-telegram"></i> התחברות לבוט טלגרם</h3>
+        {% if telegram_user and telegram_user.is_verified %}
+            <div class="telegram-status connected">
+                <i class="fa fa-check-circle"></i>
+                <span>מחובר לבוט טלגרם</span>
+                <small>שם משתמש: @{{ telegram_user.telegram_username }}</small>
+            </div>
+        {% else %}
+            <div class="telegram-status not-connected">
+                <p>התחבר לבוט טלגרם כדי לקבל התראות על קופונים חדשים!</p>
+                <a href="{{ url_for('telegram.connect_telegram') }}" class="telegram-connect-button">
+                    <i class="fa fa-telegram"></i> התחבר לבוט טלגרם
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <!-- Add Change Password Button -->
     {% if is_owner %}
@@ -205,6 +226,25 @@
     <!-- # Delete account button with improved styling and animation -->
     {% if is_owner and not is_admin %}
     <div class="action-section">
+        <!-- Telegram Bot Connection -->
+        <div class="telegram-connection">
+            <h3><i class="fa fa-telegram"></i> התחברות לבוט טלגרם</h3>
+            {% if telegram_user %}
+                <div class="telegram-status connected">
+                    <i class="fa fa-check-circle"></i>
+                    <span>מחובר לבוט טלגרם</span>
+                    <small>שם משתמש: @{{ telegram_user.username }}</small>
+                </div>
+            {% else %}
+                <div class="telegram-status not-connected">
+                    <p>התחבר לבוט טלגרם כדי לקבל התראות על קופונים חדשים!</p>
+                    <a href="{{ url_for('telegram.connect_telegram') }}" class="telegram-connect-button">
+                        <i class="fa fa-telegram"></i> התחבר לבוט טלגרם
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
         <form method="POST"
               action="{{ url_for('admin_bp.admin_users_bp.initiate_delete_user') }}"
               onsubmit="return confirm('האם אתה בטוח שתרצה למחוק את חשבונך לצמיתות? כל תוכן יישאר במערכת תחת משתמש &quot;Deleted&quot;?');"
@@ -1101,6 +1141,70 @@
         .delete-button {
             width: 100%;
         }
+    }
+
+    /* Add CSS for Telegram section */
+    .telegram-connection {
+        background: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .telegram-connection h3 {
+        color: #0088cc;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .telegram-status {
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+    }
+
+    .telegram-status.connected {
+        background: #e3f2fd;
+        border: 1px solid #90caf9;
+    }
+
+    .telegram-status.not-connected {
+        background: #f5f5f5;
+        border: 1px solid #e0e0e0;
+    }
+
+    .telegram-status i {
+        margin-right: 8px;
+    }
+
+    .telegram-status.connected i {
+        color: #4caf50;
+    }
+
+    .telegram-connect-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #0088cc;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 4px;
+        text-decoration: none;
+        transition: background-color 0.3s;
+    }
+
+    .telegram-connect-button:hover {
+        background: #006699;
+        color: white;
+    }
+
+    .telegram-status small {
+        display: block;
+        margin-top: 5px;
+        color: #666;
     }
 </style>
 {% endblock %}

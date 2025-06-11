@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">התחברות לבוט הטלגרם</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h4>הוראות התחברות:</h4>
+                        <ol>
+                            <li>פתח את הטלגרם</li>
+                            <li>חפש את הבוט: <strong>@{{ bot_username }}</strong></li>
+                            <li>שלח את הפקודה: <code>/start</code></li>
+                            <li>שלח את הקוד הבא לבוט: <code>{{ verification_token }}</code></li>
+                        </ol>
+                    </div>
+                    <div class="text-center">
+                        <p>הקוד תקף ל-24 שעות</p>
+                        <p>אם הקוד פג תוקף, רענן את הדף לקבלת קוד חדש</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %} 

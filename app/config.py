@@ -14,3 +14,7 @@ class Config:
     SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "default_salt")
     UPLOAD_FOLDER = "uploads"
     # ALLOWED_EXTENSIONS = {'xlsx'}  # אם תרצה
+    # Telegram Bot Configuration
+    TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME")
+    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
