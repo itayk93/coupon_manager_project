@@ -66,7 +66,8 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 'username': username,
                 'token': code
             },
-            headers=HEADERS
+            headers=HEADERS,
+            timeout=10
         )
         
         logger.info(f"Server response status code: {response.status_code}")
@@ -75,9 +76,15 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if response.status_code == 200:
             await update.message.reply_text("התחברת בהצלחה! 🎉\nמעכשיו תקבל עדכונים על קופונים חדשים ומועדפים.")
         else:
-            error_msg = response.json().get('error', 'אירעה שגיאה בהתחברות')
+            try:
+                error_msg = response.json().get('error', 'אירעה שגיאה בהתחברות')
+            except:
+                error_msg = 'אירעה שגיאה בהתחברות'
             await update.message.reply_text(f"שגיאה: {error_msg}")
             
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error: {str(e)}")
+        await update.message.reply_text("אירעה שגיאה בתקשורת עם השרת. אנא נסה שוב מאוחר יותר.")
     except Exception as e:
         logger.error(f"Error handling code: {str(e)}")
         await update.message.reply_text("אירעה שגיאה. אנא נסה שוב מאוחר יותר.")

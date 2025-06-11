@@ -1,9 +1,9 @@
 # wsgi.py
 import os
-import multiprocessing
 import logging
+import multiprocessing
 from app import create_app
-import sys
+from telegram_bot import run_bot
 
 # הגדרת לוגר
 logging.basicConfig(
@@ -13,39 +13,29 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def run_flask():
-    """הפעלת שרת Flask"""
+    """הפעלת שרת ה-Flask"""
     app = create_app()
-    return app
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
 
-def run_bot():
-    """הפעלת בוט טלגרם"""
+def run_telegram_bot():
+    """הפעלת בוט הטלגרם"""
     try:
-        # מניעת הפעלה כפולה של הבוט
-        if os.environ.get('TELEGRAM_BOT_RUNNING'):
-            logger.info("Telegram bot is already running")
-            return
-
-        os.environ['TELEGRAM_BOT_RUNNING'] = '1'
-        from telegram_bot import run_bot as start_telegram_bot
-        logger.info("Starting Telegram bot...")
-        start_telegram_bot()
+        run_bot()
     except Exception as e:
-        logger.error(f"Error starting Telegram bot: {str(e)}")
-    finally:
-        os.environ.pop('TELEGRAM_BOT_RUNNING', None)
+        logger.error(f"Error running Telegram bot: {str(e)}")
+
+# יצירת אפליקציית Flask
+app = create_app()
 
 if __name__ == '__main__':
-    # הפעלת שרת Flask
-    app = run_flask()
+    # הפעלת שרת ה-Flask
+    flask_process = multiprocessing.Process(target=run_flask)
+    flask_process.start()
     
-    # הפעלת בוט טלגרם בתהליך נפרד רק אם אנחנו לא בסביבת פיתוח
-    if os.environ.get('FLASK_ENV') != 'development':
-        bot_process = multiprocessing.Process(target=run_bot)
-        bot_process.daemon = True  # הגדרת התהליך כ-daemon כדי שיסגר אוטומטית כשהתהליך הראשי נסגר
-        bot_process.start()
+    # הפעלת בוט הטלגרם
+    bot_process = multiprocessing.Process(target=run_telegram_bot)
+    bot_process.start()
     
-    # הפעלת שרת Flask
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
-else:
-    # עבור gunicorn
-    app = run_flask()
+    # המתנה לסיום התהליכים
+    flask_process.join()
+    bot_process.join()
