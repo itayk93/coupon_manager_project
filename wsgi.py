@@ -1,9 +1,8 @@
 # wsgi.py
 import os
-import logging
 import multiprocessing
+import logging
 from app import create_app
-from telegram_bot import run_bot
 
 # הגדרת לוגר
 logging.basicConfig(
@@ -13,29 +12,29 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def run_flask():
-    """הפעלת שרת ה-Flask"""
+    """הפעלת שרת Flask"""
     app = create_app()
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    return app
 
-def run_telegram_bot():
-    """הפעלת בוט הטלגרם"""
+def run_bot():
+    """הפעלת בוט טלגרם"""
     try:
-        run_bot()
+        from telegram_bot import run_bot as start_telegram_bot
+        logger.info("Starting Telegram bot...")
+        start_telegram_bot()
     except Exception as e:
-        logger.error(f"Error running Telegram bot: {str(e)}")
-
-# יצירת אפליקציית Flask
-app = create_app()
+        logger.error(f"Error starting Telegram bot: {str(e)}")
 
 if __name__ == '__main__':
-    # הפעלת שרת ה-Flask
-    flask_process = multiprocessing.Process(target=run_flask)
-    flask_process.start()
+    # הפעלת שרת Flask
+    app = run_flask()
     
-    # הפעלת בוט הטלגרם
-    bot_process = multiprocessing.Process(target=run_telegram_bot)
+    # הפעלת בוט טלגרם בתהליך נפרד
+    bot_process = multiprocessing.Process(target=run_bot)
     bot_process.start()
     
-    # המתנה לסיום התהליכים
-    flask_process.join()
-    bot_process.join()
+    # הפעלת שרת Flask
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
+else:
+    # עבור gunicorn
+    app = run_flask()

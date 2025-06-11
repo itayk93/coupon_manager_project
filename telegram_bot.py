@@ -1,14 +1,11 @@
 import os
 import logging
-import asyncio
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from dotenv import load_dotenv
 import requests
+import asyncio
 from datetime import datetime, timezone
-
-# טעינת משתני סביבה
-load_dotenv()
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from dotenv import load_dotenv
 
 # הגדרת לוגר
 logging.basicConfig(
@@ -17,54 +14,51 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# קבלת טוקן הבוט ממשתני הסביבה
-TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-API_URL = os.getenv('API_URL', 'https://couponmasteril.com')
+# טעינת משתני סביבה
+load_dotenv()
 
-# הגדרת headers לבקשות HTTP
+# הגדרות
+API_URL = os.getenv('API_URL', 'https://couponmasteril.com')  # שימוש בשרת הייצור כברירת מחדל
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME')
+
+# הגדרת headers לכל הבקשות
 HEADERS = {
-    'User-Agent': 'TelegramBot/1.0',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'  # הוספת header זה עוקף את בדיקת ה-CSRF
 }
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """טיפול בפקודת /start"""
-    try:
-        user = update.effective_user
-        logger.info(f"Received /start command from user {user.username if user else 'None'}")
-        
-        welcome_message = (
-            "ברוכים הבאים לבוט קופון מאסטר! 🎉\n\n"
-            "כדי להתחבר לבוט, אנא בצע את הפעולות הבאות:\n"
-            "1. היכנס לאתר https://couponmasteril.com\n"
-            "2. התחבר או צור חשבון\n"
-            "3. לחץ על 'התחבר לבוט טלגרם' בפרופיל שלך\n"
-            "4. העתק את קוד האימות שתקבל\n"
-            "5. שלח את הקוד לבוט זה\n\n"
-            "אחרי שתתחבר, תוכל לקבל עדכונים על קופונים חדשים ומועדפים!"
-        )
-        
-        await update.message.reply_text(welcome_message)
-    except Exception as e:
-        logger.error(f"Error in start command: {str(e)}")
-        await update.message.reply_text("אירעה שגיאה. אנא נסה שוב מאוחר יותר.")
+    """מטפל בפקודת /start"""
+    logger.info(f"Received /start command from user {update.message.from_user.username}")
+    await update.message.reply_text(
+        'ברוך הבא לבוט קופון מאסטר! 🎉\n\n'
+        'כדי להתחבר לבוט, עליך:\n'
+        '1. להיכנס לאתר https://couponmasteril.com\n'
+        '2. להירשם או להתחבר לחשבון שלך\n'
+        '3. ללחוץ על "התחבר לבוט טלגרם"\n'
+        '4. להעתיק את קוד האימות ולשלוח אותו כאן\n\n'
+        'אם כבר נרשמת, פשוט שלח את קוד האימות שקיבלת מהאתר.'
+    )
 
 async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """טיפול בקוד אימות"""
+    """מטפל בקוד אימות שנשלח על ידי המשתמש"""
+    token = update.message.text.strip()
+    chat_id = update.message.chat_id
+    username = update.message.from_user.username
+
+    # שליחת הקוד לשרת לאימות
     try:
-        code = update.message.text.strip()
-        chat_id = update.effective_chat.id
-        username = update.effective_user.username if update.effective_user else None
-        
         logger.info(f"Sending verification request to {API_URL}/verify_telegram")
-        logger.info(f"Request data: chat_id={chat_id}, username={username}, token={code}")
+        logger.info(f"Request data: chat_id={chat_id}, username={username}, token={token}")
         
         response = requests.post(
-            f"{API_URL}/verify_telegram",
+            f'{API_URL}/verify_telegram',
             json={
                 'chat_id': chat_id,
                 'username': username,
-                'token': code
+                'token': token
             },
             headers=HEADERS,
             timeout=10
@@ -73,47 +67,123 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"Server response status code: {response.status_code}")
         logger.info(f"Server response content: {response.text}")
         
-        if response.status_code == 200:
-            await update.message.reply_text("התחברת בהצלחה! 🎉\nמעכשיו תקבל עדכונים על קופונים חדשים ומועדפים.")
-        else:
+        if response.ok:
             try:
-                error_msg = response.json().get('error', 'אירעה שגיאה בהתחברות')
-            except:
-                error_msg = 'אירעה שגיאה בהתחברות'
-            await update.message.reply_text(f"שגיאה: {error_msg}")
-            
+                data = response.json()
+                if data.get('success'):
+                    await update.message.reply_text('✅ התחברת בהצלחה!')
+                    # קבלת הקופונים
+                    await get_coupons(update, context)
+                else:
+                    error_msg = data.get('error', 'שגיאה לא ידועה')
+                    if 'not registered' in error_msg.lower() or 'not found' in error_msg.lower():
+                        await update.message.reply_text(
+                            '❌ נראה שעדיין לא נרשמת לאתר!\n\n'
+                            'כדי להתחבר לבוט, עליך:\n'
+                            '1. להיכנס לאתר https://couponmasteril.com\n'
+                            '2. להירשם או להתחבר לחשבון שלך\n'
+                            '3. ללחוץ על "התחבר לבוט טלגרם"\n'
+                            '4. להעתיק את קוד האימות ולשלוח אותו כאן'
+                        )
+                    else:
+                        await update.message.reply_text(f'❌ שגיאה: {error_msg}')
+            except ValueError as e:
+                logger.error(f"JSON parsing error: {e}")
+                logger.error(f"Response content: {response.text}")
+                await update.message.reply_text('❌ אירעה שגיאה בעיבוד התשובה מהשרת')
+        else:
+            if response.status_code == 404:
+                await update.message.reply_text(
+                    '❌ נראה שעדיין לא נרשמת לאתר!\n\n'
+                    'כדי להתחבר לבוט, עליך:\n'
+                    '1. להיכנס לאתר https://couponmasteril.com\n'
+                    '2. להירשם או להתחבר לחשבון שלך\n'
+                    '3. ללחוץ על "התחבר לבוט טלגרם"\n'
+                    '4. להעתיק את קוד האימות ולשלוח אותו כאן'
+                )
+            else:
+                logger.error(f"Server error: {response.status_code}")
+                logger.error(f"Response content: {response.text}")
+                await update.message.reply_text(f'❌ שגיאת שרת: {response.status_code}')
     except requests.exceptions.RequestException as e:
-        logger.error(f"Network error: {str(e)}")
-        await update.message.reply_text("אירעה שגיאה בתקשורת עם השרת. אנא נסה שוב מאוחר יותר.")
+        logger.error(f"Network error: {e}")
+        await update.message.reply_text('❌ אירעה שגיאה בתקשורת עם השרת')
     except Exception as e:
-        logger.error(f"Error handling code: {str(e)}")
-        await update.message.reply_text("אירעה שגיאה. אנא נסה שוב מאוחר יותר.")
+        logger.error(f"Unexpected error: {e}")
+        logger.error(f"Error details: {str(e)}")
+        await update.message.reply_text('❌ אירעה שגיאה לא צפויה')
+
+async def get_coupons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """שולף את הקופונים של המשתמש"""
+    chat_id = update.message.chat_id
+    
+    try:
+        response = requests.post(
+            f'{API_URL}/api/telegram_coupons',
+            json={'chat_id': chat_id},
+            headers=HEADERS,
+            timeout=10
+        )
+        
+        if response.ok and response.json().get('success'):
+            coupons = response.json().get('coupons', [])
+            if coupons:
+                message = "הנה הקופונים שלך:\n\n"
+                for coupon in coupons:
+                    message += (
+                        f"🏷️ קופון: {coupon['code']}\n"
+                        f"💰 ערך: {coupon['value']}₪\n"
+                        f"🏢 חברה: {coupon['company']}\n"
+                        f"📅 תפוגה: {coupon['expiration'] or 'ללא'}\n"
+                        f"📝 סטטוס: {coupon['status']}\n"
+                        f"{'✅ זמין' if coupon['is_available'] else '❌ לא זמין'}\n\n"
+                    )
+                await update.message.reply_text(message)
+            else:
+                await update.message.reply_text('לא נמצאו קופונים')
+        else:
+            error_msg = response.json().get('error', 'שגיאה לא ידועה')
+            await update.message.reply_text(f'❌ שגיאה: {error_msg}')
+    except Exception as e:
+        logger.error(f"Error in get_coupons: {e}")
+        await update.message.reply_text('❌ אירעה שגיאה בתקשורת עם השרת')
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """מציג את רשימת הפקודות הזמינות"""
+    help_text = (
+        "📋 רשימת הפקודות הזמינות:\n\n"
+        "/start - התחלת שיחה עם הבוט\n"
+        "/help - הצגת רשימת הפקודות\n"
+        "/coupons - הצגת הקופונים שלך\n\n"
+        "כדי להתחבר, שלח את קוד האימות שקיבלת מהאתר."
+    )
+    await update.message.reply_text(help_text)
+
+async def coupons_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """מציג את הקופונים של המשתמש"""
+    await get_coupons(update, context)
 
 def run_bot():
     """הפעלת הבוט"""
-    try:
-        # בדיקה אם הבוט כבר רץ
-        if os.environ.get('TELEGRAM_BOT_RUNNING'):
-            logger.info("Telegram bot is already running")
-            return
+    if not TELEGRAM_BOT_TOKEN:
+        logger.error("No TELEGRAM_BOT_TOKEN found in environment variables")
+        return
 
-        os.environ['TELEGRAM_BOT_RUNNING'] = '1'
-        
-        # יצירת אפליקציית הבוט
-        application = Application.builder().token(TOKEN).build()
-        
-        # הוספת handlers
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_code))
-        
-        # הפעלת הבוט
-        logger.info("הבוט פועל...")
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
-        
-    except Exception as e:
-        logger.error(f"Error running bot: {str(e)}")
-    finally:
-        os.environ.pop('TELEGRAM_BOT_RUNNING', None)
+    # יצירת event loop חדש
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    
+    # הוספת handlers
+    app.add_handler(CommandHandler('start', start))
+    app.add_handler(CommandHandler('help', help_command))
+    app.add_handler(CommandHandler('coupons', coupons_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_code))
+    
+    # הפעלת הבוט
+    logger.info('הבוט פועל...')
+    app.run_polling(drop_pending_updates=True)  # הוספת drop_pending_updates כדי למנוע שגיאות Conflict
 
 if __name__ == '__main__':
     run_bot() 
