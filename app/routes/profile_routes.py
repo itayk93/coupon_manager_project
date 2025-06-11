@@ -1000,6 +1000,7 @@ def confirm_password_change(token):
 @profile_bp.route('/connect_telegram')
 @login_required
 def connect_telegram():
+    """יצירת קוד אימות לחיבור לבוט טלגרם"""
     try:
         # יצירת קוד אימות אקראי
         verification_code = ''.join(random.choices('0123456789', k=6))
@@ -1026,25 +1027,22 @@ def connect_telegram():
         
         db.session.commit()
         
-        # לוג פעילות
-        try:
-            log_user_activity(
-                current_user.id,
-                'telegram_verification_code_generated',
-                {
-                    'user_id': current_user.id,
-                    'ip_address': request.remote_addr,
-                    'user_agent': request.user_agent.string
-                }
-            )
-        except Exception as log_error:
-            current_app.logger.error(f"Error logging activity: {str(log_error)}")
+        # רישום הפעילות
+        log_user_activity(
+            current_user.id,
+            'telegram_verification_code_generated',
+            {
+                'user_id': current_user.id,
+                'verification_code': verification_code,
+                'ip_address': request.remote_addr,
+                'device_info': request.user_agent.string
+            }
+        )
         
-        flash(f'קוד האימות שלך הוא: {verification_code}. שלח אותו לבוט טלגרם כדי להתחבר.', 'success')
+        flash(f'קוד האימות שלך הוא: {verification_code}. שלח אותו לבוט כדי להתחבר.', 'success')
         return redirect(url_for('profile.user_profile', user_id=current_user.id))
-        
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error in connect_telegram: {str(e)}")
+        logger.error(f"Error generating verification code: {str(e)}")
         flash('אירעה שגיאה ביצירת קוד האימות. אנא נסה שוב מאוחר יותר.', 'error')
         return redirect(url_for('profile.user_profile', user_id=current_user.id))

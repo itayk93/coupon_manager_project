@@ -1,13 +1,9 @@
 # wsgi.py
-from dotenv import load_dotenv
 import os
-from app import create_app
-from telegram_bot import run_bot
 import multiprocessing
 import logging
-
-# טוען את משתני הסביבה מה-.env
-load_dotenv()
+from app import create_app
+from telegram_bot import run_bot
 
 # הגדרת לוגר
 logging.basicConfig(
@@ -16,18 +12,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# יוצר מופע Flask מהפונקציה create_app שבקובץ app/__init__.py
-app = create_app()
-
 def run_flask():
-    """הפעלת שרת ה-Flask"""
-    app.run(host='0.0.0.0', port=5001)
+    """הפעלת שרת Flask"""
+    app = create_app()
+    return app
+
+def run_telegram_bot():
+    """הפעלת בוט טלגרם"""
+    try:
+        logger.info('Starting Telegram bot...')
+        run_bot()
+    except Exception as e:
+        logger.error(f"Error running Telegram bot: {e}")
 
 if __name__ == '__main__':
-    # הפעלת הבוט בתהליך נפרד
-    bot_process = multiprocessing.Process(target=run_bot)
-    bot_process.start()
-    logger.info('הבוט פועל...')
+    # הפעלת שרת Flask
+    app = run_flask()
     
-    # הפעלת שרת ה-Flask
-    run_flask()
+    # הפעלת בוט טלגרם בתהליך נפרד
+    bot_process = multiprocessing.Process(target=run_telegram_bot)
+    bot_process.start()
+    
+    # הפעלת שרת Flask
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5001)))

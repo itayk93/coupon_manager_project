@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # הגדרות
-API_URL = os.getenv('API_URL', 'http://127.0.0.1:5001')  # שימוש בשרת המקומי בפיתוח
+API_URL = os.getenv('API_URL', 'https://couponmasteril.com')  # שימוש בשרת הייצור כברירת מחדל
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME')
 
@@ -30,6 +30,7 @@ HEADERS = {
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """מטפל בפקודת /start"""
+    logger.info(f"Received /start command from user {update.message.from_user.username}")
     await update.message.reply_text(
         'ברוך הבא לבוט קופון מאסטר! 🎉\n\n'
         'כדי להתחבר לבוט, עליך:\n'
