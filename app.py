@@ -20,7 +20,7 @@ app.logger.setLevel(logging.DEBUG)
 
 # Configuration settings
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("SQLALCHEMY_DATABASE_URI", "postgresql+psycopg2://postgres.dugjsiyenazpsoiyduuz:ZQCBKYkI1eB6f2sW@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("SQLALCHEMY_DATABASE_URI")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "uploads"
 app.config["WTF_CSRF_ENABLED"] = True

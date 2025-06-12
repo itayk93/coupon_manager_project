@@ -8,7 +8,7 @@ LOG_LEVEL = logging.DEBUG
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
-    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "postgresql+psycopg2://postgres.dugjsiyenazpsoiyduuz:ZQCBKYkI1eB6f2sW@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require")
+    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_ENABLED = True
     SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "default_salt")
