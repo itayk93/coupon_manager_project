@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 app = create_app()
 
 # הגדרת דגל להפעלת הבוט - שים True כדי להפעיל את הבוט, False כדי לכבות אותו
-ENABLE_BOT = False
+ENABLE_BOT = True
 
 def start_telegram_bot():
     """הפעלת הבוט טלגרם בתהליך נפרד"""

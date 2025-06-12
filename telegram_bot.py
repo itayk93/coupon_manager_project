@@ -73,7 +73,12 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"Server response content: {response.text}")
         
         if response.status_code == 200:
-            await update.message.reply_text("התחברת בהצלחה! 🎉\nמעכשיו תקבל עדכונים על קופונים חדשים ומועדפים.")
+            response_data = response.json()
+            if response_data.get('success'):
+                await update.message.reply_text(response_data.get('message', 'הקוד פעל!!'))
+            else:
+                error_msg = response_data.get('error', 'אירעה שגיאה בהתחברות')
+                await update.message.reply_text(f"שגיאה: {error_msg}")
         else:
             error_msg = response.json().get('error', 'אירעה שגיאה בהתחברות')
             await update.message.reply_text(f"שגיאה: {error_msg}")

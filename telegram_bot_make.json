@@ -1,0 +1,110 @@
+{
+    "name": "Telegram Verification Bot",
+    "flow": [
+      {
+        "id": 1,
+        "module": "builtin:Webhook",
+        "version": 1,
+        "metadata": {
+          "designer": { "x": 0, "y": 0 }
+        },
+        "config": {
+          "url": "https://couponmasteril.com/verify_telegram",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          "body": {
+            "code": "{{1.body.code}}",
+            "chat_id": "{{1.body.chat_id}}",
+            "username": "{{1.body.username}}"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "module": "builtin:BasicRouter",
+        "version": 1,
+        "metadata": {
+          "designer": { "x": 200, "y": 0 }
+        },
+        "routes": [
+          {
+            "condition": "{{1.status}} == 200",
+            "flow": [
+              {
+                "id": 3,
+                "module": "telegram:SendMessage",
+                "version": 1,
+                "metadata": {
+                  "designer": { "x": 400, "y": 0 }
+                },
+                "config": {
+                  "token": "your-telegram-bot-token",
+                  "chat_id": "{{1.body.chat_id}}",
+                  "text": "✅ הקוד אומת בהצלחה! הבוט שלך מוכן לשימוש."
+                }
+              }
+            ]
+          },
+          {
+            "condition": "{{1.status}} == 400",
+            "flow": [
+              {
+                "id": 4,
+                "module": "telegram:SendMessage",
+                "version": 1,
+                "metadata": {
+                  "designer": { "x": 400, "y": 100 }
+                },
+                "config": {
+                  "token": "your-telegram-bot-token",
+                  "chat_id": "{{1.body.chat_id}}",
+                  "text": "❌ הקוד שהוזן אינו תקין. אנא נסה שוב."
+                }
+              }
+            ]
+          },
+          {
+            "condition": "{{1.status}} == 500",
+            "flow": [
+              {
+                "id": 5,
+                "module": "telegram:SendMessage",
+                "version": 1,
+                "metadata": {
+                  "designer": { "x": 400, "y": 200 }
+                },
+                "config": {
+                  "token": "your-telegram-bot-token",
+                  "chat_id": "{{1.body.chat_id}}",
+                  "text": "⚠️ אירעה שגיאת שרת. אנא נסה שוב מאוחר יותר."
+                }
+              }
+            ]
+          },
+          {
+            "condition": "default",
+            "flow": [
+              {
+                "id": 6,
+                "module": "telegram:SendMessage",
+                "version": 1,
+                "metadata": {
+                  "designer": { "x": 400, "y": 300 }
+                },
+                "config": {
+                  "token": "your-telegram-bot-token",
+                  "chat_id": "{{1.body.chat_id}}",
+                  "text": "❌ אירעה שגיאה לא צפויה. אנא נסה שוב מאוחר יותר."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "connections": []
+  }
+  

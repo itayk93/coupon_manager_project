@@ -136,8 +136,9 @@ def create_app():
     def utility_processor():
         return dict(has_feature_access=has_feature_access)
 
-    # עקיפת בדיקת CSRF עבור routes של טלגרם
-    csrf.exempt(telegram_bp)
+    # עקיפת בדיקת CSRF עבור routes של טלגרם רק אם מוגדר
+    if not app.config.get('TELEGRAM_CSRF_PROTECTION', False):
+        csrf.exempt(telegram_bp)
 
     return app
 

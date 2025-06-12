@@ -701,15 +701,15 @@ class TelegramUser(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    telegram_chat_id = db.Column(db.BigInteger, unique=True, nullable=False)
+    telegram_chat_id = db.Column(db.BigInteger, unique=True, nullable=True)
     telegram_username = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     last_interaction = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # שדות אבטחה
-    verification_token = db.Column(db.String(255), nullable=False)
-    verification_expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    verification_token = db.Column(db.String(255), nullable=True)
+    verification_expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
     is_verified = db.Column(db.Boolean, default=False)
     verification_attempts = db.Column(db.Integer, default=0)
     last_verification_attempt = db.Column(db.DateTime(timezone=True))
@@ -725,12 +725,17 @@ class TelegramUser(db.Model):
 
     def is_blocked(self):
         """בודק האם המשתמש חסום"""
+        if not current_app.config.get('TELEGRAM_BLOCKING_ENABLED', False):
+            return False
         if self.blocked_until and self.blocked_until > datetime.now(timezone.utc):
             return True
         return False
 
     def increment_verification_attempts(self):
         """מגדיל את מספר ניסיונות האימות"""
+        if not current_app.config.get('TELEGRAM_ATTEMPT_LIMIT', False):
+            return
+            
         self.verification_attempts += 1
         self.last_verification_attempt = datetime.now(timezone.utc)
         
@@ -742,6 +747,9 @@ class TelegramUser(db.Model):
 
     def reset_verification_attempts(self):
         """מאפס את מספר ניסיונות האימות"""
+        if not current_app.config.get('TELEGRAM_ATTEMPT_LIMIT', False):
+            return
+            
         self.verification_attempts = 0
         self.blocked_until = None
         db.session.commit()
@@ -749,17 +757,22 @@ class TelegramUser(db.Model):
     def generate_verification_token(self):
         """מייצר טוקן אימות חדש"""
         self.verification_token = secrets.token_urlsafe(32)
-        self.verification_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+        if current_app.config.get('TELEGRAM_TOKEN_EXPIRY', False):
+            self.verification_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
         db.session.commit()
         return self.verification_token
 
     def verify_token(self, token):
         """בודק האם הטוקן תקף"""
+        if not current_app.config.get('TELEGRAM_VERIFICATION_ENABLED', False):
+            return True
+            
         if self.is_blocked():
             return False
         
         if (self.verification_token == token and 
-            self.verification_expires_at > datetime.now(timezone.utc)):
+            (not current_app.config.get('TELEGRAM_TOKEN_EXPIRY', False) or 
+             self.verification_expires_at > datetime.now(timezone.utc))):
             self.is_verified = True
             self.reset_verification_attempts()
             db.session.commit()
