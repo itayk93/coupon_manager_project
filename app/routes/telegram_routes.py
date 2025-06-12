@@ -78,7 +78,7 @@ def verify_telegram():
         if missing_fields:
             return jsonify({
                 'success': False,
-                'error': f'Missing required fields: {', '.join(missing_fields)}'
+                'error': f"Missing required fields: {', '.join(missing_fields)}"
             }), 400
 
         chat_id = data.get('chat_id')
