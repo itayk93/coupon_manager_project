@@ -5,6 +5,7 @@ from app.extensions import db
 import secrets
 from datetime import datetime, timezone, timedelta
 import logging
+import random
 
 telegram_bp = Blueprint('telegram', __name__)
 logger = logging.getLogger(__name__)
@@ -34,10 +35,10 @@ def connect_telegram():
     existing_connection = TelegramUser.query.filter_by(user_id=current_user.id).first()
     if existing_connection and existing_connection.is_verified:
         return render_template('telegram/already_connected.html')
-    verification_token = secrets.token_urlsafe(32)
+    verification_token = ''.join(random.choices('0123456789', k=6))
     if existing_connection:
         existing_connection.verification_token = verification_token
-        existing_connection.verification_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+        existing_connection.verification_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
         existing_connection.is_verified = False
         existing_connection.disconnected_at = None
         existing_connection.is_disconnected = False
@@ -46,7 +47,7 @@ def connect_telegram():
             user_id=current_user.id,
             telegram_chat_id=0,  # יוגדר מאוחר יותר
             verification_token=verification_token,
-            verification_expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+            verification_expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
             ip_address=request.remote_addr,
             device_info=request.user_agent.string
         )

@@ -288,7 +288,6 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
             AND verification_expires_at > NOW()
             AND is_verified = false
             AND (blocked_until IS NULL OR blocked_until < NOW())
-            AND verification_expires_at <= NOW() + INTERVAL '5 minutes'
             LIMIT 1
         """
         user = await conn.fetchrow(query, user_message)
