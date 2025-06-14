@@ -27,7 +27,7 @@ def start_telegram_bot():
         logger.error(f"Error starting Telegram bot: {str(e)}")
 
 if __name__ == '__main__':
-    # הפעלת הבוט רק אם הדגל מופעל
+        # הפעלת הבוט רק אם הדגל מופעל
     if ENABLE_BOT:
         # הפעלת הבוט בתהליך נפרד
         bot_process = multiprocessing.Process(target=start_telegram_bot)
