@@ -8,7 +8,13 @@ LOG_LEVEL = logging.DEBUG
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///default.db")
+    # Modify the database URI to handle SSL properly
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///default.db")
+    if DATABASE_URL.startswith('postgresql://'):
+        DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
+        if '?' not in DATABASE_URL:
+            DATABASE_URL += '?sslmode=require'
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_ENABLED = True
     SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "default_salt")
