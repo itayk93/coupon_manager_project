@@ -1325,8 +1325,18 @@ def run_bot():
         application.add_handler(CommandHandler("disconnect", disconnect))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_number_message))
         
-        # הפעלת הבוט
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
+        # הפעלת הבוט עם טיפול בסיום
+        try:
+            application.run_polling(allowed_updates=Update.ALL_TYPES)
+        except KeyboardInterrupt:
+            logger.info("Bot stopped by user")
+        except Exception as e:
+            logger.error(f"Error in bot polling: {str(e)}")
+            logger.exception("Full traceback:")
+        finally:
+            logger.info("Bot process ending...")
+            application.stop()
+            application.shutdown()
         
     except Exception as e:
         logger.error(f"Error in run_bot: {str(e)}")
