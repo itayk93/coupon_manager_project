@@ -56,9 +56,15 @@ def decrypt_coupon_code(encrypted_code):
 # הגדרת חיבור לבסיס הנתונים
 def get_db_connection():
     database_url = os.getenv('DATABASE_URL')
-    if database_url.startswith('postgresql+psycopg2://'):
-        database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable is not set")
     return psycopg2.connect(database_url)
+
+async def get_async_db_connection():
+    database_url = os.getenv('DATABASE_URL')
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable is not set")
+    return await asyncpg.connect(database_url, statement_cache_size=0)
 
 # משתנה גלובלי לשמירת ההודעה הראשונה
 first_message = None
@@ -69,11 +75,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     
     try:
-        database_url = os.getenv('DATABASE_URL')
-        if database_url.startswith('postgresql+psycopg2://'):
-            database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
-        
-        conn = await asyncpg.connect(database_url, statement_cache_size=0)
+        conn = await get_async_db_connection()
         
         # Check if user is already authenticated
         query = """
@@ -229,11 +231,7 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        database_url = os.getenv('DATABASE_URL')
-        if database_url.startswith('postgresql+psycopg2://'):
-            database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
-        
-        conn = await asyncpg.connect(database_url, statement_cache_size=0)
+        conn = await get_async_db_connection()
 
         # Check if user is already connected
         existing_user_query = """
@@ -417,11 +415,7 @@ async def disconnect(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     
     try:
-        database_url = os.getenv('DATABASE_URL')
-        if database_url.startswith('postgresql+psycopg2://'):
-            database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
-        
-        conn = await asyncpg.connect(database_url, statement_cache_size=0)
+        conn = await get_async_db_connection()
         
         # בדיקה אם המשתמש מחובר
         check_query = """
@@ -485,11 +479,7 @@ async def handle_company_choice(update: Update, context: ContextTypes.DEFAULT_TY
     
     try:
         # בדיקה אם המשתמש מחובר
-        database_url = os.getenv('DATABASE_URL')
-        if database_url.startswith('postgresql+psycopg2://'):
-            database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
-        
-        conn = await asyncpg.connect(database_url, statement_cache_size=0)
+        conn = await get_async_db_connection()
         
         # בדיקה אם המשתמש מאומת
         query = """
@@ -615,11 +605,7 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     try:
         # Check if user is connected
-        database_url = os.getenv('DATABASE_URL')
-        if database_url.startswith('postgresql+psycopg2://'):
-            database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
-        
-        conn = await asyncpg.connect(database_url, statement_cache_size=0)
+        conn = await get_async_db_connection()
         
         # Check if user is verified
         query = """
