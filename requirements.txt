@@ -37,3 +37,4 @@ flask-dance==7.1.0
 webdriver-manager
 flask_mail
 python-telegram-bot==20.8
+asyncpg==0.29.0
