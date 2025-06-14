@@ -20,9 +20,14 @@ def start_telegram_bot():
     """הפעלת הבוט טלגרם בתהליך נפרד"""
     try:
         logger.info("Starting Telegram bot...")
+        logger.info(f"Bot enabled: {os.getenv('ENABLE_BOT', 'True')}")
+        logger.info(f"Bot token exists: {bool(os.getenv('TELEGRAM_BOT_TOKEN'))}")
+        logger.info(f"Bot username exists: {bool(os.getenv('TELEGRAM_BOT_USERNAME'))}")
+        logger.info(f"Database URL exists: {bool(os.getenv('DATABASE_URL'))}")
         run_bot()
     except Exception as e:
         logger.error(f"Error starting Telegram bot: {str(e)}")
+        logger.exception("Full traceback:")
 
 if __name__ == '__main__':
     # הפעלת הבוט בתהליך נפרד

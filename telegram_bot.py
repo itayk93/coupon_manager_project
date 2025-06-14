@@ -1295,36 +1295,43 @@ def get_gender_specific_text(gender, male_text, female_text):
     return male_text
 
 def run_bot():
-    """Run the bot"""
-    if not ENABLE_BOT:
-        logger.info("Bot is disabled via ENABLE_BOT environment variable")
-        return
-        
-    if not TELEGRAM_BOT_TOKEN:
-        logger.error("No TELEGRAM_BOT_TOKEN found in environment variables")
-        return
+    """הפעלת הבוט"""
+    try:
+        if not ENABLE_BOT:
+            logger.info("Bot is disabled via ENABLE_BOT environment variable")
+            return
 
-    # יצירת event loop חדש
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-    
-    # הוספת handlers בסדר הנכון
-    app.add_handler(CommandHandler('start', start))
-    app.add_handler(CommandHandler('help', help_command))
-    app.add_handler(CommandHandler('coupons', coupons_command))
-    app.add_handler(CommandHandler('disconnect', disconnect))
-    
-    # קודם מטפלים בהודעות טקסט רגילות (קוד אימות)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_coupon_fsm))
-    
-    # רק אז מטפלים בהודעות מספרים (בחירות תפריט)
-    app.add_handler(MessageHandler(filters.Regex(r'^\d+$'), handle_number_message))
-    
-    # הפעלת הבוט
-    logger.info('הבוט פועל...')
-    app.run_polling()
+        if not TELEGRAM_BOT_TOKEN:
+            logger.error("No TELEGRAM_BOT_TOKEN provided")
+            return
+
+        if not TELEGRAM_BOT_USERNAME:
+            logger.error("No TELEGRAM_BOT_USERNAME provided")
+            return
+
+        if not os.getenv('DATABASE_URL'):
+            logger.error("No DATABASE_URL provided")
+            return
+
+        logger.info("הבוט פועל...")
+        
+        # יצירת אפליקציית הבוט
+        application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+        
+        # הוספת handlers
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("coupons", coupons_command))
+        application.add_handler(CommandHandler("disconnect", disconnect))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_number_message))
+        
+        # הפעלת הבוט
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
+        
+    except Exception as e:
+        logger.error(f"Error in run_bot: {str(e)}")
+        logger.exception("Full traceback:")
+        raise
 
 if __name__ == '__main__':
     run_bot()
