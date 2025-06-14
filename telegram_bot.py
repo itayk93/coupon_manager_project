@@ -55,13 +55,10 @@ def decrypt_coupon_code(encrypted_code):
 
 # הגדרת חיבור לבסיס הנתונים
 def get_db_connection():
-    return psycopg2.connect(
-        dbname=os.getenv('DB_NAME', 'coupon_manager'),
-        user=os.getenv('DB_USER', 'postgres'),
-        password=os.getenv('DB_PASSWORD', 'postgres'),
-        host=os.getenv('DB_HOST', 'localhost'),
-        port=os.getenv('DB_PORT', '5432')
-    )
+    database_url = os.getenv('DATABASE_URL')
+    if database_url.startswith('postgresql+psycopg2://'):
+        database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
+    return psycopg2.connect(database_url)
 
 # משתנה גלובלי לשמירת ההודעה הראשונה
 first_message = None
