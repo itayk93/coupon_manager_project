@@ -12,22 +12,41 @@ from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 import asyncpg
 from enum import Enum
+import httpx
 
 # טעינת משתני סביבה
 load_dotenv()
 
-# הגדרת לוגר
+# הגדרת לוגר מפורט
 logging.basicConfig(
-    format=os.getenv('LOG_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
-    level=getattr(logging, os.getenv('LOG_LEVEL', 'INFO'))
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # מדפיס לקונסול
+        logging.FileHandler('telegram_bot.log')  # שומר לקובץ
+    ]
 )
+
+# הגדרת לוגר ספציפי ל-httpx
+httpx_logger = logging.getLogger('httpx')
+httpx_logger.setLevel(logging.INFO)
+
+# הגדרת לוגר ספציפי לבוט
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 # הגדרות
 API_URL = os.getenv('API_URL', 'https://couponmasteril.com')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME')
 ENABLE_BOT = os.getenv('ENABLE_BOT', 'True').lower() == 'true'
+
+# לוג של הגדרות חשובות (בלי סיסמאות)
+logger.info(f"Bot Configuration:")
+logger.info(f"API_URL: {API_URL}")
+logger.info(f"TELEGRAM_BOT_USERNAME: {TELEGRAM_BOT_USERNAME}")
+logger.info(f"ENABLE_BOT: {ENABLE_BOT}")
+logger.info(f"DATABASE_URL configured: {'Yes' if os.getenv('DATABASE_URL') else 'No'}")
 
 # הגדרת headers לכל הבקשות
 HEADERS = {
@@ -1287,27 +1306,39 @@ def run_bot():
         logger.error("No TELEGRAM_BOT_TOKEN found in environment variables")
         return
 
+    logger.info("Starting bot initialization...")
+    
     # יצירת event loop חדש
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-    
-    # הוספת handlers בסדר הנכון
-    app.add_handler(CommandHandler('start', start))
-    app.add_handler(CommandHandler('help', help_command))
-    app.add_handler(CommandHandler('coupons', coupons_command))
-    app.add_handler(CommandHandler('disconnect', disconnect))
-    
-    # קודם מטפלים בהודעות טקסט רגילות (קוד אימות)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_coupon_fsm))
-    
-    # רק אז מטפלים בהודעות מספרים (בחירות תפריט)
-    app.add_handler(MessageHandler(filters.Regex(r'^\d+$'), handle_number_message))
-    
-    # הפעלת הבוט
-    logger.info('הבוט פועל...')
-    app.run_polling()
+    try:
+        app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+        logger.info("Bot application built successfully")
+        
+        # הוספת handlers בסדר הנכון
+        app.add_handler(CommandHandler('start', start))
+        app.add_handler(CommandHandler('help', help_command))
+        app.add_handler(CommandHandler('coupons', coupons_command))
+        app.add_handler(CommandHandler('disconnect', disconnect))
+        
+        # קודם מטפלים בהודעות טקסט רגילות (קוד אימות)
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_coupon_fsm))
+        
+        # רק אז מטפלים בהודעות מספרים (בחירות תפריט)
+        app.add_handler(MessageHandler(filters.Regex(r'^\d+$'), handle_number_message))
+        
+        # הפעלת הבוט
+        logger.info('Bot is starting to poll...')
+        app.run_polling(allowed_updates=Update.ALL_TYPES)
+        
+    except Exception as e:
+        logger.error(f"Error starting bot: {e}", exc_info=True)
+        raise
 
 if __name__ == '__main__':
-    run_bot()
+    try:
+        run_bot()
+    except Exception as e:
+        logger.error(f"Fatal error: {e}", exc_info=True)
+        raise
