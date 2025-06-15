@@ -7,7 +7,7 @@ import hashlib
 import secrets
 from datetime import datetime, timezone
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 import asyncpg
@@ -1370,27 +1370,23 @@ def get_gender_specific_text(gender, male_text, female_text):
         return female_text
     return male_text
 
-def run_bot():
-    """Run the bot"""
-    if not ENABLE_BOT:
-        logger.info("Bot is disabled via ENABLE_BOT environment variable")
-        return
-        
-    if not TELEGRAM_BOT_TOKEN:
-        logger.error("No TELEGRAM_BOT_TOKEN found in environment variables")
-        return
-
-    logger.info("Starting bot initialization...")
-    
-    # יצירת event loop חדש
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
+def create_bot_application():
+    """
+    Create and return bot application without running it.
+    This allows external modules to control when and how the bot runs.
+    """
     try:
-        app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-        logger.info("Bot application built successfully")
+        # Check if bot is enabled
+        if not ENABLE_BOT:
+            logger.warning("טלגרם בוט מושבת - מדלג על יצירת האפליקציה")
+            return None
+            
+        logger.info("יוצר את אפליקציית הבוט...")
         
-        # הוספת handlers בסדר הנכון
+        # Create application
+        app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+        
+        # Add all handlers
         app.add_handler(CommandHandler('start', start))
         app.add_handler(CommandHandler('help', help_command))
         app.add_handler(CommandHandler('coupons', coupons_command))
@@ -1402,13 +1398,20 @@ def run_bot():
         # רק אז מטפלים בהודעות מספרים (בחירות תפריט)
         app.add_handler(MessageHandler(filters.Regex(r'^\d+$'), handle_number_message))
         
-        # הפעלת הבוט
-        logger.info('Bot is starting to poll...')
-        app.run_polling(allowed_updates=Update.ALL_TYPES)
+        logger.info("אפליקציית הבוט נוצרה בהצלחה")
+        return app
         
     except Exception as e:
-        logger.error(f"Error starting bot: {e}", exc_info=True)
-        raise
+        logger.error(f"שגיאה ביצירת אפליקציית הבוט: {e}")
+        return None
+
+def run_bot():
+    """
+    Create and run the bot application.
+    """
+    app = create_bot_application()
+    if app:
+        app.run_polling(allowed_updates=['message', 'callback_query'])
 
 if __name__ == '__main__':
     try:
