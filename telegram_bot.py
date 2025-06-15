@@ -13,6 +13,8 @@ from cryptography.fernet import Fernet
 import asyncpg
 from enum import Enum
 import httpx
+import re
+from fuzzywuzzy import fuzz
 
 # טעינת משתני סביבה
 load_dotenv()
@@ -98,6 +100,10 @@ user_states = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command"""
     chat_id = update.message.chat_id
+    
+    # Clear any existing session data
+    user_coupon_states.pop(chat_id, None)
+    user_states.pop(chat_id, None)
     
     try:
         conn = await get_async_db_connection()
@@ -876,6 +882,7 @@ class CouponCreationState(Enum):
     SUMMARY = 16
     EDIT_FIELD = 17
     CONFIRM_SAVE = 18
+    FUZZY_MATCH = 19  # New state for fuzzy matching
 
 # שמירת מצב ותשובות לכל משתמש
 user_coupon_states = {}  # chat_id: {'state': CouponCreationState, 'data': {...}, 'edit_field': None}
@@ -896,7 +903,7 @@ async def get_companies_list(user_id):
 async def start_coupon_creation(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id):
     chat_id = update.message.chat_id
     companies = await get_companies_list(user_id)
-    user_coupon_states[chat_id] = {'state': CouponCreationState.CHOOSE_COMPANY, 'data': {}, 'companies': companies}
+    user_coupon_states[chat_id] = {'state': CouponCreationState.FUZZY_MATCH, 'data': {}, 'companies': companies}
     
     # קבלת מגדר המשתמש
     user_gender = await get_user_gender(user_id)
@@ -904,13 +911,9 @@ async def start_coupon_creation(update: Update, context: ContextTypes.DEFAULT_TY
     # התאמת הטקסט למגדר
     msg = get_gender_specific_text(
         user_gender,
-        "בחר חברה:\n",
-        "בחרי חברה:\n"
+        "מה שם החברה של הקופון?",
+        "מה שם החברה של הקופון?"
     )
-    
-    for i, c in enumerate(companies, 1):
-        msg += f"{i}. {c}\n"
-    msg += f"{len(companies)+1}. אחר"
     await update.message.reply_text(msg)
 
 # פונקציה לחזרה לתפריט הראשי
@@ -947,75 +950,212 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
     companies = state_obj.get('companies', [])
     text = update.message.text.strip()
 
+    # Get user gender
+    user_gender = await get_user_gender(user_id)
+
     # בדיקה אם המשתמש רוצה לחזור לתפריט הראשי
     if text.lower() in ['תפריט', 'חזור', 'ביטול', 'exit', 'menu', 'cancel']:
         await return_to_main_menu(update, context, chat_id)
         return
 
-    # שלב בחירת חברה
+    # שלב התאמה פלואידית של שם החברה
+    if state == CouponCreationState.FUZZY_MATCH:
+        from fuzzywuzzy import fuzz
+        
+        # מציאת ההתאמות הטובות ביותר
+        matches = []
+        for company in companies:
+            ratio = fuzz.ratio(text.lower(), company.lower())
+            if ratio >= 90:  # רק התאמות מעל 90%
+                matches.append((company, ratio))
+        
+        # מיון לפי אחוז ההתאמה
+        matches.sort(key=lambda x: x[1], reverse=True)
+        
+        if matches:
+            # הצגת ההתאמות למשתמש
+            msg = get_gender_specific_text(
+                user_gender,
+                "בחר את האפשרות המתאימה:",
+                "בחרי את האפשרות המתאימה:"
+            )
+            for i, (company, ratio) in enumerate(matches, 1):
+                msg += f"\n{i}. {company} ({ratio}% התאמה)"
+            msg += f"\n{len(matches)+1}. זו חברה אחרת"
+            
+            # שמירת ההתאמות במצב הנוכחי
+            state_obj['matches'] = matches
+            state_obj['state'] = CouponCreationState.CHOOSE_COMPANY
+            await update.message.reply_text(msg)
+        else:
+            # בדיקה אם זו הפעם הראשונה או השנייה
+            if 'fuzzy_attempt' not in state_obj:
+                # זו הפעם הראשונה
+                state_obj['fuzzy_attempt'] = 1
+                msg = get_gender_specific_text(
+                    user_gender,
+                    "לא מצאתי התאמות דומות. האם תוכל לכתוב שוב את שם החברה?",
+                    "לא מצאתי התאמות דומות. האם תוכלי לכתוב שוב את שם החברה?"
+                )
+                await update.message.reply_text(msg)
+            else:
+                # זו הפעם השנייה - ממשיכים כחברה חדשה
+                data['company'] = text
+                state_obj['state'] = CouponCreationState.ENTER_CODE
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "מה קוד הקופון/הקוד המזהה?",
+                        "מה קוד הקופון/הקוד המזהה?"
+                    )
+                )
+        return
+
+    # שלב בחירת חברה מההתאמות
     if state == CouponCreationState.CHOOSE_COMPANY:
         try:
             choice = int(text)
-            if 1 <= choice <= len(companies):
-                data['company'] = companies[choice-1]
+            matches = state_obj.get('matches', [])
+            
+            if 1 <= choice <= len(matches):
+                # בחירה מההתאמות
+                data['company'] = matches[choice-1][0]
                 state_obj['state'] = CouponCreationState.ENTER_CODE
-                await update.message.reply_text("מה קוד הקופון/הקוד המזהה?")
-            elif choice == len(companies)+1:
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "מה קוד הקופון/הקוד המזהה?",
+                        "מה קוד הקופון/הקוד המזהה?"
+                    )
+                )
+            elif choice == len(matches) + 1:
+                # בחירה בחברה חדשה
                 state_obj['state'] = CouponCreationState.ENTER_NEW_COMPANY
-                await update.message.reply_text("מה שם החברה החדשה?")
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "מה שם החברה החדשה?",
+                        "מה שם החברה החדשה?"
+                    )
+                )
             else:
                 raise ValueError
-        except Exception:
-            await update.message.reply_text("אנא בחר מספר תקין מהרשימה.")
+        except ValueError:
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "אנא בחר מספר תקין מהרשימה.",
+                    "אנא בחרי מספר תקין מהרשימה."
+                )
+            )
         return
 
     # שלב הזנת שם חברה חדשה
     if state == CouponCreationState.ENTER_NEW_COMPANY:
         if not text:
-            await update.message.reply_text("יש להזין שם חברה חדשה.")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "יש להזין שם חברה חדשה.",
+                    "יש להזין שם חברה חדשה."
+                )
+            )
             return
         data['company'] = text
         state_obj['state'] = CouponCreationState.ENTER_CODE
-        await update.message.reply_text("מה קוד הקופון/הקוד המזהה?")
+        await update.message.reply_text(
+            get_gender_specific_text(
+                user_gender,
+                "מה קוד הקופון/הקוד המזהה?",
+                "מה קוד הקופון/הקוד המזהה?"
+            )
+        )
         return
 
     # שלב קוד קופון
     if state == CouponCreationState.ENTER_CODE:
         if not text:
-            await update.message.reply_text("יש להזין קוד קופון.")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "יש להזין קוד קופון.",
+                    "יש להזין קוד קופון."
+                )
+            )
             return
         data['code'] = text
         state_obj['state'] = CouponCreationState.ENTER_COST
-        await update.message.reply_text("כמה שילמת על הקופון?")
+        await update.message.reply_text(
+            get_gender_specific_text(
+                user_gender,
+                "כמה שילמת על הקופון?",
+                "כמה שילמת על הקופון?"
+            )
+        )
         return
 
     # שלב מחיר
     if state == CouponCreationState.ENTER_COST:
         try:
             if not text.isdigit():
-                await update.message.reply_text("אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?")
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
+                        "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
+                    )
+                )
                 return
             data['cost'] = float(text)
             state_obj['state'] = CouponCreationState.ENTER_VALUE
-            await update.message.reply_text("כמה הקופון שווה בפועל?")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "כמה הקופון שווה בפועל?",
+                    "כמה הקופון שווה בפועל?"
+                )
+            )
         except ValueError:
-            await update.message.reply_text("אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
+                    "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
+                )
+            )
         return
 
     # שלב ערך
     if state == CouponCreationState.ENTER_VALUE:
         try:
             if not text.replace('.','',1).isdigit():
-                await update.message.reply_text("אנא הזן מספר בלבד. כמה הקופון שווה בפועל?")
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "אנא הזן מספר בלבד. כמה הקופון שווה בפועל?",
+                        "אנא הזיני מספר בלבד. כמה הקופון שווה בפועל?"
+                    )
+                )
                 return
             data['value'] = float(text)
             state_obj['state'] = CouponCreationState.ENTER_EXPIRATION
             await update.message.reply_text(
-                "מה תאריך תפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
-                "אם אין תאריך תפוגה, כתוב 'אין'"
+                get_gender_specific_text(
+                    user_gender,
+                    "מה תאריך תפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
+                    "אם אין תאריך תפוגה, כתוב 'אין'",
+                    "מה תאריך תפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
+                    "אם אין תאריך תפוגה, כתובי 'אין'"
+                )
             )
         except ValueError:
-            await update.message.reply_text("אנא הזן מספר בלבד. כמה הקופון שווה בפועל?")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "אנא הזן מספר בלבד. כמה הקופון שווה בפועל?",
+                    "אנא הזיני מספר בלבד. כמה הקופון שווה בפועל?"
+                )
+            )
         return
 
     # תאריך תפוגה
@@ -1027,14 +1167,24 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
                 data['expiration'] = datetime.strptime(text, "%d/%m/%Y").date()
         except Exception:
             await update.message.reply_text(
-                "פורמט תאריך לא תקין. נסה שוב (DD/MM/YYYY)\n"
-                "אם אין תאריך תפוגה, כתוב 'אין'"
+                get_gender_specific_text(
+                    user_gender,
+                    "פורמט תאריך לא תקין. נסה שוב (DD/MM/YYYY)\n"
+                    "אם אין תאריך תפוגה, תכתוב 'אין'",
+                    "פורמט תאריך לא תקין. נסי שוב (DD/MM/YYYY)\n"
+                    "אם אין תאריך תפוגה, תכתבי 'אין'"
+                )
             )
             return
         state_obj['state'] = CouponCreationState.ENTER_DESCRIPTION
         await update.message.reply_text(
-            "יש תיאור או הערות על הקופון?\n"
-            "אם אין תיאור, כתוב 'אין'"
+            get_gender_specific_text(
+                user_gender,
+                "יש תיאור או הערות על הקופון?\n"
+                "אם אין תיאור, תכתוב 'אין'",
+                "יש תיאור או הערות על הקופון?\n"
+                "אם אין תיאור, תכתבי 'אין'"
+            )
         )
         return
 
@@ -1043,8 +1193,13 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
         data['description'] = None if is_empty_field(text) else text
         state_obj['state'] = CouponCreationState.ENTER_SOURCE
         await update.message.reply_text(
-            "מאיפה קיבלת את הקופון?\n"
-            "אם לא רלוונטי, כתוב 'אין'"
+            get_gender_specific_text(
+                user_gender,
+                "מאיפה קיבלת את הקופון?\n"
+                "אם לא רלוונטי, תכתוב 'אין'",
+                "מאיפה קיבלת את הקופון?\n"
+                "אם לא רלוונטי, תכתבי 'אין'"
+            )
         )
         return
 
@@ -1052,30 +1207,70 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
     if state == CouponCreationState.ENTER_SOURCE:
         data['source'] = None if is_empty_field(text) else text
         state_obj['state'] = CouponCreationState.ASK_CREDIT_CARD
-        await update.message.reply_text("האם להכניס תוקף כרטיס ו-CVV? (כן/לא)")
+        await update.message.reply_text(
+            get_gender_specific_text(
+                user_gender,
+                "האם להכניס תוקף כרטיס ו-CVV? (כן/לא)",
+                "האם להכניס תוקף כרטיס ו-CVV? (כן/לא)"
+            )
+        )
         return
 
     # האם להכניס פרטי כרטיס
     if state == CouponCreationState.ASK_CREDIT_CARD:
+        if text.lower() not in ['כן', 'לא']:
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "אנא ענה רק 'כן' או 'לא'",
+                    "אנא עני רק 'כן' או 'לא'"
+                )
+            )
+            return
+            
         if text.lower() == 'כן':
             state_obj['state'] = CouponCreationState.ENTER_CVV
-            await update.message.reply_text("מה ה-CVV?")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "מה ה-CVV?",
+                    "מה ה-CVV?"
+                )
+            )
         else:
             data['cvv'] = None
             data['card_exp'] = None
             state_obj['state'] = CouponCreationState.ASK_ONE_TIME
-            await update.message.reply_text("האם זה קוד לשימוש חד פעמי? (כן/לא)")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "האם זה קוד לשימוש חד פעמי? (כן/לא)",
+                    "האם זה קוד לשימוש חד פעמי? (כן/לא)"
+                )
+            )
         return
 
     # CVV
     if state == CouponCreationState.ENTER_CVV:
         # בדיקה שהקלט הוא מספר בין 3-4 ספרות
         if not text.isdigit() or len(text) not in [3, 4]:
-            await update.message.reply_text("אנא הזן CVV תקין (3 או 4 ספרות)")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "אנא הזן CVV תקין (3 או 4 ספרות)",
+                    "אנא הזיני CVV תקין (3 או 4 ספרות)"
+                )
+            )
             return
         data['cvv'] = text
         state_obj['state'] = CouponCreationState.ENTER_CARD_EXP
-        await update.message.reply_text("מה תוקף הכרטיס? (פורמט: MM/YY)")
+        await update.message.reply_text(
+            get_gender_specific_text(
+                user_gender,
+                "מה תוקף הכרטיס? (פורמט: MM/YY)",
+                "מה תוקף הכרטיס? (פורמט: MM/YY)"
+            )
+        )
         return
 
     # תוקף כרטיס
@@ -1097,21 +1292,46 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
             
             data['card_exp'] = text
             state_obj['state'] = CouponCreationState.ASK_ONE_TIME
-            await update.message.reply_text("האם זה קוד לשימוש חד פעמי? (כן/לא)")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "האם זה קוד לשימוש חד פעמי? (כן/לא)",
+                    "האם זה קוד לשימוש חד פעמי? (כן/לא)"
+                )
+            )
         except ValueError as e:
             await update.message.reply_text(
-                "פורמט לא תקין. אנא הזן תאריך בפורמט MM/YY (למשל: 12/28)"
+                get_gender_specific_text(
+                    user_gender,
+                    "פורמט לא תקין. אנא הזן תאריך בפורמט MM/YY (למשל: 12/28)",
+                    "פורמט לא תקין. אנא הזיני תאריך בפורמט MM/YY (למשל: 12/28)"
+                )
             )
         return
 
     # שימוש חד פעמי
     if state == CouponCreationState.ASK_ONE_TIME:
+        if text.lower() not in ['כן', 'לא']:
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "אנא ענה רק 'כן' או 'לא'",
+                    "אנא עני רק 'כן' או 'לא'"
+                )
+            )
+            return
+            
         data['is_one_time'] = text.lower() == 'כן'
         if data['is_one_time']:
             state_obj['state'] = CouponCreationState.ENTER_PURPOSE
             await update.message.reply_text(
-                "מה מטרת הקופון?\n"
-                "אם אין מטרה, כתוב 'אין'"
+                get_gender_specific_text(
+                    user_gender,
+                    "מה מטרת הקופון?\n"
+                    "אם אין מטרה, כתוב 'אין'",
+                    "מה מטרת הקופון?\n"
+                    "אם אין מטרה, כתובי 'אין'"
+                )
             )
         else:
             data['purpose'] = None
@@ -1132,49 +1352,136 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
         if field == 'ערך בפועל':
             try:
                 if not text.isdigit():
-                    await update.message.reply_text("אנא הזן מספר שלם בלבד. כמה הקופון שווה בפועל?")
+                    await update.message.reply_text(
+                        get_gender_specific_text(
+                            user_gender,
+                            "אנא הזן מספר שלם בלבד. כמה הקופון שווה בפועל?",
+                            "אנא הזיני מספר שלם בלבד. כמה הקופון שווה בפועל?"
+                        )
+                    )
                     return
                 data['value'] = float(text)
                 state_obj['state'] = CouponCreationState.SUMMARY
                 await send_coupon_summary(update, data)
             except ValueError:
-                await update.message.reply_text("אנא הזן מספר שלם בלבד. כמה הקופון שווה בפועל?")
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "אנא הזן מספר שלם בלבד. כמה הקופון שווה בפועל?",
+                        "אנא הזיני מספר שלם בלבד. כמה הקופון שווה בפועל?"
+                    )
+                )
         elif field == 'מחיר ששולם':
             try:
                 if not text.isdigit():
-                    await update.message.reply_text("אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?")
+                    await update.message.reply_text(
+                        get_gender_specific_text(
+                            user_gender,
+                            "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
+                            "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
+                        )
+                    )
                     return
                 data['cost'] = float(text)
                 state_obj['state'] = CouponCreationState.SUMMARY
                 await send_coupon_summary(update, data)
             except ValueError:
-                await update.message.reply_text("אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?")
-        else:
-            data[field] = text
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
+                        "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
+                    )
+                )
+        elif field == 'תאריך תפוגה':
+            try:
+                if is_empty_field(text):
+                    data['expiration'] = None
+                else:
+                    data['expiration'] = datetime.strptime(text, "%d/%m/%Y").date()
+                state_obj['state'] = CouponCreationState.SUMMARY
+                await send_coupon_summary(update, data)
+            except Exception:
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "פורמט תאריך לא תקין. נסה שוב (DD/MM/YYYY)\n"
+                        "אם אין תאריך תפוגה, תכתוב 'אין'",
+                        "פורמט תאריך לא תקין. נסי שוב (DD/MM/YYYY)\n"
+                        "אם אין תאריך תפוגה, תכתבי 'אין'"
+                    )
+                )
+        elif field == 'תיאור':
+            data['description'] = None if is_empty_field(text) else text
+            state_obj['state'] = CouponCreationState.SUMMARY
+            await send_coupon_summary(update, data)
+        elif field == 'מקור':
+            data['source'] = None if is_empty_field(text) else text
+            state_obj['state'] = CouponCreationState.SUMMARY
+            await send_coupon_summary(update, data)
+        elif field == 'CVV':
+            if not text.isdigit() or len(text) != 3:
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "אנא הזן 3 ספרות בלבד עבור ה-CVV",
+                        "אנא הזיני 3 ספרות בלבד עבור ה-CVV"
+                    )
+                )
+                return
+            data['cvv'] = text
+            state_obj['state'] = CouponCreationState.SUMMARY
+            await send_coupon_summary(update, data)
+        elif field == 'תוקף כרטיס':
+            if not re.match(r'^\d{2}/\d{2}$', text):
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "אנא הזן תאריך בפורמט MM/YY",
+                        "אנא הזיני תאריך בפורמט MM/YY"
+                    )
+                )
+                return
+            data['card_exp'] = text
+            state_obj['state'] = CouponCreationState.SUMMARY
+            await send_coupon_summary(update, data)
+        elif field == 'מטרה':
+            data['purpose'] = None if is_empty_field(text) else text
             state_obj['state'] = CouponCreationState.SUMMARY
             await send_coupon_summary(update, data)
         return
 
-    # אישור סופי
+    # אישור סיכום
     if state == CouponCreationState.CONFIRM_SAVE:
+        if text.lower() not in ['כן', 'לא']:
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "אנא ענה רק 'כן' או 'לא'",
+                    "אנא עני רק 'כן' או 'לא'"
+                )
+            )
+            return
+            
         if text.lower() == 'כן':
             await save_coupon_to_db(update, data, user_id)
             await update.message.reply_text(
                 get_gender_specific_text(
                     user_gender,
-                    "מעולה! ✨\n"
-                    "הקופון נשמר בהצלחה\n\n"
-                    "רוצה להוסיף עוד קופון?",
-                    "מעולה! ✨\n"
-                    "הקופון נשמר בהצלחה\n\n"
-                    "רוצה להוסיף עוד קופון?"
+                    "✅ הקופון נשמר בהצלחה!",
+                    "✅ הקופון נשמר בהצלחה!"
                 )
             )
-            user_coupon_states.pop(chat_id, None)
             await return_to_main_menu(update, context, chat_id)
         else:
-            await update.message.reply_text("איזה שדה תרצה לערוך? (כתוב את שם השדה)")
             state_obj['state'] = CouponCreationState.EDIT_FIELD
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "איזה שדה תרצה לערוך? (כתוב את שם השדה)",
+                    "איזה שדה תרצי לערוך? (כתובי את שם השדה)"
+                )
+            )
         return
 
 # שליחת סיכום לאישור
