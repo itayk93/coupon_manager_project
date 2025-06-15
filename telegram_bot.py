@@ -77,12 +77,18 @@ def get_db_connection():
     database_url = os.getenv('DATABASE_URL')
     if not database_url:
         raise ValueError("DATABASE_URL environment variable is not set")
+    # Remove the +psycopg2 part from the URL for direct psycopg2 connection
+    if database_url.startswith('postgresql+psycopg2://'):
+        database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
     return psycopg2.connect(database_url)
 
 async def get_async_db_connection():
     database_url = os.getenv('DATABASE_URL')
     if not database_url:
         raise ValueError("DATABASE_URL environment variable is not set")
+    # Remove the +psycopg2 part from the URL for asyncpg connection
+    if database_url.startswith('postgresql+psycopg2://'):
+        database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
     return await asyncpg.connect(database_url, statement_cache_size=0)
 
 # משתנה גלובלי לשמירת ההודעה הראשונה
