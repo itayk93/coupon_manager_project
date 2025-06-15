@@ -1,0 +1,37 @@
+coupon_manager_project/
+├── __pycache__/
+├── .git/
+├── .gitattributes
+├── .gitignore
+├── .DS_Store
+├── Aptfile
+├── Procfile
+├── app.py
+├── graphs.py
+├── requirements.txt
+├── runtime.txt
+├── scheduler_config.py
+├── scheduler_utils.py
+├── telegram_bot.py
+├── telegram_bot.log
+├── telegram_bot_make.json
+├── wsgi.py
+├── admin_manage_coupon_tags.html
+├── app/
+│   ├── __pycache__/
+│   ├── .DS_Store
+│   ├── __init__.py
+│   ├── config.py
+│   ├── extensions.py
+│   ├── forms.py
+│   ├── helpers.py
+│   ├── models.py
+│   ├── send_mail.py
+│   ├── routes/
+│   ├── static/
+│   └── templates/
+├── automatic_coupon_update/
+├── exports/
+├── instance/
+├── migrations/
+└── uploads/ 
