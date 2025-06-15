@@ -4,7 +4,6 @@ import sys
 import logging
 import threading
 import asyncio
-import signal
 from app import create_app
 
 def setup_production_logging():
@@ -57,34 +56,14 @@ logger = logging.getLogger(__name__)
 # Create Flask application
 app = create_app()
 
-def start_flask_server():
+def start_telegram_bot_thread():
     """
-    Start Flask server in a separate thread.
-    """
-    try:
-        logger.info("Starting Flask server in separate thread...")
-        print("Starting Flask server in separate thread...", flush=True)
-        
-        app.run(
-            host='0.0.0.0', 
-            port=10000, 
-            debug=False,
-            use_reloader=False,
-            threaded=True
-        )
-        
-    except Exception as e:
-        error_msg = f"Error starting Flask server: {str(e)}"
-        logger.error(error_msg, exc_info=True)
-        print(f"ERROR: {error_msg}", flush=True)
-
-def start_telegram_bot_async():
-    """
-    Start Telegram bot with async/await support in main thread.
+    Start Telegram bot in a separate thread with asyncio loop.
+    This works around the signal handler limitation.
     """
     try:
-        logger.info("Starting Telegram bot in main thread...")
-        print("Starting Telegram bot in main thread...", flush=True)
+        logger.info("Starting Telegram bot in background thread...")
+        print("Starting Telegram bot in background thread...", flush=True)
         
         # Import here to avoid circular imports
         from telegram_bot import create_bot_application
@@ -96,62 +75,81 @@ def start_telegram_bot_async():
         # Create bot application
         app_bot = create_bot_application()
         
-        if not app_bot:
-            error_msg = "Failed to create Telegram bot application"
-            logger.error(error_msg)
-            print(f"ERROR: {error_msg}", flush=True)
-            return
+        if app_bot:
+            logger.info("Bot application created, starting polling without signal handlers...")
+            print("Bot application created, starting polling without signal handlers...", flush=True)
             
-        logger.info("Bot application created, starting polling...")
-        print("Bot application created, starting polling...", flush=True)
-        
-        # Run polling in the event loop
-        app_bot.run_polling(allowed_updates=['message', 'callback_query'])
+            # Start polling without signal handlers (to avoid main thread requirement)
+            async def run_polling():
+                await app_bot.initialize()
+                await app_bot.start()
+                await app_bot.updater.start_polling(allowed_updates=['message', 'callback_query'])
+                
+                # Keep the bot running
+                try:
+                    while True:
+                        await asyncio.sleep(1)
+                except asyncio.CancelledError:
+                    pass
+                finally:
+                    await app_bot.stop()
+                    await app_bot.shutdown()
+            
+            # Run the bot
+            loop.run_until_complete(run_polling())
+        else:
+            logger.warning("Failed to create bot application")
+            print("Failed to create bot application", flush=True)
         
     except Exception as e:
         error_msg = f"Error starting Telegram bot: {str(e)}"
         logger.error(error_msg, exc_info=True)
         print(f"ERROR: {error_msg}", flush=True)
-        # Don't exit here, let Flask continue running
-        return
+
+def start_bot_if_enabled():
+    """
+    Start bot if enabled, regardless of execution mode.
+    """
+    enable_bot = os.getenv('ENABLE_BOT', 'true').lower() == 'true'
+    
+    if enable_bot:
+        logger.info("Starting Telegram bot in background thread...")
+        print("Starting Telegram bot in background thread...", flush=True)
+        
+        bot_thread = threading.Thread(target=start_telegram_bot_thread, daemon=True)
+        bot_thread.start()
+        
+        logger.info("Telegram bot thread started successfully")
+        print("Telegram bot thread started successfully", flush=True)
+    else:
+        logger.info("Telegram bot is disabled via ENABLE_BOT environment variable")
+        print("Telegram bot is disabled via ENABLE_BOT environment variable", flush=True)
 
 if __name__ == '__main__':
     try:
         # Log application startup
-        logger.info("=== Starting Coupon Manager Application ===")
+        logger.info("=== Starting Coupon Manager Application (Direct Mode) ===")
         logger.info(f"Python version: {sys.version}")
         logger.info(f"Environment: {'PRODUCTION' if os.getenv('FLASK_ENV') == 'production' else 'DEVELOPMENT'}")
         logger.info(f"Current working directory: {os.getcwd()}")
         
-        print("=== Starting Coupon Manager Application ===", flush=True)
+        print("=== Starting Coupon Manager Application (Direct Mode) ===", flush=True)
         print(f"Environment: {'PRODUCTION' if os.getenv('FLASK_ENV') == 'production' else 'DEVELOPMENT'}", flush=True)
         
-        # Check if Telegram bot is enabled
-        enable_bot = os.getenv('ENABLE_BOT', 'true').lower() == 'true'
+        # Start bot
+        start_bot_if_enabled()
         
-        if enable_bot:
-            # Start Flask in background thread
-            logger.info("Creating Flask server thread...")
-            flask_thread = threading.Thread(target=start_flask_server, daemon=True)
-            flask_thread.start()
-            
-            logger.info("Flask server thread started, starting Telegram bot in main thread...")
-            print("Flask server thread started, starting Telegram bot in main thread...", flush=True)
-            
-            # Start Telegram bot in main thread (required for asyncio signal handlers)
-            start_telegram_bot_async()
-        else:
-            logger.info("Telegram bot is disabled, starting only Flask server")
-            print("Telegram bot is disabled, starting only Flask server", flush=True)
-            
-            # Just run Flask server
-            app.run(
-                host='0.0.0.0', 
-                port=10000, 
-                debug=False,
-                use_reloader=False,
-                threaded=True
-            )
+        # Start Flask server
+        logger.info("Starting Flask server on 0.0.0.0:10000")
+        print("Starting Flask server on 0.0.0.0:10000", flush=True)
+        
+        app.run(
+            host='0.0.0.0', 
+            port=10000, 
+            debug=False,
+            use_reloader=False,
+            threaded=True
+        )
         
     except KeyboardInterrupt:
         logger.info("Application interrupted by user")
@@ -167,7 +165,12 @@ if __name__ == '__main__':
         logger.info("Application shutdown complete")
         print("Application shutdown complete", flush=True)
 
-# For production servers like Gunicorn that import this file
+# For production servers like Gunicorn - ALWAYS start the bot here too
 else:
-    logger.info("WSGI mode detected - Telegram bot will need to run separately or use webhook")
-    print("WSGI mode detected - Telegram bot will need to run separately or use webhook", flush=True)
+    logger.info("=== Starting Coupon Manager Application (WSGI Mode) ===")
+    logger.info(f"Environment: {'PRODUCTION' if os.getenv('FLASK_ENV') == 'production' else 'DEVELOPMENT'}")
+    print("=== Starting Coupon Manager Application (WSGI Mode) ===", flush=True)
+    print(f"Environment: {'PRODUCTION' if os.getenv('FLASK_ENV') == 'production' else 'DEVELOPMENT'}", flush=True)
+    
+    # Start bot in WSGI mode too
+    start_bot_if_enabled()
