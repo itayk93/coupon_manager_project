@@ -112,28 +112,46 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = await conn.fetchrow(query, chat_id)
         
         if user:
+            # Get user gender
+            user_gender = await get_user_gender(user['user_id'])
             await update.message.reply_text(
-                "🎉 ברוך הבא חזרה! אתה כבר מחובר למערכת.\n"
-                "💡 השתמש בפקודה /disconnect אם אתה רוצה להתנתק."
+                get_gender_specific_text(
+                    user_gender,
+                    "יאללה! הצלחנו 🎉\n\n"
+                    "עכשיו אתה מחובר לבוט הקופונים\n"
+                    "יכול לקבל עדכונים ולנהל את הקופונים שלך\n\n"
+                    "בואו נתחיל?",
+                    "יאללה! הצלחנו 🎉\n\n"
+                    "עכשיו את מחוברת לבוט הקופונים\n"
+                    "יכולה לקבל עדכונים ולנהל את הקופונים שלך\n\n"
+                    "בואי נתחיל?"
+                )
             )
             
             # Send menu
-            menu_text = (
-                "🏠 **התפריט הראשי שלך**\n\n"
-                "בחר מה שאתה רוצה לעשות:\n\n"
-                "1️⃣ **הקופונים שלי** - כל הקופונים הפעילים שלך\n"
-                "2️⃣ **חיפוש לפי חברה** - מצא קופונים של חברה ספציפית\n"
-                "3️⃣ **הוסף קופון חדש** - רגע אחד ונוסיף לך קופון\n"
-                "4️⃣ **התנתק** - יאללה ביי!\n\n"
-                "📱 פשוט שלח לי את המספר שרלוונטי לך\n"
-                "🔄 רוצה לחזור לתפריט? כתוב 'תפריט' בכל זמן"
+            menu_text = get_gender_specific_text(
+                user_gender,
+                "🏠 מה תרצה לעשות?\n\n"
+                "1️⃣ הקופונים שלי\n"
+                "2️⃣ חיפוש לפי חברה\n"
+                "3️⃣ הוספת קופון חדש\n"
+                "4️⃣ התנתק\n\n"
+                "שלח לי מספר מ-1 עד 4",
+                "🏠 מה תרצי לעשות?\n\n"
+                "1️⃣ הקופונים שלי\n"
+                "2️⃣ חיפוש לפי חברה\n"
+                "3️⃣ הוספת קופון חדש\n"
+                "4️⃣ התנתק\n\n"
+                "שלחי לי מספר מ-1 עד 4"
             )
             await update.message.reply_text(menu_text)
         else:
+            # For new users, we'll use a default male text since we don't know their gender yet
             await update.message.reply_text(
-                "👋 היי שם! ברוך הבא לבוט הקופונים שלך!\n\n"
-                "🔐 כדי להתחיל, אני צריך שתשלח לי את קוד האימות שקיבלת מהאתר\n"
-                "📩 פשוט העתק אותו והדבק כאן"
+                "היי! 👋\n"
+                "ברוך הבא לבוט הקופונים\n\n"
+                "כדי להתחיל, שלח לי את קוד האימות מהאתר\n"
+                "פשוט העתק והדבק כאן"
             )
         
         await conn.close()
@@ -141,7 +159,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error in start command: {e}")
         await update.message.reply_text(
-            "😅 אופס! משהו השתבש. תנסה שוב בעוד רגע?"
+            get_gender_specific_text(
+                user_gender,
+                "אופס! 😅\n"
+                "משהו השתבש מהצד שלנו\n\n"
+                "תנסה שוב בעוד רגע?\n"
+                "או כתוב /start להתחיל מחדש",
+                "אופס! 😅\n"
+                "משהו השתבש מהצד שלנו\n\n"
+                "תנסי שוב בעוד רגע?\n"
+                "או כתבי /start להתחיל מחדש"
+            )
         )
 
 async def get_user_coupons(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -416,7 +444,10 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         )
                     elif debug_info['verification_expires_at'] <= datetime.now(timezone.utc):
                         await update.message.reply_text(
-                            "⏰ הקוד פג תוקף. קח קוד חדש מהאתר ותחזור"
+                            "הקוד פג תוקף ⏰\n"
+                            "קח קוד חדש מהאתר ובוא נתחיל",
+                            "הקוד פג תוקף ⏰\n"
+                            "קחי קוד חדש מהאתר ובואי נתחיל"
                         )
                     else:
                         await update.message.reply_text(
@@ -480,8 +511,12 @@ async def disconnect(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 get_gender_specific_text(
                     user_gender,
-                    "✅ התנתקת בהצלחה! כדי להתחבר מחדש, עליך לקבל קוד אימות חדש מהאתר.",
-                    "✅ התנתקת בהצלחה! כדי להתחבר מחדש, עלייך לקבל קוד אימות חדש מהאתר."
+                    "התנתקת בהצלחה ✅\n\n"
+                    "כדי להתחבר מחדש:\n"
+                    "קח קוד חדש מהאתר ושלח לי אותו",
+                    "התנתקת בהצלחה ✅\n\n"
+                    "כדי להתחבר מחדש:\n"
+                    "קחי קוד חדש מהאתר ושלחי לי אותו"
                 )
             )
         else:
@@ -547,6 +582,11 @@ async def handle_company_choice(update: Update, context: ContextTypes.DEFAULT_TY
             message = "🏢 **בחר חברה מהרשימה:**\n\n"
             for i, company in enumerate(companies, 1):
                 message += f"{i}. {company['company']}\n"
+            message += get_gender_specific_text(
+                user_gender,
+                "\nלא רואה את החברה? בחר \"אחר\"",
+                "\nלא רואה את החברה? בחרי \"אחר\""
+            )
             await update.message.reply_text(message)
             await conn.close()
             return
@@ -714,8 +754,10 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 await update.message.reply_text(
                     get_gender_specific_text(
                         user_gender,
-                        '🤷‍♂️ עדיין אין לך קופונים פעילים. בוא נוסיף כמה!',
-                        '🤷‍♀️ עדיין אין לך קופונים פעילים. בואי נוסיף כמה!'
+                        "עדיין אין לך קופונים מחברות שונות 🏢\n"
+                        "בוא נוסיף את הראשון?",
+                        "עדיין אין לך קופונים מחברות שונות 🏢\n"
+                        "בואי נוסיף את הראשון?"
                     )
                 )
                 
@@ -761,6 +803,11 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 )
                 for i, company in enumerate(companies, 1):
                     message += f"{i}. {company['company']}\n"
+                message += get_gender_specific_text(
+                    user_gender,
+                    "\nלא רואה את החברה? בחר \"אחר\"",
+                    "\nלא רואה את החברה? בחרי \"אחר\""
+                )
                 await update.message.reply_text(message)
             else:
                 await update.message.reply_text(
@@ -840,16 +887,27 @@ async def get_companies_list(user_id):
         database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
     import asyncpg
     conn = await asyncpg.connect(database_url, statement_cache_size=0)
-    companies = await conn.fetch("SELECT DISTINCT company FROM coupon WHERE user_id = $1 ORDER BY company ASC", user_id)
+    # שינוי השאילתה כך שתציג את כל החברות במערכת
+    companies = await conn.fetch("SELECT DISTINCT name FROM companies ORDER BY name ASC")
     await conn.close()
-    return [c['company'] for c in companies]
+    return [c['name'] for c in companies]
 
 # התחלת תהליך הוספת קופון
 async def start_coupon_creation(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id):
     chat_id = update.message.chat_id
     companies = await get_companies_list(user_id)
     user_coupon_states[chat_id] = {'state': CouponCreationState.CHOOSE_COMPANY, 'data': {}, 'companies': companies}
-    msg = "בחר חברה:\n"
+    
+    # קבלת מגדר המשתמש
+    user_gender = await get_user_gender(user_id)
+    
+    # התאמת הטקסט למגדר
+    msg = get_gender_specific_text(
+        user_gender,
+        "בחר חברה:\n",
+        "בחרי חברה:\n"
+    )
+    
     for i, c in enumerate(companies, 1):
         msg += f"{i}. {c}\n"
     msg += f"{len(companies)+1}. אחר"
@@ -1101,7 +1159,17 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
     if state == CouponCreationState.CONFIRM_SAVE:
         if text.lower() == 'כן':
             await save_coupon_to_db(update, data, user_id)
-            await update.message.reply_text("✅ הקופון נשמר בהצלחה!")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "מעולה! ✨\n"
+                    "הקופון נשמר בהצלחה\n\n"
+                    "רוצה להוסיף עוד קופון?",
+                    "מעולה! ✨\n"
+                    "הקופון נשמר בהצלחה\n\n"
+                    "רוצה להוסיף עוד קופון?"
+                )
+            )
             user_coupon_states.pop(chat_id, None)
             await return_to_main_menu(update, context, chat_id)
         else:
