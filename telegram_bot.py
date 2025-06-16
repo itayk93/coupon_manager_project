@@ -916,19 +916,36 @@ async def start_coupon_creation(update: Update, context: ContextTypes.DEFAULT_TY
     )
     await update.message.reply_text(msg)
 
-# פונקציה לחזרה לתפריט הראשי
 async def return_to_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id):
     """מחזיר את המשתמש לתפריט הראשי ומנקה את מצב הקופון"""
     user_coupon_states.pop(chat_id, None)
-    menu_text = (
-        "🏠 **התפריט הראשי שלך**\n\n"
-        "בחר מה שאתה רוצה לעשות:\n\n"
-        "1️⃣ **הקופונים שלי** - כל הקופונים הפעילים שלך\n"
-        "2️⃣ **חיפוש לפי חברה** - מצא קופונים של חברה ספציפית\n"
-        "3️⃣ **הוסף קופון חדש** - רגע אחד ונוסיף לך קופון\n"
-        "4️⃣ **התנתק** - יאללה ביי!\n\n"
-        "📱 פשוט שלח לי את המספר שרלוונטי לך\n"
-        "🔄 רוצה לחזור לתפריט? כתוב 'תפריט' בכל זמן"
+    
+    # Get user gender
+    conn = await get_async_db_connection()
+    query = """
+        SELECT user_id 
+        FROM telegram_users 
+        WHERE telegram_chat_id = $1 
+        AND is_verified = true
+    """
+    user = await conn.fetchrow(query, chat_id)
+    user_gender = await get_user_gender(user['user_id']) if user else None
+    await conn.close()
+    
+    menu_text = get_gender_specific_text(
+        user_gender,
+        "🏠 מה תרצה לעשות?\n\n"
+        "1️⃣ הקופונים שלי\n"
+        "2️⃣ חיפוש לפי חברה\n"
+        "3️⃣ הוספת קופון חדש\n"
+        "4️⃣ התנתק\n\n"
+        "שלח לי מספר מ-1 עד 4",
+        "🏠 מה תרצי לעשות?\n\n"
+        "1️⃣ הקופונים שלי\n"
+        "2️⃣ חיפוש לפי חברה\n"
+        "3️⃣ הוספת קופון חדש\n"
+        "4️⃣ התנתק\n\n"
+        "שלחי לי מספר מ-1 עד 4"
     )
     await update.message.reply_text(menu_text)
 
