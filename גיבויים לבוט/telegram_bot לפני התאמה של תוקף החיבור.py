@@ -5,7 +5,7 @@ import asyncio
 import psycopg2
 import hashlib
 import secrets
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from telegram import Update
 from telegram.ext import Application, ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
@@ -48,9 +48,6 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME')
 ENABLE_BOT = os.getenv('ENABLE_BOT', 'True').lower() == 'true'
 
-# Session timeout configuration - configurable via environment variable
-SESSION_TIMEOUT_MINUTES = int(os.getenv('SESSION_TIMEOUT_MINUTES', '10'))
-
 # Business logic constants
 MAX_COUPON_VALUE = 100000  # Maximum value for coupon price/value
 MAX_AI_TEXT_LENGTH = 1000  # Maximum text length for AI analysis
@@ -60,7 +57,6 @@ logger.info(f"Bot Configuration:")
 logger.info(f"API_URL: {API_URL}")
 logger.info(f"TELEGRAM_BOT_USERNAME: {TELEGRAM_BOT_USERNAME}")
 logger.info(f"ENABLE_BOT: {ENABLE_BOT}")
-logger.info(f"SESSION_TIMEOUT_MINUTES: {SESSION_TIMEOUT_MINUTES}")
 logger.info(f"DATABASE_URL configured: {'Yes' if os.getenv('DATABASE_URL') else 'No'}")
 
 # Setup headers for all requests
@@ -177,87 +173,6 @@ async def get_async_db_connection():
         database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
     return await asyncpg.connect(database_url, statement_cache_size=0)
 
-async def check_session_validity(chat_id):
-    """
-    Check if user session is still valid based on verification_expires_at timestamp
-    Returns (is_valid, user_id, user_gender)
-    """
-    try:
-        conn = await get_async_db_connection()
-        
-        # Check if user exists and session is valid
-        query = """
-            SELECT user_id, verification_expires_at 
-            FROM telegram_users 
-            WHERE telegram_chat_id = $1 
-            AND is_verified = true
-        """
-        user = await conn.fetchrow(query, chat_id)
-        
-        if not user:
-            await conn.close()
-            return False, None, None
-        
-        # Check if session has expired
-        current_time = datetime.now(timezone.utc)
-        if user['verification_expires_at'] <= current_time:
-            # Session expired - disconnect user
-            await disconnect_user_session(conn, chat_id)
-            await conn.close()
-            return False, None, None
-        
-        # Session is valid - get user gender
-        user_gender = await get_user_gender(user['user_id'])
-        await conn.close()
-        return True, user['user_id'], user_gender
-        
-    except Exception as e:
-        logger.error(f"Error checking session validity: {e}")
-        return False, None, None
-
-async def disconnect_user_session(conn, chat_id):
-    """
-    Disconnect user session by updating database
-    """
-    try:
-        update_query = """
-            UPDATE telegram_users 
-            SET telegram_chat_id = NULL,
-                telegram_username = NULL,
-                is_verified = false,
-                last_interaction = NOW(),
-                disconnected_at = NOW(),
-                is_disconnected = true
-            WHERE telegram_chat_id = $1
-        """
-        await conn.execute(update_query, chat_id)
-        logger.info(f"User session disconnected due to timeout: chat_id={chat_id}")
-    except Exception as e:
-        logger.error(f"Error disconnecting user session: {e}")
-
-async def update_session_expiry(chat_id):
-    """
-    Update session expiry time for active user
-    """
-    try:
-        conn = await get_async_db_connection()
-        
-        # Update expiry time to current time + SESSION_TIMEOUT_MINUTES
-        new_expiry = datetime.now(timezone.utc) + timedelta(minutes=SESSION_TIMEOUT_MINUTES)
-        
-        update_query = """
-            UPDATE telegram_users 
-            SET verification_expires_at = $1,
-                last_interaction = NOW()
-            WHERE telegram_chat_id = $2
-            AND is_verified = true
-        """
-        await conn.execute(update_query, new_expiry, chat_id)
-        await conn.close()
-        
-    except Exception as e:
-        logger.error(f"Error updating session expiry: {e}")
-
 # Global variable to store first message
 first_message = None
 user_states = {}
@@ -299,9 +214,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         conn = await get_async_db_connection()
         
-        # Check if user is already authenticated and session is valid
+        # Check if user is already authenticated
         query = """
-            SELECT user_id, verification_expires_at 
+            SELECT user_id 
             FROM telegram_users 
             WHERE telegram_chat_id = $1 
             AND is_verified = true
@@ -309,44 +224,31 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = await conn.fetchrow(query, chat_id)
         
         if user:
-            # Check if session is still valid
-            current_time = datetime.now(timezone.utc)
-            if user['verification_expires_at'] > current_time:
-                # Session is valid - update expiry and continue
-                await update_session_expiry(chat_id)
-                
-                # Get user gender
-                user_gender = await get_user_gender(user['user_id'])
-                # Get slots_automatic_coupons
-                slots = 0
-                try:
-                    slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user['user_id'])
-                    if slots_row:
-                        slots = slots_row['slots_automatic_coupons']
-                except Exception as e:
-                    logger.error(f"Error fetching slots_automatic_coupons: {e}")
-                await update.message.reply_text(
-                    get_gender_specific_text(
-                        user_gender,
-                        "יאללה! הצלחנו 🎉\n\n"
-                        "עכשיו אתה מחובר לבוט הקופונים\n"
-                        "יכול לקבל עדכונים ולנהל את הקופונים שלך\n\n"
-                        "בואו נתחיל?",
-                        "יאללה! הצלחנו 🎉\n\n"
-                        "עכשיו את מחוברת לבוט הקופונים\n"
-                        "יכולה לקבל עדכונים ולנהל את הקופונים שלך\n\n"
-                        "בואי נתחיל?"
-                    )
+            # Get user gender
+            user_gender = await get_user_gender(user['user_id'])
+            # Get slots_automatic_coupons
+            slots = 0
+            try:
+                slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user['user_id'])
+                if slots_row:
+                    slots = slots_row['slots_automatic_coupons']
+            except Exception as e:
+                logger.error(f"Error fetching slots_automatic_coupons: {e}")
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "יאללה! הצלחנו 🎉\n\n"
+                    "עכשיו אתה מחובר לבוט הקופונים\n"
+                    "יכול לקבל עדכונים ולנהל את הקופונים שלך\n\n"
+                    "בואו נתחיל?",
+                    "יאללה! הצלחנו 🎉\n\n"
+                    "עכשיו את מחוברת לבוט הקופונים\n"
+                    "יכולה לקבל עדכונים ולנהל את הקופונים שלך\n\n"
+                    "בואי נתחיל?"
                 )
-                # Send menu
-                await update.message.reply_text(get_main_menu_text(user_gender, slots))
-            else:
-                # Session expired - disconnect user
-                await disconnect_user_session(conn, chat_id)
-                await update.message.reply_text(
-                    "⏰ הפעלה שלך פגה תוקף\n"
-                    "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-                )
+            )
+            # Send menu
+            await update.message.reply_text(get_main_menu_text(user_gender, slots))
         else:
             # For new users, we'll use a default male text since we don't know their gender yet
             await update.message.reply_text(
@@ -371,24 +273,16 @@ async def get_user_coupons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Fetch first three user coupons by chat_id"""
     chat_id = update.message.chat_id
     
-    # Check session validity first
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
     try:
         # Get DATABASE_URL from environment variables
         database_url = os.getenv('DATABASE_URL')
         
         # Connect to Supabase database
         conn = await asyncpg.connect(database_url)
+        
+        # Fetch user_id by chat_id from telegram_users table
+        user_query = "SELECT user_id FROM telegram_users WHERE chat_id = $1"
+        user_id = await conn.fetchval(user_query, chat_id)
         
         if user_id:
             # Fetch first three user coupons
@@ -426,18 +320,6 @@ async def get_user_coupons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_coupons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Fetch user coupons"""
     chat_id = update.message.chat_id
-    
-    # Check session validity first
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
     
     try:
         response = requests.post(
@@ -501,9 +383,9 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         conn = await get_async_db_connection()
 
-        # Check if user is already connected with valid session
+        # Check if user is already connected
         existing_user_query = """
-            SELECT user_id, is_verified, verification_expires_at 
+            SELECT user_id, is_verified 
             FROM telegram_users 
             WHERE telegram_chat_id = $1 
             AND is_verified = true
@@ -511,39 +393,32 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         existing_user = await conn.fetchrow(existing_user_query, chat_id)
         
         if existing_user:
-            # Check if session is still valid
-            current_time = datetime.now(timezone.utc)
-            if existing_user['verification_expires_at'] > current_time:
-                # Session is valid - check if this is a menu selection
-                if user_message in ['1', '2', '3', '4', '5']:
-                    await handle_menu_option(update, context)
-                    await conn.close()
-                    return
-                else:
-                    logger.warning(f"[DEBUG] handle_code: User already connected chat_id={chat_id}")
-                    user_gender = await get_user_gender(existing_user['user_id'])
-                    await update.message.reply_text(
-                        get_gender_specific_text(
-                            user_gender,
-                            "👍 אתה כבר מחובר! השתמש בתפריט למטה",
-                            "👍 את כבר מחוברת! השתמשי בתפריט למטה"
-                        )
-                    )
-                    # Send menu and update session expiry
-                    await update_session_expiry(chat_id)
-                    slots = 0
-                    try:
-                        slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", existing_user['user_id'])
-                        if slots_row:
-                            slots = slots_row['slots_automatic_coupons']
-                    except Exception as e:
-                        logger.error(f"Error fetching slots_automatic_coupons: {e}")
-                    await update.message.reply_text(get_main_menu_text(user_gender, slots))
-                    await conn.close()
-                    return
+            # If user is connected, check if this is a menu selection
+            if user_message in ['1', '2', '3', '4', '5']:
+                await handle_menu_option(update, context)
+                await conn.close()
+                return
             else:
-                # Session expired - disconnect user
-                await disconnect_user_session(conn, chat_id)
+                logger.warning(f"[DEBUG] handle_code: User already connected chat_id={chat_id}")
+                user_gender = await get_user_gender(existing_user['user_id'])
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "👍 אתה כבר מחובר! השתמש בתפריט למטה",
+                        "👍 את כבר מחוברת! השתמשי בתפריט למטה"
+                    )
+                )
+                # Send menu
+                slots = 0
+                try:
+                    slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", existing_user['user_id'])
+                    if slots_row:
+                        slots = slots_row['slots_automatic_coupons']
+                except Exception as e:
+                    logger.error(f"Error fetching slots_automatic_coupons: {e}")
+                await update.message.reply_text(get_main_menu_text(user_gender, slots))
+                await conn.close()
+                return
 
         # Fetch all records with this code for debugging
         all_rows = await conn.fetch("SELECT * FROM telegram_users WHERE verification_token = $1", user_message)
@@ -567,9 +442,6 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Get user gender
             user_gender = await get_user_gender(user['user_id'])
             
-            # Calculate session expiry time
-            session_expiry = datetime.now(timezone.utc) + timedelta(minutes=SESSION_TIMEOUT_MINUTES)
-            
             # Update existing record instead of deleting and creating new
             update_query = """
                 UPDATE telegram_users 
@@ -579,9 +451,9 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     last_interaction = NOW(),
                     verification_attempts = 0,
                     last_verification_attempt = NULL,
-                    verification_expires_at = $3
-                WHERE user_id = $4
-                AND verification_token = $5
+                    verification_expires_at = NOW() + INTERVAL '5 minutes'
+                WHERE user_id = $3
+                AND verification_token = $4
                 RETURNING user_id
             """
             
@@ -590,7 +462,6 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 update_query, 
                 chat_id,
                 update.message.from_user.username,
-                session_expiry,
                 user['user_id'],
                 user_message
             )
@@ -758,21 +629,28 @@ async def handle_company_choice(update: Update, context: ContextTypes.DEFAULT_TY
     chat_id = update.message.chat_id
     user_message = update.message.text.strip()
     
-    # Check session validity first
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
     try:
         # Check if user is connected
         conn = await get_async_db_connection()
+        
+        # Check if user is verified
+        query = """
+            SELECT user_id 
+            FROM telegram_users 
+            WHERE telegram_chat_id = $1 
+            AND is_verified = true
+        """
+        user = await conn.fetchrow(query, chat_id)
+        
+        if not user:
+            await update.message.reply_text(
+                "❌ אתה לא מחובר. אנא התחבר קודם באמצעות קוד האימות."
+            )
+            await conn.close()
+            return
+            
+        # Get user gender
+        user_gender = await get_user_gender(user['user_id'])
             
         # Fetch user companies
         companies_query = """
@@ -782,7 +660,7 @@ async def handle_company_choice(update: Update, context: ContextTypes.DEFAULT_TY
             AND status = 'פעיל' 
             ORDER BY company ASC
         """
-        companies = await conn.fetch(companies_query, user_id)
+        companies = await conn.fetch(companies_query, user['user_id'])
         
         if not companies:
             await update.message.reply_text('לא נמצאו חברות פעילות')
@@ -822,7 +700,7 @@ async def handle_company_choice(update: Update, context: ContextTypes.DEFAULT_TY
             AND c.company = $2
             ORDER BY c.date_added DESC
         """
-        coupons = await conn.fetch(coupons_query, user_id, selected_company)
+        coupons = await conn.fetch(coupons_query, user['user_id'], selected_company)
         
         if coupons:
             # Separate coupons into two types
@@ -863,7 +741,7 @@ async def handle_company_choice(update: Update, context: ContextTypes.DEFAULT_TY
         # Send menu again
         slots = 0
         try:
-            slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user_id)
+            slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user['user_id'])
             if slots_row:
                 slots = slots_row['slots_automatic_coupons']
         except Exception as e:
@@ -883,21 +761,28 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
     chat_id = update.message.chat_id
     user_message = update.message.text.strip()
     
-    # Check session validity first
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
     try:
         # Check if user is connected
         conn = await get_async_db_connection()
+        
+        # Check if user is verified
+        query = """
+            SELECT user_id 
+            FROM telegram_users 
+            WHERE telegram_chat_id = $1 
+            AND is_verified = true
+        """
+        user = await conn.fetchrow(query, chat_id)
+        
+        if not user:
+            await update.message.reply_text(
+                "😬 אתה לא מחובר. בוא נתחבר קודם עם קוד האימות"
+            )
+            await conn.close()
+            return
+            
+        # Get user gender
+        user_gender = await get_user_gender(user['user_id'])
         
         # Handle menu options
         if user_message == "1":
@@ -913,7 +798,7 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 AND c.status = 'פעיל'
                 ORDER BY c.company ASC, c.date_added DESC
             """
-            coupons = await conn.fetch(coupons_query, user_id)
+            coupons = await conn.fetch(coupons_query, user['user_id'])
             
             if coupons:
                 # Separate coupons into two types
@@ -972,7 +857,7 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
             # Send menu again
             slots = 0
             try:
-                slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user_id)
+                slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user['user_id'])
                 if slots_row:
                     slots = slots_row['slots_automatic_coupons']
             except Exception as e:
@@ -991,7 +876,7 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 AND status = 'פעיל' 
                 ORDER BY company ASC
             """
-            companies = await conn.fetch(companies_query, user_id)
+            companies = await conn.fetch(companies_query, user['user_id'])
             
             if companies:
                 message = get_gender_specific_text(
@@ -1019,7 +904,7 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 user_states.pop(chat_id, None)
                 
         elif user_message == "3":
-            await start_coupon_creation(update, context, user_id)
+            await start_coupon_creation(update, context, user['user_id'])
             await conn.close()
             return
             
@@ -1028,7 +913,7 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
             
         elif user_message == "5":
             # New option - AI free text analysis
-            await start_ai_text_analysis(update, context, user_id)
+            await start_ai_text_analysis(update, context, user['user_id'])
             await conn.close()
             return
             
@@ -1036,7 +921,7 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
             # Send menu again if choice is invalid
             slots = 0
             try:
-                slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user_id)
+                slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user['user_id'])
                 if slots_row:
                     slots = slots_row['slots_automatic_coupons']
             except Exception as e:
@@ -1117,18 +1002,6 @@ def find_best_field_match(input_text):
 async def start_ai_text_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id):
     """Start AI free text analysis process"""
     chat_id = update.message.chat_id
-    
-    # Check session validity first
-    is_valid, valid_user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
     
     try:
         # Update user's slots_automatic_coupons
@@ -1387,19 +1260,6 @@ async def get_companies_list(user_id):
 # Start coupon creation process
 async def start_coupon_creation(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id):
     chat_id = update.message.chat_id
-    
-    # Check session validity first
-    is_valid, valid_user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
     companies = await get_companies_list(user_id)
     user_coupon_states[chat_id] = {'state': CouponCreationState.FUZZY_MATCH, 'data': {}, 'companies': companies}
     
@@ -1418,26 +1278,22 @@ async def return_to_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Return user to main menu and clear coupon state"""
     user_coupon_states.pop(chat_id, None)
     
-    # Check session validity first
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
     # Get user gender
     conn = await get_async_db_connection()
+    query = """
+        SELECT user_id 
+        FROM telegram_users 
+        WHERE telegram_chat_id = $1 
+        AND is_verified = true
+    """
+    user = await conn.fetchrow(query, chat_id)
+    user_gender = await get_user_gender(user['user_id']) if user else None
     
     # Get slots for menu
     slots = 0
-    if user_id:
+    if user:
         try:
-            slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user_id)
+            slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user['user_id'])
             if slots_row:
                 slots = slots_row['slots_automatic_coupons']
         except Exception as e:
@@ -1460,21 +1316,6 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
     if not state_obj:
         await update.message.reply_text("שגיאה פנימית. נסה שוב מהתפריט.")
         return
-    
-    # Check session validity first for any coupon creation step
-    is_valid, valid_user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        # Clear coupon state and return session expired message
-        user_coupon_states.pop(chat_id, None)
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
     state = state_obj['state']
     data = state_obj['data']
     companies = state_obj.get('companies', [])
@@ -1897,7 +1738,7 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
             )
         )
         return
-    
+
     # Source
     if state == CouponCreationState.ENTER_SOURCE:
         data['source'] = None if is_empty_field(text) else text
@@ -2488,18 +2329,6 @@ async def handle_number_message(update: Update, context: ContextTypes.DEFAULT_TY
     chat_id = update.message.chat_id
     user_message = update.message.text.strip()
     
-    # Check session validity first
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
     try:
         # Check if user is connected
         database_url = os.getenv('DATABASE_URL')
@@ -2508,6 +2337,25 @@ async def handle_number_message(update: Update, context: ContextTypes.DEFAULT_TY
         
         conn = await asyncpg.connect(database_url, statement_cache_size=0)
         
+        # Check if user is verified
+        query = """
+            SELECT user_id 
+            FROM telegram_users 
+            WHERE telegram_chat_id = $1 
+            AND is_verified = true
+        """
+        user = await conn.fetchrow(query, chat_id)
+        
+        if not user:
+            await update.message.reply_text(
+                "❌ אתה לא מחובר. אנא התחבר קודם באמצעות קוד האימות."
+            )
+            await conn.close()
+            return
+        
+        # Get user gender
+        user_gender = await get_user_gender(user['user_id'])
+        
         # Handle menu selection
         if user_message in ['1', '2', '3', '4', '5']:
             await handle_menu_option(update, context)
@@ -2515,7 +2363,7 @@ async def handle_number_message(update: Update, context: ContextTypes.DEFAULT_TY
             # Send menu again if choice is invalid
             slots = 0
             try:
-                slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user_id)
+                slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user['user_id'])
                 if slots_row:
                     slots = slots_row['slots_automatic_coupons']
             except Exception as e:
