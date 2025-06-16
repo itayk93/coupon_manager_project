@@ -1231,12 +1231,20 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text(
                 get_gender_specific_text(
                     user_gender,
-                    "איזה שדה תרצה לערוך? כתוב את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:",
-                    "איזה שדה תרצי לערוך? כתבי את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:"
+                    "איזה שדה תרצה לערוך? כתוב את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:\n\n"
+                    "💡 שדה זה אחד מפרטי הקופון כמו:\n"
+                    "• שם החברה\n"
+                    "• קוד הקופון\n"
+                    "• וכו׳",
+                    "איזה שדה תרצי לערוך? כתבי את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:\n\n"
+                    "💡 שדה זה אחד מפרטי הקופון כמו:\n"
+                    "• שם החברה\n"
+                    "• קוד הקופון\n"
+                    "• וכו׳",
                 )
             )
         return
-
+    
     # Handle field selection for editing
     if state == CouponCreationState.EDIT_FIELD_SELECTION:
         best_match, best_ratio = find_best_field_match(text)
@@ -1292,8 +1300,16 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text(
                 get_gender_specific_text(
                     user_gender,
-                    "איזה שדה תרצה לערוך? כתוב את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:",
-                    "איזה שדה תרצי לערוך? כתבי את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:"
+                    "איזה שדה תרצה לערוך? כתוב את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:\n\n"
+                    "💡 שדה זה אחד מפרטי הקופון כמו:\n"
+                    "• שם החברה\n"
+                    "• קוד הקופון\n"
+                    "• וכו׳",
+                    "איזה שדה תרצי לערוך? כתבי את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:\n\n"
+                    "💡 שדה זה אחד מפרטי הקופון כמו:\n"
+                    "• שם החברה\n"
+                    "• קוד הקופון\n"
+                    "• וכו׳",
                 )
             )
         return
@@ -1773,8 +1789,16 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text(
                 get_gender_specific_text(
                     user_gender,
-                    "איזה שדה תרצה לערוך? כתוב את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:",
-                    "איזה שדה תרצי לערוך? כתבי את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:"
+                    "איזה שדה תרצה לערוך? כתוב את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:\n\n"
+                    "💡 שדה זה אחד מפרטי הקופון כמו:\n"
+                    "• שם החברה\n"
+                    "• קוד הקופון\n"
+                    "• וכו׳",
+                    "איזה שדה תרצי לערוך? כתבי את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:\n\n"
+                    "💡 שדה זה אחד מפרטי הקופון כמו:\n"
+                    "• שם החברה\n"
+                    "• קוד הקופון\n"
+                    "• וכו׳",
                 )
             )
         return
@@ -2052,7 +2076,7 @@ async def handle_field_edit(update, context, field_name, new_value, data, user_g
                 "אירעה שגיאה בעריכת השדה. נסי שוב."
             )
         )
-        
+
 # Send summary for confirmation
 async def send_coupon_summary(update, data, user_gender):
     """Send coupon summary for user confirmation"""
