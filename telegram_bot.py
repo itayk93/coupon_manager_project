@@ -1348,92 +1348,21 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
 
     # עריכה
     if state == CouponCreationState.EDIT_FIELD:
-        field = state_obj['edit_field']
-        if field == 'ערך בפועל':
-            try:
-                if not text.isdigit():
-                    await update.message.reply_text(
-                        get_gender_specific_text(
-                            user_gender,
-                            "אנא הזן מספר שלם בלבד. כמה הקופון שווה בפועל?",
-                            "אנא הזיני מספר שלם בלבד. כמה הקופון שווה בפועל?"
-                        )
-                    )
-                    return
-                data['value'] = float(text)
-                state_obj['state'] = CouponCreationState.SUMMARY
-                await send_coupon_summary(update, data)
-            except ValueError:
+        if state_obj['edit_field'] is None:
+            # User just specified which field to edit
+            field = text.strip()
+            valid_fields = ['ערך בפועל', 'מחיר ששולם', 'תאריך תפוגה', 'תיאור', 'מקור', 'CVV', 'תוקף כרטיס', 'מטרה']
+            if field not in valid_fields:
                 await update.message.reply_text(
                     get_gender_specific_text(
                         user_gender,
-                        "אנא הזן מספר שלם בלבד. כמה הקופון שווה בפועל?",
-                        "אנא הזיני מספר שלם בלבד. כמה הקופון שווה בפועל?"
-                    )
-                )
-        elif field == 'מחיר ששולם':
-            try:
-                if not text.isdigit():
-                    await update.message.reply_text(
-                        get_gender_specific_text(
-                            user_gender,
-                            "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
-                            "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
-                        )
-                    )
-                    return
-                data['cost'] = float(text)
-                state_obj['state'] = CouponCreationState.SUMMARY
-                await send_coupon_summary(update, data)
-            except ValueError:
-                await update.message.reply_text(
-                    get_gender_specific_text(
-                        user_gender,
-                        "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
-                        "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
-                    )
-                )
-        elif field == 'תאריך תפוגה':
-            try:
-                if is_empty_field(text):
-                    data['expiration'] = None
-                else:
-                    data['expiration'] = datetime.strptime(text, "%d/%m/%Y").date()
-                state_obj['state'] = CouponCreationState.SUMMARY
-                await send_coupon_summary(update, data)
-            except Exception:
-                await update.message.reply_text(
-                    get_gender_specific_text(
-                        user_gender,
-                        "פורמט תאריך לא תקין. נסה שוב (DD/MM/YYYY)\n"
-                        "אם אין תאריך תפוגה, תכתוב 'אין'",
-                        "פורמט תאריך לא תקין. נסי שוב (DD/MM/YYYY)\n"
-                        "אם אין תאריך תפוגה, תכתבי 'אין'"
-                    )
-                )
-        elif field == 'תיאור':
-            data['description'] = None if is_empty_field(text) else text
-            state_obj['state'] = CouponCreationState.SUMMARY
-            await send_coupon_summary(update, data)
-        elif field == 'מקור':
-            data['source'] = None if is_empty_field(text) else text
-            state_obj['state'] = CouponCreationState.SUMMARY
-            await send_coupon_summary(update, data)
-        elif field == 'CVV':
-            if not text.isdigit() or len(text) != 3:
-                await update.message.reply_text(
-                    get_gender_specific_text(
-                        user_gender,
-                        "אנא הזן 3 ספרות בלבד עבור ה-CVV",
-                        "אנא הזיני 3 ספרות בלבד עבור ה-CVV"
+                        "שדה לא תקין. אנא בחר אחד מהשדות הבאים:\n" + "\n".join(valid_fields),
+                        "שדה לא תקין. אנא בחרי אחד מהשדות הבאים:\n" + "\n".join(valid_fields)
                     )
                 )
                 return
-            data['cvv'] = text
-            state_obj['state'] = CouponCreationState.SUMMARY
-            await send_coupon_summary(update, data)
-        elif field == 'תוקף כרטיס':
-            if not re.match(r'^\d{2}/\d{2}$', text):
+            state_obj['edit_field'] = field
+            if field == 'תוקף כרטיס':
                 await update.message.reply_text(
                     get_gender_specific_text(
                         user_gender,
@@ -1441,15 +1370,167 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
                         "אנא הזיני תאריך בפורמט MM/YY"
                     )
                 )
-                return
-            data['card_exp'] = text
-            state_obj['state'] = CouponCreationState.SUMMARY
-            await send_coupon_summary(update, data)
-        elif field == 'מטרה':
-            data['purpose'] = None if is_empty_field(text) else text
-            state_obj['state'] = CouponCreationState.SUMMARY
-            await send_coupon_summary(update, data)
-        return
+            elif field == 'CVV':
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "אנא הזן 3 ספרות בלבד עבור ה-CVV",
+                        "אנא הזיני 3 ספרות בלבד עבור ה-CVV"
+                    )
+                )
+            elif field == 'תאריך תפוגה':
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "אנא הזן תאריך בפורמט DD/MM/YYYY\nאם אין תאריך תפוגה, תכתוב 'אין'",
+                        "אנא הזיני תאריך בפורמט DD/MM/YYYY\nאם אין תאריך תפוגה, תכתבי 'אין'"
+                    )
+                )
+            elif field == 'ערך בפועל':
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "כמה הקופון שווה בפועל?",
+                        "כמה הקופון שווה בפועל?"
+                    )
+                )
+            elif field == 'מחיר ששולם':
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "כמה שילמת על הקופון?",
+                        "כמה שילמת על הקופון?"
+                    )
+                )
+            elif field == 'תיאור':
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "מה התיאור של הקופון?",
+                        "מה התיאור של הקופון?"
+                    )
+                )
+            elif field == 'מקור':
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "מה המקור של הקופון?",
+                        "מה המקור של הקופון?"
+                    )
+                )
+            elif field == 'מטרה':
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "מה מטרת הקופון?",
+                        "מה מטרת הקופון?"
+                    )
+                )
+            return
+        else:
+            # User is providing the new value for the field
+            field = state_obj['edit_field']
+            if field == 'ערך בפועל':
+                try:
+                    if not text.isdigit():
+                        await update.message.reply_text(
+                            get_gender_specific_text(
+                                user_gender,
+                                "אנא הזן מספר שלם בלבד. כמה הקופון שווה בפועל?",
+                                "אנא הזיני מספר שלם בלבד. כמה הקופון שווה בפועל?"
+                            )
+                        )
+                        return
+                    data['value'] = float(text)
+                    state_obj['state'] = CouponCreationState.SUMMARY
+                    await send_coupon_summary(update, data)
+                except ValueError:
+                    await update.message.reply_text(
+                        get_gender_specific_text(
+                            user_gender,
+                            "אנא הזן מספר שלם בלבד. כמה הקופון שווה בפועל?",
+                            "אנא הזיני מספר שלם בלבד. כמה הקופון שווה בפועל?"
+                        )
+                    )
+            elif field == 'מחיר ששולם':
+                try:
+                    if not text.isdigit():
+                        await update.message.reply_text(
+                            get_gender_specific_text(
+                                user_gender,
+                                "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
+                                "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
+                            )
+                        )
+                        return
+                    data['cost'] = float(text)
+                    state_obj['state'] = CouponCreationState.SUMMARY
+                    await send_coupon_summary(update, data)
+                except ValueError:
+                    await update.message.reply_text(
+                        get_gender_specific_text(
+                            user_gender,
+                            "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
+                            "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
+                        )
+                    )
+            elif field == 'תאריך תפוגה':
+                try:
+                    if is_empty_field(text):
+                        data['expiration'] = None
+                    else:
+                        data['expiration'] = datetime.strptime(text, "%d/%m/%Y").date()
+                    state_obj['state'] = CouponCreationState.SUMMARY
+                    await send_coupon_summary(update, data)
+                except Exception:
+                    await update.message.reply_text(
+                        get_gender_specific_text(
+                            user_gender,
+                            "פורמט תאריך לא תקין. נסה שוב (DD/MM/YYYY)\n"
+                            "אם אין תאריך תפוגה, תכתוב 'אין'",
+                            "פורמט תאריך לא תקין. נסי שוב (DD/MM/YYYY)\n"
+                            "אם אין תאריך תפוגה, תכתבי 'אין'"
+                        )
+                    )
+            elif field == 'תיאור':
+                data['description'] = None if is_empty_field(text) else text
+                state_obj['state'] = CouponCreationState.SUMMARY
+                await send_coupon_summary(update, data)
+            elif field == 'מקור':
+                data['source'] = None if is_empty_field(text) else text
+                state_obj['state'] = CouponCreationState.SUMMARY
+                await send_coupon_summary(update, data)
+            elif field == 'CVV':
+                if not text.isdigit() or len(text) != 3:
+                    await update.message.reply_text(
+                        get_gender_specific_text(
+                            user_gender,
+                            "אנא הזן 3 ספרות בלבד עבור ה-CVV",
+                            "אנא הזיני 3 ספרות בלבד עבור ה-CVV"
+                        )
+                    )
+                    return
+                data['cvv'] = text
+                state_obj['state'] = CouponCreationState.SUMMARY
+                await send_coupon_summary(update, data)
+            elif field == 'תוקף כרטיס':
+                if not re.match(r'^\d{2}/\d{2}$', text):
+                    await update.message.reply_text(
+                        get_gender_specific_text(
+                            user_gender,
+                            "אנא הזן תאריך בפורמט MM/YY",
+                            "אנא הזיני תאריך בפורמט MM/YY"
+                        )
+                    )
+                    return
+                data['card_exp'] = text
+                state_obj['state'] = CouponCreationState.SUMMARY
+                await send_coupon_summary(update, data)
+            elif field == 'מטרה':
+                data['purpose'] = None if is_empty_field(text) else text
+                state_obj['state'] = CouponCreationState.SUMMARY
+                await send_coupon_summary(update, data)
+            return
 
     # אישור סיכום
     if state == CouponCreationState.CONFIRM_SAVE:
@@ -1475,6 +1556,7 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
             await return_to_main_menu(update, context, chat_id)
         else:
             state_obj['state'] = CouponCreationState.EDIT_FIELD
+            state_obj['edit_field'] = None  # Initialize the edit_field key
             await update.message.reply_text(
                 get_gender_specific_text(
                     user_gender,
