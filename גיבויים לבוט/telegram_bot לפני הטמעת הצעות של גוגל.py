@@ -48,10 +48,6 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME')
 ENABLE_BOT = os.getenv('ENABLE_BOT', 'True').lower() == 'true'
 
-# Business logic constants
-MAX_COUPON_VALUE = 100000  # Maximum value for coupon price/value
-MAX_AI_TEXT_LENGTH = 1000  # Maximum text length for AI analysis
-
 # Log important settings (without passwords)
 logger.info(f"Bot Configuration:")
 logger.info(f"API_URL: {API_URL}")
@@ -82,77 +78,6 @@ def decrypt_coupon_code(encrypted_code):
     except Exception as e:
         logger.error(f"Error decrypting coupon code: {e}")
         return encrypted_code
-
-def validate_monetary_value(value_str, field_name, allow_zero=False):
-    """
-    Validate monetary value with business rules
-    Returns (is_valid, parsed_value, error_message)
-    """
-    try:
-        # Check if it's a valid number
-        if not value_str.replace('.', '', 1).replace('-', '', 1).isdigit():
-            return False, None, f"אנא הזן מספר תקין עבור {field_name}"
-        
-        value = float(value_str)
-        
-        # Check for negative values
-        if value < 0:
-            return False, None, f"{field_name} לא יכול להיות קטן מ-0"
-        
-        # Check for zero when not allowed
-        if not allow_zero and value == 0:
-            return False, None, f"{field_name} חייב להיות גדול מ-0"
-        
-        # Check for maximum value
-        if value > MAX_COUPON_VALUE:
-            return False, None, f"{field_name} לא יכול להיות גדול מ-{MAX_COUPON_VALUE:,} שח"
-        
-        return True, value, None
-        
-    except ValueError:
-        return False, None, f"אנא הזן מספר תקין עבור {field_name}"
-
-def validate_date_format(date_str):
-    """
-    Validate date format and check for logical errors
-    Returns (is_valid, parsed_date, error_message)
-    """
-    try:
-        # Check basic format
-        if not re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', date_str):
-            return False, None, "פורמט תאריך לא תקין. השתמש ב-DD/MM/YYYY"
-        
-        day, month, year = map(int, date_str.split('/'))
-        
-        # Check month range
-        if month < 1 or month > 12:
-            return False, None, "חודש לא תקין (1-12)"
-        
-        # Check day range
-        if day < 1 or day > 31:
-            return False, None, "יום לא תקין (1-31)"
-        
-        # Use datetime to validate the actual date
-        parsed_date = datetime.strptime(date_str, "%d/%m/%Y").date()
-        return True, parsed_date, None
-        
-    except ValueError as e:
-        if "day is out of range for month" in str(e):
-            return False, None, f"יום {day} לא קיים בחודש {month}"
-        return False, None, "תאריך לא תקין"
-
-def validate_ai_text_input(text):
-    """
-    Validate AI text input for length and content
-    Returns (is_valid, error_message)
-    """
-    if len(text) > MAX_AI_TEXT_LENGTH:
-        return False, f"הטקסט ארוך מדי. מקסימום {MAX_AI_TEXT_LENGTH} תווים"
-    
-    if len(text.strip()) < 10:
-        return False, "הטקסט קצר מדי. אנא הוסף יותר פרטים"
-    
-    return True, None
 
 # Setup database connection
 def get_db_connection():
@@ -409,14 +334,7 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 )
                 # Send menu
-                slots = 0
-                try:
-                    slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", existing_user['user_id'])
-                    if slots_row:
-                        slots = slots_row['slots_automatic_coupons']
-                except Exception as e:
-                    logger.error(f"Error fetching slots_automatic_coupons: {e}")
-                await update.message.reply_text(get_main_menu_text(user_gender, slots))
+                await update.message.reply_text(get_main_menu_text(user_gender))
                 await conn.close()
                 return
 
@@ -483,7 +401,7 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Get slots_automatic_coupons
                 slots = 0
                 try:
-                    slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user['user_id'])
+                    slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", existing_user['user_id'])
                     if slots_row:
                         slots = slots_row['slots_automatic_coupons']
                 except Exception as e:
@@ -1023,23 +941,21 @@ async def start_ai_text_analysis(update: Update, context: ContextTypes.DEFAULT_T
         # Get user gender
         user_gender = await get_user_gender(user_id)
         
-        # Gender-specific text with length limitation info
+        # Gender-specific text
         msg = get_gender_specific_text(
             user_gender,
-            f"🤖 **ניתוח טקסט חופשי עם AI**\n\n"
-            f"תכתוב את פרטי הקופון המלאים\n"
-            f"(שם חברה, כמה שילמת עליו, כמה הוא שווה בפועל, תאריך תפוגה וכו')\n\n"
-            f"📝 דוגמה:\n"
-            f"\"קניתי קופון של מקדונלדס ב88 שקל ששווה 100 שקל, תוקף עד 30/06/2025\"\n\n"
-            f"⚠️ מקסימום {MAX_AI_TEXT_LENGTH} תווים\n\n"
-            f"כתוב את כל הפרטים שיש לך:",
-            f"🤖 **ניתוח טקסט חופשי עם AI**\n\n"
-            f"תכתבי את פרטי הקופון המלאים\n"
-            f"(שם חברה, כמה שילמת עליו, כמה הוא שווה בפועל, תאריך תפוגה וכו')\n\n"
-            f"📝 דוגמה:\n"
-            f"\"קניתי קופון של מקדונלדס ב88 שקל ששווה 100 שקל, תוקף עד 30/06/2025\"\n\n"
-            f"⚠️ מקסימום {MAX_AI_TEXT_LENGTH} תווים\n\n"
-            f"כתבי את כל הפרטים שיש לך:"
+            "🤖 **ניתוח טקסט חופשי עם AI**\n\n"
+            "תכתוב את פרטי הקופון המלאים\n"
+            "(שם חברה, כמה שילמת עליו, כמה הוא שווה בפועל, תאריך תפוגה וכו')\n\n"
+            "📝 דוגמה:\n"
+            "\"קניתי קופון של מקדונלדס ב88 שקל ששווה 100 שקל, תוקף עד 30/06/2025\"\n\n"
+            "כתוב את כל הפרטים שיש לך:",
+            "🤖 **ניתוח טקסט חופשי עם AI**\n\n"
+            "תכתבי את פרטי הקופון המלאים\n"
+            "(שם חברה, כמה שילמת עליו, כמה הוא שווה בפועל, תאריך תפוגה וכו')\n\n"
+            "📝 דוגמה:\n"
+            "\"קניתי קופון של מקדונלדס ב88 שקל ששווה 100 שקל, תוקף עד 30/06/2025\"\n\n"
+            "כתבי את כל הפרטים שיש לך:"
         )
         await update.message.reply_text(msg)
     except Exception as e:
@@ -1060,18 +976,6 @@ async def handle_ai_text_analysis(update: Update, context: ContextTypes.DEFAULT_
     """Analyze free text using GPT and return summary"""
     chat_id = update.message.chat_id
     user_gender = await get_user_gender(user_id)
-    
-    # Validate AI text input
-    is_valid, error_msg = validate_ai_text_input(text)
-    if not is_valid:
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                f"❌ {error_msg}\n\nתנסה שוב עם טקסט באורך מתאים:",
-                f"❌ {error_msg}\n\nתנסי שוב עם טקסט באורך מתאים:"
-            )
-        )
-        return
     
     try:
         # Send loading message
@@ -1100,31 +1004,12 @@ async def handle_ai_text_analysis(update: Update, context: ContextTypes.DEFAULT_
                 elif hasattr(value, 'item'):  # numpy types
                     extracted_data[key] = value.item()
             
-            # Validate extracted monetary values
-            cost = extracted_data.get('עלות', 0) or 0
-            value = extracted_data.get('ערך מקורי', 0) or 0
-            
-            # Apply business rules validation
-            cost_valid, cost_value, cost_error = validate_monetary_value(str(cost), "המחיר ששולם", allow_zero=True)
-            value_valid, value_value, value_error = validate_monetary_value(str(value), "הערך בפועל", allow_zero=False)
-            
-            if not cost_valid or not value_valid:
-                error_message = cost_error or value_error
-                await update.message.reply_text(
-                    get_gender_specific_text(
-                        user_gender,
-                        f"❌ {error_message}\n\nתנסה שוב עם ערכים תקינים:",
-                        f"❌ {error_message}\n\nתנסי שוב עם ערכים תקינים:"
-                    )
-                )
-                return
-            
             # Save data in user state
             data = {
                 'company': extracted_data.get('חברה', ''),
                 'code': extracted_data.get('קוד קופון', ''),
-                'cost': cost_value,
-                'value': value_value,
+                'cost': extracted_data.get('עלות', 0) or 0,
+                'value': extracted_data.get('ערך מקורי', 0) or 0,
                 'description': extracted_data.get('תיאור', '') or None,
                 'expiration': None,
                 'source': None,
@@ -1134,18 +1019,13 @@ async def handle_ai_text_analysis(update: Update, context: ContextTypes.DEFAULT_
                 'purpose': None
             }
             
-            # Handle expiration date with validation
+            # Handle expiration date
             try:
                 expiration_str = extracted_data.get('תאריך תפוגה')
                 if expiration_str and expiration_str != 'None':
-                    # Try to parse the date and validate it
-                    is_valid_date, parsed_date, date_error = validate_date_format(expiration_str.replace('-', '/'))
-                    if is_valid_date:
-                        data['expiration'] = parsed_date
-                    else:
-                        logger.warning(f"Invalid date from AI: {expiration_str}, error: {date_error}")
+                    data['expiration'] = datetime.strptime(expiration_str, "%Y-%m-%d").date()
             except Exception as e:
-                logger.error(f"Error parsing expiration date from AI: {e}")
+                logger.error(f"Error parsing expiration date: {e}")
             
             # Update user state
             user_coupon_states[chat_id]['data'] = data
@@ -1288,20 +1168,9 @@ async def return_to_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     """
     user = await conn.fetchrow(query, chat_id)
     user_gender = await get_user_gender(user['user_id']) if user else None
-    
-    # Get slots for menu
-    slots = 0
-    if user:
-        try:
-            slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user['user_id'])
-            if slots_row:
-                slots = slots_row['slots_automatic_coupons']
-        except Exception as e:
-            logger.error(f"Error fetching slots_automatic_coupons: {e}")
-    
     await conn.close()
     
-    await update.message.reply_text(get_main_menu_text(user_gender, slots))
+    await update.message.reply_text(get_main_menu_text(user_gender))
 
 # Function to check if text is considered empty field
 def is_empty_field(text):
@@ -1597,119 +1466,129 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text(
             get_gender_specific_text(
                 user_gender,
-                f"כמה שילמת על הקופון?",
-                f"כמה שילמת על הקופון?"
+                "כמה שילמת על הקופון?",
+                "כמה שילמת על הקופון?"
             )
         )
         return
 
-    # Price stage with enhanced validation
+    # Price stage
     if state == CouponCreationState.ENTER_COST:
-        is_valid, value, error_msg = validate_monetary_value(text, "המחיר ששולם", allow_zero=True)
-        if not is_valid:
+        try:
+            if not text.isdigit():
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
+                        "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
+                    )
+                )
+                return
+            data['cost'] = float(text)
+            state_obj['state'] = CouponCreationState.ENTER_VALUE
             await update.message.reply_text(
                 get_gender_specific_text(
                     user_gender,
-                    f"❌ {error_msg}\n\nכמה שילמת על הקופון? (0-{MAX_COUPON_VALUE:,} שח)",
-                    f"❌ {error_msg}\n\nכמה שילמת על הקופון? (0-{MAX_COUPON_VALUE:,} שח)"
+                    "כמה הקופון שווה בפועל?",
+                    "כמה הקופון שווה בפועל?"
                 )
             )
-            return
-        
-        data['cost'] = value
-        state_obj['state'] = CouponCreationState.ENTER_VALUE
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                f"כמה הקופון שווה בפועל?",
-                f"כמה הקופון שווה בפועל?"
+        except ValueError:
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
+                    "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
+                )
             )
-        )
         return
 
-    # Value stage with enhanced validation
+    # Value stage
     if state == CouponCreationState.ENTER_VALUE:
-        is_valid, value, error_msg = validate_monetary_value(text, "הערך בפועל", allow_zero=False)
-        if not is_valid:
-            await update.message.reply_text(
-                get_gender_specific_text(
-                    user_gender,
-                    f"❌ {error_msg}\n\nכמה הקופון שווה בפועל? (1-{MAX_COUPON_VALUE:,} שח)",
-                    f"❌ {error_msg}\n\nכמה הקופון שווה בפועל? (1-{MAX_COUPON_VALUE:,} שח)"
+        try:
+            if not text.replace('.','',1).isdigit():
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        "אנא הזן מספר בלבד. כמה הקופון שווה בפועל?",
+                        "אנא הזיני מספר בלבד. כמה הקופון שווה בפועל?"
+                    )
                 )
-            )
-            return
-        
-        cost = data.get('cost', 0)
-        
-        # Check if value is greater than cost (for non-zero cost)
-        if cost > 0 and value <= cost:
-            await update.message.reply_text(
-                get_gender_specific_text(
-                    user_gender,
-                    f"😊 רגע, משהו לא מסתדר כאן!\n\n"
-                    f"שילמת על הקופון {cost}₪ אבל הערך שהזנת הוא {value}₪\n"
-                    f"הערך בפועל צריך להיות יותר ממה ששילמת, כדי שתהיה לך הנחה!\n\n"
-                    f"בוא נתחיל מחדש:\n"
-                    f"כמה שילמת על הקופון?",
-                    f"😊 רגע, משהו לא מסתדר כאן!\n\n"
-                    f"שילמת על הקופון {cost}₪ אבל הערך שהזנת הוא {value}₪\n"
-                    f"הערך בפועל צריך להיות יותר ממה ששילמת, כדי שתהיה לך הנחה!\n\n"
-                    f"בואי נתחיל מחדש:\n"
-                    f"כמה שילמת על הקופון?"
+                return
+            
+            value = float(text)
+            cost = data.get('cost', 0)
+            
+            # Check if value is greater than cost
+            if value <= cost:
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        f"😊 רגע, משהו לא מסתדר כאן!\n\n"
+                        f"שילמת על הקופון {cost}₪ אבל הערך שהזנת הוא {value}₪\n"
+                        f"הערך בפועל צריך להיות יותר ממה ששילמת, כדי שתהיה לך הנחה!\n\n"
+                        f"בוא נתחיל מחדש:\n"
+                        f"כמה שילמת על הקופון?",
+                        f"😊 רגע, משהו לא מסתדר כאן!\n\n"
+                        f"שילמת על הקופון {cost}₪ אבל הערך שהזנת הוא {value}₪\n"
+                        f"הערך בפועל צריך להיות יותר ממה ששילמת, כדי שתהיה לך הנחה!\n\n"
+                        f"בואי נתחיל מחדש:\n"
+                        f"כמה שילמת על הקופון?"
+                    )
                 )
-            )
-            # Reset to cost entry stage
-            state_obj['state'] = CouponCreationState.ENTER_COST
-            return
-        
-        data['value'] = value
-        
-        # Calculate discount percentage and show celebration message
-        if cost > 0:
+                # Reset to cost entry stage
+                state_obj['state'] = CouponCreationState.ENTER_COST
+                return
+            
+            data['value'] = value
+            
+            # Calculate discount percentage and show celebration message
             discount_percentage = round(((value - cost) / value) * 100)
             celebration_msg = get_gender_specific_text(
                 user_gender,
                 f"🎉 יפה! השגת {discount_percentage}% הנחה! כל הכבוד! 🎉",
                 f"🎉 יפה! השגת {discount_percentage}% הנחה! כל הכבוד! 🎉"
             )
-        else:
-            celebration_msg = get_gender_specific_text(
-                user_gender,
-                f"🎉 יפה! קופון חינמי בשווי {value}₪! זה 100% הנחה! 🎉",
-                f"🎉 יפה! קופון חינמי בשווי {value}₪! זה 100% הנחה! 🎉"
+            await update.message.reply_text(celebration_msg)
+            
+            state_obj['state'] = CouponCreationState.ENTER_EXPIRATION
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "מה תאריך התפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
+                    "אם אין תאריך תפוגה, כתוב 'אין'",
+                    "מה תאריך התפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
+                    "אם אין תאריך תפוגה, כתובי 'אין'"
+                )
             )
-        await update.message.reply_text(celebration_msg)
-        
-        state_obj['state'] = CouponCreationState.ENTER_EXPIRATION
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "מה תאריך התפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
-                "אם אין תאריך תפוגה, כתוב 'אין'",
-                "מה תאריך התפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
-                "אם אין תאריך תפוגה, כתובי 'אין'"
+        except ValueError:
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "אנא הזן מספר בלבד. כמה הקופון שווה בפועל?",
+                    "אנא הזיני מספר בלבד. כמה הקופון שווה בפועל?"
+                )
             )
-        )
         return
 
-    # Expiration date with enhanced validation
+    # Expiration date
     if state == CouponCreationState.ENTER_EXPIRATION:
-        if is_empty_field(text):
-            data['expiration'] = None
-        else:
-            is_valid, parsed_date, error_msg = validate_date_format(text)
-            if not is_valid:
-                await update.message.reply_text(
-                    get_gender_specific_text(
-                        user_gender,
-                        f"❌ {error_msg}\n\nנסה שוב (DD/MM/YYYY) או כתוב 'אין' אם אין תאריך תפוגה",
-                        f"❌ {error_msg}\n\nנסי שוב (DD/MM/YYYY) או כתבי 'אין' אם אין תאריך תפוגה"
-                    )
+        try:
+            if is_empty_field(text):
+                data['expiration'] = None
+            else:
+                data['expiration'] = datetime.strptime(text, "%d/%m/%Y").date()
+        except Exception:
+            await update.message.reply_text(
+                get_gender_specific_text(
+                    user_gender,
+                    "פורמט תאריך לא תקין. נסה שוב (DD/MM/YYYY)\n"
+                    "אם אין תאריך תפוגה, תכתוב 'אין'",
+                    "פורמט תאריך לא תקין. נסי שוב (DD/MM/YYYY)\n"
+                    "אם אין תאריך תפוגה, תכתבי 'אין'"
                 )
-                return
-            data['expiration'] = parsed_date
-            
+            )
+            return
         state_obj['state'] = CouponCreationState.ENTER_DESCRIPTION
         await update.message.reply_text(
             get_gender_specific_text(
@@ -1809,11 +1688,11 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
         )
         return
 
-    # Card expiration with enhanced validation
+    # Card expiration
     if state == CouponCreationState.ENTER_CARD_EXP:
         try:
             # Check MM/YY format
-            if not re.match(r'^\d{2}/\d{2}$', text):
+            if not '/' in text or len(text) != 5:
                 raise ValueError("Invalid format")
             
             month, year = text.split('/')
@@ -1835,7 +1714,7 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
                     "האם זה קוד לשימוש חד פעמי? (כן/לא)"
                 )
             )
-        except ValueError:
+        except ValueError as e:
             await update.message.reply_text(
                 get_gender_specific_text(
                     user_gender,
@@ -1947,16 +1826,16 @@ async def ask_for_field_value(update, field_name, user_gender):
         await update.message.reply_text(
             get_gender_specific_text(
                 user_gender,
-                f"כמה שילמת על הקופון?",
-                f"כמה שילמת על הקופון?"
+                "כמה שילמת על הקופון?",
+                "כמה שילמת על הקופון?"
             )
         )
     elif field_name == 'ערך בפועל':
         await update.message.reply_text(
             get_gender_specific_text(
                 user_gender,
-                f"כמה הקופון שווה בפועל?",
-                f"כמה הקופון שווה בפועל?"
+                "כמה הקופון שווה בפועל?",
+                "כמה הקופון שווה בפועל?"
             )
         )
     elif field_name == 'שימוש חד פעמי':
@@ -2028,22 +1907,21 @@ async def handle_field_edit(update, context, field_name, new_value, data, user_g
         elif field_name == 'קוד קופון':
             data['code'] = new_value
         elif field_name == 'מחיר ששולם':
-            is_valid, value, error_msg = validate_monetary_value(new_value, "המחיר ששולם", allow_zero=True)
-            if not is_valid:
+            if not new_value.isdigit():
                 await update.message.reply_text(
                     get_gender_specific_text(
                         user_gender,
-                        f"❌ {error_msg}\n\nכמה שילמת על הקופון? (0-{MAX_COUPON_VALUE:,} שח)",
-                        f"❌ {error_msg}\n\nכמה שילמת על הקופון? (0-{MAX_COUPON_VALUE:,} שח)"
+                        "אנא הזן מספר שלם בלבד. כמה שילמת על הקופון?",
+                        "אנא הזיני מספר שלם בלבד. כמה שילמת על הקופון?"
                     )
                 )
                 return
             
-            new_cost = value
+            new_cost = float(new_value)
             current_value = data.get('value', 0)
             
-            # Check if current value is less than or equal to new cost (only if cost > 0)
-            if new_cost > 0 and current_value <= new_cost:
+            # Check if current value is less than or equal to new cost
+            if current_value <= new_cost:
                 data['cost'] = new_cost
                 # Need to update value as well - ask for new value
                 state_obj['edit_field'] = 'ערך בפועל'
@@ -2070,29 +1948,28 @@ async def handle_field_edit(update, context, field_name, new_value, data, user_g
                     await update.message.reply_text(
                         get_gender_specific_text(
                             user_gender,
-                            f"כמה הקופון שווה בפועל?",
-                            f"כמה הקופון שווה בפועל?"
+                            "כמה הקופון שווה בפועל?",
+                            "כמה הקופון שווה בפועל?"
                         )
                     )
                     return
                 
         elif field_name == 'ערך בפועל':
-            is_valid, value, error_msg = validate_monetary_value(new_value, "הערך בפועל", allow_zero=False)
-            if not is_valid:
+            if not new_value.replace('.','',1).isdigit():
                 await update.message.reply_text(
                     get_gender_specific_text(
                         user_gender,
-                        f"❌ {error_msg}\n\nכמה הקופון שווה בפועל? (1-{MAX_COUPON_VALUE:,} שח)",
-                        f"❌ {error_msg}\n\nכמה הקופון שווה בפועל? (1-{MAX_COUPON_VALUE:,} שח)"
+                        "אנא הזן מספר בלבד. כמה הקופון שווה בפועל?",
+                        "אנא הזיני מספר בלבד. כמה הקופון שווה בפועל?"
                     )
                 )
                 return
             
-            new_value_float = value
+            new_value_float = float(new_value)
             current_cost = data.get('cost', 0)
             
-            # Check if new value is less than or equal to current cost (only if cost > 0)
-            if current_cost > 0 and new_value_float <= current_cost:
+            # Check if new value is less than or equal to current cost
+            if new_value_float <= current_cost:
                 await update.message.reply_text(
                     get_gender_specific_text(
                         user_gender,
@@ -2115,19 +1992,12 @@ async def handle_field_edit(update, context, field_name, new_value, data, user_g
             else:
                 data['value'] = new_value_float
                 # Calculate and show discount percentage
-                if current_cost > 0:
-                    discount_percentage = round(((new_value_float - current_cost) / new_value_float) * 100)
-                    celebration_msg = get_gender_specific_text(
-                        user_gender,
-                        f"🎉 יפה! השגת {discount_percentage}% הנחה! כל הכבוד! 🎉",
-                        f"🎉 יפה! השגת {discount_percentage}% הנחה! כל הכבוד! 🎉"
-                    )
-                else:
-                    celebration_msg = get_gender_specific_text(
-                        user_gender,
-                        f"🎉 יפה! קופון חינמי בשווי {new_value_float}₪! זה 100% הנחה! 🎉",
-                        f"🎉 יפה! קופון חינמי בשווי {new_value_float}₪! זה 100% הנחה! 🎉"
-                    )
+                discount_percentage = round(((new_value_float - current_cost) / new_value_float) * 100)
+                celebration_msg = get_gender_specific_text(
+                    user_gender,
+                    f"🎉 יפה! השגת {discount_percentage}% הנחה! כל הכבוד! 🎉",
+                    f"🎉 יפה! השגת {discount_percentage}% הנחה! כל הכבוד! 🎉"
+                )
                 await update.message.reply_text(celebration_msg)
                 
         elif field_name == 'שימוש חד פעמי':
@@ -2145,17 +2015,17 @@ async def handle_field_edit(update, context, field_name, new_value, data, user_g
             if is_empty_field(new_value):
                 data['expiration'] = None
             else:
-                is_valid, parsed_date, error_msg = validate_date_format(new_value)
-                if not is_valid:
+                try:
+                    data['expiration'] = datetime.strptime(new_value, "%d/%m/%Y").date()
+                except Exception:
                     await update.message.reply_text(
                         get_gender_specific_text(
                             user_gender,
-                            f"❌ {error_msg}\n\nנסה שוב (DD/MM/YYYY) או כתוב 'אין' אם אין תאריך תפוגה",
-                            f"❌ {error_msg}\n\nנסי שוב (DD/MM/YYYY) או כתבי 'אין' אם אין תאריך תפוגה"
+                            "פורמט תאריך לא תקין. נסה שוב (DD/MM/YYYY)\nאם אין תאריך תפוגה, כתוב 'אין'",
+                            "פורמט תאריך לא תקין. נסי שוב (DD/MM/YYYY)\nאם אין תאריך תפוגה, כתובי 'אין'"
                         )
                     )
                     return
-                data['expiration'] = parsed_date
         elif field_name == 'תיאור':
             data['description'] = None if is_empty_field(new_value) else new_value
         elif field_name == 'מקור':
@@ -2361,14 +2231,7 @@ async def handle_number_message(update: Update, context: ContextTypes.DEFAULT_TY
             await handle_menu_option(update, context)
         else:
             # Send menu again if choice is invalid
-            slots = 0
-            try:
-                slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user['user_id'])
-                if slots_row:
-                    slots = slots_row['slots_automatic_coupons']
-            except Exception as e:
-                logger.error(f"Error fetching slots_automatic_coupons: {e}")
-            await update.message.reply_text(get_main_menu_text(user_gender, slots))
+            await update.message.reply_text(get_main_menu_text(user_gender))
         
         await conn.close()
         
