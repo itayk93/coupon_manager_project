@@ -1306,6 +1306,7 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
 
     # Fuzzy company name matching stage
     if state == CouponCreationState.FUZZY_MATCH:
+        from fuzzywuzzy import fuzz
         
         # Find best matches
         matches = []
@@ -1339,8 +1340,8 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
                 state_obj['fuzzy_attempt'] = 1
                 msg = get_gender_specific_text(
                     user_gender,
-                    "לא מצאתי התאמות דומות. האם תוכל לכתוב שוב את שם החברה? (ניתן לנסות לכתוב גם באנגלית)",
-                    "לא מצאתי התאמות דומות. האם תוכלי לכתוב שוב את שם החברה? (ניתן לנסות לכתוב גם באנגלית)"
+                    "לא מצאתי התאמות דומות. האם תוכל לכתוב שוב את שם החברה?",
+                    "לא מצאתי התאמות דומות. האם תוכלי לכתוב שוב את שם החברה?"
                 )
                 await update.message.reply_text(msg)
             else:
@@ -1406,24 +1407,7 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
                 )
             )
             return
-        
-        # Check if this new company name already exists with fuzzy matching
-        best_match = None
-        best_ratio = 0
-        for company in companies:
-            ratio = fuzz.ratio(text.lower(), company.lower())
-            if ratio == 100:  # Exact match
-                best_match = company
-                best_ratio = ratio
-                break
-        
-        if best_ratio == 100:
-            # Found exact match - use existing company
-            data['company'] = best_match
-        else:
-            # No exact match - use as new company
-            data['company'] = text
-            
+        data['company'] = text
         state_obj['state'] = CouponCreationState.ENTER_CODE
         await update.message.reply_text(
             get_gender_specific_text(
@@ -1499,49 +1483,14 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
                     )
                 )
                 return
-            
-            value = float(text)
-            cost = data.get('cost', 0)
-            
-            # Check if value is greater than cost
-            if value <= cost:
-                await update.message.reply_text(
-                    get_gender_specific_text(
-                        user_gender,
-                        f"😊 רגע, משהו לא מסתדר כאן!\n\n"
-                        f"שילמת על הקופון {cost}₪ אבל הערך שהזנת הוא {value}₪\n"
-                        f"הערך בפועל צריך להיות יותר ממה ששילמת, כדי שתהיה לך הנחה!\n\n"
-                        f"בוא נתחיל מחדש:\n"
-                        f"כמה שילמת על הקופון?",
-                        f"😊 רגע, משהו לא מסתדר כאן!\n\n"
-                        f"שילמת על הקופון {cost}₪ אבל הערך שהזנת הוא {value}₪\n"
-                        f"הערך בפועל צריך להיות יותר ממה ששילמת, כדי שתהיה לך הנחה!\n\n"
-                        f"בואי נתחיל מחדש:\n"
-                        f"כמה שילמת על הקופון?"
-                    )
-                )
-                # Reset to cost entry stage
-                state_obj['state'] = CouponCreationState.ENTER_COST
-                return
-            
-            data['value'] = value
-            
-            # Calculate discount percentage and show celebration message
-            discount_percentage = round(((value - cost) / value) * 100)
-            celebration_msg = get_gender_specific_text(
-                user_gender,
-                f"🎉 יפה! השגת {discount_percentage}% הנחה! כל הכבוד! 🎉",
-                f"🎉 יפה! השגת {discount_percentage}% הנחה! כל הכבוד! 🎉"
-            )
-            await update.message.reply_text(celebration_msg)
-            
+            data['value'] = float(text)
             state_obj['state'] = CouponCreationState.ENTER_EXPIRATION
             await update.message.reply_text(
                 get_gender_specific_text(
                     user_gender,
-                    "מה תאריך התפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
+                    "מה תאריך תפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
                     "אם אין תאריך תפוגה, כתוב 'אין'",
-                    "מה תאריך התפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
+                    "מה תאריך תפוגה של הקופון? (פורמט: DD/MM/YYYY)\n"
                     "אם אין תאריך תפוגה, כתובי 'אין'"
                 )
             )
@@ -1577,12 +1526,10 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text(
             get_gender_specific_text(
                 user_gender,
-                "יש לך הערה או תיאור לקופון? 📝\n\n"
-                "💡 המלצה: אפשר להוסיף פה את ה-SMS שקיבלת כשקנית את הקופון\n\n"
-                "אם אין - פשוט תכתוב 'אין'",
-                "יש לך הערה או תיאור לקופון? 📝\n\n"
-                "💡 המלצה: אפשר להוסיף פה את ה-SMS שקיבלת כשקנית את הקופון\n\n"
-                "אם אין - פשוט תכתבי 'אין'"
+                "יש תיאור או הערות על הקופון?\n"
+                "אם אין תיאור, תכתוב 'אין'",
+                "יש תיאור או הערות על הקופון?\n"
+                "אם אין תיאור, תכתבי 'אין'"
             )
         )
         return
@@ -1677,17 +1624,17 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
         try:
             # Check MM/YY format
             if not '/' in text or len(text) != 5:
-                raise ValueError("Invalid format")
+                raise ValueError("פורמט לא תקין")
             
             month, year = text.split('/')
             
             # Check month is number between 1-12
             if not month.isdigit() or not (1 <= int(month) <= 12):
-                raise ValueError("Invalid month")
+                raise ValueError("חודש לא תקין")
             
             # Check year is 2-digit number
             if not year.isdigit() or len(year) != 2:
-                raise ValueError("Invalid year")
+                raise ValueError("שנה לא תקינה")
             
             data['card_exp'] = text
             state_obj['state'] = CouponCreationState.ASK_ONE_TIME
@@ -1892,44 +1839,7 @@ async def handle_field_edit(update, context, field_name, new_value, data, user_g
                     )
                 )
                 return
-            
-            new_cost = float(new_value)
-            current_value = data.get('value', 0)
-            
-            # Check if current value is less than or equal to new cost
-            if current_value <= new_cost:
-                data['cost'] = new_cost
-                # Need to update value as well - ask for new value
-                state_obj['edit_field'] = 'ערך בפועל'
-                await update.message.reply_text(
-                    get_gender_specific_text(
-                        user_gender,
-                        f"😊 רגע, משהו לא מסתדר כאן!\n\n"
-                        f"המחיר החדש ששולם הוא {new_cost}₪ אבל הערך בפועל הנוכחי הוא {current_value}₪\n"
-                        f"הערך בפועל צריך להיות יותר ממה ששילמת, כדי שתהיה לך הנחה!\n\n"
-                        f"כמה הקופון שווה בפועל?",
-                        f"😊 רגע, משהו לא מסתדר כאן!\n\n"
-                        f"המחיר החדש ששולם הוא {new_cost}₪ אבל הערך בפועל הנוכחי הוא {current_value}₪\n"
-                        f"הערך בפועל צריך להיות יותר ממה ששילמת, כדי שתהיה לך הנחה!\n\n"
-                        f"כמה הקופון שווה בפועל?"
-                    )
-                )
-                return
-            else:
-                data['cost'] = new_cost
-                # Check if we need to continue to ask for value (when coming from value edit error)
-                if state_obj.get('continue_to_value'):
-                    state_obj.pop('continue_to_value', None)
-                    state_obj['edit_field'] = 'ערך בפועל'
-                    await update.message.reply_text(
-                        get_gender_specific_text(
-                            user_gender,
-                            "כמה הקופון שווה בפועל?",
-                            "כמה הקופון שווה בפועל?"
-                        )
-                    )
-                    return
-                
+            data['cost'] = float(new_value)
         elif field_name == 'ערך בפועל':
             if not new_value.replace('.','',1).isdigit():
                 await update.message.reply_text(
@@ -1940,42 +1850,7 @@ async def handle_field_edit(update, context, field_name, new_value, data, user_g
                     )
                 )
                 return
-            
-            new_value_float = float(new_value)
-            current_cost = data.get('cost', 0)
-            
-            # Check if new value is less than or equal to current cost
-            if new_value_float <= current_cost:
-                await update.message.reply_text(
-                    get_gender_specific_text(
-                        user_gender,
-                        f"😊 רגע, משהו לא מסתדר כאן!\n\n"
-                        f"שילמת על הקופון {current_cost}₪ אבל הערך שהזנת הוא {new_value_float}₪\n"
-                        f"הערך בפועל צריך להיות יותר ממה ששילמת, כדי שתהיה לך הנחה!\n\n"
-                        f"בוא נתחיל מחדש:\n"
-                        f"כמה שילמת על הקופון?",
-                        f"😊 רגע, משהו לא מסתדר כאן!\n\n"
-                        f"שילמת על הקופון {current_cost}₪ אבל הערך שהזנת הוא {new_value_float}₪\n"
-                        f"הערך בפועל צריך להיות יותר ממה ששילמת, כדי שתהיה לך הנחה!\n\n"
-                        f"בואי נתחיל מחדש:\n"
-                        f"כמה שילמת על הקופון?"
-                    )
-                )
-                # Switch to editing cost field and flag that we need to continue to value
-                state_obj['edit_field'] = 'מחיר ששולם'
-                state_obj['continue_to_value'] = True
-                return
-            else:
-                data['value'] = new_value_float
-                # Calculate and show discount percentage
-                discount_percentage = round(((new_value_float - current_cost) / new_value_float) * 100)
-                celebration_msg = get_gender_specific_text(
-                    user_gender,
-                    f"🎉 יפה! השגת {discount_percentage}% הנחה! כל הכבוד! 🎉",
-                    f"🎉 יפה! השגת {discount_percentage}% הנחה! כל הכבוד! 🎉"
-                )
-                await update.message.reply_text(celebration_msg)
-                
+            data['value'] = float(new_value)
         elif field_name == 'שימוש חד פעמי':
             if new_value.lower() not in ['כן', 'לא']:
                 await update.message.reply_text(
@@ -2052,7 +1927,7 @@ async def handle_field_edit(update, context, field_name, new_value, data, user_g
                 "אירעה שגיאה בעריכת השדה. נסי שוב."
             )
         )
-        
+
 # Send summary for confirmation
 async def send_coupon_summary(update, data, user_gender):
     """Send coupon summary for user confirmation"""
