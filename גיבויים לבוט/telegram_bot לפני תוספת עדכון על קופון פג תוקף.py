@@ -6,7 +6,6 @@ import psycopg2
 import hashlib
 import secrets
 from datetime import datetime, timezone, timedelta
-import pytz
 from telegram import Update
 from telegram.ext import Application, ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
@@ -272,25 +271,23 @@ def get_main_menu_text(user_gender, slots=0):
         "2️⃣ חיפוש לפי חברה\n"
         "3️⃣ הוספת קופון חדש\n"
         "4️⃣ עדכון שימוש בקופון\n"
-        "5️⃣ למחוק קופון\n"
-        "6️⃣ להתנתק\n"
+        "5️⃣ להתנתק\n"
         "-------------------\n"
         "🤖 אפשרויות עם AI\n"
         f"(נותרו לך עוד {slots} סלוטים לשימוש ביכולות AI)\n"
-        "7️⃣ הוספת קופון חדש מטקסט חופשי\n\n"
-        "שלח לי מספר מ-1 עד 7",
+        "6️⃣ הוספת קופון חדש מטקסט חופשי\n\n"
+        "שלח לי מספר מ-1 עד 6",
         "🏠 מה תרצי לעשות?\n\n"
         "1️⃣ הקופונים שלי\n"
         "2️⃣ חיפוש לפי חברה\n"
         "3️⃣ הוספת קופון חדש\n"
         "4️⃣ עדכון שימוש בקופון\n"
-        "5️⃣ למחוק קופון\n"
-        "6️⃣ להתנתק\n"
+        "5️⃣ להתנתק\n"
         "-------------------\n"
         "🤖 אפשרויות עם AI\n"
         f"(נותרו לך עוד {slots} סלוטים לשימוש ביכולות AI)\n"
-        "7️⃣ הוספת קופון חדש מטקסט חופשי\n\n"
-        "שלחי לי מספר מ-1 עד 7"
+        "6️⃣ הוספת קופון חדש מטקסט חופשי\n\n"
+        "שלחי לי מספר מ-1 עד 6"
     )
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -503,11 +500,6 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_company_choice_for_usage(update, context)
         return
 
-    # Check if user is in company selection mode for coupon deletion
-    if user_states.get(chat_id) == "choose_company_for_delete":
-        await handle_company_choice_for_delete(update, context)
-        return
-
     # Check if user is in company selection mode
     if user_states.get(chat_id) == "choose_company":
         await handle_company_choice(update, context)
@@ -530,7 +522,7 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
             current_time = datetime.now(timezone.utc)
             if existing_user['verification_expires_at'] > current_time:
                 # Session is valid - check if this is a menu selection
-                if user_message in ['1', '2', '3', '4', '5', '6', '7']:
+                if user_message in ['1', '2', '3', '4', '5', '6']:
                     await handle_menu_option(update, context)
                     await conn.close()
                     return
@@ -1001,114 +993,6 @@ async def handle_company_choice_for_usage(update: Update, context: ContextTypes.
             "❌ אירעה שגיאה בטיפול בבקשה. אנא נסה שוב מאוחר יותר."
         )
 
-async def handle_company_choice_for_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle company selection for coupon deletion"""
-    chat_id = update.message.chat_id
-    user_message = update.message.text.strip()
-    
-    # Check session validity first
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
-    try:
-        conn = await get_async_db_connection()
-            
-        # Fetch user companies with active coupons
-        companies_query = """
-            SELECT DISTINCT company 
-            FROM coupon 
-            WHERE user_id = $1 
-            AND status = 'פעיל' 
-            ORDER BY company ASC
-        """
-        companies = await conn.fetch(companies_query, user_id)
-        
-        if not companies:
-            await update.message.reply_text('לא נמצאו חברות פעילות')
-            await conn.close()
-            return
-            
-        # Check if choice is valid
-        try:
-            choice = int(user_message)
-            if choice < 1 or choice > len(companies):
-                raise ValueError("Invalid choice")
-        except ValueError:
-            # If choice is invalid, show list again
-            message = "🏢 **בחר חברה מהרשימה:**\n\n"
-            for i, company in enumerate(companies, 1):
-                message += f"{i}. {company['company']}\n"
-            await update.message.reply_text(message)
-            await conn.close()
-            return
-            
-        # Fetch coupons for selected company
-        selected_company = companies[choice - 1]['company']
-        coupons_query = """
-            SELECT id, code, value, used_value, company, expiration, is_one_time, purpose
-            FROM coupon
-            WHERE user_id = $1
-            AND status = 'פעיל'
-            AND company = $2
-            ORDER BY date_added DESC
-        """
-        coupons = await conn.fetch(coupons_query, user_id, selected_company)
-        
-        if coupons:
-            # Display coupons with selection numbers
-            message = f"🗑️ **בחר קופון מ{selected_company} למחיקה:**\n\n"
-            for i, coupon in enumerate(coupons, 1):
-                remaining_value = coupon['value'] - coupon['used_value']
-                decrypted_code = decrypt_coupon_code(coupon['code'])
-                coupon_type = "🎫 חד פעמי" if coupon['is_one_time'] else "🔄 רגיל"
-                
-                message += (
-                    f"{i}. {coupon_type}\n"
-                    f"   🏷️ קוד: {decrypted_code}\n"
-                    f"   💰 ערך כולל: {coupon['value']}₪\n"
-                    f"   💵 נותר לשימוש: {remaining_value}₪\n"
-                )
-                if coupon['is_one_time'] and coupon['purpose']:
-                    message += f"   🎯 מטרה: {coupon['purpose']}\n"
-                message += "\n"
-            
-            message += get_gender_specific_text(
-                user_gender,
-                "כתוב את מספר הקופון שברצונך למחוק:",
-                "כתבי את מספר הקופון שברצונך למחוק:"
-            )
-            
-            # Store coupons data for next step
-            user_coupon_states[chat_id] = {
-                'state': CouponCreationState.CHOOSE_COUPON_FOR_DELETE,
-                'data': {},
-                'coupons': coupons,
-                'user_id': user_id
-            }
-            
-            await update.message.reply_text(message)
-        else:
-            await update.message.reply_text(f'לא נמצאו קופונים פעילים עבור {selected_company}')
-            # Return to main menu
-            await return_to_main_menu(update, context, chat_id)
-            
-        await conn.close()
-        user_states.pop(chat_id, None)  # Clear company selection state
-        
-    except Exception as e:
-        logger.error(f"Error in handle_company_choice_for_delete: {e}")
-        await update.message.reply_text(
-            "❌ אירעה שגיאה בטיפול בבקשה. אנא נסה שוב מאוחר יותר."
-        )
-
 async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle menu option selection"""
     chat_id = update.message.chat_id
@@ -1261,15 +1145,9 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
             return
             
         elif user_message == "5":
-            # Start coupon deletion process
-            await start_coupon_deletion(update, context, user_id)
-            await conn.close()
-            return
-            
-        elif user_message == "6":
             await disconnect(update, context)
             
-        elif user_message == "7":
+        elif user_message == "6":
             # AI free text analysis
             await start_ai_text_analysis(update, context, user_id)
             await conn.close()
@@ -1293,79 +1171,6 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(
             "😅 יש לי בעיה טכנית. תנסה שוב?"
         )
-
-async def start_coupon_deletion(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id):
-    """Start coupon deletion process"""
-    chat_id = update.message.chat_id
-    
-    # Check session validity first
-    is_valid, valid_user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
-    try:
-        conn = await get_async_db_connection()
-        
-        # Fetch user's companies with active coupons
-        companies_query = """
-            SELECT DISTINCT company 
-            FROM coupon 
-            WHERE user_id = $1 
-            AND status = 'פעיל' 
-            ORDER BY company ASC
-        """
-        companies = await conn.fetch(companies_query, user_id)
-        
-        if not companies:
-            await update.message.reply_text(
-                get_gender_specific_text(
-                    user_gender,
-                    "אין לך קופונים פעילים למחיקה 🤷‍♂️",
-                    "אין לך קופונים פעילים למחיקה 🤷‍♀️"
-                )
-            )
-            await return_to_main_menu(update, context, chat_id)
-            await conn.close()
-            return
-        
-        # Set user state for company selection for deletion
-        user_states[chat_id] = "choose_company_for_delete"
-        
-        # Show companies list
-        message = get_gender_specific_text(
-            user_gender,
-            "🗑️ **מאיזה חברה תרצה למחוק קופון?**\n\n",
-            "🗑️ **מאיזה חברה תרצי למחוק קופון?**\n\n"
-        )
-        for i, company in enumerate(companies, 1):
-            message += f"{i}. {company['company']}\n"
-        
-        message += get_gender_specific_text(
-            user_gender,
-            "\nבחר מספר מהרשימה:",
-            "\nבחרי מספר מהרשימה:"
-        )
-        
-        await update.message.reply_text(message)
-        await conn.close()
-        
-    except Exception as e:
-        logger.error(f"Error in start_coupon_deletion: {e}")
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "😅 אירעה שגיאה בתהליך. נסה שוב מהתפריט הראשי",
-                "😅 אירעה שגיאה בתהליך. נסי שוב מהתפריט הראשי"
-            )
-        )
-        await return_to_main_menu(update, context, chat_id)
 
 async def start_coupon_usage_update(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id):
     """Start coupon usage update process"""
@@ -1470,8 +1275,6 @@ class CouponCreationState(Enum):
     ASK_USAGE_TYPE = 26           # New state for asking usage type (partial/full)
     ENTER_USAGE_AMOUNT = 27       # New state for entering usage amount
     CONFIRM_USAGE_UPDATE = 28     # New state for confirming usage update
-    CHOOSE_COUPON_FOR_DELETE = 29  # New state for selecting coupon for deletion
-    CONFIRM_DELETE = 30            # New state for confirming deletion
 
 # Store state and responses for each user
 user_coupon_states = {}  # chat_id: {'state': CouponCreationState, 'data': {...}, 'edit_field': None}
@@ -1888,16 +1691,6 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
         await handle_coupon_selection_for_usage(update, context, text, user_id)
         return
 
-    # Handle coupon selection for deletion
-    if state == CouponCreationState.CHOOSE_COUPON_FOR_DELETE:
-        await handle_coupon_selection_for_delete(update, context, text, user_id)
-        return
-
-    # Handle delete confirmation
-    if state == CouponCreationState.CONFIRM_DELETE:
-        await handle_delete_confirmation(update, context, text, user_id)
-        return
-
     # Handle usage type selection (partial or full)
     if state == CouponCreationState.ASK_USAGE_TYPE:
         await handle_usage_type_selection(update, context, text, user_id)
@@ -1948,13 +1741,13 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
                     user_gender,
                     "איזה שדה תרצה לערוך? כתוב את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:\n\n"
                     "💡 שדה זה אחד מפרטי הקופון כמו:\n"
-                    "• שם החברה\n"
-                    "• קוד הקופון\n"
+                    "• חברה\n"
+                    "• קוד קופון\n"
                     "  וכו׳",
                     "איזה שדה תרצי לערוך? כתבי את שם השדה בדיוק כמו שמופיע בהודעה המסכמת:\n\n"
                     "💡 שדה זה אחד מפרטי הקופון כמו:\n"
-                    "• שם החברה\n"
-                    "• קוד הקופון\n"
+                    "• חברה\n"
+                    "• קוד קופון\n"
                     "  וכו׳",
                 )
             )
@@ -2561,143 +2354,6 @@ async def handle_coupon_selection_for_usage(update: Update, context: ContextType
                 user_gender,
                 "אנא בחר מספר תקין מהרשימה.",
                 "אנא בחרי מספר תקין מהרשימה."
-            )
-        )
-
-# Handle coupon selection for deletion
-async def handle_coupon_selection_for_delete(update: Update, context: ContextTypes.DEFAULT_TYPE, text, user_id):
-    """Handle coupon selection for deletion"""
-    chat_id = update.message.chat_id
-    state_obj = user_coupon_states.get(chat_id)
-    user_gender = await get_user_gender(user_id)
-    
-    try:
-        choice = int(text)
-        coupons = state_obj.get('coupons', [])
-        
-        if choice < 1 or choice > len(coupons):
-            raise ValueError("Invalid choice")
-        
-        # Get selected coupon
-        selected_coupon = coupons[choice - 1]
-        state_obj['selected_coupon'] = selected_coupon
-        state_obj['state'] = CouponCreationState.CONFIRM_DELETE
-        
-        # Show coupon details and ask for confirmation
-        remaining_value = selected_coupon['value'] - selected_coupon['used_value']
-        decrypted_code = decrypt_coupon_code(selected_coupon['code'])
-        
-        message = get_gender_specific_text(
-            user_gender,
-            f"⚠️ **אישור מחיקת קופון:**\n\n"
-            f"🏢 חברה: {selected_coupon['company']}\n"
-            f"🏷️ קוד: {decrypted_code}\n"
-            f"💰 ערך כולל: {selected_coupon['value']}₪\n"
-            f"💵 נותר לשימוש: {remaining_value}₪\n\n"
-            f"❗ האם אתה בטוח שברצונך למחוק את הקופון הזה?\n"
-            f"פעולה זו לא ניתנת לביטול!\n\n"
-            f"כתוב 'כן' לאישור או 'לא' לביטול:",
-            f"⚠️ **אישור מחיקת קופון:**\n\n"
-            f"🏢 חברה: {selected_coupon['company']}\n"
-            f"🏷️ קוד: {decrypted_code}\n"
-            f"💰 ערך כולל: {selected_coupon['value']}₪\n"
-            f"💵 נותר לשימוש: {remaining_value}₪\n\n"
-            f"❗ האם את בטוחה שברצונך למחוק את הקופון הזה?\n"
-            f"פעולה זו לא ניתנת לביטול!\n\n"
-            f"כתבי 'כן' לאישור או 'לא' לביטול:"
-        )
-        
-        await update.message.reply_text(message)
-        
-    except ValueError:
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "אנא בחר מספר תקין מהרשימה.",
-                "אנא בחרי מספר תקין מהרשימה."
-            )
-        )
-
-# Handle delete confirmation
-async def handle_delete_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE, text, user_id):
-    """Handle deletion confirmation"""
-    chat_id = update.message.chat_id
-    state_obj = user_coupon_states.get(chat_id)
-    user_gender = await get_user_gender(user_id)
-    
-    if text.lower() not in ['כן', 'לא']:
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "אנא ענה רק 'כן' או 'לא'",
-                "אנא עני רק 'כן' או 'לא'"
-            )
-        )
-        return
-    
-    if text.lower() == 'כן':
-        # Execute the deletion
-        await execute_coupon_deletion(update, context, state_obj, user_id)
-        await return_to_main_menu(update, context, chat_id)
-    else:
-        # Cancel and return to main menu
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "המחיקה בוטלה. חוזר לתפריט הראשי.",
-                "המחיקה בוטלה. חוזרת לתפריט הראשי."
-            )
-        )
-        await return_to_main_menu(update, context, chat_id)
-
-# Execute coupon deletion
-async def execute_coupon_deletion(update: Update, context: ContextTypes.DEFAULT_TYPE, state_obj, user_id):
-    """Execute the actual coupon deletion in database"""
-    chat_id = update.message.chat_id
-    user_gender = await get_user_gender(user_id)
-    selected_coupon = state_obj.get('selected_coupon')
-    
-    try:
-        conn = await get_async_db_connection()
-        
-        # Delete coupon from database
-        delete_coupon_query = """
-            DELETE FROM coupon 
-            WHERE id = $1 AND user_id = $2
-        """
-        result = await conn.execute(delete_coupon_query, selected_coupon['id'], user_id)
-        
-        # Send success message
-        if result == "DELETE 1":
-            decrypted_code = decrypt_coupon_code(selected_coupon['code'])
-            success_msg = get_gender_specific_text(
-                user_gender,
-                f"🗑️ הקופון נמחק בהצלחה!\n\n"
-                f"🏢 חברה: {selected_coupon['company']}\n"
-                f"🏷️ קוד: {decrypted_code}\n"
-                f"הקופון הוסר מהמערכת לצמיתות.",
-                f"🗑️ הקופון נמחק בהצלחה!\n\n"
-                f"🏢 חברה: {selected_coupon['company']}\n"
-                f"🏷️ קוד: {decrypted_code}\n"
-                f"הקופון הוסר מהמערכת לצמיתות."
-            )
-        else:
-            success_msg = get_gender_specific_text(
-                user_gender,
-                "❌ שגיאה במחיקת הקופון. יתכן שהקופון כבר נמחק.",
-                "❌ שגיאה במחיקת הקופון. יתכן שהקופון כבר נמחק."
-            )
-        
-        await update.message.reply_text(success_msg)
-        await conn.close()
-        
-    except Exception as e:
-        logger.error(f"Error executing coupon deletion: {e}")
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "😅 אירעה שגיאה במחיקת הקופון. אנא נסה שוב מאוחר יותר.",
-                "😅 אירעה שגיאה במחיקת הקופון. אנא נסי שוב מאוחר יותר."
             )
         )
 
@@ -3369,7 +3025,7 @@ async def handle_number_message(update: Update, context: ContextTypes.DEFAULT_TY
         conn = await asyncpg.connect(database_url, statement_cache_size=0)
         
         # Handle menu selection
-        if user_message in ['1', '2', '3', '4', '5', '6', '7']:
+        if user_message in ['1', '2', '3', '4', '5', '6']:
             await handle_menu_option(update, context)
         else:
             # Send menu again if choice is invalid
@@ -3414,147 +3070,6 @@ def get_gender_specific_text(gender, male_text, female_text):
         return female_text
     return male_text
 
-# Daily coupon expiration reminder functions
-def format_days_remaining(days):
-    """Format days remaining in Hebrew"""
-    if days == 0:
-        return "היום"
-    elif days == 1:
-        return "מחר"
-    elif days == 7:
-        return "בעוד שבוע"
-    else:
-        return f"בעוד {days} ימים"
-
-async def send_expiration_reminder(chat_id, coupons, user_gender):
-    """Send expiration reminder message to user"""
-    try:
-        bot = context_app.bot if 'context_app' in globals() else None
-        if not bot:
-            logger.error("Bot instance not available for sending reminders")
-            return
-        
-        message = get_gender_specific_text(
-            user_gender,
-            "🔔 **תזכורת קופונים**\n\n"
-            "הקופונים הבאים שלך יפוגו תוקף בקרוב:\n\n",
-            "🔔 **תזכורת קופונים**\n\n"
-            "הקופונים הבאים שלך יפוגו תוקף בקרוב:\n\n"
-        )
-        
-        for coupon in coupons:
-            # Calculate days remaining
-            expiration_date = coupon['expiration']
-            if isinstance(expiration_date, str):
-                expiration_date = datetime.strptime(expiration_date, '%Y-%m-%d').date()
-            
-            today = datetime.now(pytz.timezone('Asia/Jerusalem')).date()
-            days_remaining = (expiration_date - today).days
-            
-            remaining_value = coupon['value'] - coupon['used_value']
-            decrypted_code = decrypt_coupon_code(coupon['code'])
-            
-            time_text = format_days_remaining(days_remaining)
-            
-            message += (
-                f"🏢 **{coupon['company']}**\n"
-                f"🏷️ קוד: {decrypted_code}\n"
-                f"💰 ערך: {coupon['value']}₪\n"
-                f"💵 נותר: {remaining_value}₪\n"
-                f"⏰ יפוג תוקף: {time_text}\n\n"
-            )
-        
-        message += get_gender_specific_text(
-            user_gender,
-            "💡 זכור להשתמש בקופונים לפני שיפוגו!",
-            "💡 זכרי להשתמש בקופונים לפני שיפוגו!"
-        )
-        
-        await bot.send_message(chat_id=chat_id, text=message)
-        logger.info(f"Sent expiration reminder to chat_id {chat_id} for {len(coupons)} coupons")
-        
-    except Exception as e:
-        logger.error(f"Error sending expiration reminder to chat_id {chat_id}: {e}")
-
-async def check_expiring_coupons_for_all_users():
-    """Check all users for expiring coupons and send reminders"""
-    try:
-        conn = await get_async_db_connection()
-        
-        # Get all connected users
-        users_query = """
-            SELECT DISTINCT tu.telegram_chat_id, tu.user_id
-            FROM telegram_users tu
-            WHERE tu.is_verified = true 
-            AND tu.telegram_chat_id IS NOT NULL
-            AND tu.verification_expires_at > NOW()
-        """
-        users = await conn.fetch(users_query)
-        
-        logger.info(f"Checking expiring coupons for {len(users)} connected users")
-        
-        for user in users:
-            user_id = user['user_id']
-            chat_id = user['telegram_chat_id']
-            
-            # Get user's expiring coupons
-            coupons_query = """
-                SELECT * 
-                FROM coupon
-                WHERE user_id = $1
-                  AND status = 'פעיל'
-                  AND expiration IS NOT NULL
-                  AND expiration::date >= CURRENT_DATE
-                  AND expiration::date < CURRENT_DATE + INTERVAL '7 days'
-            """
-            coupons = await conn.fetch(coupons_query, user_id)
-            
-            if coupons:
-                # Get user gender
-                user_gender = await get_user_gender(user_id)
-                
-                # Send reminder
-                await send_expiration_reminder(chat_id, coupons, user_gender)
-                
-                logger.info(f"Sent reminder to user {user_id} for {len(coupons)} expiring coupons")
-        
-        await conn.close()
-        logger.info("Completed checking expiring coupons for all users")
-        
-    except Exception as e:
-        logger.error(f"Error in check_expiring_coupons_for_all_users: {e}")
-
-async def schedule_daily_reminder():
-    """Schedule daily reminder at 10 AM Israel time"""
-    while True:
-        try:
-            # Get current time in Israel timezone
-            israel_tz = pytz.timezone('Asia/Jerusalem')
-            now = datetime.now(israel_tz)
-            
-            # Calculate next 10 AM
-            next_10am = now.replace(hour=10, minute=0, second=0, microsecond=0)
-            if now >= next_10am:
-                # If it's already past 10 AM today, schedule for tomorrow
-                next_10am += timedelta(days=1)
-            
-            # Calculate seconds until next 10 AM
-            sleep_seconds = (next_10am - now).total_seconds()
-            
-            logger.info(f"Scheduling next coupon expiration check at {next_10am} (in {sleep_seconds:.0f} seconds)")
-            
-            # Sleep until 10 AM
-            await asyncio.sleep(sleep_seconds)
-            
-            # Run the check
-            logger.info("Running daily coupon expiration check...")
-            await check_expiring_coupons_for_all_users()
-            
-        except Exception as e:
-            logger.error(f"Error in schedule_daily_reminder: {e}")
-            # Wait 1 hour before retrying
-            await asyncio.sleep(3600)
-
 def create_bot_application():
     """
     Create and return bot application without running it.
@@ -3596,17 +3111,6 @@ def run_bot():
     """
     app = create_bot_application()
     if app:
-        # Store app globally for reminder function
-        global context_app
-        context_app = app
-        
-        # Start daily reminder scheduler in background
-        async def start_scheduler():
-            asyncio.create_task(schedule_daily_reminder())
-        
-        # Add scheduler to bot startup
-        app.post_init = start_scheduler
-        
         app.run_polling(allowed_updates=['message', 'callback_query'])
 
 if __name__ == '__main__':
