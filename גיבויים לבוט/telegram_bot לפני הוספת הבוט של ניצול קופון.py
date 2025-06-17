@@ -263,31 +263,29 @@ first_message = None
 user_states = {}
 
 def get_main_menu_text(user_gender, slots=0):
-    """Return main menu text with updated options"""
+    """Return main menu text"""
     return get_gender_specific_text(
         user_gender,
         "🏠 מה תרצה לעשות?\n\n"
         "1️⃣ הקופונים שלי\n"
         "2️⃣ חיפוש לפי חברה\n"
         "3️⃣ הוספת קופון חדש\n"
-        "4️⃣ עדכון שימוש בקופון\n"
-        "5️⃣ להתנתק\n"
+        "4️⃣ להתנתק\n"
         "-------------------\n"
         "🤖 אפשרויות עם AI\n"
         f"(נותרו לך עוד {slots} סלוטים לשימוש ביכולות AI)\n"
-        "6️⃣ הוספת קופון חדש מטקסט חופשי\n\n"
-        "שלח לי מספר מ-1 עד 6",
+        "5️⃣ הוספת קופון בטקסט חופשי\n\n"
+        "שלח לי מספר מ-1 עד 5",
         "🏠 מה תרצי לעשות?\n\n"
         "1️⃣ הקופונים שלי\n"
         "2️⃣ חיפוש לפי חברה\n"
         "3️⃣ הוספת קופון חדש\n"
-        "4️⃣ עדכון שימוש בקופון\n"
-        "5️⃣ להתנתק\n"
+        "4️⃣ להתנתק\n"
         "-------------------\n"
         "🤖 אפשרויות עם AI\n"
         f"(נותרו לך עוד {slots} סלוטים לשימוש ביכולות AI)\n"
-        "6️⃣ הוספת קופון חדש מטקסט חופשי\n\n"
-        "שלחי לי מספר מ-1 עד 6"
+        "5️⃣ הוספת קופון בטקסט חופשי\n\n"
+        "שלחי לי מספר מ-1 עד 5"
     )
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -495,11 +493,6 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Print received code to console
     logger.info(f"[CONSOLE] User entered code: {user_message}")
 
-    # Check if user is in company selection mode for coupon usage update
-    if user_states.get(chat_id) == "choose_company_for_usage":
-        await handle_company_choice_for_usage(update, context)
-        return
-
     # Check if user is in company selection mode
     if user_states.get(chat_id) == "choose_company":
         await handle_company_choice(update, context)
@@ -522,7 +515,7 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
             current_time = datetime.now(timezone.utc)
             if existing_user['verification_expires_at'] > current_time:
                 # Session is valid - check if this is a menu selection
-                if user_message in ['1', '2', '3', '4', '5', '6']:
+                if user_message in ['1', '2', '3', '4', '5']:
                     await handle_menu_option(update, context)
                     await conn.close()
                     return
@@ -885,114 +878,6 @@ async def handle_company_choice(update: Update, context: ContextTypes.DEFAULT_TY
             "❌ אירעה שגיאה בטיפול בבקשה. אנא נסה שוב מאוחר יותר."
         )
 
-async def handle_company_choice_for_usage(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle company selection for coupon usage update"""
-    chat_id = update.message.chat_id
-    user_message = update.message.text.strip()
-    
-    # Check session validity first
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
-    try:
-        conn = await get_async_db_connection()
-            
-        # Fetch user companies with active coupons
-        companies_query = """
-            SELECT DISTINCT company 
-            FROM coupon 
-            WHERE user_id = $1 
-            AND status = 'פעיל' 
-            ORDER BY company ASC
-        """
-        companies = await conn.fetch(companies_query, user_id)
-        
-        if not companies:
-            await update.message.reply_text('לא נמצאו חברות פעילות')
-            await conn.close()
-            return
-            
-        # Check if choice is valid
-        try:
-            choice = int(user_message)
-            if choice < 1 or choice > len(companies):
-                raise ValueError("Invalid choice")
-        except ValueError:
-            # If choice is invalid, show list again
-            message = "🏢 **בחר חברה מהרשימה:**\n\n"
-            for i, company in enumerate(companies, 1):
-                message += f"{i}. {company['company']}\n"
-            await update.message.reply_text(message)
-            await conn.close()
-            return
-            
-        # Fetch coupons for selected company
-        selected_company = companies[choice - 1]['company']
-        coupons_query = """
-            SELECT id, code, value, used_value, company, expiration, is_one_time, purpose
-            FROM coupon
-            WHERE user_id = $1
-            AND status = 'פעיל'
-            AND company = $2
-            ORDER BY date_added DESC
-        """
-        coupons = await conn.fetch(coupons_query, user_id, selected_company)
-        
-        if coupons:
-            # Display coupons with selection numbers
-            message = f"🎯 **בחר קופון מ{selected_company} לעדכון שימוש:**\n\n"
-            for i, coupon in enumerate(coupons, 1):
-                remaining_value = coupon['value'] - coupon['used_value']
-                decrypted_code = decrypt_coupon_code(coupon['code'])
-                coupon_type = "🎫 חד פעמי" if coupon['is_one_time'] else "🔄 רגיל"
-                
-                message += (
-                    f"{i}. {coupon_type}\n"
-                    f"   🏷️ קוד: {decrypted_code}\n"
-                    f"   💰 ערך כולל: {coupon['value']}₪\n"
-                    f"   💵 נותר לשימוש: {remaining_value}₪\n"
-                )
-                if coupon['is_one_time'] and coupon['purpose']:
-                    message += f"   🎯 מטרה: {coupon['purpose']}\n"
-                message += "\n"
-            
-            message += get_gender_specific_text(
-                user_gender,
-                "כתוב את מספר הקופון שברצונך לעדכן:",
-                "כתבי את מספר הקופון שברצונך לעדכן:"
-            )
-            
-            # Store coupons data for next step
-            user_coupon_states[chat_id] = {
-                'state': CouponCreationState.CHOOSE_COUPON_FOR_USAGE,
-                'data': {},
-                'coupons': coupons,
-                'user_id': user_id
-            }
-            
-            await update.message.reply_text(message)
-        else:
-            await update.message.reply_text(f'לא נמצאו קופונים פעילים עבור {selected_company}')
-            # Return to main menu
-            await return_to_main_menu(update, context, chat_id)
-            
-        await conn.close()
-        user_states.pop(chat_id, None)  # Clear company selection state
-        
-    except Exception as e:
-        logger.error(f"Error in handle_company_choice_for_usage: {e}")
-        await update.message.reply_text(
-            "❌ אירעה שגיאה בטיפול בבקשה. אנא נסה שוב מאוחר יותר."
-        )
-
 async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle menu option selection"""
     chat_id = update.message.chat_id
@@ -1139,16 +1024,10 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
             return
             
         elif user_message == "4":
-            # Start coupon usage update process
-            await start_coupon_usage_update(update, context, user_id)
-            await conn.close()
-            return
-            
-        elif user_message == "5":
             await disconnect(update, context)
             
-        elif user_message == "6":
-            # AI free text analysis
+        elif user_message == "5":
+            # New option - AI free text analysis
             await start_ai_text_analysis(update, context, user_id)
             await conn.close()
             return
@@ -1171,79 +1050,6 @@ async def handle_menu_option(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(
             "😅 יש לי בעיה טכנית. תנסה שוב?"
         )
-
-async def start_coupon_usage_update(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id):
-    """Start coupon usage update process"""
-    chat_id = update.message.chat_id
-    
-    # Check session validity first
-    is_valid, valid_user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
-    try:
-        conn = await get_async_db_connection()
-        
-        # Fetch user's companies with active coupons
-        companies_query = """
-            SELECT DISTINCT company 
-            FROM coupon 
-            WHERE user_id = $1 
-            AND status = 'פעיל' 
-            ORDER BY company ASC
-        """
-        companies = await conn.fetch(companies_query, user_id)
-        
-        if not companies:
-            await update.message.reply_text(
-                get_gender_specific_text(
-                    user_gender,
-                    "אין לך קופונים פעילים לעדכון שימוש 🤷‍♂️",
-                    "אין לך קופונים פעילים לעדכון שימוש 🤷‍♀️"
-                )
-            )
-            await return_to_main_menu(update, context, chat_id)
-            await conn.close()
-            return
-        
-        # Set user state for company selection for usage update
-        user_states[chat_id] = "choose_company_for_usage"
-        
-        # Show companies list
-        message = get_gender_specific_text(
-            user_gender,
-            "📝 **איזה חברה רוצה לעדכן שימוש בקופון?**\n\n",
-            "📝 **איזה חברה רוצית לעדכן שימוש בקופון?**\n\n"
-        )
-        for i, company in enumerate(companies, 1):
-            message += f"{i}. {company['company']}\n"
-        
-        message += get_gender_specific_text(
-            user_gender,
-            "\nבחר מספר מהרשימה:",
-            "\nבחרי מספר מהרשימה:"
-        )
-        
-        await update.message.reply_text(message)
-        await conn.close()
-        
-    except Exception as e:
-        logger.error(f"Error in start_coupon_usage_update: {e}")
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "😅 אירעה שגיאה בתהליך. נסה שוב מהתפריט הראשי",
-                "😅 אירעה שגיאה בתהליך. נסי שוב מהתפריט הראשי"
-            )
-        )
-        await return_to_main_menu(update, context, chat_id)
 
 # --- FSM states for coupon creation ---
 class CouponCreationState(Enum):
@@ -1271,10 +1077,6 @@ class CouponCreationState(Enum):
     EDIT_FIELD_SELECTION = 22  # New state for field selection during edit
     EDIT_FIELD_CONFIRM = 23    # New state for confirming fuzzy matched field
     EDIT_FIELD_VALUE = 24      # New state for entering new field value
-    CHOOSE_COUPON_FOR_USAGE = 25  # New state for selecting coupon for usage update
-    ASK_USAGE_TYPE = 26           # New state for asking usage type (partial/full)
-    ENTER_USAGE_AMOUNT = 27       # New state for entering usage amount
-    CONFIRM_USAGE_UPDATE = 28     # New state for confirming usage update
 
 # Store state and responses for each user
 user_coupon_states = {}  # chat_id: {'state': CouponCreationState, 'data': {...}, 'edit_field': None}
@@ -1684,26 +1486,6 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
     # Check if user wants to return to main menu
     if text.lower() in ['תפריט', 'חזור', 'ביטול', 'exit', 'menu', 'cancel']:
         await return_to_main_menu(update, context, chat_id)
-        return
-
-    # Handle coupon selection for usage update
-    if state == CouponCreationState.CHOOSE_COUPON_FOR_USAGE:
-        await handle_coupon_selection_for_usage(update, context, text, user_id)
-        return
-
-    # Handle usage type selection (partial or full)
-    if state == CouponCreationState.ASK_USAGE_TYPE:
-        await handle_usage_type_selection(update, context, text, user_id)
-        return
-
-    # Handle usage amount entry
-    if state == CouponCreationState.ENTER_USAGE_AMOUNT:
-        await handle_usage_amount_entry(update, context, text, user_id)
-        return
-
-    # Handle usage update confirmation
-    if state == CouponCreationState.CONFIRM_USAGE_UPDATE:
-        await handle_usage_update_confirmation(update, context, text, user_id)
         return
 
     # Handle AI free text analysis
@@ -2301,304 +2083,6 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
             )
         return
 
-# Handle coupon selection for usage update
-async def handle_coupon_selection_for_usage(update: Update, context: ContextTypes.DEFAULT_TYPE, text, user_id):
-    """Handle coupon selection for usage update"""
-    chat_id = update.message.chat_id
-    state_obj = user_coupon_states.get(chat_id)
-    user_gender = await get_user_gender(user_id)
-    
-    try:
-        choice = int(text)
-        coupons = state_obj.get('coupons', [])
-        
-        if choice < 1 or choice > len(coupons):
-            raise ValueError("Invalid choice")
-        
-        # Get selected coupon
-        selected_coupon = coupons[choice - 1]
-        state_obj['selected_coupon'] = selected_coupon
-        state_obj['state'] = CouponCreationState.ASK_USAGE_TYPE
-        
-        # Show coupon details and ask for usage type
-        remaining_value = selected_coupon['value'] - selected_coupon['used_value']
-        decrypted_code = decrypt_coupon_code(selected_coupon['code'])
-        
-        message = get_gender_specific_text(
-            user_gender,
-            f"📝 **עדכון שימוש בקופון:**\n\n"
-            f"🏢 חברה: {selected_coupon['company']}\n"
-            f"🏷️ קוד: {decrypted_code}\n"
-            f"💰 ערך כולל: {selected_coupon['value']}₪\n"
-            f"💵 נותר לשימוש: {remaining_value}₪\n\n"
-            f"מה ברצונך לעשות?\n\n"
-            f"1️⃣ לעדכן סכום שהשתמשת\n"
-            f"2️⃣ לסמן כנוצל לגמרי\n\n"
-            f"כתוב 1 או 2:",
-            f"📝 **עדכון שימוש בקופון:**\n\n"
-            f"🏢 חברה: {selected_coupon['company']}\n"
-            f"🏷️ קוד: {decrypted_code}\n"
-            f"💰 ערך כולל: {selected_coupon['value']}₪\n"
-            f"💵 נותר לשימוש: {remaining_value}₪\n\n"
-            f"מה ברצונך לעשות?\n\n"
-            f"1️⃣ לעדכן סכום שהשתמשת\n"
-            f"2️⃣ לסמן כנוצל לגמרי\n\n"
-            f"כתבי 1 או 2:"
-        )
-        
-        await update.message.reply_text(message)
-        
-    except ValueError:
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "אנא בחר מספר תקין מהרשימה.",
-                "אנא בחרי מספר תקין מהרשימה."
-            )
-        )
-
-# Handle usage type selection (partial or full)
-async def handle_usage_type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE, text, user_id):
-    """Handle usage type selection"""
-    chat_id = update.message.chat_id
-    state_obj = user_coupon_states.get(chat_id)
-    user_gender = await get_user_gender(user_id)
-    selected_coupon = state_obj.get('selected_coupon')
-    
-    if text not in ['1', '2']:
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "אנא בחר 1 או 2 בלבד.",
-                "אנא בחרי 1 או 2 בלבד."
-            )
-        )
-        return
-    
-    if text == '1':
-        # Partial usage - ask for amount
-        state_obj['usage_type'] = 'partial'
-        state_obj['state'] = CouponCreationState.ENTER_USAGE_AMOUNT
-        
-        remaining_value = selected_coupon['value'] - selected_coupon['used_value']
-        
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                f"💰 כמה שקלים השתמשת מהקופון?\n\n"
-                f"💡 זכור: נותר לשימוש {remaining_value}₪\n"
-                f"אתה יכול להזין סכום בין 1 ל-{remaining_value}₪:",
-                f"💰 כמה שקלים השתמשת מהקופון?\n\n"
-                f"💡 זכרי: נותר לשימוש {remaining_value}₪\n"
-                f"את יכולה להזין סכום בין 1 ל-{remaining_value}₪:"
-            )
-        )
-    else:
-        # Full usage - mark as fully used
-        state_obj['usage_type'] = 'full'
-        remaining_value = selected_coupon['value'] - selected_coupon['used_value']
-        state_obj['usage_amount'] = remaining_value
-        state_obj['state'] = CouponCreationState.CONFIRM_USAGE_UPDATE
-        
-        decrypted_code = decrypt_coupon_code(selected_coupon['code'])
-        
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                f"✅ **אישור עדכון שימוש:**\n\n"
-                f"אני אעדכן שבקופון של {selected_coupon['company']} השתמשת ב-{remaining_value} שקל וניצלת את כל הקופון.\n"
-                f"הקופון יירשם כמנוצל לגמרי.\n\n"
-                f"האם לאשר? (כן/לא)",
-                f"✅ **אישור עדכון שימוש:**\n\n"
-                f"אני אעדכן שבקופון של {selected_coupon['company']} השתמשת ב-{remaining_value} שקל וניצלת את כל הקופון.\n"
-                f"הקופון יירשם כמנוצל לגמרי.\n\n"
-                f"האם לאשר? (כן/לא)"
-            )
-        )
-
-# Handle usage amount entry
-async def handle_usage_amount_entry(update: Update, context: ContextTypes.DEFAULT_TYPE, text, user_id):
-    """Handle usage amount entry"""
-    chat_id = update.message.chat_id
-    state_obj = user_coupon_states.get(chat_id)
-    user_gender = await get_user_gender(user_id)
-    selected_coupon = state_obj.get('selected_coupon')
-    
-    # Validate amount
-    is_valid, amount, error_msg = validate_monetary_value(text, "הסכום שהשתמשת", allow_zero=False)
-    if not is_valid:
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                f"❌ {error_msg}\n\nאנא הזן סכום תקין:",
-                f"❌ {error_msg}\n\nאנא הזיני סכום תקין:"
-            )
-        )
-        return
-    
-    remaining_value = selected_coupon['value'] - selected_coupon['used_value']
-    
-    # Check if amount is not greater than remaining value
-    if amount > remaining_value:
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                f"❌ לא ניתן לסמן שהשתמשת ב-{amount}₪ כי נותר רק {remaining_value}₪ בקופון!\n\n"
-                f"אנא הזן סכום עד {remaining_value}₪:",
-                f"❌ לא ניתן לסמן שהשתמשת ב-{amount}₪ כי נותר רק {remaining_value}₪ בקופון!\n\n"
-                f"אנא הזיני סכום עד {remaining_value}₪:"
-            )
-        )
-        return
-    
-    # Store usage amount and move to confirmation
-    state_obj['usage_amount'] = amount
-    state_obj['state'] = CouponCreationState.CONFIRM_USAGE_UPDATE
-    
-    # Check if this amount will fully use the coupon
-    will_be_fully_used = (selected_coupon['used_value'] + amount) >= selected_coupon['value']
-    new_remaining = remaining_value - amount
-    
-    if will_be_fully_used:
-        message = get_gender_specific_text(
-            user_gender,
-            f"✅ **אישור עדכון שימוש:**\n\n"
-            f"אני אעדכן שבקופון של {selected_coupon['company']} השתמשת ב-{amount} שקל וניצלת את כל הקופון.\n"
-            f"הקופון יירשם כמנוצל לגמרי.\n\n"
-            f"האם לאשר? (כן/לא)",
-            f"✅ **אישור עדכון שימוש:**\n\n"
-            f"אני אעדכן שבקופון של {selected_coupon['company']} השתמשת ב-{amount} שקל וניצלת את כל הקופון.\n"
-            f"הקופון יירשם כמנוצל לגמרי.\n\n"
-            f"האם לאשר? (כן/לא)"
-        )
-    else:
-        message = get_gender_specific_text(
-            user_gender,
-            f"✅ **אישור עדכון שימוש:**\n\n"
-            f"אני אעדכן שבקופון של {selected_coupon['company']} השתמשת ב-{amount} שקל.\n"
-            f"אחרי העדכון יישאר לך להשתמש בעוד {new_remaining} שקל עד ניצול מלא של הקופון.\n\n"
-            f"האם לאשר? (כן/לא)",
-            f"✅ **אישור עדכון שימוש:**\n\n"
-            f"אני אעדכן שבקופון של {selected_coupon['company']} השתמשת ב-{amount} שקל.\n"
-            f"אחרי העדכון יישאר לך להשתמש בעוד {new_remaining} שקל עד ניצול מלא של הקופון.\n\n"
-            f"האם לאשר? (כן/לא)"
-        )
-    
-    await update.message.reply_text(message)
-
-# Handle usage update confirmation
-async def handle_usage_update_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE, text, user_id):
-    """Handle usage update confirmation"""
-    chat_id = update.message.chat_id
-    state_obj = user_coupon_states.get(chat_id)
-    user_gender = await get_user_gender(user_id)
-    
-    if text.lower() not in ['כן', 'לא']:
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "אנא ענה רק 'כן' או 'לא'",
-                "אנא עני רק 'כן' או 'לא'"
-            )
-        )
-        return
-    
-    if text.lower() == 'כן':
-        # Execute the usage update
-        await execute_usage_update(update, context, state_obj, user_id)
-        await return_to_main_menu(update, context, chat_id)
-    else:
-        # Cancel and return to main menu
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "העדכון בוטל. חוזר לתפריט הראשי.",
-                "העדכון בוטל. חוזרת לתפריט הראשי."
-            )
-        )
-        await return_to_main_menu(update, context, chat_id)
-
-# Execute usage update in database
-async def execute_usage_update(update: Update, context: ContextTypes.DEFAULT_TYPE, state_obj, user_id):
-    """Execute the actual usage update in database"""
-    chat_id = update.message.chat_id
-    user_gender = await get_user_gender(user_id)
-    selected_coupon = state_obj.get('selected_coupon')
-    usage_amount = state_obj.get('usage_amount')
-    usage_type = state_obj.get('usage_type')
-    
-    try:
-        conn = await get_async_db_connection()
-        
-        # Calculate new used_value
-        new_used_value = selected_coupon['used_value'] + usage_amount
-        
-        # Determine if coupon will be fully used
-        will_be_fully_used = new_used_value >= selected_coupon['value']
-        new_status = 'נוצל' if will_be_fully_used else 'פעיל'
-        
-        # Update coupon table
-        update_coupon_query = """
-            UPDATE coupon 
-            SET used_value = $1, status = $2
-            WHERE id = $3
-        """
-        await conn.execute(update_coupon_query, new_used_value, new_status, selected_coupon['id'])
-        
-        # Add entry to coupon_usage table
-        if will_be_fully_used or usage_type == 'full':
-            # Full usage
-            insert_usage_query = """
-                INSERT INTO coupon_usage (coupon_id, used_amount, timestamp, action, details)
-                VALUES ($1, $2, NOW(), 'נוצל לגמרי', 'סומן על ידי המשתמש כ"נוצל לגמרי".')
-            """
-            action_text = "נוצל לגמרי"
-        else:
-            # Partial usage
-            insert_usage_query = """
-                INSERT INTO coupon_usage (coupon_id, used_amount, timestamp, action, details)
-                VALUES ($1, $2, NOW(), 'שימוש', 'שימוש ידני')
-            """
-            action_text = "שימוש"
-        
-        await conn.execute(insert_usage_query, selected_coupon['id'], usage_amount)
-        
-        # Send success message
-        if will_be_fully_used or usage_type == 'full':
-            success_msg = get_gender_specific_text(
-                user_gender,
-                f"🎉 עודכן בהצלחה!\n\n"
-                f"הקופון של {selected_coupon['company']} סומן כמנוצל לגמרי.\n"
-                f"השתמשת ב-{usage_amount} שקל והקופון הושלם.",
-                f"🎉 עודכן בהצלחה!\n\n"
-                f"הקופון של {selected_coupon['company']} סומן כמנוצל לגמרי.\n"
-                f"השתמשת ב-{usage_amount} שקל והקופון הושלם."
-            )
-        else:
-            remaining = selected_coupon['value'] - new_used_value
-            success_msg = get_gender_specific_text(
-                user_gender,
-                f"🎉 עודכן בהצלחה!\n\n"
-                f"בקופון של {selected_coupon['company']} השתמשת ב-{usage_amount} שקל.\n"
-                f"נותר לך עוד {remaining} שקל לשימוש.",
-                f"🎉 עודכן בהצלחה!\n\n"
-                f"בקופון של {selected_coupon['company']} השתמשת ב-{usage_amount} שקל.\n"
-                f"נותר לך עוד {remaining} שקל לשימוש."
-            )
-        
-        await update.message.reply_text(success_msg)
-        await conn.close()
-        
-    except Exception as e:
-        logger.error(f"Error executing usage update: {e}")
-        await update.message.reply_text(
-            get_gender_specific_text(
-                user_gender,
-                "😅 אירעה שגיאה בעדכון הקופון. אנא נסה שוב מאוחר יותר.",
-                "😅 אירעה שגיאה בעדכון הקופון. אנא נסי שוב מאוחר יותר."
-            )
-        )
-
 # Helper function to ask for field value based on field type
 async def ask_for_field_value(update, field_name, user_gender):
     """Ask user for new value based on field type"""
@@ -3025,7 +2509,7 @@ async def handle_number_message(update: Update, context: ContextTypes.DEFAULT_TY
         conn = await asyncpg.connect(database_url, statement_cache_size=0)
         
         # Handle menu selection
-        if user_message in ['1', '2', '3', '4', '5', '6']:
+        if user_message in ['1', '2', '3', '4', '5']:
             await handle_menu_option(update, context)
         else:
             # Send menu again if choice is invalid
