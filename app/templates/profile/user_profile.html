@@ -53,14 +53,13 @@
     </div>
 
     <!-- Telegram Bot Connection -->
-    {% if is_admin %}
     <div class="telegram-connection">
         <h3><i class="fa fa-telegram"></i> התחברות לבוט טלגרם</h3>
-        {% if telegram_user and telegram_user.is_verified %}
+        {% if telegram_user and (telegram_user.is_verified if telegram_user.is_verified is defined else True) %}
             <div class="telegram-status connected">
                 <i class="fa fa-check-circle"></i>
                 <span>מחובר לבוט טלגרם</span>
-                <small>שם משתמש: @{{ telegram_user.telegram_username }}</small>
+                <small>שם משתמש: @{{ telegram_user.telegram_username if telegram_user.telegram_username is defined else telegram_user.username }}</small>
             </div>
         {% else %}
             <div class="telegram-status not-connected">
@@ -71,7 +70,6 @@
             </div>
         {% endif %}
     </div>
-    {% endif %}
 
     <!-- Add Change Password Button -->
     {% if is_owner %}

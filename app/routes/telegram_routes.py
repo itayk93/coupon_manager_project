@@ -23,6 +23,24 @@ def get_telegram_config():
         return None
     return config
 
+@telegram_bp.route('/bot', methods=['GET'])
+@login_required
+def telegram_bot_page():
+    """
+    עמוד שיווקי לבוט הטלגרם
+    """
+    config = get_telegram_config()
+    if not config:
+        return render_template('telegram/error.html', error="הבוט לא מוגדר כראוי. אנא פנה למנהל המערכת.")
+    
+    # בדיקה האם המשתמש כבר מחובר
+    existing_connection = TelegramUser.query.filter_by(user_id=current_user.id).first()
+    is_connected = existing_connection and existing_connection.is_verified
+    
+    return render_template('telegram/bot_landing.html', 
+                         bot_username=config['bot_username'],
+                         is_connected=is_connected)
+
 @telegram_bp.route('/connect_telegram', methods=['GET'])
 @login_required
 def connect_telegram():

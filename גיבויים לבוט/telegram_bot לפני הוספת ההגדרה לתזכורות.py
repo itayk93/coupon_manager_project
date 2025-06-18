@@ -52,10 +52,6 @@ ENABLE_BOT = os.getenv('ENABLE_BOT', 'True').lower() == 'true'
 # Session timeout configuration - configurable via environment variable
 SESSION_TIMEOUT_MINUTES = int(os.getenv('SESSION_TIMEOUT_MINUTES', '10080'))
 
-# Reminder time configuration (hour and minute in Israel time)
-REMINDER_HOUR = int(os.getenv('REMINDER_HOUR', '10'))
-REMINDER_MINUTE = int(os.getenv('REMINDER_MINUTE', '0'))
-
 # Business logic constants
 MAX_COUPON_VALUE = 100000  # Maximum value for coupon price/value
 MAX_AI_TEXT_LENGTH = 1000  # Maximum text length for AI analysis
@@ -66,7 +62,6 @@ logger.info(f"API_URL: {API_URL}")
 logger.info(f"TELEGRAM_BOT_USERNAME: {TELEGRAM_BOT_USERNAME}")
 logger.info(f"ENABLE_BOT: {ENABLE_BOT}")
 logger.info(f"SESSION_TIMEOUT_MINUTES: {SESSION_TIMEOUT_MINUTES}")
-logger.info(f"REMINDER_TIME: {REMINDER_HOUR:02d}:{REMINDER_MINUTE:02d} Israel time")
 logger.info(f"DATABASE_URL configured: {'Yes' if os.getenv('DATABASE_URL') else 'No'}")
 
 # Setup headers for all requests
@@ -80,84 +75,6 @@ ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
 if not ENCRYPTION_KEY:
     raise ValueError("No ENCRYPTION_KEY set for encryption")
 cipher_suite = Fernet(ENCRYPTION_KEY.encode())
-
-# Global variables
-reminder_config = {
-    'hour': REMINDER_HOUR,
-    'minute': REMINDER_MINUTE
-}
-
-# Global variable to store bot context
-context_app = None
-
-# Function to load reminder time from database
-async def load_reminder_config():
-    """Load reminder configuration from database"""
-    try:
-        conn = await get_async_db_connection()
-        # Try to create settings table if it doesn't exist
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bot_settings (
-                key VARCHAR(50) PRIMARY KEY,
-                value VARCHAR(100) NOT NULL,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Load reminder hour and minute
-        hour_result = await conn.fetchrow("SELECT value FROM bot_settings WHERE key = 'reminder_hour'")
-        minute_result = await conn.fetchrow("SELECT value FROM bot_settings WHERE key = 'reminder_minute'")
-        
-        if hour_result:
-            reminder_config['hour'] = int(hour_result['value'])
-        if minute_result:
-            reminder_config['minute'] = int(minute_result['value'])
-            
-        await conn.close()
-        logger.info(f"Loaded reminder config from database: {reminder_config['hour']:02d}:{reminder_config['minute']:02d}")
-        
-    except Exception as e:
-        logger.warning(f"Could not load reminder config from database, using defaults: {e}")
-        # Use default values from environment variables
-        pass
-
-# Function to save reminder time to database
-async def save_reminder_config():
-    """Save reminder configuration to database"""
-    try:
-        conn = await get_async_db_connection()
-        
-        # Try to create settings table if it doesn't exist
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bot_settings (
-                key VARCHAR(50) PRIMARY KEY,
-                value VARCHAR(100) NOT NULL,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Insert or update reminder hour and minute
-        await conn.execute("""
-            INSERT INTO bot_settings (key, value, updated_at) 
-            VALUES ('reminder_hour', $1, CURRENT_TIMESTAMP)
-            ON CONFLICT (key) DO UPDATE SET 
-                value = EXCLUDED.value, 
-                updated_at = CURRENT_TIMESTAMP
-        """, str(reminder_config['hour']))
-        
-        await conn.execute("""
-            INSERT INTO bot_settings (key, value, updated_at) 
-            VALUES ('reminder_minute', $1, CURRENT_TIMESTAMP)
-            ON CONFLICT (key) DO UPDATE SET 
-                value = EXCLUDED.value, 
-                updated_at = CURRENT_TIMESTAMP
-        """, str(reminder_config['minute']))
-        
-        await conn.close()
-        logger.info(f"Saved reminder config to database: {reminder_config['hour']:02d}:{reminder_config['minute']:02d}")
-        
-    except Exception as e:
-        logger.error(f"Could not save reminder config to database: {e}")
 
 def decrypt_coupon_code(encrypted_code):
     """Decrypt encrypted coupon code"""
@@ -342,19 +259,6 @@ async def update_session_expiry(chat_id):
     except Exception as e:
         logger.error(f"Error updating session expiry: {e}")
 
-# Check if user is admin
-async def is_user_admin(user_id):
-    """Check if user has admin privileges"""
-    try:
-        conn = await get_async_db_connection()
-        query = "SELECT is_admin FROM users WHERE id = $1"
-        result = await conn.fetchrow(query, user_id)
-        await conn.close()
-        return result['is_admin'] if result else False
-    except Exception as e:
-        logger.error(f"Error checking admin status: {e}")
-        return False
-
 # Global variable to store first message
 first_message = None
 user_states = {}
@@ -468,195 +372,123 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "או כתוב /start להתחיל מחדש"
         )
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Display available commands list"""
+async def get_user_coupons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Fetch first three user coupons by chat_id"""
     chat_id = update.message.chat_id
     
-    # Check if user is connected and get user_id
+    # Check session validity first
     is_valid, user_id, user_gender = await check_session_validity(chat_id)
+    if not is_valid:
+        await update.message.reply_text(
+            "⏰ הפעלה שלך פגה תוקף\n"
+            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
+        )
+        return
     
+    # Update session expiry
+    await update_session_expiry(chat_id)
+    
+    try:
+        # Get DATABASE_URL from environment variables
+        database_url = os.getenv('DATABASE_URL')
+        
+        # Connect to Supabase database
+        conn = await asyncpg.connect(database_url)
+        
+        if user_id:
+            # Fetch first three user coupons
+            coupons_query = """
+                SELECT id, code, value, company, expiration, status
+                FROM coupons
+                WHERE user_id = $1
+                LIMIT 3
+            """
+            coupons = await conn.fetch(coupons_query, user_id)
+            
+            if coupons:
+                message = "הנה שלושת הקופונים הראשונים שלך:\n\n"
+                for coupon in coupons:
+                    message += (
+                        f"מזהה: {coupon['id']}\n"
+                        f"קוד: {coupon['code']}\n"
+                        f"ערך: {coupon['value']}\n"
+                        f"חברה: {coupon['company']}\n"
+                        f"תאריך תפוגה: {coupon['expiration']}\n"
+                        f"סטטוס: {coupon['status']}\n\n"
+                    )
+                await update.message.reply_text(message)
+            else:
+                await update.message.reply_text("לא נמצאו קופונים עבורך.")
+        else:
+            await update.message.reply_text("לא נמצא משתמש עם ה-chat_id הזה.")
+        
+        # Close database connection
+        await conn.close()
+    
+    except Exception as e:
+        await update.message.reply_text(f"אירעה שגיאה: {str(e)}")
+        
+async def get_coupons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Fetch user coupons"""
+    chat_id = update.message.chat_id
+    
+    # Check session validity first
+    is_valid, user_id, user_gender = await check_session_validity(chat_id)
+    if not is_valid:
+        await update.message.reply_text(
+            "⏰ הפעלה שלך פגה תוקף\n"
+            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
+        )
+        return
+    
+    # Update session expiry
+    await update_session_expiry(chat_id)
+    
+    try:
+        response = requests.post(
+            f'{API_URL}/api/telegram_coupons',
+            json={'chat_id': chat_id},
+            headers=HEADERS,
+            timeout=10
+        )
+        
+        if response.ok and response.json().get('success'):
+            coupons = response.json().get('coupons', [])
+            if coupons:
+                message = "הנה הקופונים שלך:\n\n"
+                for coupon in coupons:
+                    message += (
+                        f"🏷️ קופון: {coupon['code']}\n"
+                        f"💰 ערך: {coupon['value']}₪\n"
+                        f"🏢 חברה: {coupon['company']}\n"
+                        f"📅 תפוגה: {coupon['expiration'] or 'ללא'}\n"
+                        f"📝 סטטוס: {coupon['status']}\n"
+                        f"{'✅ זמין' if coupon['is_available'] else '❌ לא זמין'}\n\n"
+                    )
+                await update.message.reply_text(message)
+            else:
+                await update.message.reply_text('לא נמצאו קופונים')
+        else:
+            error_msg = response.json().get('error', 'שגיאה לא ידועה')
+            await update.message.reply_text(f'❌ שגיאה: {error_msg}')
+    except Exception as e:
+        logger.error(f"Error in get_coupons: {e}")
+        await update.message.reply_text('❌ אירעה שגיאה בתקשורת עם השרת')
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Display available commands list"""
     help_text = (
         "📋 רשימת הפקודות הזמינות:\n\n"
         "/start - התחלת שיחה עם הבוט\n"
         "/help - הצגת רשימת הפקודות\n"
+        "/coupons - הצגת הקופונים שלך\n\n"
+        "כדי להתחבר, שלח את קוד האימות שקיבלת מהאתר."
     )
-    
-    # Add admin commands if user is admin
-    if is_valid and user_id and await is_user_admin(user_id):
-        help_text += (
-            "/test_reminders - בדיקת תזכורות קופונים\n"
-            "/change_reminder_time <שעה> <דקה> - שינוי זמן התזכורת (לדוגמה: /change_reminder_time 18 5)\n"
-        )
-    
-    help_text += "\nכדי להתחבר, שלח את קוד האימות שקיבלת מהאתר."
-    
     await update.message.reply_text(help_text)
 
-async def test_reminders_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Test reminder functionality (admin only)"""
-    chat_id = update.message.chat_id
-    
-    # Check if user is connected and is admin
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    if not await is_user_admin(user_id):
-        await update.message.reply_text("❌ פקודה זו זמינה למנהלים בלבד")
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
-    await update.message.reply_text(
-        f"🔔 מריץ בדיקת תזכורות...\n"
-        f"שעת תזכורת נוכחית: {reminder_config['hour']:02d}:{reminder_config['minute']:02d} (שעון ישראל)"
-    )
-    
-    # Run reminder check
-    await check_expiring_coupons_for_all_users()
-    
-    await update.message.reply_text("✅ בדיקת תזכורות הושלמה")
-
-# Add this to user_states tracking at the top of the file
-# user_states = {}  # This already exists, just showing where it is
-
-async def change_reminder_time_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Change reminder time (admin only)"""
-    chat_id = update.message.chat_id
-    
-    # Check if user is connected and is admin
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid:
-        await update.message.reply_text(
-            "⏰ הפעלה שלך פגה תוקף\n"
-            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
-        )
-        return
-    
-    if not await is_user_admin(user_id):
-        await update.message.reply_text("❌ פקודה זו זמינה למנהלים בלבד")
-        return
-    
-    # Update session expiry
-    await update_session_expiry(chat_id)
-    
-    # Parse arguments
-    args = context.args
-    if len(args) == 0:
-        # No arguments provided - set state and wait for input
-        user_states[chat_id] = "waiting_for_reminder_time"
-        await update.message.reply_text(
-            "⏰ הזן את השעה והדקה לתזכורת\n"
-            "לדוגמה: 21:20 או 21 20\n"
-            "או: 9:30 או 9 30"
-        )
-        return
-    elif len(args) != 2:
-        await update.message.reply_text(
-            "❌ פורמט שגוי. השתמש ב:\n"
-            "/change_reminder_time <שעה> <דקה>\n"
-            "לדוגמה: /change_reminder_time 18 30"
-        )
-        return
-    
-    try:
-        hour = int(args[0])
-        minute = int(args[1])
-        
-        if not (0 <= hour <= 23):
-            raise ValueError("שעה חייבת להיות בין 0 ל-23")
-        if not (0 <= minute <= 59):
-            raise ValueError("דקה חייבת להיות בין 0 ל-59")
-        
-        # Update reminder config
-        reminder_config['hour'] = hour
-        reminder_config['minute'] = minute
-        
-        # Save to database
-        await save_reminder_config()
-        
-        await update.message.reply_text(
-            f"✅ שעת התזכורת עודכנה ל-{hour:02d}:{minute:02d} (שעון ישראל)\n"
-            f"התזכורת הבאה תישלח בשעה זו"
-        )
-        
-        logger.info(f"Reminder time updated to {hour:02d}:{minute:02d} Israel time by user {user_id}")
-        
-    except ValueError as e:
-        await update.message.reply_text(f"❌ שגיאה: {str(e)}")
-
-
-# Add this new function to handle reminder time input
-async def handle_reminder_time_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle reminder time input when in waiting state"""
-    chat_id = update.message.chat_id
-    user_message = update.message.text.strip()
-    
-    # Check if user is admin (redundant check for safety)
-    is_valid, user_id, user_gender = await check_session_validity(chat_id)
-    if not is_valid or not await is_user_admin(user_id):
-        user_states.pop(chat_id, None)
-        return
-    
-    try:
-        # Support both "21 20" and "21:20" formats
-        if ':' in user_message:
-            parts = user_message.split(':')
-        else:
-            parts = user_message.split()
-            
-        if len(parts) != 2:
-            await update.message.reply_text(
-                "❌ פורמט שגוי. הזן שעה ודקה\n"
-                "לדוגמה: 21:20 או 21 20"
-            )
-            return
-        
-        hour = int(parts[0])
-        minute = int(parts[1])
-        
-        if not (0 <= hour <= 23):
-            raise ValueError("שעה חייבת להיות בין 0 ל-23")
-        if not (0 <= minute <= 59):
-            raise ValueError("דקה חייבת להיות בין 0 ל-59")
-        
-        # Update reminder config
-        reminder_config['hour'] = hour
-        reminder_config['minute'] = minute
-        
-        # Save to database
-        await save_reminder_config()
-        
-        # Clear state
-        user_states.pop(chat_id, None)
-        
-        await update.message.reply_text(
-            f"✅ שעת התזכורת עודכנה ל-{hour:02d}:{minute:02d} (שעון ישראל)\n"
-            f"התזכורת הבאה תישלח בשעה זו"
-        )
-        
-        logger.info(f"Reminder time updated to {hour:02d}:{minute:02d} Israel time by user {user_id}")
-        
-        # Send menu again
-        conn = await get_async_db_connection()
-        slots = 0
-        try:
-            slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user_id)
-            if slots_row:
-                slots = slots_row['slots_automatic_coupons']
-        except Exception as e:
-            logger.error(f"Error fetching slots_automatic_coupons: {e}")
-        await conn.close()
-        
-        await update.message.reply_text(get_main_menu_text(user_gender, slots))
-        
-    except ValueError as e:
-        await update.message.reply_text(f"❌ שגיאה: {str(e)}")
+async def coupons_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Display user coupons"""
+    await get_coupons(update, context)
 
 async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle text messages (verification code) and authenticate user"""
@@ -665,11 +497,6 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Print received code to console
     logger.info(f"[CONSOLE] User entered code: {user_message}")
-
-    # Check if user is waiting for reminder time input
-    if user_states.get(chat_id) == "waiting_for_reminder_time":
-        await handle_reminder_time_input(update, context)
-        return
 
     # Check if user is in company selection mode for coupon usage update
     if user_states.get(chat_id) == "choose_company_for_usage":
@@ -2132,7 +1959,7 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
                 )
             )
         return
-
+    
     # Handle field selection for editing
     if state == CouponCreationState.EDIT_FIELD_SELECTION:
         best_match, best_ratio = find_best_field_match(text)
@@ -3602,17 +3429,10 @@ def format_days_remaining(days):
 async def send_expiration_reminder(chat_id, coupons, user_gender):
     """Send expiration reminder message to user"""
     try:
-        logger.info(f"Attempting to send reminder to chat_id {chat_id}")
-        if context_app is None:
-            logger.error("Bot instance not available for sending reminders - context_app is None")
+        bot = context_app.bot if 'context_app' in globals() else None
+        if not bot:
+            logger.error("Bot instance not available for sending reminders")
             return
-        
-        bot = context_app.bot
-        if bot is None:
-            logger.error("Bot object is None")
-            return
-        
-        logger.info(f"Bot instance available, preparing message for {len(coupons)} coupons")
         
         message = get_gender_specific_text(
             user_gender,
@@ -3650,9 +3470,8 @@ async def send_expiration_reminder(chat_id, coupons, user_gender):
             "💡 זכרי להשתמש בקופונים לפני שיפוגו!"
         )
         
-        logger.info(f"Sending message to chat_id {chat_id}")
         await bot.send_message(chat_id=chat_id, text=message)
-        logger.info(f"Successfully sent expiration reminder to chat_id {chat_id} for {len(coupons)} coupons")
+        logger.info(f"Sent expiration reminder to chat_id {chat_id} for {len(coupons)} coupons")
         
     except Exception as e:
         logger.error(f"Error sending expiration reminder to chat_id {chat_id}: {e}")
@@ -3660,7 +3479,6 @@ async def send_expiration_reminder(chat_id, coupons, user_gender):
 async def check_expiring_coupons_for_all_users():
     """Check all users for expiring coupons and send reminders"""
     try:
-        logger.info("Starting coupon expiration check...")
         conn = await get_async_db_connection()
         
         # Get all connected users
@@ -3704,48 +3522,36 @@ async def check_expiring_coupons_for_all_users():
         logger.info("Completed checking expiring coupons for all users")
         
     except Exception as e:
-        logger.error(f"Error in check_expiring_coupons_for_all_users: {e}", exc_info=True)
+        logger.error(f"Error in check_expiring_coupons_for_all_users: {e}")
 
 async def schedule_daily_reminder():
-    """Schedule daily reminder at configured time in Israel timezone"""
-    logger.info(f"Starting daily reminder scheduler with time {reminder_config['hour']:02d}:{reminder_config['minute']:02d}")
+    """Schedule daily reminder at 10 AM Israel time"""
     while True:
         try:
             # Get current time in Israel timezone
             israel_tz = pytz.timezone('Asia/Jerusalem')
             now = datetime.now(israel_tz)
             
-            logger.info(f"Current Israel time: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+            # Calculate next 10 AM
+            next_10am = now.replace(hour=10, minute=0, second=0, microsecond=0)
+            if now >= next_10am:
+                # If it's already past 10 AM today, schedule for tomorrow
+                next_10am += timedelta(days=1)
             
-            # Calculate next reminder time using global config
-            next_reminder = now.replace(
-                hour=reminder_config['hour'], 
-                minute=reminder_config['minute'], 
-                second=0, 
-                microsecond=0
-            )
+            # Calculate seconds until next 10 AM
+            sleep_seconds = (next_10am - now).total_seconds()
             
-            if now >= next_reminder:
-                # If it's already past reminder time today, schedule for tomorrow
-                next_reminder += timedelta(days=1)
-                logger.info(f"Reminder time has passed today, scheduling for tomorrow: {next_reminder.strftime('%Y-%m-%d %H:%M:%S')}")
-            else:
-                logger.info(f"Next reminder scheduled for today: {next_reminder.strftime('%Y-%m-%d %H:%M:%S')}")
+            logger.info(f"Scheduling next coupon expiration check at {next_10am} (in {sleep_seconds:.0f} seconds)")
             
-            # Calculate seconds until next reminder
-            sleep_seconds = (next_reminder - now).total_seconds()
-            
-            logger.info(f"Next coupon expiration check scheduled at {next_reminder.strftime('%Y-%m-%d %H:%M:%S')} Israel time (in {sleep_seconds:.0f} seconds)")
-            
-            # Sleep until reminder time
+            # Sleep until 10 AM
             await asyncio.sleep(sleep_seconds)
             
             # Run the check
-            logger.info(f"Running scheduled coupon expiration check at {reminder_config['hour']:02d}:{reminder_config['minute']:02d} Israel time...")
+            logger.info("Running daily coupon expiration check...")
             await check_expiring_coupons_for_all_users()
             
         except Exception as e:
-            logger.error(f"Error in schedule_daily_reminder: {e}", exc_info=True)
+            logger.error(f"Error in schedule_daily_reminder: {e}")
             # Wait 1 hour before retrying
             await asyncio.sleep(3600)
 
@@ -3768,9 +3574,8 @@ def create_bot_application():
         # Add all handlers
         app.add_handler(CommandHandler('start', start))
         app.add_handler(CommandHandler('help', help_command))
+        app.add_handler(CommandHandler('coupons', coupons_command))
         app.add_handler(CommandHandler('disconnect', disconnect))
-        app.add_handler(CommandHandler('test_reminders', test_reminders_command))
-        app.add_handler(CommandHandler('change_reminder_time', change_reminder_time_command))
         
         # First handle regular text messages (verification code)
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_coupon_fsm))
@@ -3797,10 +3602,6 @@ def run_bot():
         
         # Start daily reminder scheduler in background
         async def start_scheduler():
-            # Load reminder config from database first
-            await load_reminder_config()
-            # Wait a bit for bot to be fully initialized
-            await asyncio.sleep(2)
             asyncio.create_task(schedule_daily_reminder())
         
         # Add scheduler to bot startup

@@ -1,0 +1,838 @@
+{% extends 'base.html' %}
+
+{% block title %}
+בוט קופונים בטלגרם - Coupon Master
+{% endblock %}
+
+{% block meta_description %}
+<meta name="description" content="הצטרפו לבוט הקופונים הייחודי בטלגרם! קבלו התראות על קופונים חדשים, נהלו את הקופונים שלכם ותהנו מחוויית שימוש נוחה וחכמה." />
+<meta property="og:title" content="בוט קופונים בטלגרם - Coupon Master">
+<meta property="og:description" content="בוט מתקדם לניהול קופונים בטלגרם - קבלו התראות, נהלו קופונים וחסכו כסף!">
+<meta property="og:image" content="{{ url_for('static', filename='images/telegram_bot.jpg', _external=True) }}">
+{% endblock %}
+
+{% block content %}
+<style>
+:root {
+    --telegram-blue: #0088cc;
+    --telegram-blue-hover: #006699;
+    --success-green: #28a745;
+    --warning-orange: #ff6b35;
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-telegram: linear-gradient(135deg, #0088cc 0%, #229ed9 100%);
+    --gradient-success: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    --shadow-soft: 0 10px 40px rgba(0,0,0,0.1);
+    --shadow-card: 0 4px 20px rgba(0,0,0,0.08);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+body {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+}
+
+.bot-landing-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Hero Section */
+.hero-section {
+    background: var(--gradient-primary);
+    border-radius: 20px;
+    padding: 60px 40px;
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+.hero-title {
+    font-size: 3em;
+    margin-bottom: 20px;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.hero-subtitle {
+    font-size: 1.3em;
+    margin-bottom: 30px;
+    opacity: 0.95;
+    line-height: 1.6;
+}
+
+.telegram-icon-large {
+    font-size: 4em;
+    margin-bottom: 20px;
+    display: block;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Features Grid */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-bottom: 50px;
+}
+
+.feature-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: var(--shadow-card);
+    transition: var(--transition-smooth);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.feature-icon {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+    background: var(--gradient-telegram);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.feature-title {
+    font-size: 1.4em;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.feature-description {
+    color: #666;
+    line-height: 1.6;
+    font-size: 1em;
+}
+
+/* QR Code Section */
+.qr-section {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow-card);
+    border: 2px solid #f0f0f0;
+}
+
+.qr-title {
+    font-size: 2em;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.qr-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+    flex-wrap: wrap;
+}
+
+.qr-image-wrapper {
+    position: relative;
+}
+
+.qr-image {
+    max-width: 200px;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    transition: var(--transition-smooth);
+}
+
+.qr-image:hover {
+    transform: scale(1.05);
+}
+
+.qr-instructions {
+    max-width: 400px;
+    text-align: right;
+}
+
+.qr-step {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-right: 4px solid var(--telegram-blue);
+}
+
+.step-number {
+    background: var(--gradient-telegram);
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-left: 15px;
+    flex-shrink: 0;
+}
+
+/* Connection Section */
+.connection-section {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow-card);
+}
+
+.connection-status {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.status-connected {
+    color: var(--success-green);
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.status-not-connected {
+    color: var(--warning-orange);
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+/* Token Generation */
+.token-section {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 30px;
+    margin-top: 30px;
+    border: 2px dashed #dee2e6;
+}
+
+.token-title {
+    font-size: 1.3em;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    text-align: center;
+    font-weight: 600;
+}
+
+.token-display {
+    background: white;
+    border: 2px solid var(--telegram-blue);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    margin: 20px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 2em;
+    font-weight: bold;
+    color: var(--telegram-blue);
+    letter-spacing: 3px;
+    position: relative;
+    overflow: hidden;
+}
+
+.token-display.loading {
+    color: #ccc;
+}
+
+.token-display::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+    animation: shine 1.5s infinite;
+}
+
+@keyframes shine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.generate-token-btn {
+    background: var(--gradient-telegram);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 50px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    box-shadow: 0 4px 15px rgba(0,136,204,0.3);
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.generate-token-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,136,204,0.4);
+}
+
+.generate-token-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.connect-bot-btn {
+    background: var(--gradient-success);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 50px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    box-shadow: 0 4px 15px rgba(40,167,69,0.3);
+    width: 100%;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.connect-bot-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(40,167,69,0.4);
+    color: white;
+}
+
+/* Instructions */
+.instructions-list {
+    text-align: right;
+    margin-top: 20px;
+}
+
+.instruction-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    border-right: 3px solid var(--telegram-blue);
+}
+
+.instruction-icon {
+    color: var(--telegram-blue);
+    margin-left: 10px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* Benefits Section */
+.benefits-section {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow-card);
+}
+
+.benefits-title {
+    font-size: 2em;
+    text-align: center;
+    margin-bottom: 40px;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.benefits-list {
+    display: grid;
+    gap: 20px;
+}
+
+.benefit-item {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    transition: var(--transition-smooth);
+}
+
+.benefit-item:hover {
+    background: #e9ecef;
+    transform: translateX(-5px);
+}
+
+.benefit-icon {
+    background: var(--gradient-telegram);
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3em;
+    margin-left: 20px;
+    flex-shrink: 0;
+}
+
+.benefit-text {
+    font-size: 1.1em;
+    color: var(--text-color);
+    line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .bot-landing-container {
+        padding: 10px;
+    }
+    
+    .hero-section {
+        padding: 40px 20px;
+    }
+    
+    .hero-title {
+        font-size: 2.2em;
+    }
+    
+    .qr-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .qr-instructions {
+        text-align: center;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .feature-card {
+        padding: 20px;
+    }
+}
+
+/* Loading Animation */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ffffff3d;
+    border-top: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.hidden {
+    display: none;
+}
+
+/* Success/Error Messages */
+.message {
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    text-align: center;
+    font-weight: 500;
+}
+
+.message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Token expiry warning */
+.token-expiry {
+    color: #666;
+    font-size: 0.9em;
+    text-align: center;
+    margin-top: 10px;
+    font-style: italic;
+}
+</style>
+
+<div class="bot-landing-container">
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <i class="fa fa-telegram telegram-icon-large"></i>
+            <h1 class="hero-title">בוט קופונים חכם בטלגרם</h1>
+            <p class="hero-subtitle">
+                נהלו את הקופונים שלכם בקלות מטלגרם! קבלו התראות על קופונים חדשים, 
+                עקבו אחר תאריכי תפוגה ותהנו מחוויית ניהול קופונים חכמה ונוחה.
+            </p>
+        </div>
+    </div>
+
+    <!-- Features Grid -->
+    <div class="features-grid">
+        <div class="feature-card">
+            <i class="fa fa-bell feature-icon"></i>
+            <h3 class="feature-title">התראות חכמות</h3>
+            <p class="feature-description">
+                קבלו התראות אוטומטיות על קופונים שעומדים לפוג תוקף, 
+                כדי שלא תפספסו הזדמנויות חסכון!
+            </p>
+        </div>
+        
+        <div class="feature-card">
+            <i class="fa fa-mobile-alt feature-icon"></i>
+            <h3 class="feature-title">גישה מהירה</h3>
+            <p class="feature-description">
+                צפו בכל הקופונים שלכם ישירות מטלגרם, 
+                בלי צורך לפתוח את האתר בכל פעם.
+            </p>
+        </div>
+        
+        <div class="feature-card">
+            <i class="fa fa-magic feature-icon"></i>
+            <h3 class="feature-title">ניהול קל</h3>
+            <p class="feature-description">
+                הוסיפו קופונים חדשים, עדכנו שימוש בקופונים 
+                ונהלו את הארנק הדיגיטלי בקלות מטלגרם.
+            </p>
+        </div>
+    </div>
+
+    <!-- QR Code Section -->
+    <div class="qr-section">
+        <h2 class="qr-title">
+            <i class="fa fa-qrcode"></i>
+            התחברו לבוט בקלות
+        </h2>
+        
+        <div class="qr-container">
+            <div class="qr-image-wrapper">
+                <img src="{{ url_for('static', filename='images/telegram_bot.jpg') }}" 
+                     alt="QR Code לבוט הטלגרם" 
+                     class="qr-image">
+            </div>
+            
+            <div class="qr-instructions">
+                <div class="qr-step">
+                    <div class="step-number">1</div>
+                    <div>סרקו את הקוד QR או חפשו @{{ bot_username }} בטלגרם</div>
+                </div>
+                
+                <div class="qr-step">
+                    <div class="step-number">2</div>
+                    <div>הקישו על "התחל" או שלחו /start לבוט</div>
+                </div>
+                
+                <div class="qr-step">
+                    <div class="step-number">3</div>
+                    <div>הפיקו קוד חיבור באזור שלמטה</div>
+                </div>
+                
+                <div class="qr-step">
+                    <div class="step-number">4</div>
+                    <div>שלחו את הקוד לבוט כדי להתחבר</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Section -->
+    <div class="connection-section">
+        <div class="connection-status">
+            {% if is_connected %}
+                <div class="status-connected">
+                    <i class="fa fa-check-circle"></i>
+                    אתם כבר מחוברים לבוט הטלגרם!
+                </div>
+                <p>תוכלו ליהנות מכל התכונות החכמות של הבוט שלנו.</p>
+            {% else %}
+                <div class="status-not-connected">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    עדיין לא מחוברים לבוט
+                </div>
+                <p>הפיקו קוד חיבור ושלחו אותו לבוט כדי להתחבר.</p>
+            {% endif %}
+        </div>
+
+        {% if not is_connected %}
+        <div class="token-section">
+            <h3 class="token-title">
+                <i class="fa fa-key"></i>
+                הפקת קוד חיבור
+            </h3>
+            
+            <div id="tokenDisplay" class="token-display">
+                הקישו על "הפק קוד" למטה
+            </div>
+            
+            <div class="token-expiry" id="tokenExpiry" style="display: none;">
+                הקוד בתוקף למשך 5 דקות
+            </div>
+            
+            <button id="generateTokenBtn" class="generate-token-btn">
+                <i class="fa fa-magic"></i>
+                הפק קוד חיבור חדש
+            </button>
+            
+            <div id="message" class="message hidden"></div>
+            
+            <a href="https://t.me/{{ bot_username }}" 
+               target="_blank" 
+               class="connect-bot-btn">
+                <i class="fa fa-telegram"></i>
+                פתח את הבוט בטלגרם
+            </a>
+            
+            <div class="instructions-list">
+                <div class="instruction-item">
+                    <i class="fa fa-info-circle instruction-icon"></i>
+                    <div>לאחר הפקת הקוד, פתחו את הבוט בטלגרם ושלחו את הקוד</div>
+                </div>
+                
+                <div class="instruction-item">
+                    <i class="fa fa-clock instruction-icon"></i>
+                    <div>הקוד בתוקף למשך 5 דקות בלבד</div>
+                </div>
+                
+                <div class="instruction-item">
+                    <i class="fa fa-refresh instruction-icon"></i>
+                    <div>תוכלו להפיק קוד חדש בכל עת</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Benefits Section -->
+    <div class="benefits-section">
+        <h2 class="benefits-title">
+            <i class="fa fa-star"></i>
+            למה כדאי להשתמש בבוט?
+        </h2>
+        
+        <div class="benefits-list">
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="fa fa-clock"></i>
+                </div>
+                <div class="benefit-text">
+                    חסכו זמן - כל הקופונים שלכם במקום אחד, זמינים תמיד בטלגרם
+                </div>
+            </div>
+            
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="fa fa-shield-alt"></i>
+                </div>
+                <div class="benefit-text">
+                    אבטחה מלאה - הקופונים שלכם מוצפנים ומאובטחים במערכת שלנו
+                </div>
+            </div>
+            
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="fa fa-calendar-alt"></i>
+                </div>
+                <div class="benefit-text">
+                    לא תפספסו תאריכי תפוגה - התראות אוטומטיות על קופונים שעומדים לפוג
+                </div>
+            </div>
+            
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="fa fa-plus"></i>
+                </div>
+                <div class="benefit-text">
+                    הוספה קלה - הוסיפו קופונים חדשים ישירות מטלגרם
+                </div>
+            </div>
+            
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="fa fa-chart-line"></i>
+                </div>
+                <div class="benefit-text">
+                    מעקב אחר חסכון - ראו כמה כסף חסכתם עם הקופונים שלכם
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const generateBtn = document.getElementById('generateTokenBtn');
+    const tokenDisplay = document.getElementById('tokenDisplay');
+    const messageDiv = document.getElementById('message');
+    const tokenExpiry = document.getElementById('tokenExpiry');
+
+    let countdownInterval = null;
+
+    function showMessage(text, type) {
+        messageDiv.textContent = text;
+        messageDiv.className = `message ${type}`;
+        messageDiv.classList.remove('hidden');
+        
+        setTimeout(() => {
+            messageDiv.classList.add('hidden');
+        }, 5000);
+    }
+
+    function startCountdown() {
+        let timeLeft = 300; // 5 minutes in seconds
+        tokenExpiry.style.display = 'block';
+        
+        countdownInterval = setInterval(() => {
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            tokenExpiry.textContent = `הקוד בתוקף עוד ${minutes}:${seconds.toString().padStart(2, '0')} דקות`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                tokenDisplay.textContent = 'הקוד פג תוקף - הפיקו קוד חדש';
+                tokenDisplay.classList.add('loading');
+                tokenExpiry.style.display = 'none';
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<i class="fa fa-magic"></i> הפק קוד חיבור חדש';
+            }
+        }, 1000);
+    }
+
+    if (generateBtn) {
+        generateBtn.addEventListener('click', function() {
+            // Disable button and show loading
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> מפיק קוד...';
+            
+            tokenDisplay.textContent = 'מפיק קוד...';
+            tokenDisplay.classList.add('loading');
+
+            // Clear any existing countdown
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+
+            // Make request to generate token
+            fetch('{{ url_for("telegram.connect_telegram") }}', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                // Parse the HTML to extract the token
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const tokenElement = doc.querySelector('.verification-token');
+                
+                if (tokenElement) {
+                    const token = tokenElement.textContent.trim();
+                    tokenDisplay.textContent = token;
+                    tokenDisplay.classList.remove('loading');
+                    
+                    showMessage('קוד חיבור חדש הופק בהצלחה! שלחו אותו לבוט בטלגרם.', 'success');
+                    
+                    // Start countdown
+                    startCountdown();
+                    
+                    // Re-enable button after delay
+                    setTimeout(() => {
+                        generateBtn.disabled = false;
+                        generateBtn.innerHTML = '<i class="fa fa-refresh"></i> הפק קוד חדש';
+                    }, 3000);
+                } else {
+                    throw new Error('לא ניתן לחלץ את הקוד מהתגובה');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                tokenDisplay.textContent = 'שגיאה ביצירת קוד';
+                tokenDisplay.classList.remove('loading');
+                showMessage('שגיאה ביצירת קוד החיבור. נסו שוב.', 'error');
+                
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<i class="fa fa-magic"></i> הפק קוד חיבור חדש';
+            });
+        });
+    }
+
+    // Add some interactive effects
+    const featureCards = document.querySelectorAll('.feature-card');
+    featureCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(-5px) scale(1)';
+        });
+    });
+
+    // QR code hover effect
+    const qrImage = document.querySelector('.qr-image');
+    if (qrImage) {
+        qrImage.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.1) rotate(2deg)';
+        });
+        
+        qrImage.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1.05) rotate(0deg)';
+        });
+    }
+});
+</script>
+
+{% endblock %}
