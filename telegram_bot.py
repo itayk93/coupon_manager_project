@@ -497,7 +497,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(help_text)
 
 async def test_reminders_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Test reminder functionality (admin only)"""
+    """Test reminder functionality (admin only) - shows what would be sent without sending"""
     chat_id = update.message.chat_id
     
     # Add debug logging
@@ -524,9 +524,9 @@ async def test_reminders_command(update: Update, context: ContextTypes.DEFAULT_T
         f"שעת תזכורת נוכחית: {reminder_config['hour']:02d}:{reminder_config['minute']:02d} (שעון ישראל)"
     )
     
-    # Run reminder check
-    logger.info(f"About to run check_expiring_coupons_for_all_users from test_reminders_command")
-    await check_expiring_coupons_for_all_users(source="test_reminders_command")
+    # Test reminder check - DRY RUN (doesn't send actual messages)
+    logger.info(f"Running test check for expiring coupons from test_reminders_command")
+    await test_check_expiring_coupons(chat_id)
     
     await update.message.reply_text("✅ בדיקת תזכורות הושלמה")
 
@@ -3631,9 +3631,9 @@ async def send_expiration_reminder(chat_id, coupons, user_gender):
         message = get_gender_specific_text(
             user_gender,
             "🔔 **תזכורת קופונים**\n\n"
-            "הקופונים הבאים שלך יפוגו תוקף בקרוב:\n\n",
+            "התוקף של הקופונים הבאים שלך יפוגו בקרוב:\n\n",
             "🔔 **תזכורת קופונים**\n\n"
-            "הקופונים הבאים שלך יפוגו תוקף בקרוב:\n\n"
+            "התוקף של הקופונים הבאים שלך יפוגו בקרוב:\n\n"
         )
         
         for coupon in coupons:
@@ -3719,6 +3719,101 @@ async def check_expiring_coupons_for_all_users(source="unknown"):
         
     except Exception as e:
         logger.error(f"Error in check_expiring_coupons_for_all_users: {e}", exc_info=True)
+
+async def test_check_expiring_coupons(admin_chat_id):
+    """Test version - shows what reminders would be sent without actually sending them"""
+    try:
+        # Get the bot instance
+        from telegram.ext import Application
+        app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+        bot = app.bot
+        logger.info("Starting test coupon expiration check")
+        conn = await get_async_db_connection()
+        
+        # Get all connected users
+        users_query = """
+            SELECT DISTINCT tu.telegram_chat_id, tu.user_id
+            FROM telegram_users tu
+            WHERE tu.is_verified = true 
+            AND tu.telegram_chat_id IS NOT NULL
+            AND tu.verification_expires_at > NOW()
+        """
+        users = await conn.fetch(users_query)
+        
+        total_users = len(users)
+        users_with_expiring_coupons = 0
+        total_expiring_coupons = 0
+        
+        for user in users:
+            user_id = user['user_id']
+            chat_id = user['telegram_chat_id']
+            
+            # Get user's expiring coupons
+            coupons_query = """
+                SELECT * 
+                FROM coupon
+                WHERE user_id = $1
+                  AND status = 'פעיל'
+                  AND expiration IS NOT NULL
+                  AND expiration::date >= CURRENT_DATE
+                  AND expiration::date < CURRENT_DATE + INTERVAL '7 days'
+            """
+            coupons = await conn.fetch(coupons_query, user_id)
+            
+            if coupons:
+                users_with_expiring_coupons += 1
+                total_expiring_coupons += len(coupons)
+                
+                # Get user gender
+                user_gender = await get_user_gender(user_id)
+                
+                # Build the message that WOULD be sent (for preview)
+                coupons_list = []
+                for coupon in coupons:
+                    # Handle expiration date - could be string or date object
+                    expiration_date = coupon['expiration']
+                    if isinstance(expiration_date, str):
+                        from datetime import datetime
+                        expiration_date = datetime.strptime(expiration_date, '%Y-%m-%d').date()
+                    elif hasattr(expiration_date, 'date'):
+                        expiration_date = expiration_date.date()
+                    
+                    days_until_expiry = (expiration_date - datetime.now().date()).days
+                    if days_until_expiry == 0:
+                        expiry_text = "היום"
+                    elif days_until_expiry == 1:
+                        expiry_text = "מחר"
+                    else:
+                        expiry_text = f"בעוד {days_until_expiry} ימים"
+                    
+                    remaining_value = coupon.get('remaining_value', coupon.get('value', 0))
+                    coupon_text = f"🏢 {coupon['company']}\n"
+                    coupon_text += f"🏷️ קוד: {coupon['code']}\n"
+                    coupon_text += f"💰 ערך: {coupon['value']}₪\n"
+                    coupon_text += f"💵 נותר: {remaining_value}₪\n"
+                    coupon_text += f"⏰ יפוג תוקף: {expiry_text}"
+                    coupons_list.append(coupon_text)
+                
+                # Just count, don't send preview messages
+        
+        # Send brief summary only to the admin who requested the test
+        if users_with_expiring_coupons > 0:
+            summary_message = f"✅ מערכת התזכורות פעילה - {users_with_expiring_coupons} משתמשים יקבלו תזכורות"
+        else:
+            summary_message = "✅ מערכת התזכורות פעילה - אין קופונים שיפוגו השבוע"
+        
+        await bot.send_message(chat_id=admin_chat_id, text=summary_message)
+        
+        await conn.close()
+        logger.info("Completed test check for expiring coupons")
+        
+    except Exception as e:
+        logger.error(f"Error in test_check_expiring_coupons: {e}", exc_info=True)
+        # Get the bot instance for error message
+        from telegram.ext import Application
+        app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+        bot = app.bot
+        await bot.send_message(chat_id=admin_chat_id, text=f"❌ שגיאה בבדיקת התזכורות: {str(e)}")
 
 async def schedule_daily_reminder():
     """Schedule daily reminder at configured time in Israel timezone"""
