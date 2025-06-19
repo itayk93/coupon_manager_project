@@ -3928,6 +3928,10 @@ def create_bot_application():
         # Then handle number messages (menu choices)
         app.add_handler(MessageHandler(filters.Regex(r'^\d+$'), handle_number_message))
         
+        # Store app globally for reminder function
+        global context_app
+        context_app = app
+        
         logger.info("אפליקציית הבוט נוצרה בהצלחה")
         return app
         
