@@ -90,6 +90,10 @@ reminder_config = {
 # Global variable to store bot context
 context_app = None
 
+# Global variable to control scheduler restart
+scheduler_task = None
+scheduler_stop_event = None
+
 # Function to load reminder time from database
 async def load_reminder_config():
     """Load reminder configuration from database"""
@@ -485,7 +489,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_valid and user_id and await is_user_admin(user_id):
         help_text += (
             "/test_reminders - בדיקת תזכורות קופונים\n"
-            "/change_reminder_time <שעה> <דקה> - שינוי זמן התזכורת (לדוגמה: /change_reminder_time 18 5)\n"
+            "/change_reminder_time - שינוי זמן התזכורת יומית\n"
         )
     
     help_text += "\nכדי להתחבר, שלח את קוד האימות שקיבלת מהאתר."
@@ -495,6 +499,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def test_reminders_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Test reminder functionality (admin only)"""
     chat_id = update.message.chat_id
+    
+    # Add debug logging
+    logger.info(f"test_reminders_command called by chat_id {chat_id}")
     
     # Check if user is connected and is admin
     is_valid, user_id, user_gender = await check_session_validity(chat_id)
@@ -518,7 +525,8 @@ async def test_reminders_command(update: Update, context: ContextTypes.DEFAULT_T
     )
     
     # Run reminder check
-    await check_expiring_coupons_for_all_users()
+    logger.info(f"About to run check_expiring_coupons_for_all_users from test_reminders_command")
+    await check_expiring_coupons_for_all_users(source="test_reminders_command")
     
     await update.message.reply_text("✅ בדיקת תזכורות הושלמה")
 
@@ -528,6 +536,9 @@ async def test_reminders_command(update: Update, context: ContextTypes.DEFAULT_T
 async def change_reminder_time_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Change reminder time (admin only)"""
     chat_id = update.message.chat_id
+    
+    # Add debug logging
+    logger.info(f"change_reminder_time_command called by chat_id {chat_id}")
     
     # Check if user is connected and is admin
     is_valid, user_id, user_gender = await check_session_validity(chat_id)
@@ -631,6 +642,9 @@ async def handle_reminder_time_input(update: Update, context: ContextTypes.DEFAU
         
         # Save to database
         await save_reminder_config()
+        
+        # Restart scheduler with new configuration
+        await restart_scheduler()
         
         # Clear state
         user_states.pop(chat_id, None)
@@ -3657,10 +3671,10 @@ async def send_expiration_reminder(chat_id, coupons, user_gender):
     except Exception as e:
         logger.error(f"Error sending expiration reminder to chat_id {chat_id}: {e}")
 
-async def check_expiring_coupons_for_all_users():
+async def check_expiring_coupons_for_all_users(source="unknown"):
     """Check all users for expiring coupons and send reminders"""
     try:
-        logger.info("Starting coupon expiration check...")
+        logger.info(f"Starting coupon expiration check from source: {source}")
         conn = await get_async_db_connection()
         
         # Get all connected users
@@ -3708,7 +3722,10 @@ async def check_expiring_coupons_for_all_users():
 
 async def schedule_daily_reminder():
     """Schedule daily reminder at configured time in Israel timezone"""
+    global scheduler_stop_event
+    
     logger.info(f"Starting daily reminder scheduler with time {reminder_config['hour']:02d}:{reminder_config['minute']:02d}")
+    
     while True:
         try:
             # Get current time in Israel timezone
@@ -3717,7 +3734,10 @@ async def schedule_daily_reminder():
             
             logger.info(f"Current Israel time: {now.strftime('%Y-%m-%d %H:%M:%S')}")
             
-            # Calculate next reminder time using global config
+            # Reload config from database to get latest settings
+            await load_reminder_config()
+            
+            # Calculate next reminder time using current config
             next_reminder = now.replace(
                 hour=reminder_config['hour'], 
                 minute=reminder_config['minute'], 
@@ -3737,17 +3757,52 @@ async def schedule_daily_reminder():
             
             logger.info(f"Next coupon expiration check scheduled at {next_reminder.strftime('%Y-%m-%d %H:%M:%S')} Israel time (in {sleep_seconds:.0f} seconds)")
             
-            # Sleep until reminder time
-            await asyncio.sleep(sleep_seconds)
+            # Sleep until reminder time with checks for stop event
+            sleep_interval = min(sleep_seconds, 300)  # Check every 5 minutes max
+            elapsed = 0
+            
+            while elapsed < sleep_seconds:
+                if scheduler_stop_event and scheduler_stop_event.is_set():
+                    logger.info("Scheduler stop event received, restarting with new config")
+                    return
+                
+                wait_time = min(sleep_interval, sleep_seconds - elapsed)
+                await asyncio.sleep(wait_time)
+                elapsed += wait_time
             
             # Run the check
             logger.info(f"Running scheduled coupon expiration check at {reminder_config['hour']:02d}:{reminder_config['minute']:02d} Israel time...")
-            await check_expiring_coupons_for_all_users()
+            await check_expiring_coupons_for_all_users(source="scheduled_reminder")
             
         except Exception as e:
             logger.error(f"Error in schedule_daily_reminder: {e}", exc_info=True)
             # Wait 1 hour before retrying
             await asyncio.sleep(3600)
+
+async def restart_scheduler():
+    """Restart the scheduler task with new configuration"""
+    global scheduler_task, scheduler_stop_event
+    
+    try:
+        # Stop current scheduler if running
+        if scheduler_task and not scheduler_task.done():
+            if scheduler_stop_event:
+                scheduler_stop_event.set()
+            scheduler_task.cancel()
+            try:
+                await scheduler_task
+            except asyncio.CancelledError:
+                pass
+        
+        # Create new stop event
+        scheduler_stop_event = asyncio.Event()
+        
+        # Start new scheduler task
+        scheduler_task = asyncio.create_task(schedule_daily_reminder())
+        logger.info("Scheduler restarted with new configuration")
+        
+    except Exception as e:
+        logger.error(f"Error restarting scheduler: {e}", exc_info=True)
 
 def create_bot_application():
     """
@@ -3796,12 +3851,16 @@ def run_bot():
         context_app = app
         
         # Start daily reminder scheduler in background
-        async def start_scheduler():
+        async def start_scheduler(app):
+            global scheduler_task, scheduler_stop_event
             # Load reminder config from database first
             await load_reminder_config()
             # Wait a bit for bot to be fully initialized
             await asyncio.sleep(2)
-            asyncio.create_task(schedule_daily_reminder())
+            # Create stop event
+            scheduler_stop_event = asyncio.Event()
+            # Start scheduler task
+            scheduler_task = asyncio.create_task(schedule_daily_reminder())
         
         # Add scheduler to bot startup
         app.post_init = start_scheduler
