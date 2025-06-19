@@ -100,19 +100,19 @@
                             <h1>המוכר מציע לך קופון!</h1>
                         </div>
                         <div class="body">
-                            <p>שלום {{ buyer.first_name }},</p>
+                            <p>שלום {{ buyer.first_name|escape }},</p>
                             <p>
                                 <strong>
                                     {% if seller.gender == 'female' %}המוכרת{% else %}המוכר{% endif %}
-                                    {{ seller.first_name }}
+                                    {{ seller.first_name|escape }}
                                 </strong>
                                 {% if seller.gender == 'female' %}מציעה{% else %}מציע{% endif %}
                                 לך קופון חדש:
                             </p>
                             <p>
-                                <strong class="highlight">חברה:</strong> {{ coupon.company }}<br>
-                                <strong class="highlight">ערך הקופון:</strong> {{ coupon.value }} ש"ח<br>
-                                <strong class="highlight">מחיר מבוקש:</strong> {{ coupon.cost }} ש"ח
+                                <strong class="highlight">חברה:</strong> {{ coupon.company|escape }}<br>
+                                <strong class="highlight">ערך הקופון:</strong> {{ coupon.value|escape }} ש"ח<br>
+                                <strong class="highlight">מחיר מבוקש:</strong> {{ coupon.cost|escape }} ש"ח
                             </p>
 
                             {% if seller_message %}
@@ -120,7 +120,7 @@
                                 <strong>הודעה אישית
                                     {% if seller.gender == 'female' %} מהמוכרת {% else %} מהמוכר {% endif %}:
                                 </strong><br>
-                                {{ seller_message }}
+                                {{ seller_message|escape }}
                             </p>
                             {% endif %}
 

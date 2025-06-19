@@ -17,6 +17,8 @@ import os
 import pandas as pd
 import traceback
 from io import BytesIO
+import uuid
+import mimetypes
 
 from app.models import Coupon, Tag, Company, CouponUsage, db
 from app.forms import UploadCouponsForm, AddCouponsBulkForm
@@ -25,6 +27,46 @@ from app.extensions import db
 
 uploads_bp = Blueprint("uploads", __name__)
 logger = logging.getLogger(__name__)
+
+# הגדרת קבצים מורשים
+ALLOWED_EXTENSIONS = {'.xlsx', '.xls'}
+ALLOWED_MIME_TYPES = {
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',  # .xlsx
+    'application/vnd.ms-excel',  # .xls
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+def validate_upload_file(file):
+    """אימות קובץ שהועלה"""
+    if not file or not file.filename:
+        raise ValueError("לא נבחר קובץ")
+    
+    # בדיקת גודל קובץ
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)  # חזרה לתחילת הקובץ
+    
+    if file_size > MAX_FILE_SIZE:
+        raise ValueError(f"גודל הקובץ חורג מהמותר ({MAX_FILE_SIZE // (1024*1024)}MB)")
+    
+    # בדיקת סיומת קובץ
+    file_extension = os.path.splitext(file.filename.lower())[1]
+    if file_extension not in ALLOWED_EXTENSIONS:
+        raise ValueError("סוג קובץ לא מורשה. רק קבצי Excel (.xlsx, .xls) מותרים")
+    
+    # בדיקת MIME type
+    mime_type, _ = mimetypes.guess_type(file.filename)
+    if mime_type not in ALLOWED_MIME_TYPES:
+        raise ValueError("סוג קובץ לא תקין")
+    
+    return True
+
+def generate_safe_filename(original_filename):
+    """יצירת שם קובץ בטוח"""
+    name, ext = os.path.splitext(original_filename)
+    safe_name = secure_filename(name)
+    unique_id = str(uuid.uuid4())[:8]
+    return f"{safe_name}_{unique_id}{ext}"
 
 
 def log_user_activity(action):
@@ -69,9 +111,19 @@ def upload_coupons():
     form = UploadCouponsForm()
     if form.validate_on_submit():
         file = form.file.data
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
-        file.save(file_path)
+        
+        try:
+            # אימות קובץ
+            validate_upload_file(file)
+            
+            # יצירת שם קובץ בטוח
+            filename = generate_safe_filename(file.filename)
+            file_path = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
+            file.save(file_path)
+
+        except ValueError as e:
+            flash(str(e), "danger")
+            return render_template("upload_coupons.html", form=form)
 
         try:
             invalid_coupons, missing_optional_fields_messages = process_coupons_excel(
@@ -95,6 +147,13 @@ def upload_coupons():
             flash("אירעה שגיאה בעת עיבוד הקובץ.", "danger")
             traceback.print_exc()
             current_app.logger.error(f"Error processing uploaded coupons: {e}")
+        finally:
+            # מחיקת הקובץ המועלה בכל מקרה
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except Exception as e:
+                current_app.logger.error(f"Error deleting uploaded file: {e}")
 
         return redirect(url_for("transactions.show_coupons"))
 

@@ -1161,8 +1161,8 @@ async def handle_company_choice_for_usage(update: Update, context: ContextTypes.
             
             message += get_gender_specific_text(
                 user_gender,
-                "כתוב את מספר הקופון שברצונך לעדכן:",
-                "כתבי את מספר הקופון שברצונך לעדכן:"
+                "כתוב את מספר הקופון (מתוך הרשימה) שברצונך לעדכן:",
+                "כתבי את מספר הקופון (מתוך הרשימה) שברצונך לעדכן:"
             )
             
             # Store coupons data for next step
@@ -1269,8 +1269,8 @@ async def handle_company_choice_for_delete(update: Update, context: ContextTypes
             
             message += get_gender_specific_text(
                 user_gender,
-                "כתוב את מספר הקופון שברצונך למחוק:",
-                "כתבי את מספר הקופון שברצונך למחוק:"
+                "כתוב את מספר הקופון(מתוך הרשימה) שברצונך למחוק:",
+                "כתבי את מספר הקופון(מתוך הרשימה) שברצונך למחוק:"
             )
             
             # Store coupons data for next step
@@ -2503,9 +2503,11 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
             get_gender_specific_text(
                 user_gender,
                 "מאיפה קיבלת את הקופון?\n"
-                "אם לא רלוונטי, תכתוב 'אין'",
+                "אם לא רלוונטי, תכתוב 'אין\n\n'"
+                "יעזור לך בעתיד אם ישאלו אותך בבית העסק",
                 "מאיפה קיבלת את הקופון?\n"
-                "אם לא רלוונטי, תכתבי 'אין'"
+                "אם לא רלוונטי, תכתבי 'אין\n\n'"
+                "יעזור לך בעתיד אם ישאלו אותך בבית העסק"
             )
         )
         return
@@ -2551,8 +2553,10 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text(
                 get_gender_specific_text(
                     user_gender,
-                    "האם זה קוד לשימוש חד פעמי? (כן/לא)",
-                    "האם זה קוד לשימוש חד פעמי? (כן/לא)"
+                    "האם זה קוד לשימוש חד פעמי? (כן/לא)\n\n"
+                    "הסבר: קופון שחייבים להשתמש בכל הסכום שלו בקניה הקרוב (למשל - קפה חינם, כניסה לחדר כושר וכו׳)",
+                    "האם זה קוד לשימוש חד פעמי? (כן/לא)\n\n"
+                    "הסבר: קופון שחייבים להשתמש בכל הסכום שלו בקניה הקרוב (למשל - קפה חינם, כניסה לחדר כושר וכו׳)",
                 )
             )
         return
@@ -2635,9 +2639,11 @@ async def handle_coupon_creation(update: Update, context: ContextTypes.DEFAULT_T
                 get_gender_specific_text(
                     user_gender,
                     "מה מטרת הקופון?\n"
-                    "אם אין מטרה, כתוב 'אין'",
+                    "אם אין מטרה, כתוב 'אין'\n\n"
+                    "למשל: קפה חינם, כניסה לחדר כושר וכו׳",
                     "מה מטרת הקופון?\n"
-                    "אם אין מטרה, כתובי 'אין'"
+                    "אם אין מטרה, כתבי 'אין'\n\n"
+                    "למשל: קפה חינם, כניסה לחדר כושר וכו׳",
                 )
             )
         else:
@@ -2844,36 +2850,114 @@ async def execute_coupon_deletion(update: Update, context: ContextTypes.DEFAULT_
     user_gender = await get_user_gender(user_id)
     selected_coupon = state_obj.get('selected_coupon')
     
+    # Check if user is verified for deletion
+    if not await is_user_verified_for_deletion(user_id):
+        await update.message.reply_text(
+            get_gender_specific_text(
+                user_gender,
+                "❌ אין לך הרשאה למחיקת קופונים. אנא וודא שאימתת את החיבור לטלגרם.",
+                "❌ אין לך הרשאה למחיקת קופונים. אנא וודאי שאימתת את החיבור לטלגרם."
+            )
+        )
+        return
+    
     try:
         conn = await get_async_db_connection()
         
-        # Delete coupon from database
-        delete_coupon_query = """
-            DELETE FROM coupon 
-            WHERE id = $1 AND user_id = $2
+        # Check if coupon has related transactions
+        check_transactions_query = """
+            SELECT COUNT(*) as transaction_count
+            FROM coupon_transaction 
+            WHERE coupon_id = $1
         """
-        result = await conn.execute(delete_coupon_query, selected_coupon['id'], user_id)
+        transaction_result = await conn.fetchrow(check_transactions_query, selected_coupon['id'])
+        transaction_count = transaction_result['transaction_count'] if transaction_result else 0
         
-        # Send success message
-        if result == "DELETE 1":
-            decrypted_code = decrypt_coupon_code(selected_coupon['code'])
-            success_msg = get_gender_specific_text(
-                user_gender,
-                f"🗑️ הקופון נמחק בהצלחה!\n\n"
-                f"🏢 חברה: {selected_coupon['company']}\n"
-                f"🏷️ קוד: {decrypted_code}\n"
-                f"הקופון הוסר מהמערכת לצמיתות.",
-                f"🗑️ הקופון נמחק בהצלחה!\n\n"
-                f"🏢 חברה: {selected_coupon['company']}\n"
-                f"🏷️ קוד: {decrypted_code}\n"
-                f"הקופון הוסר מהמערכת לצמיתות."
-            )
+        # Check if coupon has regular transactions (sales)
+        check_sales_query = """
+            SELECT COUNT(*) as sales_count
+            FROM transactions 
+            WHERE coupon_id = $1
+        """
+        sales_result = await conn.fetchrow(check_sales_query, selected_coupon['id'])
+        sales_count = sales_result['sales_count'] if sales_result else 0
+        
+        total_related_records = transaction_count + sales_count
+        
+        if total_related_records > 0:
+            # If coupon has related records, perform cascade deletion
+            try:
+                # Start transaction
+                async with conn.transaction():
+                    # Delete related coupon_transaction records first
+                    if transaction_count > 0:
+                        await conn.execute(
+                            "DELETE FROM coupon_transaction WHERE coupon_id = $1", 
+                            selected_coupon['id']
+                        )
+                    
+                    # Delete related transaction records  
+                    if sales_count > 0:
+                        await conn.execute(
+                            "DELETE FROM transactions WHERE coupon_id = $1", 
+                            selected_coupon['id']
+                        )
+                    
+                    # Delete the coupon itself
+                    result = await conn.execute(
+                        "DELETE FROM coupon WHERE id = $1 AND user_id = $2",
+                        selected_coupon['id'], user_id
+                    )
+                
+                decrypted_code = decrypt_coupon_code(selected_coupon['code'])
+                success_msg = get_gender_specific_text(
+                    user_gender,
+                    f"🗑️ הקופון נמחק בהצלחה!\n\n"
+                    f"🏢 חברה: {selected_coupon['company']}\n"
+                    f"🏷️ קוד: {decrypted_code}\n"
+                    f"הקופון הוסר מהמערכת לצמיתות.",
+                    f"🗑️ הקופון נמחק בהצלחה!\n\n"
+                    f"🏢 חברה: {selected_coupon['company']}\n"
+                    f"🏷️ קוד: {decrypted_code}\n"
+                    f"הקופון הוסר מהמערכת לצמיתות."
+                )
+                
+            except Exception as cascade_error:
+                logger.error(f"Error in cascade deletion: {cascade_error}")
+                await update.message.reply_text(
+                    get_gender_specific_text(
+                        user_gender,
+                        f"❌ שגיאה במחיקת הקופון: הקופון קשור ל-{total_related_records} עסקאות. לא ניתן למחוק אותו.",
+                        f"❌ שגיאה במחיקת הקופון: הקופון קשור ל-{total_related_records} עסקאות. לא ניתן למחוק אותו."
+                    )
+                )
+                return
         else:
-            success_msg = get_gender_specific_text(
-                user_gender,
-                "❌ שגיאה במחיקת הקופון. יתכן שהקופון כבר נמחק.",
-                "❌ שגיאה במחיקת הקופון. יתכן שהקופון כבר נמחק."
+            # Simple deletion for coupons without related records
+            result = await conn.execute(
+                "DELETE FROM coupon WHERE id = $1 AND user_id = $2",
+                selected_coupon['id'], user_id
             )
+            
+            if result == "DELETE 1":
+                decrypted_code = decrypt_coupon_code(selected_coupon['code'])
+                success_msg = get_gender_specific_text(
+                    user_gender,
+                    f"🗑️ הקופון נמחק בהצלחה!\n\n"
+                    f"🏢 חברה: {selected_coupon['company']}\n"
+                    f"🏷️ קוד: {decrypted_code}\n"
+                    f"הקופון הוסר מהמערכת לצמיתות.",
+                    f"🗑️ הקופון נמחק בהצלחה!\n\n"
+                    f"🏢 חברה: {selected_coupon['company']}\n"
+                    f"🏷️ קוד: {decrypted_code}\n"
+                    f"הקופון הוסר מהמערכת לצמיתות."
+                )
+            else:
+                success_msg = get_gender_specific_text(
+                    user_gender,
+                    "❌ שגיאה במחיקת הקופון. יתכן שהקופון כבר נמחק.",
+                    "❌ שגיאה במחיקת הקופון. יתכן שהקופון כבר נמחק."
+                )
         
         await update.message.reply_text(success_msg)
         await conn.close()
@@ -3593,6 +3677,29 @@ async def get_user_gender(user_id):
     except Exception as e:
         logger.error(f"Error getting user gender: {e}")
         return None
+
+async def is_user_verified_for_deletion(user_id):
+    """Check if user is verified and has permission to delete coupons"""
+    try:
+        database_url = os.getenv('DATABASE_URL')
+        if database_url.startswith('postgresql+psycopg2://'):
+            database_url = database_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
+        
+        conn = await asyncpg.connect(database_url, statement_cache_size=0)
+        query = """
+            SELECT is_verified, is_active 
+            FROM telegram_users 
+            WHERE user_id = $1 AND is_active = true AND is_verified = true
+        """
+        result = await conn.fetchrow(query, user_id)
+        await conn.close()
+        
+        # User is verified if they have an active and verified telegram connection
+        return result is not None
+        
+    except Exception as e:
+        logger.error(f"Error checking user verification for deletion: {e}")
+        return False
 
 # Function to get gender-specific text
 def get_gender_specific_text(gender, male_text, female_text):

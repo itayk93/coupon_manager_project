@@ -843,8 +843,13 @@ def rate_user(user_id, transaction_id):
         return redirect(url_for("profile.user_profile", user_id=user_id))
 
     # לוודא שהעסקה קיימת בין המשתמשים (transaction)
-    transaction = Transaction.query.filter_by(
-        id=transaction_id, buyer_id=current_user.id, seller_id=user_to_rate.id
+    # בדיקה שהמשתמש הנוכחי היה חלק מהעסקה (קונה או מוכר)
+    transaction = Transaction.query.filter(
+        (Transaction.id == transaction_id) &
+        (
+            ((Transaction.buyer_id == current_user.id) & (Transaction.seller_id == user_to_rate.id)) |
+            ((Transaction.seller_id == current_user.id) & (Transaction.buyer_id == user_to_rate.id))
+        )
     ).first()
 
     if not transaction:

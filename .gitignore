@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 sample_text/
 .env
+reports_to_improve/
+project_structure.txt/

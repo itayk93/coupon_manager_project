@@ -37,6 +37,8 @@ app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
 app.config["SESSION_COOKIE_SECURE"] = True  # True if the site works with HTTPS
 app.config["REMEMBER_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["WTF_CSRF_ENABLED"] = True
+app.config["WTF_CSRF_TIME_LIMIT"] = None  # No time limit for CSRF tokens
 
 # Initialize extensions
 db.init_app(app)

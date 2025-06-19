@@ -9,40 +9,9 @@
 <section class="profile-container">
     <!-- # Enhanced profile header with larger photo and improved layout -->
     <div class="profile-header">
-        <div class="profile-image-container">
-            {% if user.profile_image %}
-                <img src="{{ url_for('static', filename=user.profile_image.replace('static/', '')) }}"
-                    alt="תמונת פרופיל"
-                    class="profile-image">
-            {% else %}
-                <img src="{{ url_for('static', filename='images/default_profile.png') }}"
-                    alt="תמונת פרופיל"
-                    class="profile-image">
-            {% endif %}
-        </div>
         <div class="profile-title">
             <h2>{{ user.first_name }} {{ user.last_name }}</h2>
             
-            <!-- # Improved rating stars with animation -->
-            <div class="rating-display">
-                {% if avg_rating is not none %}
-                    {% for i in range(1, 6) %}
-                        {% if avg_rating >= i %}
-                            <i class="fa fa-star"></i>
-                        {% elif avg_rating > i - 1 and (avg_rating - (i - 1)) >= 0.5 %}
-                            <i class="fa fa-star-half-o"></i>
-                        {% else %}
-                            <i class="fa fa-star-o"></i>
-                        {% endif %}
-                    {% endfor %}
-                    <span class="rating-text">({{ avg_rating }})</span>
-                {% else %}
-                    {% for i in range(1, 6) %}
-                        <i class="fa fa-star-o"></i>
-                    {% endfor %}
-                    <span class="rating-text">(אין דירוג)</span>
-                {% endif %}
-            </div>
         </div>
     </div>
 
@@ -180,46 +149,6 @@
         {% endif %}
     </div>
 
-    <!-- # Reviews section with improved card design -->
-    <div class="reviews-section">
-        <h3><i class="fa fa-comments"></i> ביקורות שקיבל</h3>
-        
-        {% if ratings and ratings|length > 0 %}
-            <!-- # Modern responsive grid for reviews -->
-            <div class="reviews-container">
-                {% for review in ratings %}
-                    <div class="review-card">
-                        <div class="review-meta">
-                            <div class="review-date">
-                                <i class="fa fa-calendar"></i> {{ review.created_at.strftime('%d/%m/%Y') }}
-                            </div>
-                            <div class="review-rating">
-                                {% for i in range(1,6) %}
-                                    {% if review.rating >= i %}
-                                        <i class="fa fa-star"></i>
-                                    {% elif review.rating > i - 1 and (review.rating - (i - 1)) >= 0.5 %}
-                                        <i class="fa fa-star-half-o"></i>
-                                    {% else %}
-                                        <i class="fa fa-star-o"></i>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="review-comment">
-                            {{ review.comment or 'אין הערה' }}
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <!-- # Enhanced empty state for no reviews -->
-            <div class="no-reviews">
-                <i class="fa fa-comment-o"></i>
-                <p>אין ביקורות על משתמש זה.</p>
-                <small>ביקורות יופיעו כאן לאחר שאחרים ידרגו את המשתמש</small>
-            </div>
-        {% endif %}
-    </div>
 
     <!-- # Delete account button with improved styling and animation -->
     {% if is_owner and not is_admin %}
@@ -461,69 +390,26 @@
     /* # Enhanced profile header styling */
     .profile-header {
         display: flex;
+        justify-content: center;
         align-items: center;
-        gap: 30px;
         margin-bottom: 30px;
-        padding: 30px;
-        background-color: var(--card-bg);
+        padding: 40px 30px;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
         border-radius: var(--border-radius);
         box-shadow: var(--box-shadow);
-    }
-
-    .profile-image-container {
-        flex-shrink: 0;
-        position: relative;
-    }
-
-    .profile-image {
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
-        object-fit: cover;
-        box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.8), 0 0 0 8px var(--primary-light);
-        transition: var(--transition);
-    }
-
-    .profile-image:hover {
-        transform: scale(1.05);
+        color: var(--white);
     }
 
     .profile-title {
-        flex-grow: 1;
+        text-align: center;
     }
 
     .profile-title h2 {
-        margin: 0 0 15px 0;
-        font-size: 32px;
-        color: var(--primary-color);
+        margin: 0;
+        font-size: 36px;
+        color: var(--white);
         font-weight: 700;
-    }
-
-    /* # Animated rating display */
-    .rating-display {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .rating-display .fa {
-        color: #ffc107;
-        font-size: 20px;
-        transition: var(--transition);
-    }
-    
-    .rating-display:hover .fa {
-        transform: scale(1.1);
-    }
-
-    .rating-display .fa-star-o {
-        color: var(--medium-gray);
-    }
-
-    .rating-text {
-        font-size: 16px;
-        color: var(--dark-gray);
-        font-weight: 500;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
 
     /* # Enhanced profile description section */
@@ -848,117 +734,6 @@
         font-size: 16px;
     }
 
-    /* # Modern reviews section styling */
-    .reviews-section {
-        margin-top: 50px;
-    }
-
-    .reviews-section h3 {
-        margin-bottom: 25px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid var(--light-gray);
-        color: var(--primary-color);
-        font-size: 24px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .reviews-section h3 .fa {
-        color: var(--secondary-color);
-    }
-
-    .reviews-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 25px;
-    }
-
-    .review-card {
-        background-color: var(--card-bg);
-        border-radius: var(--border-radius);
-        box-shadow: var(--box-shadow);
-        padding: 25px;
-        transition: var(--transition);
-        border-top: 4px solid var(--secondary-color);
-    }
-
-    .review-card:hover {
-        transform: translateY(-5px);
-        box-shadow: var(--box-shadow-hover);
-    }
-
-    .review-meta {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid var(--light-gray);
-    }
-
-    .review-date {
-        font-size: 14px;
-        color: var(--dark-gray);
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-
-    .review-rating .fa {
-        color: #ffc107;
-        font-size: 16px;
-        transition: var(--transition);
-    }
-    
-    .review-card:hover .review-rating .fa {
-        transform: rotateY(180deg);
-        transition-duration: 0.5s;
-    }
-
-    .review-rating .fa-star-o {
-        color: var(--medium-gray);
-    }
-
-    .review-comment {
-        line-height: 1.7;
-        font-size: 15px;
-    }
-
-    .no-reviews {
-        text-align: center;
-        padding: 50px 20px;
-        background-color: var(--light-gray);
-        border-radius: var(--border-radius);
-        transition: var(--transition);
-    }
-    
-    .no-reviews:hover {
-        background-color: rgba(241, 242, 246, 0.7);
-    }
-
-    .no-reviews .fa {
-        font-size: 50px;
-        color: var(--medium-gray);
-        margin-bottom: 15px;
-        transition: var(--transition);
-    }
-    
-    .no-reviews:hover .fa {
-        transform: scale(1.1);
-    }
-
-    .no-reviews p {
-        margin: 0 0 10px 0;
-        color: var(--dark-gray);
-        font-size: 18px;
-        font-weight: 600;
-    }
-    
-    .no-reviews small {
-        color: var(--dark-gray);
-        font-size: 14px;
-    }
 
     /* # Enhanced action section for delete button */
     .action-section {
@@ -1070,19 +845,7 @@
     /* # Enhanced responsive design */
     @media (max-width: 768px) {
         .profile-header {
-            flex-direction: column;
-            text-align: center;
-            gap: 20px;
-            padding: 25px 15px;
-        }
-        
-        .profile-image {
-            width: 120px;
-            height: 120px;
-        }
-
-        .reviews-container {
-            grid-template-columns: 1fr;
+            padding: 30px 15px;
         }
         
         .tab-content {
@@ -1123,12 +886,6 @@
         
         .tab-button.active:after {
             transform: scaleY(1);
-        }
-        
-        .review-meta {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
         }
         
         .profile-description h3:after,

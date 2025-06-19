@@ -1,5 +1,5 @@
 # admin_routes.py
-from flask import Blueprint, redirect, url_for, flash, request, render_template
+from flask import Blueprint, redirect, url_for, flash, request, render_template, abort
 from flask_login import login_required, current_user
 from app.models import Tag, Coupon, CouponTransaction, FeatureAccess, User
 from app.extensions import db
@@ -7,9 +7,20 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, SelectField, HiddenField
 from wtforms.validators import DataRequired
 from app.helpers import get_coupon_data, send_password_reset_email
+from functools import wraps
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Admin-only decorator
+def admin_required(f):
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
 
 # ===============================
 # Blueprint לניהול תגיות (admin_tags_bp)
@@ -158,25 +169,8 @@ admin_bp = Blueprint("admin", __name__)
 
 # עדכון עסקאות קופונים
 @admin_bp.route("/update_coupon_transactions", methods=["POST"])
-@login_required
+@admin_required
 def update_coupon_transactions():
-    # בדיקת הרשאות – רק אדמין מורשה
-    if not current_user.is_admin:
-        flash("אין לך הרשאה לבצע פעולה זו.", "danger")
-        coupon_id = request.form.get("coupon_id")
-        coupon_code = request.form.get("coupon_code")
-
-        coupon = None
-        if coupon_id:
-            coupon = Coupon.query.get(coupon_id)
-        elif coupon_code:
-            coupon = Coupon.query.filter_by(code=coupon_code).first()
-
-        if coupon:
-            return redirect(url_for("coupon_detail", id=coupon.id))
-        else:
-            flash("לא ניתן לעדכן נתונים ללא מזהה קופון תקין.", "danger")
-            return redirect(url_for("show_coupons"))
 
     # קבלת נתוני הקופון מהטופס
     coupon_id = request.form.get("coupon_id")

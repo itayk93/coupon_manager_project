@@ -100,13 +100,13 @@
                             <h1>המוכר אישר את העסקה!</h1>
                         </div>
                         <div class="body">
-                            <p>שלום {{ buyer.first_name }},</p>
+                            <p>שלום {{ buyer.first_name|escape }},</p>
                             <p>
-                                <strong class="highlight">{{ seller.first_name }}</strong>
+                                <strong class="highlight">{{ seller.first_name|escape }}</strong>
                                 {% if seller.gender == 'female' %}אישרה{% else %}אישר{% endif %}
                                 את העסקה עבור הקופון מחברת
-                                <span class="highlight">{{ coupon.company }}</span>
-                                שעולה <span class="highlight">{{ coupon.cost }} ₪</span>.
+                                <span class="highlight">{{ coupon.company|escape }}</span>
+                                שעולה <span class="highlight">{{ coupon.cost|escape }} ₪</span>.
                             </p>
                             <p>
                                 כעת 

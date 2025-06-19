@@ -112,68 +112,14 @@ def fetch_users() -> pd.DataFrame:
         df = pd.DataFrame(data)
         if not df.empty:
             return df
-    # במקרה ואין נתונים – משתמשים בדאטה סטטי לדוגמה:
+    # במקרה ואין נתונים – ללא דאטה סטטי עם מידע אישי:
     sample_data = [
         {
-            "id": 26,
-            "email": "itayk93@yahoo.com",
-            "first_name": "איתיטסט1",
-            "last_name": "להלה",
-        },
-        {
-            "id": 29,
-            "email": "yahavtr07@gmail.com",
-            "first_name": "יהב",
-            "last_name": "טרבלסי",
-        },
-        {
-            "id": 35,
-            "email": "avso1981@gmail.com",
-            "first_name": "אבי",
-            "last_name": "סובול",
-        },
-        {
-            "id": 40,
-            "email": "orendi1978@gmail.com",
-            "first_name": "Oren",
-            "last_name": "Dichterman",
-        },
-        {
-            "id": 39,
-            "email": "ordona1995@gmail.com",
-            "first_name": "אליאור",
-            "last_name": "אזואלוס",
-        },
-        {
-            "id": 41,
-            "email": "eladi111@hotmail.com",
-            "first_name": "אלעד",
-            "last_name": "דבש",
-        },
-        {
             "id": 1,
-            "email": "itayk93@gmail.com",
-            "first_name": "איתי",
-            "last_name": "קרקסון",
-        },
-        {
-            "id": 42,
-            "email": "tjuacwmobiyrjdaxcc@poplk.com",
-            "first_name": "kvkv",
-            "last_name": "kkf",
-        },
-        {
-            "id": 28,
-            "email": "arielfrid20011@gmail.com",
-            "first_name": "אריאל",
-            "last_name": "פריד",
-        },
-        {
-            "id": 36,
-            "email": "david.ruimy1@gmail.com",
-            "first_name": "דוד",
-            "last_name": "רוימי",
-        },
+            "email": "demo@example.com",
+            "first_name": "דמו",
+            "last_name": "משתמש",
+        }
     ]
     return pd.DataFrame(sample_data)
 
