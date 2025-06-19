@@ -18,7 +18,7 @@
     --telegram-blue-hover: #006699;
     --success-green: #28a745;
     --warning-orange: #ff6b35;
-    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-primary: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     --gradient-telegram: linear-gradient(135deg, #0088cc 0%, #229ed9 100%);
     --gradient-success: linear-gradient(135deg, #28a745 0%, #20c997 100%);
     --shadow-soft: 0 10px 40px rgba(0,0,0,0.1);
@@ -39,64 +39,38 @@ body {
 
 /* Hero Section */
 .hero-section {
-    background: var(--gradient-primary);
-    border-radius: 20px;
-    padding: 60px 40px;
+    background: white;
+    border-radius: 15px;
+    padding: 20px 15px;
     text-align: center;
-    color: white;
-    margin-bottom: 40px;
-    box-shadow: var(--shadow-soft);
-    position: relative;
-    overflow: hidden;
-}
-
-.hero-section::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-    opacity: 0.3;
-    animation: float 6s ease-in-out infinite;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-10px) rotate(2deg); }
+    color: var(--text-color);
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
 .hero-content {
-    position: relative;
-    z-index: 1;
+    /* Simple content wrapper */
 }
 
 .hero-title {
-    font-size: 3em;
-    margin-bottom: 20px;
-    font-weight: 700;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    font-size: 1.8em;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: var(--primary-color);
 }
 
 .hero-subtitle {
-    font-size: 1.3em;
-    margin-bottom: 30px;
-    opacity: 0.95;
-    line-height: 1.6;
+    font-size: 0.95em;
+    margin-bottom: 0;
+    line-height: 1.4;
+    color: #666;
 }
 
 .telegram-icon-large {
-    font-size: 4em;
-    margin-bottom: 20px;
+    font-size: 1.8em;
+    margin-bottom: 10px;
     display: block;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+    color: var(--telegram-blue);
 }
 
 /* Features Grid */
@@ -428,11 +402,21 @@ body {
     }
     
     .hero-section {
-        padding: 40px 20px;
+        padding: 20px 15px;
+        margin-bottom: 20px;
     }
     
     .hero-title {
-        font-size: 2.2em;
+        font-size: 1.8em;
+    }
+    
+    .hero-subtitle {
+        font-size: 1em;
+    }
+    
+    .telegram-icon-large {
+        font-size: 2em;
+        margin-bottom: 10px;
     }
     
     .qr-container {
@@ -513,41 +497,12 @@ body {
             <i class="fa fa-telegram telegram-icon-large"></i>
             <h1 class="hero-title">בוט קופונים חכם בטלגרם</h1>
             <p class="hero-subtitle">
-                נהלו את הקופונים שלכם בקלות מטלגרם! קבלו התראות על קופונים חדשים, 
+                נהלו את הקופונים שלכם בקלות מטלגרם! קבלו התראות על קופונים חדשים,<br>
                 עקבו אחר תאריכי תפוגה ותהנו מחוויית ניהול קופונים חכמה ונוחה.
             </p>
         </div>
     </div>
 
-    <!-- Features Grid -->
-    <div class="features-grid">
-        <div class="feature-card">
-            <i class="fa fa-bell feature-icon"></i>
-            <h3 class="feature-title">התראות חכמות</h3>
-            <p class="feature-description">
-                קבלו התראות אוטומטיות על קופונים שעומדים לפוג תוקף, 
-                כדי שלא תפספסו הזדמנויות חסכון!
-            </p>
-        </div>
-        
-        <div class="feature-card">
-            <i class="fa fa-mobile-alt feature-icon"></i>
-            <h3 class="feature-title">גישה מהירה</h3>
-            <p class="feature-description">
-                צפו בכל הקופונים שלכם ישירות מטלגרם, 
-                בלי צורך לפתוח את האתר בכל פעם.
-            </p>
-        </div>
-        
-        <div class="feature-card">
-            <i class="fa fa-magic feature-icon"></i>
-            <h3 class="feature-title">ניהול קל</h3>
-            <p class="feature-description">
-                הוסיפו קופונים חדשים, עדכנו שימוש בקופונים 
-                ונהלו את הארנק הדיגיטלי בקלות מטלגרם.
-            </p>
-        </div>
-    </div>
 
     <!-- QR Code Section -->
     <div class="qr-section">
@@ -654,6 +609,36 @@ body {
         {% endif %}
     </div>
 
+    <!-- Features Grid -->
+    <div class="features-grid">
+        <div class="feature-card">
+            <i class="fa fa-bell feature-icon"></i>
+            <h3 class="feature-title">התראות חכמות</h3>
+            <p class="feature-description">
+                קבלו התראות אוטומטיות על קופונים שעומדים לפוג תוקף, 
+                כדי שלא תפספסו הזדמנויות חסכון!
+            </p>
+        </div>
+        
+        <div class="feature-card">
+            <i class="fa fa-mobile-alt feature-icon"></i>
+            <h3 class="feature-title">גישה מהירה</h3>
+            <p class="feature-description">
+                צפו בכל הקופונים שלכם ישירות מטלגרם, 
+                בלי צורך לפתוח את האתר בכל פעם.
+            </p>
+        </div>
+        
+        <div class="feature-card">
+            <i class="fa fa-magic feature-icon"></i>
+            <h3 class="feature-title">ניהול קל</h3>
+            <p class="feature-description">
+                הוסיפו קופונים חדשים, עדכנו שימוש בקופונים 
+                ונהלו את הארנק הדיגיטלי בקלות מטלגרם.
+            </p>
+        </div>
+    </div>
+
     <!-- Benefits Section -->
     <div class="benefits-section">
         <h2 class="benefits-title">
@@ -698,14 +683,6 @@ body {
                 </div>
             </div>
             
-            <div class="benefit-item">
-                <div class="benefit-icon">
-                    <i class="fa fa-chart-line"></i>
-                </div>
-                <div class="benefit-text">
-                    מעקב אחר חסכון - ראו כמה כסף חסכתם עם הקופונים שלכם
-                </div>
-            </div>
         </div>
     </div>
 </div>
