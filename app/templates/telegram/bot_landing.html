@@ -521,7 +521,16 @@ body {
             <div class="qr-instructions">
                 <div class="qr-step">
                     <div class="step-number">1</div>
-                    <div>סרקו את הקוד QR או חפשו {{ bot_username }} בטלגרם</div>
+                    <div>סרקו את הקוד QR או חפשו {{ bot_username }} בטלגרם <a href="tg://resolve?domain=@couponmasteril_bot" style="color: var(--telegram-blue); text-decoration: underline; font-weight: bold;" onclick="window.open('https://t.me/{{ bot_username }}', '_blank'); return false;">או לחצו כאן</a></div>
+                </div>
+                <div class="qr-step">
+                    <div class="step-number">1</div>
+                    <div>
+                        <a href="tg://resolve?domain={{ bot_username }}" 
+                           onclick="window.open('https://t.me/{{ bot_username }}', '_blank'); return false;">
+                            סרקו את הקוד QR או חפשו {{ bot_username }} בטלגרם
+                        </a>
+                    </div>
                 </div>
                 
                 <div class="qr-step">
