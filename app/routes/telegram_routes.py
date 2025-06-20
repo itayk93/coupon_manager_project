@@ -29,6 +29,8 @@ def telegram_bot_page():
     """
     עמוד שיווקי לבוט הטלגרם
     """
+    from flask_wtf.csrf import generate_csrf
+    
     config = get_telegram_config()
     if not config:
         return render_template('telegram/error.html', error="הבוט לא מוגדר כראוי. אנא פנה למנהל המערכת.")
@@ -39,7 +41,8 @@ def telegram_bot_page():
     
     return render_template('telegram/bot_landing.html', 
                          bot_username=config['bot_username'],
-                         is_connected=is_connected)
+                         is_connected=is_connected,
+                         csrf_token=generate_csrf)
 
 @telegram_bp.route('/connect_telegram', methods=['GET'])
 @login_required
@@ -56,7 +59,7 @@ def connect_telegram():
     verification_token = ''.join(random.choices('0123456789', k=6))
     if existing_connection:
         existing_connection.verification_token = verification_token
-        existing_connection.verification_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+        existing_connection.verification_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
         existing_connection.is_verified = False
         existing_connection.disconnected_at = None
         existing_connection.is_disconnected = False
@@ -65,7 +68,7 @@ def connect_telegram():
             user_id=current_user.id,
             telegram_chat_id=0,  # יוגדר מאוחר יותר
             verification_token=verification_token,
-            verification_expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+            verification_expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
             ip_address=request.remote_addr,
             device_info=request.user_agent.string
         )
@@ -74,6 +77,52 @@ def connect_telegram():
     return render_template('telegram/connect.html', 
                          verification_token=verification_token,
                          bot_username=config['bot_username'])
+
+@telegram_bp.route('/generate_token', methods=['POST'])
+@login_required
+def generate_token():
+    """
+    API endpoint לייצור טוקן חדש עבור עמוד הבוט
+    """
+    try:
+        config = get_telegram_config()
+        if not config:
+            return jsonify({'success': False, 'error': 'הבוט לא מוגדר כראוי'}), 500
+        
+        # יצירת קוד אימות אקראי
+        verification_token = ''.join(random.choices('0123456789', k=6))
+        
+        # בדיקה האם יש חיבור קיים
+        existing_connection = TelegramUser.query.filter_by(user_id=current_user.id).first()
+        
+        if existing_connection:
+            existing_connection.verification_token = verification_token
+            existing_connection.verification_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+            existing_connection.is_verified = False
+            existing_connection.disconnected_at = None
+            existing_connection.is_disconnected = False
+        else:
+            new_connection = TelegramUser(
+                user_id=current_user.id,
+                telegram_chat_id=0,
+                verification_token=verification_token,
+                verification_expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+                ip_address=request.remote_addr,
+                device_info=request.user_agent.string
+            )
+            db.session.add(new_connection)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'token': verification_token,
+            'expires_in_minutes': 10
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in generate_token: {str(e)}")
+        return jsonify({'success': False, 'error': 'אירעה שגיאה ביצירת הטוקן'}), 500
 
 @telegram_bp.route('/verify_telegram', methods=['POST'])
 def verify_telegram():

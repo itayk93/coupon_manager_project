@@ -9,6 +9,7 @@
 <meta property="og:title" content="בוט קופונים בטלגרם - Coupon Master">
 <meta property="og:description" content="בוט מתקדם לניהול קופונים בטלגרם - קבלו התראות, נהלו קופונים וחסכו כסף!">
 <meta property="og:image" content="{{ url_for('static', filename='images/telegram_bot.png', _external=True) }}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 {% endblock %}
 
 {% block content %}
@@ -238,7 +239,6 @@ body {
     padding: 20px;
     text-align: center;
     margin: 20px 0;
-    font-family: 'Courier New', monospace;
     font-size: 2em;
     font-weight: bold;
     color: var(--telegram-blue);
@@ -497,8 +497,13 @@ body {
             <i class="fa fa-telegram telegram-icon-large"></i>
             <h1 class="hero-title">בוט קופונים חכם בטלגרם</h1>
             <p class="hero-subtitle">
-                נהלו את הקופונים שלכם בקלות מטלגרם! קבלו התראות על קופונים חדשים,<br>
-                עקבו אחר תאריכי תפוגה ותהנו מחוויית ניהול קופונים חכמה ונוחה.
+                {% if current_user.gender == 'female' %}
+                    נהלי את הקופונים שלך בקלות מטלגרם! קבלי התראות על קופונים חדשים,<br>
+                    עקבי אחר תאריכי תפוגה ותהני מחוויית ניהול קופונים חכמה ונוחה.
+                {% else %}
+                    נהל את הקופונים שלך בקלות מטלגרם! קבל התראות על קופונים חדשים,<br>
+                    עקוב אחר תאריכי תפוגה ותהנה מחוויית ניהול קופונים חכמה ונוחה.
+                {% endif %}
             </p>
         </div>
     </div>
@@ -521,31 +526,59 @@ body {
             <div class="qr-instructions">
                 <div class="qr-step">
                     <div class="step-number">1</div>
-                    <div>סרקו את הקוד QR או חפשו {{ bot_username }} בטלגרם <a href="tg://resolve?domain=@couponmasteril_bot" style="color: var(--telegram-blue); text-decoration: underline; font-weight: bold;" onclick="window.open('https://t.me/{{ bot_username }}', '_blank'); return false;">או לחצו כאן</a></div>
+                    <div>
+                        {% if current_user.gender == 'female' %}
+                            סרקי את הקוד QR או חפשי {{ bot_username }} בטלגרם <a href="tg://resolve?domain=@couponmasteril_bot" style="color: var(--telegram-blue); text-decoration: underline; font-weight: bold;" onclick="window.open('https://t.me/{{ bot_username }}', '_blank'); return false;">או לחצי כאן</a>
+                        {% else %}
+                            סרוק את הקוד QR או חפש {{ bot_username }} בטלגרם <a href="tg://resolve?domain=@couponmasteril_bot" style="color: var(--telegram-blue); text-decoration: underline; font-weight: bold;" onclick="window.open('https://t.me/{{ bot_username }}', '_blank'); return false;">או לחץ כאן</a>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="qr-step">
                     <div class="step-number">1</div>
                     <div>
                         <a href="tg://resolve?domain={{ bot_username }}" 
                            onclick="window.open('https://t.me/{{ bot_username }}', '_blank'); return false;">
-                            סרקו את הקוד QR או חפשו {{ bot_username }} בטלגרם
+                            {% if current_user.gender == 'female' %}
+                                סרקי את הקוד QR או חפשי {{ bot_username }} בטלגרם
+                            {% else %}
+                                סרוק את הקוד QR או חפש {{ bot_username }} בטלגרם
+                            {% endif %}
                         </a>
                     </div>
                 </div>
                 
                 <div class="qr-step">
                     <div class="step-number">2</div>
-                    <div>הקישו על "התחל" או שלחו /start לבוט</div>
+                    <div>
+                        {% if current_user.gender == 'female' %}
+                            לחצי על "התחל" או שלחי /start לבוט
+                        {% else %}
+                            לחץ על "התחל" או שלח /start לבוט
+                        {% endif %}
+                    </div>
                 </div>
                 
                 <div class="qr-step">
                     <div class="step-number">3</div>
-                    <div>הפיקו קוד חיבור באזור שלמטה</div>
+                    <div>
+                        {% if current_user.gender == 'female' %}
+                            הפיקי קוד חיבור באזור שלמטה
+                        {% else %}
+                            הפיקו קוד חיבור באזור שלמטה
+                        {% endif %}
+                    </div>
                 </div>
                 
                 <div class="qr-step">
                     <div class="step-number">4</div>
-                    <div>שלחו את הקוד לבוט כדי להתחבר</div>
+                    <div>
+                        {% if current_user.gender == 'female' %}
+                            שלחי את הקוד לבוט כדי להתחבר
+                        {% else %}
+                            שלחו את הקוד לבוט כדי להתחבר
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -557,15 +590,35 @@ body {
             {% if is_connected %}
                 <div class="status-connected">
                     <i class="fa fa-check-circle"></i>
-                    אתם כבר מחוברים לבוט הטלגרם!
+                    {% if current_user.gender == 'female' %}
+                        את כבר מחוברת לבוט הטלגרם!
+                    {% else %}
+                        אתה כבר מחובר לבוט הטלגרם!
+                    {% endif %}
                 </div>
-                <p>תוכלו ליהנות מכל התכונות החכמות של הבוט שלנו.</p>
+                <p>
+                    {% if current_user.gender == 'female' %}
+                        תוכלי ליהנות מכל התכונות החכמות של הבוט שלנו.
+                    {% else %}
+                        תוכל ליהנות מכל התכונות החכמות של הבוט שלנו.
+                    {% endif %}
+                </p>
             {% else %}
                 <div class="status-not-connected">
                     <i class="fa fa-exclamation-triangle"></i>
-                    עדיין לא מחוברים לבוט
+                    {% if current_user.gender == 'female' %}
+                        עדיין לא מחוברת לבוט
+                    {% else %}
+                        עדיין לא מחובר לבוט
+                    {% endif %}
                 </div>
-                <p>הפיקו קוד חיבור ושלחו אותו לבוט כדי להתחבר.</p>
+                <p>
+                    {% if current_user.gender == 'female' %}
+                        הפיקי קוד חיבור ושלחי אותו לבוט כדי להתחבר.
+                    {% else %}
+                        הפק קוד חיבור ושלח אותו לבוט כדי להתחבר.
+                    {% endif %}
+                </p>
             {% endif %}
         </div>
 
@@ -577,16 +630,24 @@ body {
             </h3>
             
             <div id="tokenDisplay" class="token-display">
-                הקישו על "הפק קוד" למטה
+                {% if current_user.gender == 'female' %}
+                    לחצי על "הפקי קוד" למטה
+                {% else %}
+                    לחץ על "הפק קוד" למטה
+                {% endif %}
             </div>
             
             <div class="token-expiry" id="tokenExpiry" style="display: none;">
-                הקוד בתוקף למשך 5 דקות
+                הקוד בתוקף למשך 10 דקות
             </div>
             
             <button id="generateTokenBtn" class="generate-token-btn">
                 <i class="fa fa-magic"></i>
-                הפק קוד חיבור חדש
+                {% if current_user.gender == 'female' %}
+                    הפיקי קוד חיבור חדש
+                {% else %}
+                    הפק קוד חיבור חדש
+                {% endif %}
             </button>
             
             <div id="message" class="message hidden"></div>
@@ -595,23 +656,39 @@ body {
                target="_blank" 
                class="connect-bot-btn">
                 <i class="fa fa-telegram"></i>
-                פתח את הבוט בטלגרם
+                {% if current_user.gender == 'female' %}
+                    פתחי את הבוט בטלגרם
+                {% else %}
+                    פתח את הבוט בטלגרם
+                {% endif %}
             </a>
             
             <div class="instructions-list">
                 <div class="instruction-item">
                     <i class="fa fa-info-circle instruction-icon"></i>
-                    <div>לאחר הפקת הקוד, פתחו את הבוט בטלגרם ושלחו את הקוד</div>
+                    <div>
+                        {% if current_user.gender == 'female' %}
+                            לאחר הפקת הקוד, פתחי את הבוט בטלגרם ושלחי את הקוד
+                        {% else %}
+                            לאחר הפקת הקוד, פתח את הבוט בטלגרם ושלח את הקוד
+                        {% endif %}
+                    </div>
                 </div>
                 
                 <div class="instruction-item">
                     <i class="fa fa-clock instruction-icon"></i>
-                    <div>הקוד בתוקף למשך 5 דקות בלבד</div>
+                    <div>הקוד בתוקף למשך 10 דקות בלבד</div>
                 </div>
                 
                 <div class="instruction-item">
                     <i class="fa fa-refresh instruction-icon"></i>
-                    <div>תוכלו להפיק קוד חדש בכל עת</div>
+                    <div>
+                        {% if current_user.gender == 'female' %}
+                            תוכלי להפיק קוד חדש בכל עת
+                        {% else %}
+                            תוכל להפיק קוד חדש בכל עת
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -624,8 +701,13 @@ body {
             <i class="fa fa-bell feature-icon"></i>
             <h3 class="feature-title">התראות חכמות</h3>
             <p class="feature-description">
-                קבלו התראות אוטומטיות על קופונים שעומדים לפוג תוקף, 
-                כדי שלא תפספסו הזדמנויות חסכון!
+                {% if current_user.gender == 'female' %}
+                    קבלי התראות אוטומטיות על קופונים שעומדים לפוג תוקף, 
+                    כדי שלא תפספסי הזדמנויות חסכון!
+                {% else %}
+                    קבל התראות אוטומטיות על קופונים שעומדים לפוג תוקף, 
+                    כדי שלא תפספס הזדמנויות חסכון!
+                {% endif %}
             </p>
         </div>
         
@@ -633,8 +715,13 @@ body {
             <i class="fa fa-mobile-alt feature-icon"></i>
             <h3 class="feature-title">גישה מהירה</h3>
             <p class="feature-description">
-                צפו בכל הקופונים שלכם ישירות מטלגרם, 
-                בלי צורך לפתוח את האתר בכל פעם.
+                {% if current_user.gender == 'female' %}
+                    צפי בכל הקופונים שלך ישירות מטלגרם, 
+                    בלי צורך לפתוח את האתר בכל פעם.
+                {% else %}
+                    צפה בכל הקופונים שלך ישירות מטלגרם, 
+                    בלי צורך לפתוח את האתר בכל פעם.
+                {% endif %}
             </p>
         </div>
         
@@ -642,8 +729,13 @@ body {
             <i class="fa fa-magic feature-icon"></i>
             <h3 class="feature-title">ניהול קל</h3>
             <p class="feature-description">
-                הוסיפו קופונים חדשים, עדכנו שימוש בקופונים 
-                ונהלו את הארנק הדיגיטלי בקלות מטלגרם.
+                {% if current_user.gender == 'female' %}
+                    הוסיפי קופונים חדשים, עדכני שימוש בקופונים 
+                    ונהלי את הארנק הדיגיטלי בקלות מטלגרם.
+                {% else %}
+                    הוסף קופונים חדשים, עדכן שימוש בקופונים 
+                    ונהל את הארנק הדיגיטלי בקלות מטלגרם.
+                {% endif %}
             </p>
         </div>
     </div>
@@ -661,7 +753,11 @@ body {
                     <i class="fa fa-clock"></i>
                 </div>
                 <div class="benefit-text">
-                    חסכו זמן - כל הקופונים שלכם במקום אחד, זמינים תמיד בטלגרם
+                    {% if current_user.gender == 'female' %}
+                        חסכי זמן - כל הקופונים שלך במקום אחד, זמינים תמיד בטלגרם
+                    {% else %}
+                        חסוך זמן - כל הקופונים שלך במקום אחד, זמינים תמיד בטלגרם
+                    {% endif %}
                 </div>
             </div>
             
@@ -670,7 +766,11 @@ body {
                     <i class="fa fa-shield-alt"></i>
                 </div>
                 <div class="benefit-text">
-                    אבטחה מלאה - הקופונים שלכם מוצפנים ומאובטחים במערכת שלנו
+                    {% if current_user.gender == 'female' %}
+                        אבטחה מלאה - הקופונים שלך מוצפנים ומאובטחים במערכת שלנו
+                    {% else %}
+                        אבטחה מלאה - הקופונים שלך מוצפנים ומאובטחים במערכת שלנו
+                    {% endif %}
                 </div>
             </div>
             
@@ -679,7 +779,11 @@ body {
                     <i class="fa fa-calendar-alt"></i>
                 </div>
                 <div class="benefit-text">
-                    לא תפספסו תאריכי תפוגה - התראות אוטומטיות על קופונים שעומדים לפוג
+                    {% if current_user.gender == 'female' %}
+                        לא תפספסי תאריכי תפוגה - התראות אוטומטיות על קופונים שעומדים לפוג
+                    {% else %}
+                        לא תפספס תאריכי תפוגה - התראות אוטומטיות על קופונים שעומדים לפוג
+                    {% endif %}
                 </div>
             </div>
             
@@ -688,7 +792,11 @@ body {
                     <i class="fa fa-plus"></i>
                 </div>
                 <div class="benefit-text">
-                    הוספה קלה - הוסיפו קופונים חדשים ישירות מטלגרם
+                    {% if current_user.gender == 'female' %}
+                        הוספה קלה - הוסיפי קופונים חדשים ישירות מטלגרם
+                    {% else %}
+                        הוספה קלה - הוסף קופונים חדשים ישירות מטלגרם
+                    {% endif %}
                 </div>
             </div>
             
@@ -716,7 +824,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function startCountdown() {
-        let timeLeft = 300; // 5 minutes in seconds
+        let timeLeft = 600; // 10 minutes in seconds
         tokenExpiry.style.display = 'block';
         
         countdownInterval = setInterval(() => {
@@ -727,11 +835,19 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (timeLeft <= 0) {
                 clearInterval(countdownInterval);
-                tokenDisplay.textContent = 'הקוד פג תוקף - הפיקו קוד חדש';
+                {% if current_user.gender == 'female' %}
+                tokenDisplay.textContent = 'הקוד פג תוקף - הפיקי קוד חדש';
+                {% else %}
+                tokenDisplay.textContent = 'הקוד פג תוקף - הפק קוד חדש';
+                {% endif %}
                 tokenDisplay.classList.add('loading');
                 tokenExpiry.style.display = 'none';
                 generateBtn.disabled = false;
+                {% if current_user.gender == 'female' %}
+                generateBtn.innerHTML = '<i class="fa fa-magic"></i> הפיקי קוד חיבור חדש';
+                {% else %}
                 generateBtn.innerHTML = '<i class="fa fa-magic"></i> הפק קוד חיבור חדש';
+                {% endif %}
             }
         }, 1000);
     }
@@ -751,25 +867,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Make request to generate token
-            fetch('{{ url_for("telegram.connect_telegram") }}', {
-                method: 'GET',
+            fetch('{{ url_for("telegram.generate_token") }}', {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
                 }
             })
-            .then(response => response.text())
-            .then(html => {
-                // Parse the HTML to extract the token
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const tokenElement = doc.querySelector('.verification-token');
-                
-                if (tokenElement) {
-                    const token = tokenElement.textContent.trim();
-                    tokenDisplay.textContent = token;
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    tokenDisplay.textContent = data.token;
                     tokenDisplay.classList.remove('loading');
                     
-                    showMessage('קוד חיבור חדש הופק בהצלחה! שלחו אותו לבוט בטלגרם.', 'success');
+                    {% if current_user.gender == 'female' %}
+                    showMessage('קוד חיבור חדש הופק בהצלחה! שלחי אותו לבוט בטלגרם.', 'success');
+                    {% else %}
+                    showMessage('קוד חיבור חדש הופק בהצלחה! שלח אותו לבוט בטלגרם.', 'success');
+                    {% endif %}
                     
                     // Start countdown
                     startCountdown();
@@ -777,20 +892,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Re-enable button after delay
                     setTimeout(() => {
                         generateBtn.disabled = false;
+                        {% if current_user.gender == 'female' %}
+                        generateBtn.innerHTML = '<i class="fa fa-refresh"></i> הפיקי קוד חדש';
+                        {% else %}
                         generateBtn.innerHTML = '<i class="fa fa-refresh"></i> הפק קוד חדש';
+                        {% endif %}
                     }, 3000);
                 } else {
-                    throw new Error('לא ניתן לחלץ את הקוד מהתגובה');
+                    throw new Error(data.error || 'שגיאה ביצירת הטוקן');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 tokenDisplay.textContent = 'שגיאה ביצירת קוד';
                 tokenDisplay.classList.remove('loading');
-                showMessage('שגיאה ביצירת קוד החיבור. נסו שוב.', 'error');
+                {% if current_user.gender == 'female' %}
+                showMessage('שגיאה ביצירת קוד החיבור. נסי שוב.', 'error');
+                {% else %}
+                showMessage('שגיאה ביצירת קוד החיבור. נסה שוב.', 'error');
+                {% endif %}
                 
                 generateBtn.disabled = false;
+                {% if current_user.gender == 'female' %}
+                generateBtn.innerHTML = '<i class="fa fa-magic"></i> הפיקי קוד חיבור חדש';
+                {% else %}
                 generateBtn.innerHTML = '<i class="fa fa-magic"></i> הפק קוד חיבור חדש';
+                {% endif %}
             });
         });
     }

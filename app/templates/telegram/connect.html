@@ -12,15 +12,45 @@
                     <div class="alert alert-info">
                         <h4>הוראות התחברות:</h4>
                         <ol>
-                            <li>פתח את הטלגרם</li>
-                            <li>חפש את הבוט: <strong>@{{ bot_username }}</strong></li>
-                            <li>שלח את הפקודה: <code>/start</code></li>
-                            <li>שלח את הקוד הבא לבוט: <code>{{ verification_token }}</code></li>
+                            <li>
+                                {% if current_user.gender == 'female' %}
+                                    פתחי את הטלגרם
+                                {% else %}
+                                    פתח את הטלגרם
+                                {% endif %}
+                            </li>
+                            <li>
+                                {% if current_user.gender == 'female' %}
+                                    חפשי את הבוט: <strong>@{{ bot_username }}</strong>
+                                {% else %}
+                                    חפש את הבוט: <strong>@{{ bot_username }}</strong>
+                                {% endif %}
+                            </li>
+                            <li>
+                                {% if current_user.gender == 'female' %}
+                                    שלחי את הפקודה: <code>/start</code>
+                                {% else %}
+                                    שלח את הפקודה: <code>/start</code>
+                                {% endif %}
+                            </li>
+                            <li>
+                                {% if current_user.gender == 'female' %}
+                                    שלחי את הקוד הבא לבוט: <code class="verification-token">{{ verification_token }}</code>
+                                {% else %}
+                                    שלח את הקוד הבא לבוט: <code class="verification-token">{{ verification_token }}</code>
+                                {% endif %}
+                            </li>
                         </ol>
                     </div>
                     <div class="text-center">
                         <p>הקוד תקף ל-24 שעות</p>
-                        <p>אם הקוד פג תוקף, רענן את הדף לקבלת קוד חדש</p>
+                        <p>
+                            {% if current_user.gender == 'female' %}
+                                אם הקוד פג תוקף, רענני את הדף לקבלת קוד חדש
+                            {% else %}
+                                אם הקוד פג תוקף, רענן את הדף לקבלת קוד חדש
+                            {% endif %}
+                        </p>
                     </div>
                 </div>
             </div>

@@ -687,13 +687,21 @@
                 d.setTime(d.getTime() + (365*24*60*60*1000));
                 document.cookie = `cookies_accepted=false; expires=${d.toUTCString()}; path=/`;
 
+                // שליחת דחיית העוגיות לשרת
+                sendConsentToServer(false);
+
+                // מחיקת כל העוגיות והאחסון המקומי
                 document.cookie.split(";").forEach(function(c) {
                     document.cookie = c.trim().split("=")[0]
                         + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                 });
                 localStorage.clear();
                 sessionStorage.clear();
-                location.reload();
+                
+                // טעינה מחדש של הדף רק אחרי שליחת ההסכמה לשרת
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
             };
 
             // הגדרת dropdowns למובייל / דסקטופ
