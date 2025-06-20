@@ -8,7 +8,7 @@
 <meta name="description" content="הצטרפו לבוט הקופונים הייחודי בטלגרם! קבלו התראות על קופונים חדשים, נהלו את הקופונים שלכם ותהנו מחוויית שימוש נוחה וחכמה." />
 <meta property="og:title" content="בוט קופונים בטלגרם - Coupon Master">
 <meta property="og:description" content="בוט מתקדם לניהול קופונים בטלגרם - קבלו התראות, נהלו קופונים וחסכו כסף!">
-<meta property="og:image" content="{{ url_for('static', filename='images/telegram_bot.jpg', _external=True) }}">
+<meta property="og:image" content="{{ url_for('static', filename='images/telegram_bot.png', _external=True) }}">
 {% endblock %}
 
 {% block content %}
@@ -513,7 +513,7 @@ body {
         
         <div class="qr-container">
             <div class="qr-image-wrapper">
-                <img src="{{ url_for('static', filename='images/telegram_bot.jpg') }}" 
+                <img src="{{ url_for('static', filename='images/telegram_bot.png') }}" 
                      alt="QR Code לבוט הטלגרם" 
                      class="qr-image">
             </div>
@@ -521,7 +521,7 @@ body {
             <div class="qr-instructions">
                 <div class="qr-step">
                     <div class="step-number">1</div>
-                    <div>סרקו את הקוד QR או חפשו @{{ bot_username }} בטלגרם</div>
+                    <div>סרקו את הקוד QR או חפשו {{ bot_username }} בטלגרם</div>
                 </div>
                 
                 <div class="qr-step">
