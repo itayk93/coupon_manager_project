@@ -1,0 +1,743 @@
+{% extends "base.html" %}
+
+{% block title %}סטטיסטיקות{% endblock %}
+
+{% block styles %}
+<style>
+    .statistics-container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 0 15px;
+    }
+
+    .stats-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .stats-header h1 {
+        color: var(--primary-color);
+        margin-bottom: 10px;
+    }
+
+    .date-selector {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .date-controls {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .selector-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        align-items: center;
+    }
+
+    .selector-group label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--primary-color);
+    }
+
+    .selector-group select {
+        padding: 6px 10px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        background: white;
+        min-width: 120px;
+        max-width: 150px;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 8px;
+        flex-direction: row;
+    }
+
+    .button-group button {
+        padding: 6px 12px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background-color 0.3s;
+        white-space: nowrap;
+        min-width: 100px;
+    }
+
+    .button-group button:hover {
+        background: var(--secondary-color);
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-right: 4px solid var(--primary-color);
+    }
+
+    .stat-card h3 {
+        margin: 0 0 15px 0;
+        color: var(--primary-color);
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .stat-number {
+        font-size: 28px;
+        font-weight: bold;
+        color: var(--accent-color);
+        margin-bottom: 5px;
+    }
+
+    .stat-description {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .usage-chart {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .usage-bar {
+        height: 20px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        color: white;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+    }
+
+    .usage-fully {
+        background: #28a745;
+    }
+
+    .usage-partially {
+        background: #ffc107;
+        color: #333;
+        text-shadow: none;
+    }
+
+    .usage-unused {
+        background: #dc3545;
+    }
+
+    .companies-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .companies-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+        min-height: 44px;
+    }
+
+    .companies-list li:last-child {
+        border-bottom: none;
+    }
+
+    .company-name {
+        font-weight: 500;
+        flex: 1;
+        margin-left: 10px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    .company-count {
+        background: var(--primary-color);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .comparison-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .comparison-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .change-positive {
+        color: #28a745;
+        font-weight: bold;
+    }
+
+    .change-negative {
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .change-neutral {
+        color: #6c757d;
+    }
+
+    .alert-warning {
+        background: #fff3cd;
+        color: #856404;
+        padding: 15px;
+        border-radius: 5px;
+        border-right: 4px solid #ffc107;
+        text-align: center;
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .alert-button {
+        background: #ffc107;
+        color: #856404;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .alert-button:hover {
+        background: #e0a800;
+        transform: translateY(-1px);
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+    }
+
+    .loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--primary-color);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .error-message {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 5px;
+        text-align: center;
+        margin: 20px 0;
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .date-controls {
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .button-group {
+            flex-direction: row;
+            justify-content: center;
+        }
+        
+        .button-group button {
+            min-width: 80px;
+            font-size: 11px;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+        }
+        
+        .alert-warning {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .alert-button {
+            margin-top: 10px;
+        }
+        
+        .stat-card {
+            padding: 20px;
+        }
+        
+        .stat-card h3 {
+            font-size: 16px;
+        }
+        
+        .companies-list li {
+            padding: 10px 0;
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .company-name {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .company-count {
+            align-self: flex-end;
+            margin-top: 5px;
+        }
+        
+        .comparison-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+            text-align: right;
+        }
+        
+        .usage-chart {
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .usage-bar {
+            width: 100% !important;
+            min-width: auto;
+            justify-content: flex-start;
+            padding-left: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="statistics-container">
+    <div class="stats-header">
+        <h1>📊 סטטיסטיקות הקופונים שלי</h1>
+        <p>צפה בנתונים המפורטים על השימוש והחיסכון שלך</p>
+    </div>
+
+    <div class="date-selector">
+        <div class="date-controls">
+            <div class="selector-group">
+                <label for="month-select">חודש:</label>
+                <select id="month-select">
+                    <option value="all">כל החודשים</option>
+                    <option value="1">ינואר</option>
+                    <option value="2">פברואר</option>
+                    <option value="3">מרץ</option>
+                    <option value="4">אפריל</option>
+                    <option value="5">מאי</option>
+                    <option value="6">יוני</option>
+                    <option value="7">יולי</option>
+                    <option value="8">אוגוסט</option>
+                    <option value="9">ספטמבר</option>
+                    <option value="10">אוקטובר</option>
+                    <option value="11">נובמבר</option>
+                    <option value="12">דצמבר</option>
+                </select>
+            </div>
+
+            <div class="selector-group">
+                <label for="year-select">שנה:</label>
+                <select id="year-select">
+                    <!-- יתמלא ב-JavaScript -->
+                </select>
+            </div>
+
+            <div class="button-group">
+                <button onclick="loadStatistics()">עדכן נתונים</button>
+                <button onclick="setCurrentMonth()">חודש נוכחי</button>
+                <button onclick="showAllData()">כל הנתונים</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading" class="loading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>טוען נתונים...</p>
+    </div>
+
+    <div id="error-container"></div>
+
+    <div id="stats-content" style="display: none;">
+        <div class="stats-grid">
+            <!-- נתונים בסיסיים -->
+            <div class="stat-card">
+                <h3><i class="fas fa-plus-circle"></i> קופונים חדשים</h3>
+                <div class="stat-number" id="new-coupons">-</div>
+                <div class="stat-description" id="new-coupons-desc">קופונים שנוספו החודש</div>
+            </div>
+
+            <div class="stat-card">
+                <h3><i class="fas fa-piggy-bank"></i> חיסכון כולל</h3>
+                <div class="stat-number" id="total-savings">₪-</div>
+                <div class="stat-description" id="total-savings-desc">חיסכון נומינלי החודש</div>
+            </div>
+
+            <div class="stat-card">
+                <h3><i class="fas fa-chart-line"></i> ממוצע חיסכון</h3>
+                <div class="stat-number" id="average-savings">₪-</div>
+                <div class="stat-description" id="average-savings-desc">חיסכון ממוצע לקופון</div>
+            </div>
+
+            <div class="stat-card">
+                <h3><i class="fas fa-wallet"></i> ערך פעיל</h3>
+                <div class="stat-number" id="active-value">₪-</div>
+                <div class="stat-description">ערך כולל בקופונים פעילים</div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <!-- אחוז ניצול -->
+            <div class="stat-card">
+                <h3><i class="fas fa-chart-pie"></i> ניצול קופונים</h3>
+                <div class="stat-number" id="usage-percentage">-%</div>
+                <div class="stat-description" id="usage-percentage-desc">אחוז הקופונים שנוצלו במלואם</div>
+                <div class="usage-chart" id="usage-chart">
+                    <!-- יתמלא ב-JavaScript -->
+                </div>
+            </div>
+
+            <!-- חברות פופולריות -->
+            <div class="stat-card">
+                <h3><i class="fas fa-store"></i> החברות הפופולריות</h3>
+                <p class="stat-description" id="companies-explanation">החברות שהכי הרבה השתמשתי בקופונים שלהן החודש</p>
+                <ul class="companies-list" id="popular-companies">
+                    <li>אין נתונים</li>
+                </ul>
+            </div>
+
+            <!-- השוואה לתקופה קודמת -->
+            <div class="stat-card">
+                <h3><i class="fas fa-balance-scale"></i> <span id="comparison-title">השוואה לחודש קודם</span></h3>
+                <div id="comparison-data">
+                    <!-- יתמלא ב-JavaScript -->
+                </div>
+            </div>
+
+            <!-- התראות -->
+            <div class="stat-card">
+                <h3><i class="fas fa-exclamation-triangle"></i> התראות</h3>
+                <div id="alerts-data">
+                    <p class="stat-description">אין התראות כרגע</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDateSelectors();
+    setCurrentMonth();
+    loadStatistics();
+    
+    // הוספת event listeners לסלקטורים
+    document.getElementById('month-select').addEventListener('change', loadStatistics);
+    document.getElementById('year-select').addEventListener('change', loadStatistics);
+});
+
+function initializeDateSelectors() {
+    const yearSelect = document.getElementById('year-select');
+    const currentYear = new Date().getFullYear();
+    
+    // הוספת שנים מ-2020 עד השנה הבאה
+    for (let year = 2020; year <= currentYear + 1; year++) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === currentYear) {
+            option.selected = true;
+        }
+        yearSelect.appendChild(option);
+    }
+}
+
+function setCurrentMonth() {
+    const now = new Date();
+    document.getElementById('month-select').value = now.getMonth() + 1;
+    document.getElementById('year-select').value = now.getFullYear();
+    loadStatistics();
+}
+
+function showAllData() {
+    document.getElementById('month-select').value = 'all';
+    document.getElementById('year-select').value = new Date().getFullYear();
+    loadStatistics();
+}
+
+async function loadStatistics() {
+    const month = document.getElementById('month-select').value;
+    const year = document.getElementById('year-select').value;
+    
+    // הצגת loading
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('stats-content').style.display = 'none';
+    document.getElementById('error-container').innerHTML = '';
+    
+    try {
+        let url = '/statistics/api/data?';
+        if (month === 'all') {
+            url += `year=${year}&all_months=true`;
+        } else {
+            url += `month=${month}&year=${year}`;
+        }
+        
+        const response = await fetch(url);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayStatistics(result.data);
+            document.getElementById('stats-content').style.display = 'block';
+        } else {
+            showError(result.error || 'שגיאה בטעינת הנתונים');
+        }
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+        showError('שגיאה בחיבור לשרת');
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+}
+
+function displayStatistics(data) {
+    const monthSelect = document.getElementById('month-select');
+    const isAllMonths = monthSelect.value === 'all';
+    
+    // נתונים בסיסיים
+    document.getElementById('new-coupons').textContent = data.basic_stats.new_coupons_count;
+    document.getElementById('total-savings').textContent = `₪${data.basic_stats.total_savings}`;
+    document.getElementById('average-savings').textContent = `₪${data.basic_stats.average_savings}`;
+    document.getElementById('active-value').textContent = `₪${data.basic_stats.total_active_value}`;
+    
+    // עדכון תיאורי הנתונים בהתאם לתצוגה
+    const newCouponsDesc = document.getElementById('new-coupons-desc');
+    if (newCouponsDesc) {
+        newCouponsDesc.textContent = isAllMonths ? 'קופונים שנוספו השנה' : 'קופונים שנוספו החודש';
+    }
+    
+    const totalSavingsDesc = document.getElementById('total-savings-desc');
+    if (totalSavingsDesc) {
+        totalSavingsDesc.textContent = isAllMonths ? 'חיסכון נומינלי מצטבר' : 'חיסכון נומינלי החודש';
+    }
+    
+    const averageSavingsDesc = document.getElementById('average-savings-desc');
+    if (averageSavingsDesc) {
+        averageSavingsDesc.textContent = isAllMonths ? 'חיסכון ממוצע לקופון השנה' : 'חיסכון ממוצע לקופון החודש';
+    }
+    
+    const usagePercentageDesc = document.getElementById('usage-percentage-desc');
+    if (usagePercentageDesc) {
+        usagePercentageDesc.textContent = isAllMonths ? 'אחוז הקופונים שנוצלו במלואם השנה' : 'אחוז הקופונים שנוצלו במלואם החודש';
+    }
+    
+    // עדכון הסבר החברות הפופולריות
+    const companiesExplanation = document.getElementById('companies-explanation');
+    if (companiesExplanation) {
+        companiesExplanation.textContent = isAllMonths ? 
+            'החברות שהכי הרבה השתמשתי בקופונים שלהן השנה ומספר הפעמים' : 
+            'החברות שהכי הרבה השתמשתי בקופונים שלהן החודש ומספר הפעמים';
+    }
+    
+    // אחוז ניצול
+    document.getElementById('usage-percentage').textContent = `${data.usage_stats.usage_percentage}%`;
+    
+    // תרשום ניצול
+    displayUsageChart(data.usage_stats);
+    
+    // חברות פופולריות
+    displayPopularCompanies(data.popular_companies);
+    
+    // השוואה לתקופה קודמת
+    displayComparison(data.comparison, isAllMonths);
+    
+    // התראות
+    displayAlerts(data.alerts);
+}
+
+function displayUsageChart(usageStats) {
+    const chartContainer = document.getElementById('usage-chart');
+    chartContainer.innerHTML = '';
+    
+    if (usageStats.total_coupons === 0) {
+        const monthSelect = document.getElementById('month-select');
+        const isAllMonths = monthSelect.value === 'all';
+        chartContainer.innerHTML = `<p class="stat-description">אין קופונים ${isAllMonths ? 'בשנה זו' : 'בחודש זה'}</p>`;
+        return;
+    }
+    
+    const fullyPct = (usageStats.fully_used / usageStats.total_coupons) * 100;
+    const partiallyPct = (usageStats.partially_used / usageStats.total_coupons) * 100;
+    const unusedPct = (usageStats.unused / usageStats.total_coupons) * 100;
+    
+    if (fullyPct > 0) {
+        const fullyBar = document.createElement('div');
+        fullyBar.className = 'usage-bar usage-fully';
+        fullyBar.style.width = `${fullyPct}%`;
+        fullyBar.textContent = `${usageStats.fully_used}`;
+        fullyBar.title = `נוצלו במלואם: ${usageStats.fully_used}`;
+        chartContainer.appendChild(fullyBar);
+    }
+    
+    if (partiallyPct > 0) {
+        const partiallyBar = document.createElement('div');
+        partiallyBar.className = 'usage-bar usage-partially';
+        partiallyBar.style.width = `${partiallyPct}%`;
+        partiallyBar.textContent = `${usageStats.partially_used}`;
+        partiallyBar.title = `נוצלו חלקית: ${usageStats.partially_used}`;
+        chartContainer.appendChild(partiallyBar);
+    }
+    
+    if (unusedPct > 0) {
+        const unusedBar = document.createElement('div');
+        unusedBar.className = 'usage-bar usage-unused';
+        unusedBar.style.width = `${unusedPct}%`;
+        unusedBar.textContent = `${usageStats.unused}`;
+        unusedBar.title = `לא נוצלו: ${usageStats.unused}`;
+        chartContainer.appendChild(unusedBar);
+    }
+}
+
+function displayPopularCompanies(companies) {
+    const container = document.getElementById('popular-companies');
+    container.innerHTML = '';
+    
+    if (companies.length === 0) {
+        const monthSelect = document.getElementById('month-select');
+        const isAllMonths = monthSelect.value === 'all';
+        container.innerHTML = `<li>אין נתוני שימוש ${isAllMonths ? 'השנה' : 'החודש'}</li>`;
+        return;
+    }
+    
+    companies.forEach(company => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <span class="company-name">${company.name}</span>
+            <span class="company-count">${company.usage_count}</span>
+        `;
+        container.appendChild(li);
+    });
+}
+
+function displayComparison(comparison, isAllMonths = false) {
+    const container = document.getElementById('comparison-data');
+    const titleElement = document.getElementById('comparison-title');
+    container.innerHTML = '';
+    
+    // עדכון הכותרת
+    if (titleElement) {
+        titleElement.textContent = isAllMonths ? 'השוואה לשנה קודמת' : 'השוואה לחודש קודם';
+    }
+    
+    // קופונים
+    const couponsChange = comparison.coupons_change;
+    const couponsClass = couponsChange > 0 ? 'change-positive' : couponsChange < 0 ? 'change-negative' : 'change-neutral';
+    const couponsSymbol = couponsChange > 0 ? '+' : '';
+    
+    const couponsDiv = document.createElement('div');
+    couponsDiv.className = 'comparison-item';
+    couponsDiv.innerHTML = `
+        <span>קופונים:</span>
+        <span class="${couponsClass}">${couponsSymbol}${couponsChange}</span>
+    `;
+    container.appendChild(couponsDiv);
+    
+    // חיסכון
+    const savingsChange = comparison.savings_change;
+    const savingsClass = savingsChange > 0 ? 'change-positive' : savingsChange < 0 ? 'change-negative' : 'change-neutral';
+    const savingsSymbol = savingsChange > 0 ? '+' : '';
+    
+    const savingsDiv = document.createElement('div');
+    savingsDiv.className = 'comparison-item';
+    savingsDiv.innerHTML = `
+        <span>חיסכון:</span>
+        <span class="${savingsClass}">₪${savingsSymbol}${savingsChange}</span>
+    `;
+    container.appendChild(savingsDiv);
+}
+
+function displayAlerts(alerts) {
+    const container = document.getElementById('alerts-data');
+    container.innerHTML = '';
+    
+    if (alerts.expiring_next_month > 0) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert-warning';
+        alertDiv.innerHTML = `
+            ⚠️ ${alerts.expiring_next_month} קופונים פגים תוקף החודש הבא!
+            <button onclick="showExpiringCoupons()" class="alert-button">
+                <i class="fas fa-eye"></i> צפה בקופונים
+            </button>
+        `;
+        container.appendChild(alertDiv);
+    } else {
+        const noAlertsDiv = document.createElement('p');
+        noAlertsDiv.className = 'stat-description';
+        noAlertsDiv.textContent = 'אין התראות כרגע';
+        container.appendChild(noAlertsDiv);
+    }
+}
+
+function showError(message) {
+    const errorContainer = document.getElementById('error-container');
+    errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+}
+
+function showExpiringCoupons() {
+    // נווט לעמוד הקופונים עם פילטר של קופונים פגי תוקף
+    window.location.href = '/coupons?filter=expiring';
+}
+</script>
+{% endblock %}

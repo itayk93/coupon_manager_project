@@ -81,10 +81,140 @@ if not ENCRYPTION_KEY:
     raise ValueError("No ENCRYPTION_KEY set for encryption")
 cipher_suite = Fernet(ENCRYPTION_KEY.encode())
 
+def calculate_first_sunday_of_month(year=None, month=None):
+    """Calculate the date of the first Sunday of a given month (or current month if not specified)"""
+    from datetime import date, timedelta
+    
+    if year is None or month is None:
+        today = date.today()
+        year = today.year
+        month = today.month
+    
+    # Get first day of the month
+    first_day = date(year, month, 1)
+    
+    # Find first Sunday (weekday 6 = Sunday, weekday 0 = Monday)
+    days_until_sunday = (6 - first_day.weekday()) % 7
+    first_sunday = first_day + timedelta(days=days_until_sunday)
+    
+    return first_sunday.day
+
+def calculate_first_sunday_of_next_month():
+    """Calculate the first Sunday of the next month"""
+    from datetime import date, timedelta
+    
+    today = date.today()
+    
+    # Move to next month
+    if today.month == 12:
+        next_year = today.year + 1
+        next_month = 1
+    else:
+        next_year = today.year
+        next_month = today.month + 1
+    
+    # Use the existing function with next month parameters
+    return calculate_first_sunday_of_month(next_year, next_month)
+
+async def update_monthly_summary_day_for_next_month():
+    """Update the monthly summary day setting for next month after sending summaries"""
+    try:
+        from datetime import date, timedelta
+        
+        # Calculate next month
+        today = date.today()
+        if today.month == 12:
+            next_month = 1
+            next_year = today.year + 1
+        else:
+            next_month = today.month + 1
+            next_year = today.year
+        
+        # Calculate first Sunday of next month
+        next_month_first_sunday = calculate_first_sunday_of_month(next_year, next_month)
+        
+        # Update the setting in database
+        conn = await get_async_db_connection()
+        await conn.execute("""
+            UPDATE bot_settings 
+            SET value = $1, updated_at = CURRENT_TIMESTAMP 
+            WHERE key = 'monthly_summary_day'
+        """, str(next_month_first_sunday))
+        await conn.close()
+        
+        # Update local config
+        reminder_config['monthly_summary_day'] = next_month_first_sunday
+        
+        logger.info(f"Updated monthly_summary_day for next month ({next_month}/{next_year}) to: {next_month_first_sunday}")
+        
+    except Exception as e:
+        logger.error(f"Could not update monthly summary day for next month: {e}")
+
+async def save_monthly_day_config(day):
+    """Save monthly summary day configuration to database"""
+    try:
+        conn = await get_async_db_connection()
+        await conn.execute("""
+            INSERT INTO bot_settings (key, value, updated_at) 
+            VALUES ('monthly_summary_day', $1, CURRENT_TIMESTAMP)
+            ON CONFLICT (key) DO UPDATE SET 
+                value = EXCLUDED.value, 
+                updated_at = CURRENT_TIMESTAMP
+        """, str(day))
+        
+        await conn.close()
+        
+        # Update local config
+        reminder_config['monthly_summary_day'] = day
+        
+        logger.info(f"Saved monthly day config to database: {day}")
+        
+    except Exception as e:
+        logger.error(f"Could not save monthly day config to database: {e}")
+
+async def update_monthly_summary_day_to_20():
+    """Update monthly summary day to 20"""
+    try:
+        conn = await get_async_db_connection()
+        await conn.execute("""
+            INSERT INTO bot_settings (key, value, updated_at) 
+            VALUES ('monthly_summary_day', '20', CURRENT_TIMESTAMP)
+            ON CONFLICT (key) DO UPDATE SET 
+                value = EXCLUDED.value, 
+                updated_at = CURRENT_TIMESTAMP
+        """)
+        await conn.close()
+        logger.info("Updated monthly_summary_day to 20")
+    except Exception as e:
+        logger.error(f"Error updating monthly_summary_day: {e}")
+
+async def save_last_monthly_summary_date(date_str):
+    """Save the date when monthly summary was last sent"""
+    try:
+        conn = await get_async_db_connection()
+        await conn.execute("""
+            INSERT INTO bot_settings (key, value, updated_at) 
+            VALUES ('last_monthly_summary_sent', $1, CURRENT_TIMESTAMP)
+            ON CONFLICT (key) DO UPDATE SET 
+                value = EXCLUDED.value, 
+                updated_at = CURRENT_TIMESTAMP
+        """, date_str)
+        await conn.close()
+        
+        # Update local config
+        reminder_config['last_monthly_summary_sent'] = date_str
+        
+        logger.info(f"Saved last monthly summary date: {date_str}")
+        
+    except Exception as e:
+        logger.error(f"Could not save last monthly summary date: {e}")
+
 # Global variables
 reminder_config = {
     'hour': REMINDER_HOUR,
-    'minute': REMINDER_MINUTE
+    'minute': REMINDER_MINUTE,
+    'monthly_summary_day': calculate_first_sunday_of_month(),  # Default: Calculated first Sunday date
+    'last_monthly_summary_sent': None  # Track when last summary was sent
 }
 
 # Global variable to store bot context
@@ -108,17 +238,31 @@ async def load_reminder_config():
             )
         """)
         
-        # Load reminder hour and minute
+        # Load reminder hour, minute, monthly summary day, and last sent date
         hour_result = await conn.fetchrow("SELECT value FROM bot_settings WHERE key = 'reminder_hour'")
         minute_result = await conn.fetchrow("SELECT value FROM bot_settings WHERE key = 'reminder_minute'")
+        monthly_day_result = await conn.fetchrow("SELECT value FROM bot_settings WHERE key = 'monthly_summary_day'")
+        last_sent_result = await conn.fetchrow("SELECT value FROM bot_settings WHERE key = 'last_monthly_summary_sent'")
         
         if hour_result:
             reminder_config['hour'] = int(hour_result['value'])
+            logger.info(f"Loaded reminder hour: {reminder_config['hour']}")
         if minute_result:
             reminder_config['minute'] = int(minute_result['value'])
+            logger.info(f"Loaded reminder minute: {reminder_config['minute']}")
+        if monthly_day_result:
+            reminder_config['monthly_summary_day'] = int(monthly_day_result['value'])
+            logger.info(f"Loaded monthly summary day: {reminder_config['monthly_summary_day']}")
+        else:
+            logger.info("No monthly_summary_day found in database")
+        if last_sent_result:
+            reminder_config['last_monthly_summary_sent'] = last_sent_result['value']
+            logger.info(f"Loaded last monthly summary sent date: {reminder_config['last_monthly_summary_sent']}")
+        else:
+            logger.info("No last_monthly_summary_sent found in database")
             
         await conn.close()
-        logger.info(f"Loaded reminder config from database: {reminder_config['hour']:02d}:{reminder_config['minute']:02d}")
+        logger.info(f"Final reminder config: {reminder_config}")
         
     except Exception as e:
         logger.warning(f"Could not load reminder config from database, using defaults: {e}")
@@ -140,7 +284,7 @@ async def save_reminder_config():
             )
         """)
         
-        # Insert or update reminder hour and minute
+        # Insert or update reminder hour, minute and monthly summary day
         await conn.execute("""
             INSERT INTO bot_settings (key, value, updated_at) 
             VALUES ('reminder_hour', $1, CURRENT_TIMESTAMP)
@@ -157,11 +301,45 @@ async def save_reminder_config():
                 updated_at = CURRENT_TIMESTAMP
         """, str(reminder_config['minute']))
         
+        await conn.execute("""
+            INSERT INTO bot_settings (key, value, updated_at) 
+            VALUES ('monthly_summary_day', $1, CURRENT_TIMESTAMP)
+            ON CONFLICT (key) DO UPDATE SET 
+                value = EXCLUDED.value, 
+                updated_at = CURRENT_TIMESTAMP
+        """, str(reminder_config['monthly_summary_day']))
+        
         await conn.close()
-        logger.info(f"Saved reminder config to database: {reminder_config['hour']:02d}:{reminder_config['minute']:02d}")
+        logger.info(f"Saved reminder config to database: {reminder_config['hour']:02d}:{reminder_config['minute']:02d}, monthly_summary_day: {reminder_config['monthly_summary_day']}")
         
     except Exception as e:
         logger.error(f"Could not save reminder config to database: {e}")
+
+async def initialize_monthly_summary_settings():
+    """Initialize monthly summary settings in database - called from wsgi.py on server startup"""
+    try:
+        conn = await get_async_db_connection()
+        
+        # Check if monthly_summary_day setting exists
+        existing_setting = await conn.fetchrow("SELECT value FROM bot_settings WHERE key = 'monthly_summary_day'")
+        
+        if not existing_setting:
+            # Calculate the actual date of first Sunday of current month
+            first_sunday_date = calculate_first_sunday_of_month()
+            
+            # Insert the calculated date
+            await conn.execute("""
+                INSERT INTO bot_settings (key, value, updated_at) 
+                VALUES ('monthly_summary_day', $1, CURRENT_TIMESTAMP)
+            """, str(first_sunday_date))
+            logger.info(f"Added monthly_summary_day setting to database with calculated first Sunday date: {first_sunday_date}")
+        else:
+            logger.info(f"Monthly summary day setting already exists with value: {existing_setting['value']}")
+        
+        await conn.close()
+        
+    except Exception as e:
+        logger.error(f"Could not initialize monthly summary settings: {e}")
 
 def decrypt_coupon_code(encrypted_code):
     """Decrypt encrypted coupon code"""
@@ -473,28 +651,69 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Display available commands list"""
+    """Display available commands list (admin only)"""
     chat_id = update.message.chat_id
     
     # Check if user is connected and get user_id
     is_valid, user_id, user_gender = await check_session_validity(chat_id)
     
+    # Check if user is admin - if not, show main menu instead
+    if not is_valid or not user_id or not await is_user_admin(user_id):
+        # If user is connected but not admin, show main menu
+        if is_valid and user_id:
+            conn = await get_async_db_connection()
+            slots = 0
+            try:
+                slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user_id)
+                if slots_row:
+                    slots = slots_row['slots_automatic_coupons']
+            except Exception as e:
+                logger.error(f"Error fetching slots_automatic_coupons: {e}")
+            await conn.close()
+            
+            await update.message.reply_text(get_main_menu_text(user_gender, slots))
+        return
+    
     help_text = (
-        "📋 רשימת הפקודות הזמינות:\n\n"
+        "📋 רשימת הפקודות זמינות למנהלים:\n\n"
         "/start - התחלת שיחה עם הבוט\n"
         "/help - הצגת רשימת הפקודות\n"
+        "/test_reminders - בדיקת תזכורות קופונים\n"
+        "/test_monthly - בדיקת סיכום חודשי\n"
+        "/change_reminder_time - שינוי זמן התזכורת יומית\n"
+        "/change_monthly_day - שינוי יום הסיכום החודשי\n"
     )
     
-    # Add admin commands if user is admin
-    if is_valid and user_id and await is_user_admin(user_id):
-        help_text += (
-            "/test_reminders - בדיקת תזכורות קופונים\n"
-            "/change_reminder_time - שינוי זמן התזכורת יומית\n"
-        )
-    
-    help_text += "\nכדי להתחבר, שלח את קוד האימות שקיבלת מהאתר."
-    
     await update.message.reply_text(help_text)
+
+async def test_monthly_summary_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Test monthly summary for admin"""
+    chat_id = update.message.chat_id
+    
+    # Check if user is connected and is admin
+    is_valid, user_id, user_gender = await check_session_validity(chat_id)
+    if not is_valid:
+        await update.message.reply_text(
+            "⏰ הפעלה שלך פגה תוקף\n"
+            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
+        )
+        return
+    
+    if not await is_user_admin(user_id):
+        await update.message.reply_text("❌ פקודה זו זמינה למנהלים בלבד")
+        return
+
+    await update.message.reply_text("🧪 בודק הודעה חודשית...")
+    
+    try:
+        # Send monthly summary to admin
+        await send_monthly_summary(chat_id, user_id, user_gender)
+        
+        await update.message.reply_text("✅ הודעה חודשית נשלחה לבדיקה")
+        
+    except Exception as e:
+        logger.error(f"Error in test_monthly_summary_command: {e}")
+        await update.message.reply_text(f"❌ שגיאה בבדיקת הודעה חודשית: {str(e)}")
 
 async def test_reminders_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Test reminder functionality (admin only) - shows what would be sent without sending"""
@@ -530,8 +749,123 @@ async def test_reminders_command(update: Update, context: ContextTypes.DEFAULT_T
     
     await update.message.reply_text("✅ בדיקת תזכורות הושלמה")
 
+async def test_monthly_summary_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Test monthly summary functionality (admin only)"""
+    chat_id = update.message.chat_id
+    
+    # Add debug logging
+    logger.info(f"test_monthly_summary_command called by chat_id {chat_id}")
+    
+    # Check if user is connected and is admin
+    is_valid, user_id, user_gender = await check_session_validity(chat_id)
+    if not is_valid:
+        await update.message.reply_text(
+            "⏰ הפעלה שלך פגה תוקף\n"
+            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
+        )
+        return
+    
+    if not await is_user_admin(user_id):
+        await update.message.reply_text("❌ פקודה זו זמינה למנהלים בלבד")
+        return
+    
+    # Update session expiry
+    await update_session_expiry(chat_id)
+    
+    await update.message.reply_text("📊 שולח סיכום חודשי לבדיקה...")
+    
+    try:
+        # Send monthly summary to the admin
+        await send_monthly_summary(chat_id, user_id, user_gender)
+        await update.message.reply_text("✅ הסיכום החודשי נשלח בהצלחה!")
+        
+    except Exception as e:
+        logger.error(f"Error in test_monthly_summary_command: {e}")
+        await update.message.reply_text(f"❌ שגיאה בשליחת הסיכום החודשי: {str(e)}")
+
 # Add this to user_states tracking at the top of the file
 # user_states = {}  # This already exists, just showing where it is
+
+async def change_monthly_day_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Change monthly summary day (admin only)"""
+    chat_id = update.message.chat_id
+    
+    # Add debug logging
+    logger.info(f"change_monthly_day_command called by chat_id {chat_id}")
+    
+    # Check if user is connected and is admin
+    is_valid, user_id, user_gender = await check_session_validity(chat_id)
+    if not is_valid:
+        await update.message.reply_text(
+            "⏰ הפעלה שלך פגה תוקף\n"
+            "אנא התחבר שוב עם קוד אימות חדש מהאתר"
+        )
+        return
+    
+    if not await is_user_admin(user_id):
+        await update.message.reply_text("❌ פקודה זו זמינה למנהלים בלבד")
+        return
+    
+    # Update session expiry
+    await update_session_expiry(chat_id)
+    
+    # Parse arguments
+    args = context.args
+    if len(args) == 0:
+        # No arguments provided - set state and wait for input
+        user_states[chat_id] = "waiting_for_monthly_day"
+        next_sunday = calculate_first_sunday_of_next_month()
+        await update.message.reply_text(
+            "📅 הזן את היום בחודש לשליחת הסיכום החודשי\n"
+            "לדוגמה: 1 (לראשון בחודש)\n"
+            "או: 15 (ל-15 בחודש)\n"
+            "או: 20 (ל-20 בחודש)\n"
+            f"או: ראשון (ליום ראשון הראשון - יהיה ב-{next_sunday} בחודש הבא)"
+        )
+        return
+    elif len(args) != 1:
+        await update.message.reply_text(
+            "❌ פורמט שגוי. השתמש ב:\n"
+            "/change_monthly_day <יום>\n"
+            "לדוגמה: /change_monthly_day 20\n"
+            "או: /change_monthly_day ראשון"
+        )
+        return
+    
+    try:
+        arg = args[0].strip()
+        
+        if arg.lower() in ['ראשון', 'יום ראשון', 'יום ראשון הראשון', 'sunday', 'first sunday']:
+            # Calculate first Sunday of next month
+            day = calculate_first_sunday_of_next_month()
+            special_mode = True
+        else:
+            day = int(arg)
+            special_mode = False
+            
+            if not (1 <= day <= 31):
+                raise ValueError("יום חייב להיות בין 1 ל-31")
+        
+        # Save to database
+        await save_monthly_day_config(day)
+        
+        if special_mode:
+            await update.message.reply_text(
+                f"✅ יום הסיכום החודשי עודכן ליום ראשון הראשון בחודש\n"
+                f"החודש הבא זה יהיה ב-{day} בחודש"
+            )
+        else:
+            await update.message.reply_text(
+                f"✅ יום הסיכום החודשי עודכן ל-{day} בחודש"
+            )
+        
+        logger.info(f"Monthly day updated to {day} by user {user_id} (special mode: {special_mode})")
+        
+    except ValueError as e:
+        await update.message.reply_text(f"❌ שגיאה: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error updating monthly day: {e}")
+        await update.message.reply_text("❌ אירעה שגיאה בעדכון יום הסיכום החודשי")
 
 async def change_reminder_time_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Change reminder time (admin only)"""
@@ -672,6 +1006,65 @@ async def handle_reminder_time_input(update: Update, context: ContextTypes.DEFAU
     except ValueError as e:
         await update.message.reply_text(f"❌ שגיאה: {str(e)}")
 
+async def handle_monthly_day_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle monthly day input when in waiting state"""
+    chat_id = update.message.chat_id
+    user_message = update.message.text.strip()
+    
+    # Check if user is admin (redundant check for safety)
+    is_valid, user_id, user_gender = await check_session_validity(chat_id)
+    if not is_valid or not await is_user_admin(user_id):
+        user_states.pop(chat_id, None)
+        return
+    
+    try:
+        user_input = user_message.strip()
+        
+        if user_input.lower() in ['ראשון', 'יום ראשון', 'יום ראשון הראשון', 'sunday', 'first sunday']:
+            # Calculate first Sunday of next month
+            day = calculate_first_sunday_of_next_month()
+            special_mode = True
+        else:
+            day = int(user_input)
+            special_mode = False
+            
+            if not (1 <= day <= 31):
+                raise ValueError("יום חייב להיות בין 1 ל-31")
+        
+        # Save to database
+        await save_monthly_day_config(day)
+        
+        # Clear state
+        user_states.pop(chat_id, None)
+        
+        if special_mode:
+            await update.message.reply_text(
+                f"✅ יום הסיכום החודשי עודכן ליום ראשון הראשון בחודש\n"
+                f"החודש הבא זה יהיה ב-{day} בחודש"
+            )
+        else:
+            await update.message.reply_text(
+                f"✅ יום הסיכום החודשי עודכן ל-{day} בחודש"
+            )
+        
+        logger.info(f"Monthly day updated to {day} by user {user_id} (special mode: {special_mode})")
+        
+        # Send menu again
+        conn = await get_async_db_connection()
+        slots = 0
+        try:
+            slots_row = await conn.fetchrow("SELECT slots_automatic_coupons FROM users WHERE id = $1", user_id)
+            if slots_row:
+                slots = slots_row['slots_automatic_coupons']
+        except Exception as e:
+            logger.error(f"Error fetching slots_automatic_coupons: {e}")
+        await conn.close()
+        
+        await update.message.reply_text(get_main_menu_text(user_gender, slots))
+        
+    except ValueError as e:
+        await update.message.reply_text(f"❌ שגיאה: {str(e)}")
+
 async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle text messages (verification code) and authenticate user"""
     user_message = update.message.text.strip()
@@ -683,6 +1076,11 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if user is waiting for reminder time input
     if user_states.get(chat_id) == "waiting_for_reminder_time":
         await handle_reminder_time_input(update, context)
+        return
+    
+    # Check if user is waiting for monthly day input
+    if user_states.get(chat_id) == "waiting_for_monthly_day":
+        await handle_monthly_day_input(update, context)
         return
 
     # Check if user is in company selection mode for coupon usage update
@@ -3778,6 +4176,114 @@ async def send_expiration_reminder(chat_id, coupons, user_gender):
     except Exception as e:
         logger.error(f"Error sending expiration reminder to chat_id {chat_id}: {e}")
 
+async def send_monthly_summary(chat_id, user_id, user_gender):
+    """Send GPT-powered monthly summary message to user"""
+    try:
+        logger.info(f"Attempting to send GPT-powered monthly summary to user {user_id}, chat_id {chat_id}")
+        if context_app is None:
+            logger.error("Bot instance not available for sending monthly summary - context_app is None")
+            return
+        
+        bot = context_app.bot
+        if bot is None:
+            logger.error("Bot object is None")
+            return
+        
+        # Get current month and year 
+        now = datetime.now()
+        prev_month = now.month - 1 if now.month > 1 else 12
+        prev_year = now.year if now.month > 1 else now.year - 1
+        
+        # Generate GPT-powered summary text
+        try:
+            # Import the GPT function from statistics routes
+            from app.routes.statistics_routes import get_monthly_summary_text_with_gpt
+            from app import create_app
+            
+            # Create Flask app context
+            app = create_app()
+            with app.app_context():
+                gpt_message = get_monthly_summary_text_with_gpt(
+                    user_id=user_id, 
+                    month=prev_month, 
+                    year=prev_year,
+                    user_gender=user_gender or 'male'
+                )
+            
+            logger.info(f"GPT message generated successfully for user {user_id}")
+            summary_text = gpt_message
+            
+        except Exception as gpt_error:
+            logger.error(f"Error generating GPT message for user {user_id}: {str(gpt_error)}")
+            
+            # Fallback to basic message
+            month_names = {
+                1: 'ינואר', 2: 'פברואר', 3: 'מרץ', 4: 'אפריל',
+                5: 'מאי', 6: 'יוני', 7: 'יולי', 8: 'אוגוסט',
+                9: 'ספטמבר', 10: 'אוקטובר', 11: 'נובמבר', 12: 'דצמבר'
+            }
+            
+            month_name = month_names.get(prev_month, str(prev_month))
+            
+            summary_text = f"""📅 הסיכום החודשי שלך - {month_name} {prev_year}
+
+🎯 **נתונים מהחודש שעבר:**
+• זה הסיכום החודשי האוטומטי שלך
+• כדי לראות סטטיסטיקות מפורטות, כנס לאתר
+
+📊 **הסטטיסטיקות המלאות זמינות באתר:**
+• עמוד הסטטיסטיקות מציג את כל הנתונים המפורטים
+• תוכל לסנן לפי חודשים שונים
+• מידע על חיסכון, שימוש וחברות פופולריות
+
+💬 רוצה לנהל את הקופונים שלך? כתוב לי בכל עת!"""
+        
+        logger.info(f"Sending monthly summary to chat_id {chat_id}")
+        await bot.send_message(chat_id=chat_id, text=summary_text, parse_mode='Markdown')
+        logger.info(f"Successfully sent monthly summary to user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error sending monthly summary to user {user_id}, chat_id {chat_id}: {e}")
+
+async def send_monthly_summaries_to_all_users():
+    """Send monthly summary to all connected users on the first day of the month"""
+    try:
+        logger.info("Starting monthly summary send to all users")
+        conn = await get_async_db_connection()
+        
+        # Get all connected users
+        users_query = """
+            SELECT DISTINCT tu.telegram_chat_id, tu.user_id
+            FROM telegram_users tu
+            WHERE tu.is_verified = true 
+            AND tu.telegram_chat_id IS NOT NULL
+            AND tu.verification_expires_at > NOW()
+        """
+        users = await conn.fetch(users_query)
+        
+        logger.info(f"Sending monthly summaries to {len(users)} connected users")
+        
+        for user in users:
+            user_id = user['user_id']
+            chat_id = user['telegram_chat_id']
+            
+            # Get user gender
+            user_gender = await get_user_gender(user_id)
+            
+            # Send monthly summary
+            await send_monthly_summary(chat_id, user_id, user_gender)
+            
+            # Add a small delay between sends to avoid hitting rate limits
+            await asyncio.sleep(0.1)
+            
+            logger.info(f"Sent monthly summary to user {user_id}")
+        
+        await conn.close()
+        logger.info("Completed sending monthly summaries to all users")
+        
+    except Exception as e:
+        logger.error(f"Error in send_monthly_summaries_to_all_users: {e}", exc_info=True)
+
 async def check_expiring_coupons_for_all_users(source="unknown"):
     """Check all users for expiring coupons and send reminders"""
     try:
@@ -3976,6 +4482,53 @@ async def schedule_daily_reminder():
             logger.info(f"Running scheduled coupon expiration check at {reminder_config['hour']:02d}:{reminder_config['minute']:02d} Israel time...")
             await check_expiring_coupons_for_all_users(source="scheduled_reminder")
             
+            # Check if it's time to send monthly summaries based on configuration
+            current_time = datetime.now(pytz.timezone('Asia/Jerusalem'))
+            monthly_day_setting = reminder_config.get('monthly_summary_day', calculate_first_sunday_of_month())
+            reminder_hour = reminder_config.get('hour', 10)
+            reminder_minute = reminder_config.get('minute', 0)
+            last_sent_date = reminder_config.get('last_monthly_summary_sent')
+            
+            # Create current date string for comparison
+            current_date_str = current_time.strftime('%Y-%m-%d')
+            
+            # Debug logging for monthly summary checks
+            logger.info(f"Monthly summary check - Day: {current_time.day}/{monthly_day_setting}, Hour: {current_time.hour}/{reminder_hour}, Minute: {current_time.minute}/{reminder_minute}, Last sent: {last_sent_date}, Today: {current_date_str}")
+            if current_time.day == monthly_day_setting:
+                logger.info(f"Monthly summary day check - Day matches! ✓")
+                if current_time.hour == reminder_hour:
+                    logger.info(f"Monthly summary hour check - Hour matches! ✓")
+                    if current_time.minute >= reminder_minute and current_time.minute < reminder_minute + 30:
+                        logger.info(f"Monthly summary minute check - Minute in range! ✓")
+                        if last_sent_date != current_date_str:
+                            logger.info(f"Monthly summary date check - Not sent today! ✓ - Will send now")
+                        else:
+                            logger.info(f"Monthly summary date check - Already sent today ✗")
+                    else:
+                        logger.info(f"Monthly summary minute check - Minute not in range ✗")
+                else:
+                    logger.info(f"Monthly summary hour check - Hour doesn't match ✗")
+            else:
+                logger.info(f"Monthly summary day check - Day doesn't match ✗")
+            
+            # Check if today is the configured day and time for monthly summaries
+            # AND we haven't sent it yet this month
+            if (current_time.day == monthly_day_setting and
+                current_time.hour == reminder_hour and
+                current_time.minute >= reminder_minute and
+                current_time.minute < reminder_minute + 30 and  # Within 30 minutes of configured time
+                last_sent_date != current_date_str):  # Haven't sent today
+                
+                logger.info(f"It's day {monthly_day_setting} of the month at {reminder_hour:02d}:{reminder_minute:02d} - sending monthly summaries...")
+                await send_monthly_summaries_to_all_users()
+                
+                # Update last sent date to prevent duplicate sends
+                await save_last_monthly_summary_date(current_date_str)
+                
+                # Update the setting for next month's first Sunday (only if using automatic calculation)
+                if monthly_day_setting == calculate_first_sunday_of_month():
+                    await update_monthly_summary_day_for_next_month()
+            
         except Exception as e:
             logger.error(f"Error in schedule_daily_reminder: {e}", exc_info=True)
             # Wait 1 hour before retrying
@@ -4027,7 +4580,9 @@ def create_bot_application():
         app.add_handler(CommandHandler('help', help_command))
         app.add_handler(CommandHandler('disconnect', disconnect))
         app.add_handler(CommandHandler('test_reminders', test_reminders_command))
+        app.add_handler(CommandHandler('test_monthly', test_monthly_summary_command))
         app.add_handler(CommandHandler('change_reminder_time', change_reminder_time_command))
+        app.add_handler(CommandHandler('change_monthly_day', change_monthly_day_command))
         
         # First handle regular text messages (verification code)
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_coupon_fsm))
@@ -4059,6 +4614,8 @@ def run_bot():
         # Start daily reminder scheduler in background
         async def start_scheduler(app):
             global scheduler_task, scheduler_stop_event
+            # Fix monthly summary day to 20 (one-time fix)
+            await update_monthly_summary_day_to_20()
             # Load reminder config from database first
             await load_reminder_config()
             # Wait a bit for bot to be fully initialized

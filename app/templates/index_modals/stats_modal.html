@@ -2523,69 +2523,119 @@ style.textContent = `
 
   .savings-table.mobile-view tr.mobile-row {
     display: block;
-    margin-bottom: 12px; /* קטן יותר */
+    margin-bottom: 8px;
     border: 1px solid #eee;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    overflow: hidden;
   }
 
   .savings-table.mobile-view td {
     display: block;
-    padding: 8px; /* קטן יותר */
+    padding: 6px;
     border: none;
-    max-width: 100%; /* הגבלת הרוחב */
-    box-sizing: border-box; /* וידוא שהפדינג נכלל ברוחב */
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .savings-table.mobile-view .company-name {
     font-weight: bold;
-    font-size: 1rem; /* קטן יותר */
-    background-color: #f2f2f2;
-    padding: 6px; /* קטן יותר */
-    margin: -8px -8px 8px -8px; /* מותאם לפדינג החדש */
+    font-size: 0.9rem;
+    background-color: #f8f9fa;
+    padding: 8px 10px;
+    margin: -6px -6px 6px -6px;
     border-bottom: 1px solid #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .savings-table.mobile-view .mobile-row-data {
     display: flex;
     flex-direction: column;
-    gap: 6px; /* קטן יותר */
-    font-size: 0.85rem; /* גופן קטן יותר */
-    word-break: break-word; /* מונע חריגה מהמסך בטקסט ארוך */
-    line-height: 1.5;
+    gap: 4px;
+    font-size: 0.8rem;
+    word-break: break-word;
+    line-height: 1.4;
   }
 
   .savings-table.mobile-view .mobile-row-data div {
-    padding: 3px 0; /* קטן יותר */
+    padding: 2px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .savings-table.mobile-view strong {
     display: inline-block;
-    padding-left: 4px;
+    min-width: 80px;
+    font-size: 0.75rem;
+    color: #666;
   }
 
   /* Styles for table wrapper in mobile */
   @media (max-width: 767px) {
     .savings-table-wrapper {
-      width: 92%;
-      margin-left: auto;
-      margin-right: auto;
-      overflow-x: hidden; /* מניעת גלילה אופקית */
+      width: 100%;
+      margin: 0;
+      padding: 0 8px;
+      overflow-x: hidden;
+      box-sizing: border-box;
+    }
+    
+    .savings-table.mobile-view tr.mobile-row {
+      margin-bottom: 6px;
+      border-radius: 4px;
+    }
+    
+    .savings-table.mobile-view td {
+      padding: 3px;
+    }
+    
+    .savings-table.mobile-view .company-name {
+      font-size: 0.8rem;
+      padding: 4px 6px;
+      margin: -3px -3px 3px -3px;
+    }
+    
+    .savings-table.mobile-view .mobile-row-data {
+      font-size: 0.7rem;
+      gap: 2px;
+    }
+    
+    .savings-table.mobile-view strong {
+      min-width: 60px;
+      font-size: 0.65rem;
     }
   }
 
   /* עבור מסכים קטנים במיוחד */
   @media (max-width: 400px) {
     .savings-table-wrapper {
-      width: 90%;
+      padding: 0 4px;
     }
     
     .savings-table.mobile-view .company-name {
-      font-size: 0.95rem;
+      font-size: 0.75rem;
+      padding: 3px 4px;
     }
     
     .savings-table.mobile-view .mobile-row-data {
-      font-size: 0.8rem;
+      font-size: 0.65rem;
+      gap: 1px;
+    }
+    
+    .savings-table.mobile-view td {
+      padding: 2px;
+    }
+    
+    .savings-table.mobile-view tr.mobile-row {
+      margin-bottom: 4px;
+    }
+    
+    .savings-table.mobile-view strong {
+      min-width: 50px;
+      font-size: 0.6rem;
     }
   }
   /* Hide mobile-only on desktop */

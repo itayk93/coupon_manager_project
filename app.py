@@ -69,20 +69,10 @@ from app.routes.transactions_routes import transactions_bp
 from app.routes.export_routes import export_bp
 from app.routes.uploads_routes import uploads_bp
 from app.routes.admin_routes import admin_bp
+from app.routes.telegram_routes import telegram_bp
+from app.routes.statistics_routes import statistics_bp
 
 # Register Blueprints
-"""""" """
-app.register_blueprint(auth_bp)
-app.register_blueprint(profile_bp)
-app.register_blueprint(coupons_bp)
-app.register_blueprint(marketplace_bp)
-app.register_blueprint(requests_bp)
-app.register_blueprint(transactions_bp)
-app.register_blueprint(export_bp)
-app.register_blueprint(uploads_bp)
-app.register_blueprint(admin_bp)
-app.register_blueprint(admin_tags_bp)
-""" """"""
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(profile_bp, url_prefix="/profile")
 app.register_blueprint(coupons_bp, url_prefix="/coupons")
@@ -92,6 +82,8 @@ app.register_blueprint(transactions_bp, url_prefix="/transactions")
 app.register_blueprint(export_bp, url_prefix="/export")
 app.register_blueprint(uploads_bp, url_prefix="/uploads")
 app.register_blueprint(admin_bp, url_prefix="/admin")
+app.register_blueprint(telegram_bp, url_prefix="/telegram")
+app.register_blueprint(statistics_bp)
 
 # Create instance folder if it doesn't exist
 if not os.path.exists("instance"):
@@ -127,8 +119,4 @@ except Exception as e:
 scheduler = BackgroundScheduler()
 
 if __name__ == "__main__":
-    if not app.debug or os.environ.get("FLASK_ENV") == "production":
-        configure_scheduler()
-        logging.info("Scheduler started in production mode.")
-
     app.run(debug=True)

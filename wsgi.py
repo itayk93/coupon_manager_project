@@ -66,11 +66,18 @@ def start_telegram_bot_thread():
         print("Starting Telegram bot in background thread...", flush=True)
         
         # Import here to avoid circular imports
-        from telegram_bot import create_bot_application
+        from telegram_bot import create_bot_application, initialize_monthly_summary_settings
         
         # Create new event loop for this thread
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        
+        # Initialize monthly summary settings on server startup
+        try:
+            loop.run_until_complete(initialize_monthly_summary_settings())
+        except Exception as e:
+            logger.error(f"Failed to initialize monthly summary settings: {e}")
+            print(f"Failed to initialize monthly summary settings: {e}", flush=True)
         
         # Create bot application
         app_bot = create_bot_application()

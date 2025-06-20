@@ -91,6 +91,7 @@ def create_app():
     from app.routes.admin_routes.admin_messages_routes import admin_messages_bp
     from app.extensions import google_bp
     from app.routes.telegram_routes import telegram_bp
+    from app.routes.statistics_routes import statistics_bp
 
     # from app.routes.profile_routes import profile_bp
 
@@ -111,6 +112,7 @@ def create_app():
     app.register_blueprint(admin_messages_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(telegram_bp)
+    app.register_blueprint(statistics_bp)
 
     # If needed - create instance folder
     if not os.path.exists("instance"):
