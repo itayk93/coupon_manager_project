@@ -136,16 +136,55 @@ def preview_newsletter(newsletter_id):
         html_content = html_content.replace("{{ unsubscribe_link }}", "#")
         return html_content
     else:
-        # עבור ניוזלטר מובנה - שימוש בתבנית
+        # עבור ניוזלטר מובנה - יצירת HTML בעזרת החלפת מחרוזות
         from types import SimpleNamespace
-        dummy_user = SimpleNamespace(first_name="דוגמה", last_name="משתמש", email="example@email.com")
-        dummy_unsubscribe_link = "#"
-        return render_template("emails/newsletter_template.html", 
-                             newsletter=newsletter, 
-                             user=dummy_user,
-                             unsubscribe_link=dummy_unsubscribe_link,
-                             generate_unsubscribe_token=generate_unsubscribe_token,
-                             generate_preferences_token=generate_preferences_token)
+        dummy_user = SimpleNamespace(first_name="דוגמה", last_name="משתמש", email="example@email.com", id=1)
+        
+        def dummy_generate_unsubscribe_token(user):
+            return "dummy_token"
+        
+        def dummy_generate_preferences_token(user):
+            return "dummy_token"
+        
+        # קרא את הטמפלט כקובץ טקסט
+        import os
+        template_path = os.path.join(current_app.root_path, 'templates', 'emails', 'newsletter_template.html')
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        # החלפת משתנים בסיסיים
+        html_content = html_content.replace("{{ newsletter.title }}", newsletter.title)
+        html_content = html_content.replace("{{ newsletter.created_at.strftime('%B %Y') }}", "דצמבר 2024")
+        html_content = html_content.replace("{{ user.first_name }}", "דוגמה")
+        
+        # טיפול בתוכן
+        if newsletter.content:
+            content_html = newsletter.content.replace('\n', '<br>')
+            html_content = html_content.replace("{{ newsletter.content|replace('\\n', '<br>')|safe }}", content_html)
+        
+        # טיפול בסקציות נוספות
+        if newsletter.telegram_bot_section:
+            html_content = html_content.replace("{{ newsletter.telegram_bot_section|safe }}", newsletter.telegram_bot_section)
+        
+        if newsletter.website_features_section:
+            html_content = html_content.replace("{{ newsletter.website_features_section|safe }}", newsletter.website_features_section)
+        
+        # החלפת הקישורים לקישורי דמה
+        html_content = html_content.replace(
+            "{% if unsubscribe_link and unsubscribe_link != '#' %}",
+            "<!-- Preview mode - using dummy links -->"
+        )
+        html_content = html_content.replace("{% else %}", "")
+        html_content = html_content.replace("{% endif %}", "")
+        
+        # הסרת קוד Jinja2 שנותר
+        import re
+        html_content = re.sub(r'\{\{[^}]*url_for[^}]*\}\}', '#', html_content)
+        html_content = re.sub(r'\{\%[^%]*\%\}', '', html_content)
+        html_content = re.sub(r'\{\{[^}]*\}\}', '', html_content)
+        
+        return html_content
 
 # עמוד בחירת משתמשים לשליחה
 @admin_newsletter_bp.route("/send/<int:newsletter_id>", methods=["GET", "POST"])

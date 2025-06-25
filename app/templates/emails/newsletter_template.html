@@ -305,8 +305,8 @@
                         </div>
                         
                         <!-- תוכן ראשי -->
-                        <div class="main-content">
-                            {{ newsletter.content|replace('\n', '<br>')|safe }}
+                        <div class="main-content" style="white-space: pre-line;">
+                            {{ newsletter.content|safe }}
                         </div>
                         
                         <!-- סקציה ליתרונות האתר -->
@@ -354,7 +354,19 @@
                             </div>
                             <div class="unsubscribe">
                                 <p>שלום {{ user.first_name }}, קיבלת את המייל הזה כי אתה רשום לניוזלטר שלנו.</p>
-                                <p><a href="https://couponmasteril.com{{ url_for('profile.unsubscribe_newsletter', user_id=user.id, token=generate_unsubscribe_token(user)) }}" style="color: #95a5a6; text-decoration: underline;">ביטול מנוי</a> | <a href="https://couponmasteril.com{{ url_for('profile.preferences_from_email', user_id=user.id, token=generate_preferences_token(user)) }}" style="color: #95a5a6; text-decoration: underline;">עדכון העדפות</a></p>
+                                <p>
+                                    {% if unsubscribe_link and unsubscribe_link != '#' %}
+                                        <a href="{{ unsubscribe_link }}" style="color: #95a5a6; text-decoration: underline;">ביטול מנוי</a>
+                                    {% else %}
+                                        <a href="https://couponmasteril.com{{ url_for('profile.unsubscribe_newsletter', user_id=user.id, token=generate_unsubscribe_token(user)) }}" style="color: #95a5a6; text-decoration: underline;">ביטול מנוי</a>
+                                    {% endif %}
+                                    | 
+                                    {% if unsubscribe_link and unsubscribe_link != '#' %}
+                                        <a href="#" style="color: #95a5a6; text-decoration: underline;">עדכון העדפות</a>
+                                    {% else %}
+                                        <a href="https://couponmasteril.com{{ url_for('profile.preferences_from_email', user_id=user.id, token=generate_preferences_token(user)) }}" style="color: #95a5a6; text-decoration: underline;">עדכון העדפות</a>
+                                    {% endif %}
+                                </p>
                             </div>
                             <p style="margin-top: 20px;">© 2024 Coupon Master. כל הזכויות שמורות.</p>
                         </div>
