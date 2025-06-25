@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block title %}
+העדפות חשבון
+{% endblock %}
+
+{% block content %}
+<section class="user-preferences">
+    <div class="page-header">
+        <h1>העדפות חשבון</h1>
+        <p class="page-subtitle">נהלו את ההעדפות שלכם לקבלת מיילים והודעות</p>
+    </div>
+
+    <form method="POST" class="preferences-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="preferences-container">
+            <div class="preference-section">
+                <div class="section-header">
+                    <i class="fas fa-envelope"></i>
+                    <h2>העדפות מיילים</h2>
+                </div>
+                
+                <div class="preference-item">
+                    <div class="preference-info">
+                        <h3>ניוזלטר שבועי</h3>
+                        <p>קבלו עדכונים שבועיים על קופונים חדשים, מבצעים חמים והזדמנויות חיסכון</p>
+                    </div>
+                    <div class="preference-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="newsletter_subscription" 
+                                   {{ 'checked' if current_user.newsletter_subscription else '' }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preference-section">
+                <div class="section-header">
+                    <i class="fab fa-telegram-plane"></i>
+                    <h2>העדפות טלגרם</h2>
+                </div>
+                
+                <div class="preference-item">
+                    <div class="preference-info">
+                        <h3>סיכום חודשי בטלגרם</h3>
+                        <p>קבלו סיכום חודשי על הפעילות שלכם, סטטיסטיקות חיסכון והמלצות מותאמות אישית</p>
+                    </div>
+                    <div class="preference-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="telegram_monthly_summary" 
+                                   {{ 'checked' if current_user.telegram_monthly_summary else '' }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="telegram-info">
+                    <div class="info-card">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <strong>עוד לא מחוברים לבוט הטלגרם?</strong>
+                            <p>הצטרפו לבוט שלנו כדי לנהל את הקופונים שלכם בנוחות</p>
+                            <a href="#" class="telegram-connect-btn">הצטרפו לבוט עכשיו</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> שמירת העדפות
+            </button>
+            <a href="{{ url_for('profile.user_profile') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-right"></i> חזרה לפרופיל
+            </a>
+        </div>
+    </form>
+</section>
+
+<style>
+.user-preferences {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    direction: rtl;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #2E86C1;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.page-subtitle {
+    color: #666;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.preferences-form {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.preferences-container {
+    padding: 2rem;
+}
+
+.preference-section {
+    margin-bottom: 3rem;
+}
+
+.preference-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.section-header i {
+    font-size: 1.5rem;
+    color: #2E86C1;
+}
+
+.section-header h2 {
+    margin: 0;
+    color: #2E86C1;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.preference-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.preference-item:hover {
+    background: #f1f3f4;
+    transform: translateY(-2px);
+}
+
+.preference-info {
+    flex: 1;
+}
+
+.preference-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.preference-info p {
+    margin: 0;
+    color: #666;
+    line-height: 1.6;
+}
+
+.preference-toggle {
+    margin-right: 2rem;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2E86C1;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #2E86C1;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.telegram-info {
+    margin-top: 1.5rem;
+}
+
+.info-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
+    border-radius: 12px;
+    border-right: 4px solid #2E86C1;
+}
+
+.info-card i {
+    color: #2E86C1;
+    font-size: 1.2rem;
+    margin-top: 0.2rem;
+}
+
+.info-card strong {
+    display: block;
+    color: #2E86C1;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.info-card p {
+    margin: 0 0 1rem 0;
+    color: #555;
+    line-height: 1.5;
+}
+
+.telegram-connect-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: #0088cc;
+    color: white;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.telegram-connect-btn:hover {
+    background: #0066aa;
+    transform: translateY(-2px);
+}
+
+.form-actions {
+    padding: 2rem;
+    border-top: 1px solid #e9ecef;
+    background: #f8f9fa;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.btn {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 150px;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #2E86C1, #5DADE2);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1B4F72, #2E86C1);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+    transform: translateY(-2px);
+}
+
+/* אנימציות */
+.preference-section {
+    animation: fadeInUp 0.6s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* רספונסיביות */
+@media (max-width: 768px) {
+    .user-preferences {
+        padding: 1rem;
+        margin: 1rem;
+    }
+    
+    .preference-item {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: 1.5rem;
+    }
+    
+    .preference-toggle {
+        margin-right: 0;
+        align-self: center;
+    }
+    
+    .info-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // אפקט טעינה חלק לקטעים
+    const sections = document.querySelectorAll('.preference-section');
+    sections.forEach((section, index) => {
+        section.style.animationDelay = `${index * 0.2}s`;
+    });
+    
+    // הוספת אפקט hover לכרטיסי ההעדפות
+    const preferenceItems = document.querySelectorAll('.preference-item');
+    preferenceItems.forEach(item => {
+        const toggle = item.querySelector('input[type="checkbox"]');
+        
+        item.addEventListener('click', function(e) {
+            if (e.target.type !== 'checkbox') {
+                toggle.checked = !toggle.checked;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+{% endblock %}

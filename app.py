@@ -69,6 +69,7 @@ from app.routes.transactions_routes import transactions_bp
 from app.routes.export_routes import export_bp
 from app.routes.uploads_routes import uploads_bp
 from app.routes.admin_routes import admin_bp
+from app.routes.admin_routes.admin_newsletter_routes import admin_newsletter_bp
 from app.routes.telegram_routes import telegram_bp
 from app.routes.statistics_routes import statistics_bp
 
@@ -82,6 +83,7 @@ app.register_blueprint(transactions_bp, url_prefix="/transactions")
 app.register_blueprint(export_bp, url_prefix="/export")
 app.register_blueprint(uploads_bp, url_prefix="/uploads")
 app.register_blueprint(admin_bp, url_prefix="/admin")
+app.register_blueprint(admin_newsletter_bp)
 app.register_blueprint(telegram_bp, url_prefix="/telegram")
 app.register_blueprint(statistics_bp)
 

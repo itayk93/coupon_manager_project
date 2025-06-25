@@ -89,6 +89,7 @@ def create_app():
     from app.routes.admin_routes.admin_coupon_tags_routes import admin_coupon_tags_bp
     from app.routes.admin_routes.admin_dashboard_routes import admin_dashboard_bp
     from app.routes.admin_routes.admin_messages_routes import admin_messages_bp
+    from app.routes.admin_routes.admin_newsletter_routes import admin_newsletter_bp
     from app.extensions import google_bp
     from app.routes.telegram_routes import telegram_bp
     from app.routes.statistics_routes import statistics_bp
@@ -110,6 +111,7 @@ def create_app():
     # app.register_blueprint(profile_bp, url_prefix='/')
     app.register_blueprint(admin_dashboard_bp, url_prefix="/admin")
     app.register_blueprint(admin_messages_bp)
+    app.register_blueprint(admin_newsletter_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(telegram_bp)
     app.register_blueprint(statistics_bp)
@@ -136,7 +138,19 @@ def create_app():
 
     @app.context_processor
     def utility_processor():
-        return dict(has_feature_access=has_feature_access)
+        def generate_unsubscribe_token(user):
+            """יצירת טוקן לביטול הרשמה"""
+            return str(abs(hash(f"{user.email}{user.id}")))[:10]
+
+        def generate_preferences_token(user):
+            """יצירת טוקן לעדכון העדפות"""
+            return str(abs(hash(f"{user.email}{user.id}preferences")))[:10]
+            
+        return dict(
+            has_feature_access=has_feature_access,
+            generate_unsubscribe_token=generate_unsubscribe_token,
+            generate_preferences_token=generate_preferences_token
+        )
 
     # עקיפת בדיקת CSRF עבור routes של טלגרם רק אם מוגדר
     if not app.config.get('TELEGRAM_CSRF_PROTECTION', False):

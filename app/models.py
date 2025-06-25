@@ -111,6 +111,10 @@ class User(UserMixin, db.Model):
     # 🆕 New field: When the user dismissed the alert about expiring coupons
     dismissed_expiring_alert_at = db.Column(db.DateTime, nullable=True)
 
+    # 🆕 Newsletter preferences
+    newsletter_subscription = db.Column(db.Boolean, default=True, nullable=False)
+    telegram_monthly_summary = db.Column(db.Boolean, default=True, nullable=False)
+
     # Relationships
     notifications = db.relationship("Notification", back_populates="user", lazy=True)
     coupons = db.relationship("Coupon", back_populates="user", lazy=True)
@@ -798,3 +802,56 @@ class TelegramUserAuditLog(db.Model):
 
     def __repr__(self):
         return f"<TelegramUserAuditLog {self.id}>"
+
+
+class Newsletter(db.Model):
+    """
+    מודל לניוזלטרים
+    """
+    __tablename__ = "newsletters"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=True)  # עכשיו יכול להיות NULL
+    telegram_bot_section = db.Column(db.Text, nullable=True)
+    website_features_section = db.Column(db.Text, nullable=True)
+    custom_html = db.Column(db.Text, nullable=True)  # HTML מותאם אישית
+    newsletter_type = db.Column(db.String(20), default='structured')  # 'structured' או 'custom'
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    is_published = db.Column(db.Boolean, default=False)
+    sent_count = db.Column(db.Integer, default=0)
+    
+    # קשר למשתמש שיצר את הניוזלטר
+    creator = db.relationship("User", backref="created_newsletters")
+    
+    # קשר לשליחות הניוזלטר
+    sendings = db.relationship("NewsletterSending", back_populates="newsletter", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<Newsletter {self.id}: {self.title}>"
+
+
+class NewsletterSending(db.Model):
+    """
+    מעקב אחר שליחות ניוזלטרים למשתמשים
+    """
+    __tablename__ = "newsletter_sendings"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    newsletter_id = db.Column(db.Integer, db.ForeignKey("newsletters.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    sent_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    delivery_status = db.Column(db.String(50), default="sent")  # sent, delivered, failed, opened
+    error_message = db.Column(db.Text, nullable=True)
+    
+    # קשרים
+    newsletter = db.relationship("Newsletter", back_populates="sendings")
+    user = db.relationship("User", backref="newsletter_sendings")
+    
+    __table_args__ = (
+        db.UniqueConstraint('newsletter_id', 'user_id', name='unique_newsletter_user'),
+    )
+    
+    def __repr__(self):
+        return f"<NewsletterSending {self.id}: Newsletter {self.newsletter_id} to User {self.user_id}>"

@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}
+שליחת ניוזלטר: {{ newsletter.title }}
+{% endblock %}
+
+{% block content %}
+<section class="admin-send-newsletter">
+    <div class="page-header">
+        <h1>שליחת ניוזלטר</h1>
+        <a href="{{ url_for('admin_newsletter_bp.manage_newsletters') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-right"></i> חזרה לניהול ניוזלטרים
+        </a>
+    </div>
+
+    <div class="newsletter-preview-card">
+        <h2><i class="fas fa-newspaper"></i> {{ newsletter.title }}</h2>
+        <p class="newsletter-meta">
+            <i class="fas fa-calendar"></i> נוצר ב: {{ newsletter.created_at.strftime('%d/%m/%Y %H:%M') }}
+        </p>
+        <div class="preview-actions">
+            <a href="{{ url_for('admin_newsletter_bp.preview_newsletter', newsletter_id=newsletter.id) }}" 
+               class="btn btn-info" target="_blank">
+                <i class="fas fa-eye"></i> תצוגה מקדימה
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" class="send-form" id="sendForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="send-options">
+            <h2><i class="fas fa-users"></i> בחירת נמענים</h2>
+            
+            <div class="option-group">
+                <label class="option-label">
+                    <input type="checkbox" id="send_all" name="send_all" onchange="toggleUserSelection()">
+                    <span class="checkmark"></span>
+                    <strong>שליחה לכל המשתמשים ({{ users|length }} משתמשים)</strong>
+                </label>
+            </div>
+
+            <div class="users-selection" id="usersSelection">
+                <div class="selection-controls">
+                    <button type="button" class="btn btn-outline" onclick="selectAll()">בחר הכל</button>
+                    <button type="button" class="btn btn-outline" onclick="deselectAll()">בטל בחירה</button>
+                    <input type="text" id="searchUsers" placeholder="חיפוש משתמשים..." onkeyup="filterUsers()">
+                </div>
+
+                <div class="users-grid" id="usersGrid">
+                    {% for user in users %}
+                    <div class="user-card" data-user-name="{{ user.first_name }} {{ user.last_name }}" data-user-email="{{ user.email }}">
+                        <label class="user-label">
+                            <input type="checkbox" name="selected_users" value="{{ user.id }}" class="user-checkbox">
+                            <span class="user-checkmark"></span>
+                            <div class="user-info">
+                                <strong>{{ user.first_name }} {{ user.last_name }}</strong>
+                                <small>{{ user.email }}</small>
+                                <small class="user-date">נרשם: {{ user.created_at.strftime('%d/%m/%Y') if user.created_at else 'לא ידוע' }}</small>
+                            </div>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="selection-summary">
+                    <span id="selectedCount">0</span> משתמשים נבחרו מתוך {{ users|length }}
+                </div>
+            </div>
+        </div>
+
+        <div class="send-actions">
+            <button type="submit" class="btn btn-success btn-lg" id="sendButton" disabled>
+                <i class="fas fa-paper-plane"></i> שליחת ניוזלטר
+            </button>
+            <a href="{{ url_for('admin_newsletter_bp.manage_newsletters') }}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-times"></i> ביטול
+            </a>
+        </div>
+    </form>
+</section>
+
+<style>
+.admin-send-newsletter {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 2rem;
+    direction: rtl;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2E86C1;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.newsletter-preview-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+    border-right: 4px solid #2E86C1;
+}
+
+.newsletter-preview-card h2 {
+    margin: 0 0 1rem 0;
+    color: #2E86C1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.newsletter-meta {
+    color: #666;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.send-form {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    padding: 2rem;
+}
+
+.send-options h2 {
+    color: #2E86C1;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.option-group {
+    margin-bottom: 2rem;
+}
+
+.option-label {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.option-label:hover {
+    border-color: #2E86C1;
+    background-color: #f8f9fa;
+}
+
+.option-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.option-label input:checked + .checkmark {
+    background-color: #2E86C1;
+    border-color: #2E86C1;
+}
+
+.option-label input:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+}
+
+.users-selection {
+    transition: opacity 0.3s ease;
+}
+
+.users-selection.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.selection-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.selection-controls input {
+    flex: 1;
+    min-width: 250px;
+    padding: 0.75rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.user-card {
+    transition: all 0.3s ease;
+}
+
+.user-card.hidden {
+    display: none;
+}
+
+.user-label {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.user-label:hover {
+    border-color: #2E86C1;
+    background-color: #f8f9fa;
+}
+
+.user-checkbox {
+    display: none;
+}
+
+.user-checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.user-label input:checked + .user-checkmark {
+    background-color: #2E86C1;
+    border-color: #2E86C1;
+}
+
+.user-label input:checked + .user-checkmark::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-info strong {
+    display: block;
+    color: #333;
+    margin-bottom: 0.25rem;
+}
+
+.user-info small {
+    display: block;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.user-date {
+    color: #999 !important;
+    font-size: 0.8rem !important;
+}
+
+.selection-summary {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    font-weight: 600;
+    color: #2E86C1;
+}
+
+.send-actions {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.btn {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid #2E86C1;
+    color: #2E86C1;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.btn-outline:hover:not(:disabled) {
+    background: #2E86C1;
+    color: white;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1e7e34, #17a2b8);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+    transform: translateY(-2px);
+}
+
+.btn-lg {
+    padding: 1.25rem 2.5rem;
+    font-size: 1.1rem;
+}
+
+/* רספונסיביות */
+@media (max-width: 768px) {
+    .admin-send-newsletter {
+        padding: 1rem;
+        margin: 1rem;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .users-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .selection-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .selection-controls input {
+        min-width: unset;
+    }
+    
+    .send-actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+let totalUsers = {{ users|length }};
+
+function toggleUserSelection() {
+    const sendAll = document.getElementById('send_all');
+    const usersSelection = document.getElementById('usersSelection');
+    const sendButton = document.getElementById('sendButton');
+    
+    if (sendAll.checked) {
+        usersSelection.classList.add('disabled');
+        sendButton.disabled = false;
+    } else {
+        usersSelection.classList.remove('disabled');
+        updateSendButton();
+    }
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateSelectedCount();
+    updateSendButton();
+}
+
+function deselectAll() {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelectedCount();
+    updateSendButton();
+}
+
+function filterUsers() {
+    const searchTerm = document.getElementById('searchUsers').value.toLowerCase();
+    const userCards = document.querySelectorAll('.user-card');
+    
+    userCards.forEach(card => {
+        const userName = card.dataset.userName.toLowerCase();
+        const userEmail = card.dataset.userEmail.toLowerCase();
+        
+        if (userName.includes(searchTerm) || userEmail.includes(searchTerm)) {
+            card.classList.remove('hidden');
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+}
+
+function updateSelectedCount() {
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+    document.getElementById('selectedCount').textContent = checkedBoxes.length;
+}
+
+function updateSendButton() {
+    const sendAll = document.getElementById('send_all');
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+    const sendButton = document.getElementById('sendButton');
+    
+    sendButton.disabled = !sendAll.checked && checkedBoxes.length === 0;
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // הוספת event listeners לכל הצ'קבוקסים
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+    userCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectedCount();
+            updateSendButton();
+        });
+    });
+    
+    // אתחול
+    updateSelectedCount();
+    updateSendButton();
+    
+    // אישור לפני שליחה
+    document.getElementById('sendForm').addEventListener('submit', function(e) {
+        const sendAll = document.getElementById('send_all');
+        const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+        
+        let message;
+        if (sendAll.checked) {
+            message = `האם אתה בטוח שברצונך לשלוח את הניוזלטר לכל ${totalUsers} המשתמשים?`;
+        } else {
+            message = `האם אתה בטוח שברצונך לשלוח את הניוזלטר ל-${checkedBoxes.length} משתמשים נבחרים?`;
+        }
+        
+        if (!confirm(message)) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+{% endblock %}

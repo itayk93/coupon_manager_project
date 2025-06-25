@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ newsletter.title }} - Coupon Master Newsletter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        /* ===================================================
+           עיצוב ניוזלטר מתקדם ומעוצב
+        =================================================== */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+            color: #333;
+        }
+        .newsletter-container {
+            width: 100%;
+            padding: 20px 0;
+            background-color: #f8f9fa;
+        }
+        .newsletter-content {
+            max-width: 700px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        /* הדר מעוצב */
+        .header {
+            background: linear-gradient(135deg, #2E86C1 0%, #5DADE2 100%);
+            color: #ffffff;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1.5" fill="rgba(255,255,255,0.05)"/><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.08)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+            animation: float 20s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateX(0px) translateY(0px); }
+            50% { transform: translateX(-10px) translateY(-10px); }
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+            font-weight: 700;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .header .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* סקציה מיוחדת לבוט טלגרם */
+        .telegram-section {
+            background: linear-gradient(135deg, #0088cc 0%, #0066aa 100%);
+            color: white;
+            padding: 30px;
+            margin: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .telegram-section::before {
+            content: '📱';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 60px;
+            opacity: 0.1;
+        }
+        .telegram-section h2 {
+            margin: 0 0 20px 0;
+            font-size: 28px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .telegram-section h2::before {
+            content: '🚀';
+            font-size: 24px;
+        }
+        .telegram-section p {
+            margin-bottom: 15px;
+            line-height: 1.7;
+            font-size: 16px;
+        }
+        .telegram-button {
+            background: #ffffff;
+            color: #0088cc;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .telegram-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        /* סקציה ליתרונות האתר */
+        .features-section {
+            padding: 40px 30px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        .features-section h2 {
+            margin: 0 0 30px 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: #2E86C1;
+            text-align: center;
+            position: relative;
+        }
+        .features-section h2::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            right: 50%;
+            transform: translateX(50%);
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, #2E86C1, #5DADE2);
+            border-radius: 2px;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .feature-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+            border-right: 4px solid #2E86C1;
+        }
+        .feature-card:hover {
+            transform: translateY(-3px);
+        }
+        .feature-card h3 {
+            margin: 0 0 15px 0;
+            color: #2E86C1;
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .feature-card p {
+            margin: 0;
+            line-height: 1.6;
+            color: #555;
+        }
+        
+        /* תוכן ראשי */
+        .main-content {
+            padding: 40px 30px;
+            color: #2C3E50;
+            text-align: right;
+            line-height: 1.7;
+        }
+        .main-content p {
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        .main-content h3 {
+            color: #2E86C1;
+            font-size: 22px;
+            margin: 30px 0 15px 0;
+            font-weight: 600;
+        }
+        
+        /* כפתור קריאה לפעולה */
+        .cta-section {
+            background: linear-gradient(135deg, #2E86C1 0%, #5DADE2 100%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+        .cta-button {
+            background: #ffffff;
+            color: #2E86C1;
+            padding: 18px 40px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+        }
+        
+        /* פוטר */
+        .footer {
+            background-color: #34495e;
+            color: #bdc3c7;
+            text-align: center;
+            padding: 30px;
+        }
+        .footer p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .footer .social-links {
+            margin: 20px 0;
+        }
+        .footer .social-links a {
+            color: #bdc3c7;
+            text-decoration: none;
+            margin: 0 10px;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        .footer .social-links a:hover {
+            color: #3498db;
+        }
+        .unsubscribe {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 15px;
+        }
+        .unsubscribe a {
+            color: #95a5a6;
+        }
+        
+        /* רספונסיביות */
+        @media only screen and (max-width: 600px) {
+            .newsletter-content {
+                width: 100% !important;
+                margin: 0 10px;
+                max-width: calc(100% - 20px);
+            }
+            .header, .main-content, .features-section, .telegram-section, .cta-section {
+                padding: 20px 15px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            .cta-button, .telegram-button {
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body dir="rtl">
+    <div class="newsletter-container">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+                <td align="center">
+                    <div class="newsletter-content">
+                        <!-- Header -->
+                        <div class="header">
+                            <h1>{{ newsletter.title }}</h1>
+                            <div class="subtitle">ניוזלטר Coupon Master - {{ newsletter.created_at.strftime('%B %Y') }}</div>
+                        </div>
+                        
+                        <!-- סקציה מיוחדת לבוט טלגרם -->
+                        <div class="telegram-section">
+                            <h2>הבוט החדש שלנו בטלגרם!</h2>
+                            {% if newsletter.telegram_bot_section %}
+                                {{ newsletter.telegram_bot_section|safe }}
+                            {% else %}
+                                <p>אנחנו שמחים להכריז על השקת הבוט החדש שלנו בטלגרם! 🎉</p>
+                                <p>עכשיו תוכלו לנהל את הקופונים שלכם, לקבל התראות על קופונים שפגי תוקף, ולגלות הזדמנויות חדשות - הכל ישירות דרך טלגרם!</p>
+                                <p><strong>מה הבוט יכול לעשות עבורכם:</strong></p>
+                                <p>✅ ניהול קופונים בקלות<br>
+                                ✅ התראות אוטומטיות על פגיעת תוקף<br>
+                                ✅ המלצות מותאמות אישית<br>
+                                ✅ עדכונים בזמן אמת על הזדמנויות חדשות</p>
+                            {% endif %}
+                            <div style="text-align: center; margin-top: 25px;">
+                                <a href="#" class="telegram-button" style="color: #0088cc; font-weight: bold;">הצטרפו לבוט עכשיו</a>
+                            </div>
+                        </div>
+                        
+                        <!-- תוכן ראשי -->
+                        <div class="main-content">
+                            {{ newsletter.content|replace('\n', '<br>')|safe }}
+                        </div>
+                        
+                        <!-- סקציה ליתרונות האתר -->
+                        <div class="features-section">
+                            <h2>למה Coupon Master?</h2>
+                            {% if newsletter.website_features_section %}
+                                {{ newsletter.website_features_section|safe }}
+                            {% else %}
+                                <div class="features-grid">
+                                    <div class="feature-card">
+                                        <h3>💰 חיסכון מקסימלי</h3>
+                                        <p>מצאו את הקופונים הכי משתלמים ותחסכו עד 70% מהקניות שלכם</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h3>🔒 בטיחות מלאה</h3>
+                                        <p>כל הקופונים מאומתים ומוגנים בהצפנה מתקדמת</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h3>⚡ עדכונים בזמן אמת</h3>
+                                        <p>תמיד תהיו הראשונים לדעת על הזדמנויות חדשות</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h3>📱 נוח לשימוש</h3>
+                                        <p>ממשק פשוט וידידותי שמתאים לכל המכשירים</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- קריאה לפעולה -->
+                        <div class="cta-section">
+                            <h2 style="margin: 0 0 20px 0; font-size: 24px;">מוכנים להתחיל לחסוך?</h2>
+                            <p style="margin: 0 0 25px 0; font-size: 16px; opacity: 0.9;">הצטרפו למגמה של החיסכון החכם</p>
+                            <a href="#" class="cta-button" style="color: #2E86C1; font-weight: bold;">כנסו לאתר עכשיו</a>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div class="footer">
+                            <p><strong>Coupon Master</strong></p>
+                            <p>הפלטפורמה המובילה לניהול קופונים בישראל</p>
+                            <div class="social-links">
+                                <a href="#">פייסבוק</a> |
+                                <a href="#">טלגרם</a> |
+                                <a href="#">אינסטגרם</a>
+                            </div>
+                            <div class="unsubscribe">
+                                <p>שלום {{ user.first_name }}, קיבלת את המייל הזה כי אתה רשום לניוזלטר שלנו.</p>
+                                <p><a href="https://couponmasteril.com{{ url_for('profile.unsubscribe_newsletter', user_id=user.id, token=generate_unsubscribe_token(user)) }}" style="color: #95a5a6; text-decoration: underline;">ביטול מנוי</a> | <a href="https://couponmasteril.com{{ url_for('profile.preferences_from_email', user_id=user.id, token=generate_preferences_token(user)) }}" style="color: #95a5a6; text-decoration: underline;">עדכון העדפות</a></p>
+                            </div>
+                            <p style="margin-top: 20px;">© 2024 Coupon Master. כל הזכויות שמורות.</p>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

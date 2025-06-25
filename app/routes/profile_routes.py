@@ -1042,3 +1042,107 @@ def connect_telegram():
         current_app.logger.error(f"Error in connect_telegram: {str(e)}")
         flash('אירעה שגיאה ביצירת קוד האימות. אנא נסה שוב מאוחר יותר.', 'error')
         return redirect(url_for('profile.user_profile', user_id=current_user.id))
+
+
+@profile_bp.route("/preferences", methods=["GET", "POST"])
+@login_required
+def user_preferences():
+    """עמוד העדפות משתמש"""
+    if request.method == "POST":
+        try:
+            # עדכון העדפות המשתמש
+            current_user.newsletter_subscription = 'newsletter_subscription' in request.form
+            current_user.telegram_monthly_summary = 'telegram_monthly_summary' in request.form
+            
+            db.session.commit()
+            flash("ההעדפות שלך נשמרו בהצלחה!", "success")
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating user preferences: {str(e)}")
+            flash("אירעה שגיאה בשמירת ההעדפות. אנא נסה שוב.", "error")
+        
+        return redirect(url_for('profile.user_preferences'))
+    
+    return render_template("profile/user_preferences.html")
+
+
+@profile_bp.route("/unsubscribe")
+def unsubscribe_newsletter():
+    """ביטול הרשמה לניוזלטר"""
+    user_id = request.args.get('user_id')
+    token = request.args.get('token')
+    
+    if not user_id or not token:
+        flash("קישור לא תקין לביטול הרשמה.", "error")
+        return redirect(url_for('auth.login'))
+    
+    try:
+        user = User.query.get(int(user_id))
+        if not user:
+            flash("משתמש לא נמצא.", "error")
+            return redirect(url_for('auth.login'))
+        
+        # בדיקת תוקף הטוקן (ניתן להוסיף לוגיקה מתקדמת יותר)
+        # כאן נעשה בדיקה פשוטה
+        expected_token = str(abs(hash(f"{user.email}{user.id}")))[:10]
+        
+        if token != expected_token:
+            flash("קישור לא תקין לביטול הרשמה.", "error")
+            return redirect(url_for('auth.login'))
+        
+        # ביטול הרשמה לניוזלטר
+        user.newsletter_subscription = False
+        db.session.commit()
+        
+        flash("ההרשמה לניוזלטר בוטלה בהצלחה. אנו מצטערים לראותכם הולכים!", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in unsubscribe_newsletter: {str(e)}")
+        flash("אירעה שגיאה בביטול ההרשמה. אנא נסה שוב מאוחר יותר.", "error")
+    
+    return render_template("profile/unsubscribe_success.html")
+
+
+def generate_unsubscribe_token(user):
+    """יצירת טוקן לביטול הרשמה"""
+    return str(abs(hash(f"{user.email}{user.id}")))[:10]
+
+
+def generate_preferences_token(user):
+    """יצירת טוקן לעדכון העדפות"""
+    return str(abs(hash(f"{user.email}{user.id}preferences")))[:10]
+
+
+@profile_bp.route("/preferences_from_email")
+def preferences_from_email():
+    """עדכון העדפות ממייל - הפניה לעמוד האתר"""
+    user_id = request.args.get('user_id')
+    token = request.args.get('token')
+    
+    if not user_id or not token:
+        flash("קישור לא תקין לעדכון העדפות.", "error")
+        return redirect(url_for('auth.login'))
+    
+    try:
+        user = User.query.get(int(user_id))
+        if not user:
+            flash("משתמש לא נמצא.", "error")
+            return redirect(url_for('auth.login'))
+        
+        # בדיקת תוקף הטוקן
+        expected_token = generate_preferences_token(user)
+        
+        if token != expected_token:
+            flash("קישור לא תקין לעדכון העדפות.", "error")
+            return redirect(url_for('auth.login'))
+        
+        # הפניה לעמוד ההעדפות עם הודעה
+        flash("כאן תוכלו לעדכן את העדפות הדוא\"ל והטלגרם שלכם", "info")
+        return redirect(url_for('profile.user_preferences'))
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in preferences_from_email: {str(e)}")
+        flash("אירעה שגיאה. אנא נסו שוב מאוחר יותר.", "error")
+        return redirect(url_for('auth.login'))

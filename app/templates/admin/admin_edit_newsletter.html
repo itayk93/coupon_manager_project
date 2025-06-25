@@ -1,0 +1,575 @@
+{% extends "base.html" %}
+
+{% block title %}
+עריכת ניוזלטר: {{ newsletter.title }}
+{% endblock %}
+
+{% block content %}
+<section class="admin-edit-newsletter">
+    <div class="page-header">
+        <h1>עריכת ניוזלטר</h1>
+        <div class="header-actions">
+            <a href="{{ url_for('admin_newsletter_bp.preview_newsletter', newsletter_id=newsletter.id) }}" 
+               class="btn btn-info" target="_blank">
+                <i class="fas fa-eye"></i> תצוגה מקדימה
+            </a>
+            <a href="{{ url_for('admin_newsletter_bp.manage_newsletters') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-right"></i> חזרה לניהול ניוזלטרים
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" class="newsletter-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-container">
+            <div class="form-section">
+                <h2><i class="fas fa-heading"></i> כותרת וכללי</h2>
+                <div class="form-group">
+                    <label for="title">כותרת הניוזלטר *</label>
+                    <input type="text" id="title" name="title" required value="{{ newsletter.title }}"
+                           placeholder="לדוגמה: עדכונים חמים לחודש ינואר 2024">
+                </div>
+                
+                {% if newsletter.is_published %}
+                <div class="published-notice">
+                    <i class="fas fa-info-circle"></i>
+                    <div>
+                        <strong>ניוזלטר זה כבר פורסם</strong>
+                        <p>נשלח ל-{{ newsletter.sent_count }} משתמשים ב-{{ newsletter.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="newsletter-type-display">
+                    <strong>סוג הניוזלטר:</strong>
+                    {% if newsletter.newsletter_type == 'custom' %}
+                        <span class="type-badge custom">HTML מותאם אישית</span>
+                    {% else %}
+                        <span class="type-badge structured">מבנה מוכן ומעוצב</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if newsletter.newsletter_type == 'structured' %}
+            <!-- תוכן מובנה -->
+            <div class="form-section">
+                <h2><i class="fas fa-robot"></i> סקציית הבוט החדש בטלגרם</h2>
+                <div class="form-group">
+                    <label for="telegram_bot_section">תוכן על הבוט (אופציונלי)</label>
+                    <textarea id="telegram_bot_section" name="telegram_bot_section" rows="6"
+                              placeholder="תארו את הבוט החדש, התכונות שלו והיתרונות שהוא מביא...">{{ newsletter.telegram_bot_section if newsletter.telegram_bot_section else '' }}</textarea>
+                    <small class="form-help">השאירו ריק כדי להשתמש בתוכן ברירת המחדל</small>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2><i class="fas fa-edit"></i> תוכן עיקרי</h2>
+                <div class="form-group">
+                    <label for="content">תוכן הניוזלטר *</label>
+                    <textarea id="content" name="content" rows="10" required
+                              placeholder="כתבו כאן את התוכן העיקרי של הניוזלטר...">{{ newsletter.content if newsletter.content else '' }}</textarea>
+                    <small class="form-help">ניתן להשתמש ב-HTML לעיצוב מתקדם</small>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2><i class="fas fa-star"></i> יתרונות האתר</h2>
+                <div class="form-group">
+                    <label for="website_features_section">תוכן על יתרונות האתר (אופציונלי)</label>
+                    <textarea id="website_features_section" name="website_features_section" rows="6"
+                              placeholder="תארו את היתרונות והתכונות המיוחדות של האתר...">{{ newsletter.website_features_section if newsletter.website_features_section else '' }}</textarea>
+                    <small class="form-help">השאירו ריק כדי להשתמש בתוכן ברירת המחדל</small>
+                </div>
+            </div>
+            {% else %}
+            <!-- תוכן HTML מותאם אישית -->
+            <div class="form-section">
+                <h2><i class="fas fa-code"></i> HTML מותאם אישית</h2>
+                <div class="form-group">
+                    <label for="custom_html">קוד HTML מלא לניוזלטר *</label>
+                    <textarea id="custom_html" name="custom_html" rows="20" required
+                              placeholder="כתבו כאן את קוד ה-HTML המלא לניוזלטר...">{{ newsletter.custom_html if newsletter.custom_html else '' }}</textarea>
+                    <small class="form-help">כתבו כאן HTML מלא כולל CSS. זה יחליף לגמרי את התבנית הרגילה.</small>
+                </div>
+                
+                <div class="custom-help">
+                    <h4><i class="fas fa-lightbulb"></i> טיפים לכתיבת HTML לניוזלטר:</h4>
+                    <ul>
+                        <li>השתמשו בטבלאות (table) לפריסה - הן תומכות בכל הקליינטים</li>
+                        <li>כתבו CSS בתוך style="" או בתג &lt;style&gt; בתוך ה-HTML</li>
+                        <li>הימנעו מCSS מתקדם - השתמשו בסגנונות פשוטים</li>
+                        <li>בדקו תמיד את התצוגה במכשירים שונים</li>
+                        <li>ההודעה צריכה להכיל את המשתנה {{ user.first_name }} לשם המשתמש</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> שמירת שינויים
+                </button>
+                <a href="{{ url_for('admin_newsletter_bp.manage_newsletters') }}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-times"></i> ביטול
+                </a>
+                {% if not newsletter.is_published %}
+                <a href="{{ url_for('admin_newsletter_bp.send_newsletter', newsletter_id=newsletter.id) }}" 
+                   class="btn btn-success btn-lg">
+                    <i class="fas fa-paper-plane"></i> שמירה ושליחה
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    {% if newsletter.is_published and newsletter.sendings %}
+    <div class="sending-statistics">
+        <h2><i class="fas fa-chart-bar"></i> סטטיסטיקות שליחה</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="fas fa-envelope"></i>
+                <div class="stat-content">
+                    <span class="stat-number">{{ newsletter.sendings|length }}</span>
+                    <span class="stat-label">סה"כ שליחות</span>
+                </div>
+            </div>
+            <div class="stat-card success">
+                <i class="fas fa-check-circle"></i>
+                <div class="stat-content">
+                    <span class="stat-number">{{ newsletter.sendings|selectattr('delivery_status', 'equalto', 'sent')|list|length }}</span>
+                    <span class="stat-label">נשלחו בהצלחה</span>
+                </div>
+            </div>
+            <div class="stat-card error">
+                <i class="fas fa-exclamation-circle"></i>
+                <div class="stat-content">
+                    <span class="stat-number">{{ newsletter.sendings|selectattr('delivery_status', 'equalto', 'failed')|list|length }}</span>
+                    <span class="stat-label">שליחה נכשלה</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</section>
+
+<style>
+.admin-edit-newsletter {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    direction: rtl;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2E86C1;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.newsletter-form {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.form-container {
+    padding: 2rem;
+}
+
+.form-section {
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.form-section h2 {
+    color: #2E86C1;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-section h2 i {
+    color: #5DADE2;
+}
+
+.published-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    border: 1px solid #c3e6cb;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.published-notice i {
+    color: #155724;
+    font-size: 1.2rem;
+    margin-top: 0.2rem;
+}
+
+.published-notice strong {
+    color: #155724;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.published-notice p {
+    margin: 0;
+    color: #155724;
+    font-size: 0.9rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+    font-size: 1rem;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2E86C1;
+    box-shadow: 0 0 0 3px rgba(46, 134, 193, 0.1);
+}
+
+.form-group textarea {
+    min-height: 120px;
+    line-height: 1.6;
+}
+
+.form-help {
+    display: block;
+    margin-top: 0.5rem;
+    color: #666;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.form-actions {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 150px;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #2E86C1, #5DADE2);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1B4F72, #2E86C1);
+    transform: translateY(-2px);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #1e7e34, #17a2b8);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+    transform: translateY(-2px);
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background-color: #117a8b;
+    transform: translateY(-2px);
+}
+
+.btn-lg {
+    padding: 1.25rem 2.5rem;
+    font-size: 1.1rem;
+}
+
+/* סטטיסטיקות שליחה */
+.sending-statistics {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    padding: 2rem;
+}
+
+.sending-statistics h2 {
+    color: #2E86C1;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-right: 4px solid #2E86C1;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-card.success {
+    border-right-color: #28a745;
+}
+
+.stat-card.error {
+    border-right-color: #dc3545;
+}
+
+.stat-card i {
+    font-size: 2rem;
+    color: #2E86C1;
+}
+
+.stat-card.success i {
+    color: #28a745;
+}
+
+.stat-card.error i {
+    color: #dc3545;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.stat-label {
+    display: block;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* סגנון לתצוגת סוג הניוזלטר */
+.newsletter-type-display {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-right: 4px solid #2E86C1;
+}
+
+.type-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+.type-badge.structured {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.type-badge.custom {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+/* עיצוב תיבת העזרה לHTML מותאם */
+.custom-help {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-right: 4px solid #17a2b8;
+    margin-top: 1rem;
+}
+
+.custom-help h4 {
+    margin: 0 0 1rem 0;
+    color: #17a2b8;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.custom-help ul {
+    margin: 0;
+    padding-right: 1.5rem;
+}
+
+.custom-help li {
+    margin-bottom: 0.5rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+/* רספונסיביות */
+@media (max-width: 768px) {
+    .admin-edit-newsletter {
+        padding: 1rem;
+        margin: 1rem;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+        text-align: center;
+    }
+    
+    .header-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .form-container {
+        padding: 1.5rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // הוספת אינדיקטור לשדות אופציונליים
+    const optionalFields = ['telegram_bot_section', 'website_features_section'];
+    optionalFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.closest('.form-group').setAttribute('data-optional', 'true');
+        }
+    });
+    
+    // שמירה אוטומטית בlocal storage
+    const form = document.querySelector('.newsletter-form');
+    const inputs = form.querySelectorAll('input, textarea');
+    
+    inputs.forEach(input => {
+        // טעינת נתונים שמורים
+        const savedValue = localStorage.getItem(`newsletter_${input.name}`);
+        if (savedValue && input.value === '') {
+            input.value = savedValue;
+        }
+        
+        // שמירה בעת שינוי
+        input.addEventListener('input', function() {
+            localStorage.setItem(`newsletter_${input.name}`, input.value);
+        });
+    });
+    
+    // מחיקת הנתונים השמורים לאחר שליחה מוצלחת
+    form.addEventListener('submit', function() {
+        inputs.forEach(input => {
+            localStorage.removeItem(`newsletter_${input.name}`);
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+{% endblock %}

@@ -40,10 +40,13 @@
         {% endif %}
     </div>
 
-    <!-- Add Change Password Button -->
+    <!-- Add Change Password Button and Preferences -->
     {% if is_owner %}
-    <div class="change-password-section">
-        <a href="{{ url_for('profile.change_password') }}" class="change-password-button">
+    <div class="profile-actions-section">
+        <a href="{{ url_for('profile.user_preferences') }}" class="action-button preferences-button">
+            <i class="fa fa-cog"></i> העדפות חשבון
+        </a>
+        <a href="{{ url_for('profile.change_password') }}" class="action-button change-password-button">
             <i class="fa fa-key"></i> שינוי סיסמא
         </a>
     </div>
@@ -741,17 +744,20 @@
         text-align: center;
     }
 
-    /* Change Password Button Styling */
-    .change-password-section {
+    /* Profile Actions Styling */
+    .profile-actions-section {
         margin: 20px 0;
         text-align: center;
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        flex-wrap: wrap;
     }
 
-    .change-password-button {
+    .action-button {
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
         color: var(--white);
         padding: 12px 25px;
         border-radius: 50px;
@@ -759,15 +765,29 @@
         font-weight: 600;
         transition: var(--transition);
         box-shadow: var(--box-shadow);
+        min-width: 150px;
+        justify-content: center;
     }
 
-    .change-password-button:hover {
+    .preferences-button {
+        background: linear-gradient(135deg, #28a745, #20c997);
+    }
+
+    .change-password-button {
+        background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+    }
+
+    .action-button:hover {
         transform: translateY(-2px);
         box-shadow: var(--box-shadow-hover);
         color: var(--white);
     }
 
-    .change-password-button .fa {
+    .preferences-button:hover {
+        background: linear-gradient(135deg, #1e7e34, #17a2b8);
+    }
+
+    .action-button .fa {
         font-size: 18px;
     }
 
@@ -860,6 +880,16 @@
         
         .info-icon {
             margin: 0 auto;
+        }
+        
+        .profile-actions-section {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .action-button {
+            width: 100%;
+            max-width: 250px;
         }
     }
 

@@ -1,7 +1,7 @@
 # admin_routes.py
 from flask import Blueprint, redirect, url_for, flash, request, render_template, abort
 from flask_login import login_required, current_user
-from app.models import Tag, Coupon, CouponTransaction, FeatureAccess, User
+from app.models import Tag, Coupon, CouponTransaction, FeatureAccess, User, Newsletter, NewsletterSending
 from app.extensions import db
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, SelectField, HiddenField
