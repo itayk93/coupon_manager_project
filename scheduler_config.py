@@ -151,6 +151,37 @@ def send_expiration_warnings():
             )
 
         for user in users.values():
+            # Create in-app notifications for expiring coupons
+            try:
+                from app.models import Notification
+                for coupon in user["coupons"]:
+                    days_left = coupon["days_left"]
+                    if days_left <= 7:  # Only create notifications for coupons expiring in 7 days or less
+                        message = f"קופון {coupon['company']} - {coupon['code']} עומד לפוג תוקף בעוד {days_left} ימים"
+                        if days_left == 0:
+                            message = f"קופון {coupon['company']} - {coupon['code']} פג תוקף היום!"
+                        elif days_left == 1:
+                            message = f"קופון {coupon['company']} - {coupon['code']} פג תוקף מחר!"
+                        
+                        # Check if notification already exists to avoid duplicates
+                        existing_notification = db.session.query(Notification).filter_by(
+                            user_id=user["user_id"],
+                            message=message
+                        ).first()
+                        
+                        if not existing_notification:
+                            notification = Notification(
+                                user_id=user["user_id"],
+                                message=message,
+                                link=coupon["coupon_detail_link"].replace("https://coupon-manager-project.onrender.com", "")
+                            )
+                            db.session.add(notification)
+                
+                db.session.commit()
+            except Exception as e:
+                print(f"Error creating expiration notifications: {e}")
+            
+            # Send email notification
             email_content = render_template(
                 "emails/coupon_expiration_warning.html",
                 user=user,

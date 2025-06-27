@@ -168,6 +168,14 @@ def get_ip_address():
     return request.remote_addr or "0.0.0.0"
 
 
+@profile_bp.route("/faq")
+def faq():
+    """
+    דף שאלות נפוצות לניהול קופונים דיגיטליים
+    """
+    return render_template("faq.html")
+
+
 @profile_bp.route("/index", methods=["GET", "POST"])
 @login_required
 def index():

@@ -287,6 +287,20 @@ def sell_coupon():
         db.session.add(new_coupon)
         try:
             db.session.commit()
+            
+            # Create notification for new coupon for sale
+            try:
+                from app.models import Notification
+                notification = Notification(
+                    user_id=current_user.id,
+                    message=f"קופון חדש נוסף למכירה: {new_coupon.company} - {new_coupon.code}",
+                    link=url_for('coupon_detail', id=new_coupon.id)
+                )
+                db.session.add(notification)
+                db.session.commit()
+            except Exception as e:
+                print(f"Error creating coupon sale notification: {e}")
+            
             add_coupon_transaction(new_coupon)  # ✅ הוספת רשומה לטבלת CouponTransaction
 
             try:
@@ -1229,14 +1243,20 @@ def add_coupon_with_image_html():
                 add_coupon_transaction(
                     new_coupon
                 )  # ואז ליצור את רשומת ה-CouponTransaction
-                """""" """
-                notification = Notification(
-                    user_id=current_user.id,
-                    message=f"הקופון {new_coupon.code} נוסף בהצלחה.",
-                    link=url_for('coupons.coupon_detail', id=new_coupon.id)
-                )
-                db.session.add(notification)
-                """ """"""
+                
+                # Create notification for new coupon
+                try:
+                    from app.models import Notification
+                    notification = Notification(
+                        user_id=current_user.id,
+                        message=f"קופון חדש נוסף: {new_coupon.company} - {new_coupon.code}",
+                        link=url_for('coupon_detail', id=new_coupon.id)
+                    )
+                    db.session.add(notification)
+                    db.session.commit()
+                except Exception as e:
+                    print(f"Error creating coupon addition notification: {e}")
+                
                 db.session.commit()
 
                 flash("קופון נוסף בהצלחה!", "success")
@@ -1461,6 +1481,19 @@ def add_coupon():
 
                     db.session.add(new_coupon)
                     db.session.commit()
+
+                    # Create notification for new coupon
+                    try:
+                        from app.models import Notification
+                        notification = Notification(
+                            user_id=current_user.id,
+                            message=f"קופון חדש נוסף: {new_coupon.company} - {new_coupon.code}",
+                            link=url_for('coupon_detail', id=new_coupon.id)
+                        )
+                        db.session.add(notification)
+                        db.session.commit()
+                    except Exception as e:
+                        print(f"Error creating coupon addition notification: {e}")
 
                     debug_print(f"Coupon added successfully. ID: {new_coupon.id}")
                     return jsonify(success=True, message="קופון נוסף בהצלחה!")
@@ -2001,6 +2034,20 @@ def add_coupon():
                     try:
                         db.session.commit()
                         debug_print(f"Coupon saved with ID: {new_coupon.id}")
+                        
+                        # Create notification for new coupon
+                        try:
+                            from app.models import Notification
+                            notification = Notification(
+                                user_id=current_user.id,
+                                message=f"קופון חדש נוסף: {new_coupon.company} - {new_coupon.code}",
+                                link=url_for('coupon_detail', id=new_coupon.id)
+                            )
+                            db.session.add(notification)
+                            db.session.commit()
+                        except Exception as e:
+                            print(f"Error creating coupon addition notification: {e}")
+                        
                         add_coupon_transaction(new_coupon)
                         debug_print("Coupon transaction recorded")
 
@@ -2335,14 +2382,20 @@ def add_coupon_with_image():
         db.session.add(new_coupon)
         try:
             db.session.commit()
-            """""" """
-            notification = Notification(
-                user_id=current_user.id,
-                message=f"הקופון {new_coupon.code} נוסף בהצלחה.",
-                link=url_for('coupons.coupon_detail', id=new_coupon.id)
-            )
-            db.session.add(notification)
-            """ """"""
+            
+            # Create notification for new coupon
+            try:
+                from app.models import Notification
+                notification = Notification(
+                    user_id=current_user.id,
+                    message=f"קופון חדש נוסף: {new_coupon.company} - {new_coupon.code}",
+                    link=url_for('coupon_detail', id=new_coupon.id)
+                )
+                db.session.add(notification)
+                db.session.commit()
+            except Exception as e:
+                print(f"Error creating coupon addition notification: {e}")
+            
             db.session.commit()
 
             flash("קופון נוסף בהצלחה!", "success")

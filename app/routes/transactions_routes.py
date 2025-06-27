@@ -452,14 +452,17 @@ def mark_coupon_as_fully_used(id):
         )
         db.session.add(usage)
 
-        """""" """
-        notification = Notification(
-            user_id=coupon.user_id,
-            message=f"הקופון {coupon.code} נוצל במלואו.",
-            link=url_for('transactions.coupon_detail', id=coupon.id)
-        )
-        db.session.add(notification)
-        """ """"""
+        # Create notification for fully used coupon
+        try:
+            from app.models import Notification
+            notification = Notification(
+                user_id=coupon.user_id,
+                message=f"הקופון {coupon.code} נוצל במלואו.",
+                link=url_for('coupon_detail', id=coupon.id)
+            )
+            db.session.add(notification)
+        except Exception as e:
+            print(f"Error creating coupon usage notification: {e}")
         db.session.commit()
 
         flash("הקופון סומן כנוצל לגמרי בהצלחה.", "success")
@@ -518,14 +521,17 @@ def update_coupon(id):
             )
             db.session.add(usage)
 
-            """""" """
-            notification = Notification(
-                user_id=coupon.user_id,
-                message=f"השתמשת ב-{new_used_amount} ש״ח בקופון {coupon.code}.",
-                link=url_for('transactions.coupon_detail', id=coupon.id)
-            )
-            db.session.add(notification)
-            """ """"""
+            # Create notification for coupon usage
+            try:
+                from app.models import Notification
+                notification = Notification(
+                    user_id=coupon.user_id,
+                    message=f"השתמשת ב-{new_used_amount} ש״ח בקופון {coupon.code}.",
+                    link=url_for('coupon_detail', id=coupon.id)
+                )
+                db.session.add(notification)
+            except Exception as e:
+                print(f"Error creating coupon usage notification: {e}")
             db.session.commit()
 
             flash("כמות השימוש עודכנה בהצלחה.", "success")

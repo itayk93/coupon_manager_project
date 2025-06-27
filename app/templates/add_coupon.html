@@ -2,7 +2,69 @@
 {% extends 'base.html' %}
 
 {% block title %}
-הוספת קופון
+איך להוסיף קופון דיגיטלי - Coupon Master
+{% endblock %}
+
+{% block head %}
+<!-- HowTo Schema Markup -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "איך להוסיף קופון דיגיטלי לאפליקציית ניהול הקופונים",
+  "description": "מדריך צעד אחר צעד להוספת קופון דיגיטלי באפליקציית Coupon Master",
+  "image": "{{ url_for('static', filename='images/logo.png', _external=True) }}",
+  "totalTime": "PT2M",
+  "estimatedCost": {
+    "@type": "MonetaryAmount",
+    "currency": "ILS",
+    "value": "0"
+  },
+  "supply": [
+    {
+      "@type": "HowToSupply",
+      "name": "קוד הקופון הדיגיטלי"
+    },
+    {
+      "@type": "HowToSupply", 
+      "name": "פרטי הקופון (ערך, חברה, תאריך תפוגה)"
+    }
+  ],
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "כניסה לדף הוספת קופון",
+      "text": "היכנסו לאפליקציית Coupon Master ולחצו על 'הוספת קופון'",
+      "image": "{{ url_for('static', filename='images/logo.png', _external=True) }}"
+    },
+    {
+      "@type": "HowToStep", 
+      "name": "מילוי פרטי החברה",
+      "text": "בחרו את שם החברה מהרשימה או הקלידו שם חברה חדש (לדוגמה: שופרסל, זארה, BuyMe)"
+    },
+    {
+      "@type": "HowToStep",
+      "name": "הכנסת קוד הקופון",
+      "text": "הכניסו את הקוד הדיגיטלי של הקופון בשדה 'קוד הקופון'"
+    },
+    {
+      "@type": "HowToStep",
+      "name": "הגדרת ערך הקופון",
+      "text": "הכניסו את הערך הכספי של הקופון (כמה כסף שווה הקופון) ואת העלות (כמה שילמתם עליו)"
+    },
+    {
+      "@type": "HowToStep",
+      "name": "הוספת תאריך תפוגה",
+      "text": "הכניסו את תאריך התפוגה של הקופון (אופציונלי). המערכת תשלח לכם התראות לפני התפוגה"
+    },
+    {
+      "@type": "HowToStep",
+      "name": "שמירת הקופון",
+      "text": "לחצו על 'שמירה' להוספת הקופון לארנק הדיגיטלי שלכם"
+    }
+  ]
+}
+</script>
 {% endblock %}
 
 {% block content %}

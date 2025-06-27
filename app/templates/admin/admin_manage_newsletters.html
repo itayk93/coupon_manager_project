@@ -39,7 +39,11 @@
                     </div>
                     
                     <div class="newsletter-content-preview">
-                        {{ newsletter.content[:150]|safe }}...
+                        {% if newsletter.content %}
+                            {{ newsletter.content[:150]|safe }}...
+                        {% else %}
+                            <span class="text-muted">(ניוזלטר HTML מותאם אישית - אין תצוגה מקדימה לתוכן)</span>
+                        {% endif %}
                     </div>
                     
                     <div class="newsletter-actions">

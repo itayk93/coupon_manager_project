@@ -6,19 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     {% block meta_description %}
-    <meta name="description" content="גלו את Coupon Master - האתר המוביל לניהול קופונים וארנק דיגיטלי לקופונים. חסכו כסף וקבלו הנחות שוות בכל החנויות הגדולות בישראל." />
-    <meta property="og:title" content="ניהול קופונים וארנק דיגיטלי - Coupon Master">
-    <meta property="og:description" content="הצטרפו ל-Coupon Master, האתר המתקדם לניהול קופונים וארנק דיגיטלי, חסכו כסף עם הנחות בלעדיות בכל החנויות הגדולות בישראל.">
+    <meta name="description" content="💰 נהלו את כל הקופונים הדיגיטליים במקום אחד! Coupon Master - אפליקציית ניהול קופונים חכמה. ✅ מעקב אחר יתרות ✅ התראות תפוגה ✅ סטטיסטיקות חסכון. הירשמו בחינם!" />
+    <meta property="og:title" content="אפליקציית ניהול קופונים דיגיטליים - Coupon Master">
+    <meta property="og:description" content="נהלו את כל הקופונים הדיגיטליים שלכם במקום אחד עם Coupon Master. מעקב יתרות, התראות תפוגה, וסטטיסטיקות חסכון מפורטות."
     <meta property="og:image" content="{{ url_for('static', filename='images/coupons-banner.jpg', _external=True) }}">
     <meta property="og:url" content="{{ request.url }}">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="אתר לניהול קופונים וארנק דיגיטלי - Coupon Master">
-    <meta name="twitter:description" content="חסכו כסף עם Coupon Master - האתר לניהול קופונים וארנק דיגיטלי, קבלו הנחות בלעדיות בכל החנויות הגדולות בישראל.">
+    <meta name="twitter:title" content="אפליקציית ניהול קופונים דיגיטליים - Coupon Master">
+    <meta name="twitter:description" content="נהלו את כל הקופונים הדיגיטליים שלכם במקום אחד. מעקב יתרות, התראות תפוגה וסטטיסטיקות חסכון.">
     <meta name="twitter:image" content="{{ url_for('static', filename='images/coupons-banner.jpg', _external=True) }}">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Coupon Master">
     <meta name="language" content="he">
-    <meta name="keywords" content="קופונים, הנחות, חסכון בכסף, מבצעים, ניהול קופונים, ארנק דיגיטלי, הנחות בישראל">
+    <meta name="keywords" content="ניהול קופונים דיגיטליים, אפליקציית ניהול קופונים, עקיבה אחר קופונים, ארנק קופונים דיגיטלי, התראות תפוגת קופונים, מעקב יתרות קופונים, ניהול חכם קופונים בישראל">
     <meta name="rating" content="General">
     <meta name="distribution" content="Global">
     <meta name="geo.region" content="IL">
@@ -516,6 +516,45 @@
     }
     </script>
 
+    <!-- Schema Markup: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Coupon Master - ניהול קופונים דיגיטליים",
+      "description": "אפליקציית ניהול קופונים דיגיטליים חכמה. עקבו אחר כל הקופונים שלכם, קבלו התראות תפוגה וראו סטטיסטיקות חסכון.",
+      "url": "{{ url_for('profile.index', _external=True) }}",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "browserRequirements": "Requires JavaScript. Requires HTML5.",
+      "softwareVersion": "2.0",
+      "releaseNotes": "תכונות חדשות: מעקב יתרות, התראות תפוגה וסטטיסטיקות חסכון",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "ILS",
+        "priceValidUntil": "2025-12-31",
+        "@id": "free-tier"
+      },
+      "featureList": [
+        "ניהול קופונים דיגיטליים",
+        "מעקב יתרות קופונים",
+        "התראות תפוגת תוקף",
+        "סטטיסטיקות חסכון מפורטות",
+        "ארגון לפי חברות ותגים",
+        "שימוש חלקי בקופונים",
+        "ארנק דיגיטלי חכם"
+      ],
+      "screenshot": "{{ url_for('static', filename='images/coupons-banner.jpg', _external=True) }}",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Coupon Master",
+        "logo": "{{ url_for('static', filename='images/logo.png', _external=True) }}"
+      },
+      "inLanguage": "he"
+    }
+    </script>
+
     <!-- Schema Markup: Website -->
     <script type="application/ld+json">
     {
@@ -523,7 +562,7 @@
       "@type": "WebSite",
       "name": "Coupon Master",
       "url": "{{ url_for('profile.index', _external=True) }}",
-      "description": "Coupon Master - ניהול קופונים וחסכון בכסף עם ארנק דיגיטלי לקופונים.",
+      "description": "Coupon Master - אפליקציית ניהול קופונים דיגיטליים חכמה לניהול ארנק דיגיטלי של קופונים.",
       "publisher": {
         "@type": "Organization",
         "name": "Coupon Master",
@@ -564,6 +603,7 @@
                         <a href="{{ url_for('coupons.show_coupons') }}">הקופונים שלי</a>
                         <a href="{{ url_for('coupons.add_coupon') }}">הוספת קופון</a>
                         <hr class="dropdown-divider">
+                        <a href="{{ url_for('profile.faq') }}">שאלות נפוצות</a>
                         {% if current_user.is_admin %}
                         <a href="{{ url_for('admin_bp.admin_dashboard') }}">עמוד ראשי אדמין</a>
                         {% endif %}

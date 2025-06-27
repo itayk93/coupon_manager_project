@@ -73,7 +73,7 @@
             <button type="submit" class="btn btn-primary">
                 <i class="fas fa-save"></i> שמירת העדפות
             </button>
-            <a href="{{ url_for('profile.user_profile') }}" class="btn btn-secondary">
+            <a href="{{ url_for('profile.user_profile', user_id=current_user.id) }}" class="btn btn-secondary">
                 <i class="fas fa-arrow-right"></i> חזרה לפרופיל
             </a>
         </div>
@@ -309,6 +309,9 @@ input:checked + .slider:before {
     gap: 0.5rem;
     min-width: 150px;
     justify-content: center;
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
 }
 
 .btn-primary {
@@ -383,27 +386,37 @@ input:checked + .slider:before {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded - preferences page');
+    
     // אפקט טעינה חלק לקטעים
     const sections = document.querySelectorAll('.preference-section');
     sections.forEach((section, index) => {
         section.style.animationDelay = `${index * 0.2}s`;
     });
     
-    // הוספת אפקט hover לכרטיסי ההעדפות
+    // רק אפקט על checkbox בלחיצה על כרטיס העדפות (לא על כפתורים)
     const preferenceItems = document.querySelectorAll('.preference-item');
     preferenceItems.forEach(item => {
         const toggle = item.querySelector('input[type="checkbox"]');
-        
-        item.addEventListener('click', function(e) {
-            if (e.target.type !== 'checkbox') {
-                toggle.checked = !toggle.checked;
-            }
-        });
+        if (toggle) {
+            item.addEventListener('click', function(e) {
+                // רק אם לא לחצו על הcheckbox עצמו
+                if (e.target !== toggle && e.target.tagName !== 'LABEL') {
+                    toggle.checked = !toggle.checked;
+                }
+            });
+        }
     });
+    
+    // וידוא שהכפתורים עובדים
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const backBtn = document.querySelector('a.btn-secondary');
+    
+    console.log('Submit button found:', !!submitBtn);
+    console.log('Back button found:', !!backBtn);
 });
 </script>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
 {% endblock %}

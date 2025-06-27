@@ -1,0 +1,549 @@
+{% extends 'base.html' %}
+
+{% block title %}שאלות נפוצות - ניהול קופונים דיגיטליים | Coupon Master{% endblock %}
+
+{% block meta_description %}
+<meta name="description" content="שאלות ותשובות על ניהול קופונים דיגיטליים עם Coupon Master. איך לנהל קופונים, מעקב יתרות, התראות תפוגה ועוד. כל התשובות כאן!" />
+<meta property="og:title" content="שאלות נפוצות - ניהול קופונים דיגיטליים">
+<meta property="og:description" content="מדריך שאלות ותשובות מקיף לניהול קופונים דיגיטליים. כל מה שרציתם לדעת על Coupon Master.">
+{% endblock %}
+
+{% block head %}
+<!-- FAQ Schema Markup -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "איך אני יכול לנהל את כל הקופונים הדיגיטליים שלי במקום אחד?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "עם Coupon Master תוכלו להכניס את כל הקופונים הדיגיטליים שלכם לאפליקציה אחת. המערכת עוקבת אחר הערך הנותר, שולחת התראות ומציגה סטטיסטיקות חסכון."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "איך לעקוב אחר קופונים שמשתמשים בהם חלקית?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "האפליקציה מאפשרת לרשום את השימוש החלקי בכל קופון ומחשבת אוטומטית כמה נשאר. מושלם לקופוני חנויות לשימוש מרובה."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "איך לקבל התראות לפני שקופונים פגים?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "המערכת שולחת התראות אוטומטיות 30, 7 ויום אחד לפני תפוגת התוקף. ככה אף פעם לא תשכחו להשתמש בקופון."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "איך לראות כמה כסף חסכתי עם קופונים?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "האפליקציה מציגה סטטיסטיקות מפורטות על החסכון שלכם - 'על מה חסכת?' - כולל גרפים ונתונים על השימוש בקופונים לאורך זמן."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "איך מוסיפים קופון חדש לאפליקציה?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "לחצו על 'הוספת קופון מהירה' או 'הוספת קופון' ומלאו את הפרטים: שם החברה, קוד הקופון, ערך, עלות ותאריך תפוגה."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="faq-container">
+    <header class="faq-header">
+        <h1>שאלות נפוצות - ניהול קופונים דיגיטליים</h1>
+        <p class="faq-subtitle">כל מה שרציתם לדעת על ניהול חכם של הקופונים הדיגיטליים שלנו</p>
+    </header>
+
+    <div class="faq-sections">
+        <!-- ניהול בסיסי -->
+        <section class="faq-section">
+            <h2>🔧 ניהול בסיסי של קופונים</h2>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">איך אני יכול לנהל את כל הקופונים הדיגיטליים שלי במקום אחד?</h3>
+                <div class="faq-answer">
+                    <p>עם <strong>Coupon Master</strong> תוכלו להכניס את כל הקופונים הדיגיטליים שלכם לאפליקציה אחת. המערכת עוקבת אחר הערך הנותר של כל קופון, שולחת התראות לפני תפוגת תוקף ומציגה לכם בדיוק כמה כסף נשאר לכם "בארנק" הדיגיטלי.</p>
+                    <p><strong>איך זה עובד:</strong></p>
+                    <ul>
+                        <li>הכניסו את פרטי הקופון (שם חברה, קוד, ערך, תאריך תפוגה)</li>
+                        <li>המערכת תציג לכם את כל הקופונים בממשק אחד ונוח</li>
+                        <li>תוכלו לראות בבת אחת את כל הקופונים הפעילים</li>
+                        <li>המערכת תחשב אוטומטי את הסכום הכולל בארנק</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3 class="faq-question">איך מוסיפים קופון חדש לאפליקציה?</h3>
+                <div class="faq-answer">
+                    <p>הוספת קופון חדש היא פשוטה ומהירה:</p>
+                    <ol>
+                        <li>לחצו על <strong>"הוספת קופון מהירה"</strong> או <strong>"הוספת קופון"</strong></li>
+                        <li>מלאו את הפרטים הבסיסיים:
+                            <ul>
+                                <li><strong>שם החברה</strong> (לדוגמה: שופרסל, זארה, BuyMe)</li>
+                                <li><strong>קוד הקופון</strong> (הקוד הדיגיטלי שקיבלתם)</li>
+                                <li><strong>ערך הקופון</strong> (כמה כסף שווה הקופון)</li>
+                                <li><strong>עלות</strong> (כמה שילמתם עליו)</li>
+                                <li><strong>תאריך תפוגה</strong> (אופציונלי)</li>
+                            </ul>
+                        </li>
+                        <li>לחצו על "שמירה" והקופון יתווסף לארנק שלכם</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3 class="faq-question">איך עוקבים אחר השימוש בקופון?</h3>
+                <div class="faq-answer">
+                    <p>המערכת מאפשרת <strong>מעקב מדויק</strong> אחר השימוש בכל קופון:</p>
+                    <ul>
+                        <li><strong>דיווח מהיר על שימוש</strong> - לחצו על הכפתור ורשמו כמה השתמשתם</li>
+                        <li><strong>מעקב יתרה</strong> - המערכת תחשב אוטומטית כמה נשאר</li>
+                        <li><strong>היסטוריית שימוש</strong> - ראו מתי ואיך השתמשתם בקופון</li>
+                        <li><strong>אחוזי ניצול</strong> - כמה אחוז מהקופון כבר נוצל</li>
+                    </ul>
+                    <p><em>מושלם לקופונים שמשתמשים בהם חלקית, כמו קופוני חנויות או כרטיסי מתנה.</em></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- התראות ותזכורות -->
+        <section class="faq-section">
+            <h2>🔔 התראות ותזכורות</h2>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">איך לא לשכוח להשתמש בקופונים לפני שהם פגים?</h3>
+                <div class="faq-answer">
+                    <p>המערכת שולחת <strong>התראות אוטומטיות חכמות</strong>:</p>
+                    <ul>
+                        <li><strong>30 יום לפני תפוגה</strong> - התראה ראשונה לתכנון מראש</li>
+                        <li><strong>7 ימים לפני תפוגה</strong> - תזכורת דחופה</li>
+                        <li><strong>יום אחד לפני תפוגה</strong> - התראה אחרונה</li>
+                        <li><strong>התראה בעמוד הבית</strong> - רשימת קופונים שעומדים לפוג</li>
+                    </ul>
+                    <p><strong>ככה אף פעם לא תשכחו קופון ולא תאבדו כסף!</strong></p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3 class="faq-question">איך פועלות ההתראות?</h3>
+                <div class="faq-answer">
+                    <p>מערכת ההתראות עובדת בכמה דרכים:</p>
+                    <ul>
+                        <li><strong>התראות באתר</strong> - כשאתם נכנסים לאפליקציה</li>
+                        <li><strong>התראות בטלגרם</strong> (אם חיברתם את הבוט)</li>
+                        <li><strong>התראות אימייל</strong> (אופציונלי)</li>
+                        <li><strong>אזורי התראה מיוחדים</strong> בעמוד הבית</li>
+                    </ul>
+                    <p>תוכלו לנהל את ההתראות מההעדפות שלכם.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- מעקב יתרות וחסכון -->
+        <section class="faq-section">
+            <h2>💰 מעקב יתרות וחסכון</h2>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">איך לדעת כמה כסף נשאר לי בקופונים?</h3>
+                <div class="faq-answer">
+                    <p>האפליקציה מציגה לכם <strong>תמונה מלאה של הארנק הדיגיטלי</strong>:</p>
+                    <ul>
+                        <li><strong>"נשאר לך בארנק: X ₪"</strong> - סכום כולל של כל הקופונים</li>
+                        <li><strong>יתרה לכל קופון בנפרד</strong> - כמה נשאר בכל קופון</li>
+                        <li><strong>אחוזי ניצול</strong> - כמה אחוז כבר השתמשתם</li>
+                        <li><strong>מיון לפי יתרה</strong> - הקופונים עם הכי הרבה כסף</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3 class="faq-question">איך לעקוב אחר קופונים שמשתמשים בהם חלקית?</h3>
+                <div class="faq-answer">
+                    <p>זאת אחת התכונות הכי חזקות של האפליקציה:</p>
+                    <ul>
+                        <li><strong>רישום שימוש חלקי</strong> - כל פעם שמשתמשים, רושמים כמה</li>
+                        <li><strong>חישוב יתרה אוטומטי</strong> - המערכת מחשבת כמה נשאר</li>
+                        <li><strong>היסטוריית שימושים</strong> - רואים מתי ואיך השתמשתם</li>
+                        <li><strong>מעקב מדויק לשקל</strong> - דיוק מלא בחישובים</li>
+                    </ul>
+                    <p><em>מושלם לקופוני BuyMe, כרטיסי מתנה, או קופוני חנויות לשימוש מרובה.</em></p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3 class="faq-question">איך לראות כמה כסף חסכתי עם קופונים?</h3>
+                <div class="faq-answer">
+                    <p>האפליקציה מציגה <strong>סטטיסטיקות חסכון מפורטות</strong>:</p>
+                    <ul>
+                        <li><strong>"על מה חסכת?"</strong> - דוח מפורט של החסכון</li>
+                        <li><strong>גרפים וויזואליזציה</strong> - תרשימים ברורים</li>
+                        <li><strong>התפלגות לפי חברות</strong> - איפה חסכתם הכי הרבה</li>
+                        <li><strong>מגמות לאורך זמן</strong> - מעקב חודשי/שנתי</li>
+                        <li><strong>אחוזי החסכון</strong> - כמה אחוז חסכתם מהמחיר המלא</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ארגון וקטגוריות -->
+        <section class="faq-section">
+            <h2>🗂️ ארגון וקטגוריות</h2>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">איך לארגן את הקופונים שלי בצורה חכמה?</h3>
+                <div class="faq-answer">
+                    <p>האפליקציה מציעה <strong>מספר דרכים לארגון</strong>:</p>
+                    <ul>
+                        <li><strong>לפי חברות</strong> - כל הקופונים של שופרסל יחד, וכו'</li>
+                        <li><strong>לפי קטגוריות</strong> - "מזון", "אופנה", "בילויים"</li>
+                        <li><strong>לפי תאריך תפוגה</strong> - הכי דחופים קודם</li>
+                        <li><strong>לפי יתרה</strong> - הכי שווים קודם</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- בעיות נפוצות -->
+        <section class="faq-section">
+            <h2>🛠️ פתרון בעיות נפוצות</h2>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">מה לעשות אם שכחתי כמה השתמשתי בקופון?</h3>
+                <div class="faq-answer">
+                    <p>יש כמה דרכים לטפל במצב הזה:</p>
+                    <ul>
+                        <li><strong>בדקו את ההיסטוריה</strong> - במערכת יש רישום של השימושים הקודמים</li>
+                        <li><strong>איפוס והתחלה מחדש</strong> - אפשר לאפס את היתרה ולהתחיל מחדש</li>
+                        <li><strong>בדיקה עם החברה</strong> - פנו לחברה לבדיקת יתרה</li>
+                        <li>
+                            <strong>בדיקה באתרים של חברות:</strong>
+                            <div class="balance-check-buttons">
+                                <a href="https://multipass.co.il/ברור-יתרה/" target="_blank" class="balance-check-button">Multipass בדיקת יתרה</a>
+                                <a href="https://www.max.co.il/gift-card-transactions/main" target="_blank" class="balance-check-button">Max בדיקת יתרה</a>
+                                <a href="https://www.nofshonit.co.il/benefitPage/56277?srsltid=AfmBOooLwXKyRRgWVBsQ1q46QVPm5wmmLvMt4ZJqqX-eUdD6yc37ARnB" target="_blank" class="balance-check-button">נופשונונית בדיקת יתרה</a>
+                            </div>
+                            <small>(ויש עוד...)</small>
+                        </li>
+                        <li><strong>בעתיד</strong> - עדכון אוטומטי של השימוש.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3 class="faq-question">מה לעשות כשקופון פג תוקף?</h3>
+                <div class="faq-answer">
+                    <p>כשקופון פג תוקף:</p>
+                    <ul>
+                        <li><strong>המערכת תסמן אותו</strong> כ"פג תוקף" אוטומטית</li>
+                        <li><strong>אפשר למחוק</strong> או להעביר לארכיון</li>
+                        <li><strong>לפעמים אפשר להאריך</strong> - בדקו עם החברה</li>
+                        <li><strong>המערכת תזכור את הנתונים</strong> לסטטיסטיקות</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3 class="faq-question">איך למחוק קופון שכבר נוצל במלואו?</h3>
+                <div class="faq-answer">
+                    <p>מחיקת קופונים מנוצלים:</p>
+                    <ol>
+                        <li>היכנסו לפרטי הקופון</li>
+                        <li>לחצו על "עריכה"</li>
+                        <li>לחצו על "מחיקת קופון"</li>
+                        <li>אישרו את המחיקה</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- טיפים מתקדמים -->
+        <section class="faq-section">
+            <h2>💡 טיפים מתקדמים</h2>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">איך למקסם את החסכון עם האפליקציה?</h3>
+                <div class="faq-answer">
+                    <p>טיפים לחסכון מקסימלי:</p>
+                    <ul>
+                        <li><strong>קנו קופונים במבצעים</strong> - הכניסו גם את העלות לחישוב החסכון</li>
+                        <li><strong>עקבו אחר התראות</strong> - השתמשו בקופונים לפני תפוגה</li>
+                        <li><strong>נהלו יתרות</strong> - וודאו שאתם מנצלים קופונים עד הסוף</li>
+                        <li><strong>ראו סטטיסטיקות</strong> - למדו איפה אתם חוסכים הכי הרבה</li>
+                        <li><strong>תכננו קניות</strong> - השתמשו בנתונים לתכנון קניות עתידיות</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3 class="faq-question">איך להשתמש בבוט הטלגרם לניהול קופונים?</h3>
+                <div class="faq-answer">
+                    <p>הבוט של טלגרם מוסיף נוחות:</p>
+                    <ul>
+                        <li><strong>חיבור מהיר</strong> - לחצו על "בוט קופונים בטלגרם"</li>
+                        <li><strong>התראות בטלגרם</strong> - קבלו התראות ישירות לנייד</li>
+                        <li><strong>בדיקת יתרות מהירה</strong> - שאלו את הבוט כמה נשאר</li>
+                        <li><strong>הוספת קופונים</strong> - הוסיפו קופונים ישירות מטלגרם</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- קישורים מהירים -->
+    <div class="faq-quick-links">
+        <h2>קישורים מהירים</h2>
+        <div class="quick-links-grid">
+            <a href="{{ url_for('coupons.add_coupon') }}" class="quick-link">
+                <span class="icon">➕</span>
+                <span class="text">הוספת קופון חדש</span>
+            </a>
+            <a href="{{ url_for('coupons.show_coupons') }}" class="quick-link">
+                <span class="icon">📱</span>
+                <span class="text">הקופונים שלי</span>
+            </a>
+            <a href="{{ url_for('telegram.telegram_bot_page') }}" class="quick-link">
+                <span class="icon">🤖</span>
+                <span class="text">בוט טלגרם</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.faq-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    line-height: 1.7;
+}
+
+.faq-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 30px 20px;
+    background: linear-gradient(135deg, #2c3e50, #3498db);
+    color: white;
+    border-radius: 15px;
+}
+
+.faq-header h1 {
+    margin: 0 0 20px 0 !important;
+    font-size: 2.2em !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+    word-wrap: break-word !important;
+    hyphens: auto !important;
+    display: block !important;
+}
+
+.faq-subtitle {
+    margin: 0 auto;
+    font-size: 1.1em;
+    opacity: 0.9;
+    line-height: 1.5;
+    max-width: 600px;
+}
+
+.faq-sections {
+    margin-bottom: 40px;
+}
+
+.faq-section {
+    margin-bottom: 40px;
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+    border: 1px solid #e1e8ed;
+}
+
+.faq-section h2 {
+    color: #2c3e50;
+    margin: 0 0 25px 0;
+    font-size: 1.4em;
+    font-weight: 600;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #3498db;
+}
+
+.faq-item {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.faq-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.faq-question {
+    color: #2c3e50;
+    margin: 0 0 15px 0;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 15px 20px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border-right: 4px solid #3498db;
+    transition: all 0.3s ease;
+}
+
+.faq-question:hover {
+    background: #e8f4fd;
+    transform: translateX(-5px);
+}
+
+.faq-answer {
+    margin-right: 20px;
+    color: #444;
+}
+
+.faq-answer p {
+    margin: 0 0 15px 0;
+}
+
+.faq-answer ul, .faq-answer ol {
+    margin: 15px 0;
+    padding-right: 20px;
+}
+
+.faq-answer li {
+    margin-bottom: 8px;
+    padding-right: 5px;
+}
+
+.faq-answer strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.faq-answer em {
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.faq-quick-links {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+    border: 1px solid #e1e8ed;
+}
+
+.faq-quick-links h2 {
+    text-align: center;
+    color: #2c3e50;
+    margin: 0 0 20px 0;
+    font-size: 1.3em;
+}
+
+.quick-links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.quick-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 20px;
+    background: #f8fafc;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #2c3e50;
+    transition: all 0.3s ease;
+    border: 1px solid #e1e8ed;
+}
+
+.quick-link:hover {
+    background: #3498db;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(52,152,219,0.3);
+}
+
+.quick-link .icon {
+    font-size: 1.2em;
+    margin-left: 10px;
+}
+
+.quick-link .text {
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .faq-container {
+        padding: 15px;
+    }
+    
+    .faq-header {
+        padding: 20px 15px;
+    }
+    
+    .faq-header h1 {
+        font-size: 1.8em;
+    }
+    
+    .faq-section {
+        padding: 20px;
+    }
+    
+    .faq-question {
+        padding: 12px 15px;
+        font-size: 1em;
+    }
+    
+    .faq-answer {
+        margin-right: 10px;
+    }
+    
+    .quick-links-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.balance-check-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+.balance-check-button {
+    display: inline-block;
+    padding: 5px 10px;
+    background-color: #3498db;
+    color: white !important;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    text-align: center;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+
+.balance-check-button:hover {
+    background-color: #2980b9;
+}
+</style>
+{% endblock %}

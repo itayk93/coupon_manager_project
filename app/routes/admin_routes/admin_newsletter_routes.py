@@ -55,6 +55,8 @@ def create_newsletter():
         title = request.form.get("title")
         newsletter_type = request.form.get("newsletter_type", "structured")
         content = request.form.get("content")
+        main_title = request.form.get("main_title")
+        additional_title = request.form.get("additional_title")
         telegram_bot_section = request.form.get("telegram_bot_section")
         website_features_section = request.form.get("website_features_section")
         custom_html = request.form.get("custom_html")
@@ -75,6 +77,8 @@ def create_newsletter():
             title=title,
             newsletter_type=newsletter_type,
             content=content if newsletter_type == "structured" else None,
+            main_title=main_title if newsletter_type == "structured" else None,
+            additional_title=additional_title if newsletter_type == "structured" else None,
             telegram_bot_section=telegram_bot_section if newsletter_type == "structured" else None,
             website_features_section=website_features_section if newsletter_type == "structured" else None,
             custom_html=custom_html if newsletter_type == "custom" else None,

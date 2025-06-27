@@ -467,26 +467,30 @@ def update_coupon_status(coupon):
             if current_date > expiration_date:
                 status = "פג תוקף"
                 # Create notification for expired coupon
-                """""" """
-                notification = Notification(
-                    user_id=coupon.user_id,
-                    message=f"הקופון {coupon.code} פג תוקף.",
-                    link=url_for('coupon_detail', id=coupon.id)
-                )
-                db.session.add(notification)
-                """ """"""
+                try:
+                    from flask import url_for
+                    notification = Notification(
+                        user_id=coupon.user_id,
+                        message=f"הקופון {coupon.code} פג תוקף.",
+                        link=url_for('coupon_detail', id=coupon.id)
+                    )
+                    db.session.add(notification)
+                except Exception as e:
+                    print(f"Error creating expiration notification: {e}")
 
         if coupon.used_value >= coupon.value:
             status = "נוצל"
-            """""" """
             # Create notification for fully used coupon
-            notification = Notification(
-                user_id=coupon.user_id,
-                message=f"הקופון {coupon.code} נוצל במלואו.",
-                link=url_for('coupon_detail', id=coupon.id)
-            )
-            db.session.add(notification)
-            """ """"""
+            try:
+                from flask import url_for
+                notification = Notification(
+                    user_id=coupon.user_id,
+                    message=f"הקופון {coupon.code} נוצל במלואו.",
+                    link=url_for('coupon_detail', id=coupon.id)
+                )
+                db.session.add(notification)
+            except Exception as e:
+                print(f"Error creating fully used notification: {e}")
 
         if coupon.status != status:
             coupon.status = status
@@ -813,6 +817,8 @@ class Newsletter(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     content = db.Column(db.Text, nullable=True)  # עכשיו יכול להיות NULL
+    main_title = db.Column(db.String(255), nullable=True)
+    additional_title = db.Column(db.String(255), nullable=True)
     telegram_bot_section = db.Column(db.Text, nullable=True)
     website_features_section = db.Column(db.Text, nullable=True)
     custom_html = db.Column(db.Text, nullable=True)  # HTML מותאם אישית

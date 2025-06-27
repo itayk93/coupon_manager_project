@@ -66,7 +66,7 @@ def start_telegram_bot_thread():
         print("Starting Telegram bot in background thread...", flush=True)
         
         # Import here to avoid circular imports
-        from telegram_bot import create_bot_application, initialize_monthly_summary_settings
+        from telegram_bot import create_bot_application, initialize_monthly_summary_settings, load_reminder_config, schedule_daily_reminder
         
         # Create new event loop for this thread
         loop = asyncio.new_event_loop()
@@ -88,6 +88,16 @@ def start_telegram_bot_thread():
             
             # Start polling without signal handlers (to avoid main thread requirement)
             async def run_polling():
+                # Load reminder config and start the scheduler
+                try:
+                    await load_reminder_config()
+                    loop.create_task(schedule_daily_reminder())
+                    logger.info("Daily reminder scheduler started in background.")
+                    print("Daily reminder scheduler started in background.", flush=True)
+                except Exception as e:
+                    logger.error(f"Failed to start scheduler: {e}")
+                    print(f"Failed to start scheduler: {e}", flush=True)
+
                 await app_bot.initialize()
                 await app_bot.start()
                 await app_bot.updater.start_polling(allowed_updates=['message', 'callback_query'])

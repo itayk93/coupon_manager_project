@@ -287,7 +287,7 @@
                         
                         <!-- סקציה מיוחדת לבוט טלגרם -->
                         <div class="telegram-section">
-                            <h2>הבוט החדש שלנו בטלגרם!</h2>
+                            <h2>{{ newsletter.main_title if newsletter.main_title else 'הבוט החדש שלנו בטלגרם!' }}</h2>
                             {% if newsletter.telegram_bot_section %}
                                 {{ newsletter.telegram_bot_section|safe }}
                             {% else %}
@@ -311,7 +311,7 @@
                         
                         <!-- סקציה ליתרונות האתר -->
                         <div class="features-section">
-                            <h2>למה Coupon Master?</h2>
+                            <h2>{{ newsletter.additional_title if newsletter.additional_title else 'למה Coupon Master?' }}</h2>
                             {% if newsletter.website_features_section %}
                                 {{ newsletter.website_features_section|safe }}
                             {% else %}

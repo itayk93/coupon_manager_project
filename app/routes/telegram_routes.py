@@ -160,6 +160,18 @@ def verify_telegram():
         telegram_user.reset_verification_attempts()
         telegram_user.last_interaction = datetime.now(timezone.utc)
         
+        # Create notification for successful Telegram connection
+        try:
+            from app.models import Notification
+            notification = Notification(
+                user_id=telegram_user.user_id,
+                message=f"התחברת בהצלחה לטלגרם! שם המשתמש: @{username}",
+                link=url_for('telegram.bot')
+            )
+            db.session.add(notification)
+        except Exception as e:
+            logger.error(f"Error creating Telegram connection notification: {e}")
+        
         db.session.commit()
         
         logger.info(f"Successfully verified user: {telegram_user.user_id}")
