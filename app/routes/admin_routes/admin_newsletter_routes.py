@@ -3,7 +3,7 @@ from flask import Blueprint, redirect, url_for, flash, request, render_template,
 from flask_login import login_required, current_user
 from app.models import Newsletter, NewsletterSending, User
 from app.extensions import db
-from app.helpers import send_html_email
+from app.helpers import send_html_email, get_current_month_year_hebrew
 import os
 from functools import wraps
 import logging
@@ -60,6 +60,7 @@ def create_newsletter():
         telegram_bot_section = request.form.get("telegram_bot_section")
         website_features_section = request.form.get("website_features_section")
         custom_html = request.form.get("custom_html")
+        show_telegram_button = request.form.get("show_telegram_button") == "on"
         
         if not title:
             flash("יש למלא כותרת לניוזלטר.", "danger")
@@ -73,6 +74,31 @@ def create_newsletter():
             flash("יש למלא קוד HTML בניוזלטר מותאם אישית.", "danger")
             return render_template("admin/admin_create_newsletter.html")
         
+        # טיפול בתמונה
+        image_path = None
+        if 'newsletter_image' in request.files:
+            file = request.files['newsletter_image']
+            if file and file.filename != '':
+                # בדיקת סוג הקובץ
+                if not file.content_type.startswith('image/'):
+                    flash("יש לבחור קובץ תמונה בלבד.", "danger")
+                    return render_template("admin/admin_create_newsletter.html")
+                
+                # יצירת תיקיה לתמונות ניוזלטר אם לא קיימת
+                upload_folder = os.path.join(current_app.root_path, 'static', 'newsletter_images')
+                os.makedirs(upload_folder, exist_ok=True)
+                
+                # יצירת שם קובץ ייחודי
+                import uuid
+                file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
+                filename = f"newsletter_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}.{file_extension}"
+                
+                # שמירת הקובץ
+                file_path = os.path.join(upload_folder, filename)
+                file.save(file_path)
+                
+                image_path = f'newsletter_images/{filename}'
+        
         newsletter = Newsletter(
             title=title,
             newsletter_type=newsletter_type,
@@ -82,6 +108,8 @@ def create_newsletter():
             telegram_bot_section=telegram_bot_section if newsletter_type == "structured" else None,
             website_features_section=website_features_section if newsletter_type == "structured" else None,
             custom_html=custom_html if newsletter_type == "custom" else None,
+            image_path=image_path,
+            show_telegram_button=show_telegram_button if newsletter_type == "structured" else False,
             created_by=current_user.id
         )
         
@@ -107,6 +135,9 @@ def edit_newsletter(newsletter_id):
             newsletter.content = request.form.get("content")
             newsletter.telegram_bot_section = request.form.get("telegram_bot_section")
             newsletter.website_features_section = request.form.get("website_features_section")
+            newsletter.main_title = request.form.get("main_title")
+            newsletter.additional_title = request.form.get("additional_title")
+            newsletter.show_telegram_button = request.form.get("show_telegram_button") == "on"
             
             if not newsletter.title or not newsletter.content:
                 flash("יש למלא לפחות כותרת ותוכן עיקרי.", "danger")
@@ -117,6 +148,39 @@ def edit_newsletter(newsletter_id):
             if not newsletter.title or not newsletter.custom_html:
                 flash("יש למלא לפחות כותרת וקוד HTML.", "danger")
                 return render_template("admin/admin_edit_newsletter.html", newsletter=newsletter)
+        
+        # טיפול בתמונה חדשה
+        if 'newsletter_image' in request.files:
+            file = request.files['newsletter_image']
+            if file and file.filename != '':
+                # בדיקת סוג הקובץ
+                if not file.content_type.startswith('image/'):
+                    flash("יש לבחור קובץ תמונה בלבד.", "danger")
+                    return render_template("admin/admin_edit_newsletter.html", newsletter=newsletter)
+                
+                # מחיקת התמונה הקודמת אם קיימת
+                if newsletter.image_path:
+                    try:
+                        old_image_path = os.path.join(current_app.root_path, 'static', newsletter.image_path)
+                        if os.path.exists(old_image_path):
+                            os.remove(old_image_path)
+                    except Exception as e:
+                        current_app.logger.warning(f"Could not delete old image: {e}")
+                
+                # יצירת תיקיה לתמונות ניוזלטר אם לא קיימת
+                upload_folder = os.path.join(current_app.root_path, 'static', 'newsletter_images')
+                os.makedirs(upload_folder, exist_ok=True)
+                
+                # יצירת שם קובץ ייחודי
+                import uuid
+                file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
+                filename = f"newsletter_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}.{file_extension}"
+                
+                # שמירת הקובץ
+                file_path = os.path.join(upload_folder, filename)
+                file.save(file_path)
+                
+                newsletter.image_path = f'newsletter_images/{filename}'
         
         db.session.commit()
         flash(f"ניוזלטר '{newsletter.title}' עודכן בהצלחה!", "success")
@@ -158,7 +222,9 @@ def preview_newsletter(newsletter_id):
             html_content = f.read()
         
         # החלפת משתנים בסיסיים
+        hebrew_month_year = get_current_month_year_hebrew()
         html_content = html_content.replace("{{ newsletter.title }}", newsletter.title)
+        html_content = html_content.replace("{{ hebrew_month_year }}", hebrew_month_year)
         html_content = html_content.replace("{{ newsletter.created_at.strftime('%B %Y') }}", "דצמבר 2024")
         html_content = html_content.replace("{{ user.first_name }}", "דוגמה")
         
@@ -174,6 +240,15 @@ def preview_newsletter(newsletter_id):
         if newsletter.website_features_section:
             html_content = html_content.replace("{{ newsletter.website_features_section|safe }}", newsletter.website_features_section)
         
+        # טיפול בכפתור הטלגרם
+        if newsletter.show_telegram_button:
+            html_content = html_content.replace("{% if newsletter.show_telegram_button %}", "")
+            html_content = html_content.replace("{% endif %}", "")
+        else:
+            # הסרת קטע הכפתור אם לא רוצים להציג אותו
+            import re
+            html_content = re.sub(r'\{\% if newsletter\.show_telegram_button \%\}.*?\{\% endif \%\}', '', html_content, flags=re.DOTALL)
+        
         # החלפת הקישורים לקישורי דמה
         html_content = html_content.replace(
             "{% if unsubscribe_link and unsubscribe_link != '#' %}",
@@ -181,6 +256,10 @@ def preview_newsletter(newsletter_id):
         )
         html_content = html_content.replace("{% else %}", "")
         html_content = html_content.replace("{% endif %}", "")
+        
+        # טיפול בתמונת הניוזלטר
+        if newsletter.image_path:
+            html_content = html_content.replace("{{ newsletter.image_path }}", newsletter.image_path)
         
         # הסרת קוד Jinja2 שנותר
         import re
@@ -246,12 +325,14 @@ def send_newsletter(newsletter_id):
                     html_content = html_content.replace("{{ unsubscribe_link }}", unsubscribe_link)
                 else:
                     # שימוש בתבנית המובנית
+                    hebrew_month_year = get_current_month_year_hebrew()
                     html_content = render_template("emails/newsletter_template.html", 
                                                  newsletter=newsletter, 
                                                  user=user,
                                                  unsubscribe_link=unsubscribe_link,
                                                  generate_unsubscribe_token=generate_unsubscribe_token,
-                                                 generate_preferences_token=generate_preferences_token)
+                                                 generate_preferences_token=generate_preferences_token,
+                                                 hebrew_month_year=hebrew_month_year)
                 
                 send_html_email(
                     api_key=os.getenv("BREVO_API_KEY"),

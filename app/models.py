@@ -823,6 +823,8 @@ class Newsletter(db.Model):
     website_features_section = db.Column(db.Text, nullable=True)
     custom_html = db.Column(db.Text, nullable=True)  # HTML מותאם אישית
     newsletter_type = db.Column(db.String(20), default='structured')  # 'structured' או 'custom'
+    image_path = db.Column(db.String(255), nullable=True)  # נתיב לתמונה של הניוזלטר
+    show_telegram_button = db.Column(db.Boolean, default=False)  # האם להציג כפתור טלגרם
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     is_published = db.Column(db.Boolean, default=False)

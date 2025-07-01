@@ -2538,3 +2538,17 @@ def send_password_change_email(user, token):
     except Exception as e:
         current_app.logger.error(f"Error sending password change email: {str(e)}")
         return False
+
+
+def get_current_month_year_hebrew():
+    """
+    Returns the current month and year in Hebrew, e.g., 'מאי 2024'.
+    """
+    import datetime
+    months = [
+        'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+        'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+    ]
+    now = datetime.datetime.now()
+    month_name = months[now.month - 1]
+    return f"{month_name} {now.year}"

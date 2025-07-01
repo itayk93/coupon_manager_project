@@ -282,7 +282,7 @@
                         <!-- Header -->
                         <div class="header">
                             <h1>{{ newsletter.title }}</h1>
-                            <div class="subtitle">ניוזלטר Coupon Master - {{ newsletter.created_at.strftime('%B %Y') }}</div>
+                            <div class="subtitle">ניוזלטר Coupon Master - {{ hebrew_month_year }}</div>
                         </div>
                         
                         <!-- סקציה מיוחדת לבוט טלגרם -->
@@ -293,15 +293,12 @@
                             {% else %}
                                 <p>אנחנו שמחים להכריז על השקת הבוט החדש שלנו בטלגרם! 🎉</p>
                                 <p>עכשיו תוכלו לנהל את הקופונים שלכם, לקבל התראות על קופונים שפגי תוקף, ולגלות הזדמנויות חדשות - הכל ישירות דרך טלגרם!</p>
-                                <p><strong>מה הבוט יכול לעשות עבורכם:</strong></p>
-                                <p>✅ ניהול קופונים בקלות<br>
-                                ✅ התראות אוטומטיות על פגיעת תוקף<br>
-                                ✅ המלצות מותאמות אישית<br>
-                                ✅ עדכונים בזמן אמת על הזדמנויות חדשות</p>
                             {% endif %}
+                            {% if newsletter.show_telegram_button %}
                             <div style="text-align: center; margin-top: 25px;">
                                 <a href="#" class="telegram-button" style="color: #0088cc; font-weight: bold;">הצטרפו לבוט עכשיו</a>
                             </div>
+                            {% endif %}
                         </div>
                         
                         <!-- תוכן ראשי -->
@@ -315,24 +312,7 @@
                             {% if newsletter.website_features_section %}
                                 {{ newsletter.website_features_section|safe }}
                             {% else %}
-                                <div class="features-grid">
-                                    <div class="feature-card">
-                                        <h3>💰 חיסכון מקסימלי</h3>
-                                        <p>מצאו את הקופונים הכי משתלמים ותחסכו עד 70% מהקניות שלכם</p>
-                                    </div>
-                                    <div class="feature-card">
-                                        <h3>🔒 בטיחות מלאה</h3>
-                                        <p>כל הקופונים מאומתים ומוגנים בהצפנה מתקדמת</p>
-                                    </div>
-                                    <div class="feature-card">
-                                        <h3>⚡ עדכונים בזמן אמת</h3>
-                                        <p>תמיד תהיו הראשונים לדעת על הזדמנויות חדשות</p>
-                                    </div>
-                                    <div class="feature-card">
-                                        <h3>📱 נוח לשימוש</h3>
-                                        <p>ממשק פשוט וידידותי שמתאים לכל המכשירים</p>
-                                    </div>
-                                </div>
+                                <!-- יתרונות האתר הוסרו -->
                             {% endif %}
                         </div>
                         
@@ -343,10 +323,18 @@
                             <a href="#" class="cta-button" style="color: #2E86C1; font-weight: bold;">כנסו לאתר עכשיו</a>
                         </div>
                         
+                        <!-- תמונה של הניוזלטר -->
+                        {% if newsletter.image_path %}
+                        <div style="text-align: center; padding: 30px; background-color: #f8f9fa;">
+                            <img src="https://couponmasteril.com/static/{{ newsletter.image_path }}" 
+                                 alt="תמונת הניוזלטר" 
+                                 style="max-width: 100%; max-height: 300px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        </div>
+                        {% endif %}
+                        
                         <!-- Footer -->
                         <div class="footer">
                             <p><strong>Coupon Master</strong></p>
-                            <p>הפלטפורמה המובילה לניהול קופונים בישראל</p>
                             <div class="social-links">
                                 <a href="#">פייסבוק</a> |
                                 <a href="#">טלגרם</a> |

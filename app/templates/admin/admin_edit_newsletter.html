@@ -19,7 +19,7 @@
         </div>
     </div>
 
-    <form method="POST" class="newsletter-form">
+    <form method="POST" class="newsletter-form" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-container">
             <div class="form-section">
@@ -59,6 +59,14 @@
                     <input type="text" id="main_title" name="main_title" value="{{ newsletter.main_title if newsletter.main_title else '' }}" placeholder="כותרת הסקציה הראשית">
                 </div>
                 <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="show_telegram_button" name="show_telegram_button" 
+                               {% if newsletter.show_telegram_button %}checked{% endif %}>
+                        <label for="show_telegram_button">הצג כפתור "הצטרפו לבוט עכשיו"</label>
+                    </div>
+                    <small class="form-help">סמנו כדי להציג כפתור קישור לבוט הטלגרם</small>
+                </div>
+                <div class="form-group">
                     <label for="telegram_bot_section">תוכן על הבוט (אופציונלי)</label>
                     <textarea id="telegram_bot_section" name="telegram_bot_section" rows="6"
                               placeholder="תארו את הבוט החדש, התכונות שלו והיתרונות שהוא מביא...">{{ newsletter.telegram_bot_section if newsletter.telegram_bot_section else '' }}</textarea>
@@ -87,6 +95,32 @@
                     <textarea id="website_features_section" name="website_features_section" rows="6"
                               placeholder="תארו את היתרונות והתכונות המיוחדות של האתר...">{{ newsletter.website_features_section if newsletter.website_features_section else '' }}</textarea>
                     <small class="form-help">השאירו ריק כדי להשתמש בתוכן ברירת המחדל</small>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2><i class="fas fa-image"></i> תמונה</h2>
+                {% if newsletter.image_path %}
+                <div class="current-image">
+                    <h4>תמונה נוכחית:</h4>
+                    <img src="{{ url_for('static', filename=newsletter.image_path) }}" alt="תמונת הניוזלטר הנוכחית" 
+                         style="max-width: 300px; max-height: 200px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px;">
+                    <p><small>השאירו את שדה התמונה ריק כדי לשמור על התמונה הנוכחית</small></p>
+                </div>
+                {% endif %}
+                <div class="form-group">
+                    <label for="newsletter_image">{{ 'שנה תמונה' if newsletter.image_path else 'תמונה לניוזלטר' }} (אופציונלי)</label>
+                    <input type="file" id="newsletter_image" name="newsletter_image" accept="image/*" onchange="previewNewsletterImage(this)">
+                    <small class="form-help">התמונה תופיע בתחתית הניוזלטר. גודל מקסימלי: 5MB</small>
+                </div>
+                <div id="image-preview" style="margin-top: 15px; display: none;">
+                    <h4>תצוגה מקדימה:</h4>
+                    <img id="preview-img" style="max-width: 300px; max-height: 200px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <div style="margin-top: 10px;">
+                        <button type="button" onclick="removeNewsletterImage()" class="btn-small btn-danger">
+                            <i class="fas fa-trash"></i> הסר תמונה חדשה
+                        </button>
+                    </div>
                 </div>
             </div>
             {% else %}
@@ -460,6 +494,27 @@
     margin-right: 0.5rem;
 }
 
+/* עיצוב checkbox */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    transform: scale(1.2);
+    accent-color: #2E86C1;
+}
+
+.checkbox-group label {
+    margin-bottom: 0;
+    cursor: pointer;
+    font-weight: 500;
+}
+
 .type-badge.structured {
     background-color: #d1ecf1;
     color: #0c5460;
@@ -497,6 +552,35 @@
     margin-bottom: 0.5rem;
     color: #555;
     line-height: 1.5;
+}
+
+/* עיצוב לתמונה */
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.current-image h4 {
+    margin-bottom: 10px;
+    color: #2E86C1;
+    font-size: 1rem;
 }
 
 /* רספונסיביות */
@@ -575,6 +659,46 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// פונקציות לטיפול בתמונת הניוזלטר
+function previewNewsletterImage(input) {
+    const file = input.files[0];
+    const preview = document.getElementById('image-preview');
+    const previewImg = document.getElementById('preview-img');
+    
+    if (file) {
+        // בדיקת סוג הקובץ
+        if (!file.type.startsWith('image/')) {
+            alert('יש לבחור קובץ תמונה בלבד');
+            input.value = '';
+            return;
+        }
+        
+        // בדיקת גודל הקובץ (מקסימום 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('גודל הקובץ חייב להיות קטן מ-5MB');
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+function removeNewsletterImage() {
+    const input = document.getElementById('newsletter_image');
+    const preview = document.getElementById('image-preview');
+    
+    input.value = '';
+    preview.style.display = 'none';
+}
 </script>
 {% endblock %}
 
