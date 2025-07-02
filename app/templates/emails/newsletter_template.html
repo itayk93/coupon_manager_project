@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>{{ newsletter.title }} - Coupon Master Newsletter</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* ===================================================
            עיצוב ניוזלטר מתקדם ומעוצב
@@ -12,9 +13,9 @@
             margin: 0;
             padding: 0;
             background-color: #f8f9fa;
-            font-family: Arial, sans-serif;
+            font-family: 'Heebo', Arial, sans-serif;
             direction: rtl;
-            text-align: right;
+            text-align: center;
             color: #333;
         }
         .newsletter-container {
@@ -32,92 +33,73 @@
         }
         /* הדר מעוצב */
         .header {
-            background: linear-gradient(135deg, #2E86C1 0%, #5DADE2 100%);
+            background: #4A90E2;
             color: #ffffff;
-            padding: 40px 30px;
+            padding: 50px 30px;
             text-align: center;
             position: relative;
             overflow: hidden;
         }
         .header::before {
-            content: '';
+            content: '🚀';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1.5" fill="rgba(255,255,255,0.05)"/><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.08)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
-            animation: float 20s ease-in-out infinite;
-            pointer-events: none;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateX(0px) translateY(0px); }
-            50% { transform: translateX(-10px) translateY(-10px); }
+            top: 20px;
+            left: 30px;
+            font-size: 40px;
+            opacity: 0.8;
+            z-index: 1;
         }
         .header h1 {
-            margin: 0 0 10px 0;
-            font-size: 32px;
+            margin: 0 0 15px 0;
+            font-size: 36px;
             font-weight: 700;
             position: relative;
             z-index: 2;
             text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .header .subtitle {
-            font-size: 16px;
-            opacity: 0.9;
+            font-size: 18px;
+            opacity: 0.95;
             position: relative;
             z-index: 2;
+            font-weight: 400;
         }
         
         /* סקציה מיוחדת לבוט טלגרם */
         .telegram-section {
-            background: linear-gradient(135deg, #0088cc 0%, #0066aa 100%);
-            color: white;
+            background: #f8f9fa;
+            border-radius: 12px;
             padding: 30px;
-            margin: 0;
+            margin: 30px;
+            border-right: 4px solid #4A90E2;
             position: relative;
-            overflow: hidden;
-        }
-        .telegram-section::before {
-            content: '📱';
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 60px;
-            opacity: 0.1;
         }
         .telegram-section h2 {
             margin: 0 0 20px 0;
-            font-size: 28px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .telegram-section h2::before {
-            content: '🚀';
             font-size: 24px;
+            color: #2C3E50;
+            text-align: center;
         }
         .telegram-section p {
             margin-bottom: 15px;
-            line-height: 1.7;
             font-size: 16px;
+            line-height: 1.7;
+            color: #495057;
+            text-align: center;
         }
         .telegram-button {
-            background: #ffffff;
-            color: #0088cc;
+            background: #4A90E2;
+            color: white;
             padding: 15px 30px;
             text-decoration: none;
-            border-radius: 50px;
+            border-radius: 8px;
             font-size: 16px;
             font-weight: bold;
             display: inline-block;
             transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         .telegram-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            background: #357ABD;
         }
         
         /* סקציה ליתרונות האתר */
@@ -175,11 +157,52 @@
             color: #555;
         }
         
+        /* תיבת היי (תוכן עיקרי) */
+        .greeting-box {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px;
+            border-right: 4px solid #4A90E2;
+            position: relative;
+        }
+        .greeting-box h2 {
+            margin: 0 0 20px 0;
+            font-size: 24px;
+            color: #2C3E50;
+            text-align: center;
+        }
+        .greeting-box p {
+            margin-bottom: 15px;
+            font-size: 16px;
+            line-height: 1.7;
+            color: #495057;
+            text-align: center;
+        }
+        
+        /* תיבת הדגשה צהובה */
+        .highlight-box {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #f39c12;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px;
+            position: relative;
+            text-align: center;
+        }
+        .highlight-box::before {
+            content: '✨';
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+        }
+        
         /* תוכן ראשי */
         .main-content {
             padding: 40px 30px;
             color: #2C3E50;
-            text-align: right;
+            text-align: center;
             line-height: 1.7;
         }
         .main-content p {
@@ -191,6 +214,32 @@
             font-size: 22px;
             margin: 30px 0 15px 0;
             font-weight: 600;
+        }
+        
+        /* סקציה נוספת */
+        .additional-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px;
+            border-right: 4px solid #28a745;
+            position: relative;
+        }
+        .additional-section h2 {
+            margin: 0 0 20px 0;
+            font-size: 24px;
+            color: #28a745;
+            text-align: center;
+            font-weight: 600;
+        }
+        .additional-section .additional-content {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #495057;
+            text-align: center;
+        }
+        .additional-section .additional-content p {
+            margin-bottom: 15px;
         }
         
         /* כפתור קריאה לפעולה */
@@ -217,38 +266,6 @@
             box-shadow: 0 12px 30px rgba(0,0,0,0.3);
         }
         
-        /* פוטר */
-        .footer {
-            background-color: #34495e;
-            color: #bdc3c7;
-            text-align: center;
-            padding: 30px;
-        }
-        .footer p {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-        .footer .social-links {
-            margin: 20px 0;
-        }
-        .footer .social-links a {
-            color: #bdc3c7;
-            text-decoration: none;
-            margin: 0 10px;
-            font-size: 16px;
-            transition: color 0.3s;
-        }
-        .footer .social-links a:hover {
-            color: #3498db;
-        }
-        .unsubscribe {
-            font-size: 12px;
-            color: #95a5a6;
-            margin-top: 15px;
-        }
-        .unsubscribe a {
-            color: #95a5a6;
-        }
         
         /* רספונסיביות */
         @media only screen and (max-width: 600px) {
@@ -257,7 +274,7 @@
                 margin: 0 10px;
                 max-width: calc(100% - 20px);
             }
-            .header, .main-content, .features-section, .telegram-section, .cta-section {
+            .header, .main-content, .features-section, .telegram-section, .additional-section, .cta-section {
                 padding: 20px 15px;
             }
             .header h1 {
@@ -301,22 +318,35 @@
                             {% endif %}
                         </div>
                         
-                        <!-- תוכן ראשי -->
-                        <div class="main-content" style="white-space: pre-line;">
-                            {{ newsletter.content|safe }}
+                        <!-- תיבת היי (תוכן עיקרי) -->
+                        {% if newsletter.content %}
+                        <div class="greeting-box">
+                            <div style="white-space: pre-line;">{{ newsletter.content|safe }}</div>
                         </div>
+                        {% endif %}
                         
-                        <!-- סקציה ליתרונות האתר -->
-                        <div class="features-section">
-                            <h2>{{ newsletter.additional_title if newsletter.additional_title else 'למה Coupon Master?' }}</h2>
+                        <!-- תיבת הדגשה -->
+                        {% if newsletter.highlight_text %}
+                        <div class="highlight-box">
+                            {{ newsletter.highlight_text|safe }}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- סקציה נוספת -->
+                        {% if newsletter.additional_title or newsletter.website_features_section %}
+                        <div class="additional-section">
+                            {% if newsletter.additional_title %}
+                            <h2>{{ newsletter.additional_title }}</h2>
+                            {% endif %}
                             {% if newsletter.website_features_section %}
+                            <div class="additional-content">
                                 {{ newsletter.website_features_section|safe }}
-                            {% else %}
-                                <!-- יתרונות האתר הוסרו -->
+                            </div>
                             {% endif %}
                         </div>
+                        {% endif %}
                         
-                        <!-- קריאה לפעולה -->
+                        <!-- תיבת הדגשה -->
                         <div class="cta-section">
                             <h2 style="margin: 0 0 20px 0; font-size: 24px;">מוכנים להתחיל לחסוך?</h2>
                             <p style="margin: 0 0 25px 0; font-size: 16px; opacity: 0.9;">הצטרפו למגמה של החיסכון החכם</p>
@@ -332,17 +362,13 @@
                         </div>
                         {% endif %}
                         
+                        <br>
                         <!-- Footer -->
-                        <div class="footer">
-                            <p><strong>Coupon Master</strong></p>
-                            <div class="social-links">
-                                <a href="#">פייסבוק</a> |
-                                <a href="#">טלגרם</a> |
-                                <a href="#">אינסטגרם</a>
-                            </div>
-                            <div class="unsubscribe">
-                                <p>שלום {{ user.first_name }}, קיבלת את המייל הזה כי אתה רשום לניוזלטר שלנו.</p>
-                                <p>
+                        <div style="max-width: 500px; margin: 20px auto; background-color: #34495e; color: #bdc3c7; text-align: center; padding: 18px 25px; border-radius: 10px; font-family: Arial, sans-serif;">
+                            <p style="margin: 0 0 12px 0; font-size: 14px;"><strong>Coupon Master</strong></p>
+                            <div style="font-size: 12px; color: #95a5a6; margin: 12px 0;">
+                                <p style="margin: 0 0 10px 0;">שלום {{ user.first_name }}, קיבלת את המייל הזה כי אתה רשום לניוזלטר שלנו.</p>
+                                <p style="margin: 0;">
                                     {% if unsubscribe_link and unsubscribe_link != '#' %}
                                         <a href="{{ unsubscribe_link }}" style="color: #95a5a6; text-decoration: underline;">ביטול מנוי</a>
                                     {% else %}
@@ -356,7 +382,7 @@
                                     {% endif %}
                                 </p>
                             </div>
-                            <p style="margin-top: 20px;">© 2024 Coupon Master. כל הזכויות שמורות.</p>
+                            <p style="margin: 12px 0 0 0; font-size: 11px;">© {{ "now"|strftime('%Y') }} Coupon Master. כל הזכויות שמורות.</p>
                         </div>
                     </div>
                 </td>

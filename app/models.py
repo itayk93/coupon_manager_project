@@ -821,6 +821,7 @@ class Newsletter(db.Model):
     additional_title = db.Column(db.String(255), nullable=True)
     telegram_bot_section = db.Column(db.Text, nullable=True)
     website_features_section = db.Column(db.Text, nullable=True)
+    highlight_text = db.Column(db.Text, nullable=True)  # תוכן מודגש
     custom_html = db.Column(db.Text, nullable=True)  # HTML מותאם אישית
     newsletter_type = db.Column(db.String(20), default='structured')  # 'structured' או 'custom'
     image_path = db.Column(db.String(255), nullable=True)  # נתיב לתמונה של הניוזלטר

@@ -64,8 +64,7 @@
                     <div class="form-group">
                         <label for="telegram_bot_section">תוכן (אופציונלי)</label>
                         <textarea id="telegram_bot_section" name="telegram_bot_section" rows="6"
-                                  placeholder="תארו את הבוט החדש, התכונות שלו והיתרונות שהוא מביא...">
-                        </textarea>
+                                  placeholder="תארו את הבוט החדש, התכונות שלו והיתרונות שהוא מביא..."></textarea>
                         <small class="form-help">השאירו ריק כדי להשתמש בתוכן ברירת המחדל</small>
                     </div>
                 </div>
@@ -75,23 +74,31 @@
                     <div class="form-group">
                         <label for="content">תוכן הניוזלטר *</label>
                         <textarea id="content" name="content" rows="10" required
-                                  placeholder="כתבו כאן את התוכן העיקרי של הניוזלטר...">
-                        </textarea>
+                                  placeholder="כתבו כאן את התוכן העיקרי של הניוזלטר..."></textarea>
                         <small class="form-help">ניתן להשתמש ב-HTML לעיצוב מתקדם</small>
                     </div>
                 </div>
 
                 <div class="form-section">
-                    <h2><i class="fas fa-file-alt"></i> תוכן נוסף</h2>
+                    <h2><i class="fas fa-star"></i> תוכן מודגש</h2>
                     <div class="form-group">
+                        <label for="highlight_text">תוכן מודגש (אופציונלי)</label>
+                        <textarea id="highlight_text" name="highlight_text" rows="4"
+                                  placeholder="תוכן שיופיע בתיבה מודגשת צהובה..."></textarea>
+                        <small class="form-help">תוכן זה יופיע בתיבה מודגשת צהובה עם אמוג'י כוכב</small>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2><i class="fas fa-file-alt"></i> תוכן נוסף</h2>
+                    <div class="form-group" data-optional="true">
                         <label for="additional_title">כותרת (אופציונלי)</label>
                         <input type="text" id="additional_title" name="additional_title" placeholder="כותרת הסקציה הנוספת">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" data-optional="true">
                         <label for="website_features_section">תוכן (אופציונלי)</label>
                         <textarea id="website_features_section" name="website_features_section" rows="6"
-                                  placeholder="תארו את היתרונות והתכונות המיוחדות של האתר...">
-                        </textarea>
+                                  placeholder="תארו את היתרונות והתכונות המיוחדות של האתר..."></textarea>
                         <small class="form-help">השאירו ריק כדי להשתמש בתוכן ברירת המחדל</small>
                     </div>
                 </div>
@@ -121,8 +128,7 @@
                     <div class="form-group">
                         <label for="custom_html">קוד HTML מלא לניוזלטר *</label>
                         <textarea id="custom_html" name="custom_html" rows="20"
-                                  placeholder="כתבו כאן את קוד ה-HTML המלא לניוזלטר...">
-                        </textarea>
+                                  placeholder="כתבו כאן את קוד ה-HTML המלא לניוזלטר..."></textarea>
                         <small class="form-help">כתבו כאן HTML מלא כולל CSS. זה יחליף לגמרי את התבנית הרגילה.</small>
                     </div>
                     
@@ -134,7 +140,25 @@
                             <li>הימנעו מCSS מתקדם - השתמשו בסגנונות פשוטים</li>
                             <li>בדקו תמיד את התצוגה במכשירים שונים</li>
                             <li>ההודעה צריכה להכיל את המשתנה {% raw %}{{ user.first_name }}{% endraw %} לשם המשתמש</li>
+                            <li>להוספת תמונה שהועלתה, השתמשו ב: {% raw %}{{ newsletter_image_url }}{% endraw %}</li>
                         </ul>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2><i class="fas fa-image"></i> תמונה</h2>
+                    <div class="form-group">
+                        <label for="custom_newsletter_image">תמונה לניוזלטר (אופציונלי)</label>
+                        <input type="file" id="custom_newsletter_image" name="newsletter_image" accept="image/*" onchange="previewCustomNewsletterImage(this)">
+                        <small class="form-help">התמונה תהיה זמינה ב-HTML דרך המשתנה {% raw %}{{ newsletter_image_url }}{% endraw %}. גודל מקסימלי: 5MB</small>
+                    </div>
+                    <div id="custom-image-preview" style="margin-top: 15px; display: none;">
+                        <img id="custom-preview-img" style="max-width: 300px; max-height: 200px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <div style="margin-top: 10px;">
+                            <button type="button" onclick="removeCustomNewsletterImage()" class="btn-small btn-danger">
+                                <i class="fas fa-trash"></i> הסר תמונה
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -521,7 +545,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // הוספת אינדיקטור לשדות אופציונליים
-    const optionalFields = ['telegram_bot_section', 'website_features_section'];
+    const optionalFields = ['telegram_bot_section', 'additional_title', 'website_features_section', 'highlight_text'];
     optionalFields.forEach(fieldId => {
         const field = document.getElementById(fieldId);
         if (field) {
@@ -627,6 +651,46 @@ function previewNewsletterImage(input) {
 function removeNewsletterImage() {
     const input = document.getElementById('newsletter_image');
     const preview = document.getElementById('image-preview');
+    
+    input.value = '';
+    preview.style.display = 'none';
+}
+
+// פונקציות לטיפול בתמונת הניוזלטר המותאם אישית
+function previewCustomNewsletterImage(input) {
+    const file = input.files[0];
+    const preview = document.getElementById('custom-image-preview');
+    const previewImg = document.getElementById('custom-preview-img');
+    
+    if (file) {
+        // בדיקת סוג הקובץ
+        if (!file.type.startsWith('image/')) {
+            alert('יש לבחור קובץ תמונה בלבד');
+            input.value = '';
+            return;
+        }
+        
+        // בדיקת גודל הקובץ (מקסימום 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('גודל הקובץ חייב להיות קטן מ-5MB');
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+function removeCustomNewsletterImage() {
+    const input = document.getElementById('custom_newsletter_image');
+    const preview = document.getElementById('custom-image-preview');
     
     input.value = '';
     preview.style.display = 'none';

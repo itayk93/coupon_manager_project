@@ -59,6 +59,7 @@ def create_newsletter():
         additional_title = request.form.get("additional_title")
         telegram_bot_section = request.form.get("telegram_bot_section")
         website_features_section = request.form.get("website_features_section")
+        highlight_text = request.form.get("highlight_text")
         custom_html = request.form.get("custom_html")
         show_telegram_button = request.form.get("show_telegram_button") == "on"
         
@@ -107,6 +108,7 @@ def create_newsletter():
             additional_title=additional_title if newsletter_type == "structured" else None,
             telegram_bot_section=telegram_bot_section if newsletter_type == "structured" else None,
             website_features_section=website_features_section if newsletter_type == "structured" else None,
+            highlight_text=highlight_text if newsletter_type == "structured" else None,
             custom_html=custom_html if newsletter_type == "custom" else None,
             image_path=image_path,
             show_telegram_button=show_telegram_button if newsletter_type == "structured" else False,
@@ -137,6 +139,7 @@ def edit_newsletter(newsletter_id):
             newsletter.website_features_section = request.form.get("website_features_section")
             newsletter.main_title = request.form.get("main_title")
             newsletter.additional_title = request.form.get("additional_title")
+            newsletter.highlight_text = request.form.get("highlight_text")
             newsletter.show_telegram_button = request.form.get("show_telegram_button") == "on"
             
             if not newsletter.title or not newsletter.content:
@@ -198,10 +201,63 @@ def preview_newsletter(newsletter_id):
     if newsletter.newsletter_type == "custom":
         # עבור HTML מותאם אישית - החזרת ה-HTML ישירות עם משתנים לדוגמה
         html_content = newsletter.custom_html
+        
+        # הוספת תמונה וחלק ביטול המנוי לתצוגה המקדימה
+        from datetime import datetime
+        current_year = datetime.now().year
+        
+        # תמונה אם קיימת
+        image_section = ""
+        if newsletter.image_path:
+            image_url = f"{url_for('static', filename=newsletter.image_path, _external=True)}"
+            image_section = f'''
+            <br>
+            <!-- Newsletter Image -->
+            <div style="text-align: center; margin: 20px 0;">
+                <img src="{image_url}" alt="תמונת הניוזלטר" style="max-width: 100%; max-height: 300px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+            </div>
+            '''
+        
+        unsubscribe_section = f'''
+            {image_section}
+            <br>
+            <!-- Footer -->
+            <div style="max-width: 500px; margin: 20px auto; background-color: #34495e; color: #bdc3c7; text-align: center; padding: 18px 25px; border-radius: 10px; font-family: Arial, sans-serif;">
+                <p style="margin: 0 0 12px 0; font-size: 14px;"><strong>Coupon Master</strong></p>
+                <div style="font-size: 12px; color: #95a5a6; margin: 12px 0;">
+                    <p style="margin: 0 0 10px 0;">שלום דוגמה, קיבלת את המייל הזה כי אתה רשום לניוזלטר שלנו.</p>
+                    <p style="margin: 0;">
+                        <a href="#" style="color: #95a5a6; text-decoration: underline;">ביטול מנוי</a>
+                        | 
+                        <a href="#" style="color: #95a5a6; text-decoration: underline;">עדכון העדפות</a>
+                    </p>
+                </div>
+                <p style="margin: 12px 0 0 0; font-size: 11px;">© {current_year} Coupon Master. כל הזכויות שמורות.</p>
+            </div>
+        '''
+        
+        # בדיקה אם יש כבר </body> או </html> ואם כן, להוסיף לפני זה
+        if '</body>' in html_content:
+            html_content = html_content.replace('</body>', unsubscribe_section + '</body>')
+        elif '</html>' in html_content:
+            html_content = html_content.replace('</html>', unsubscribe_section + '</html>')
+        else:
+            html_content += unsubscribe_section
+        
         html_content = html_content.replace("{{ user.first_name }}", "דוגמה")
         html_content = html_content.replace("{{ user.last_name }}", "משתמש")
         html_content = html_content.replace("{{ user.email }}", "example@email.com")
         html_content = html_content.replace("{{ unsubscribe_link }}", "#")
+        
+        # החלפת URL התמונה אם קיימת
+        if newsletter.image_path:
+            image_url = f"{url_for('static', filename=newsletter.image_path, _external=True)}"
+            logger.info(f"Preview: Replacing newsletter_image_url with: {image_url}")
+            html_content = html_content.replace("{{ newsletter_image_url }}", image_url)
+        else:
+            logger.info("Preview: No image path found, removing newsletter_image_url placeholder")
+            html_content = html_content.replace("{{ newsletter_image_url }}", "")
+            
         return html_content
     else:
         # עבור ניוזלטר מובנה - יצירת HTML בעזרת החלפת מחרוזות
@@ -318,11 +374,69 @@ def send_newsletter(newsletter_id):
                 if newsletter.newsletter_type == "custom":
                     # שימוש ב-HTML מותאם אישית
                     html_content = newsletter.custom_html
+                    
+                    # יצירת קישור ביטול המנוי ועדכון העדפות
+                    unsubscribe_token = generate_unsubscribe_token(user)
+                    preferences_token = generate_preferences_token(user)
+                    unsubscribe_full_link = f"https://couponmasteril.com{url_for('profile.unsubscribe_newsletter', user_id=user.id, token=unsubscribe_token)}"
+                    preferences_full_link = f"https://couponmasteril.com{url_for('profile.preferences_from_email', user_id=user.id, token=preferences_token)}"
+                    
+                    # הוספת תמונה וחלק ביטול המנוי לסוף ה-HTML אם הוא לא קיים
+                    from datetime import datetime
+                    current_year = datetime.now().year
+                    
+                    # תמונה אם קיימת
+                    image_section = ""
+                    if newsletter.image_path:
+                        image_url = f"https://couponmasteril.com/static/{newsletter.image_path}"
+                        image_section = f'''
+                        <br>
+                        <!-- Newsletter Image -->
+                        <div style="text-align: center; margin: 20px 0;">
+                            <img src="{image_url}" alt="תמונת הניוזלטר" style="max-width: 100%; max-height: 300px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        </div>
+                        '''
+                    
+                    unsubscribe_section = f'''
+                        {image_section}
+                        <br>
+                        <!-- Footer -->
+                        <div style="max-width: 500px; margin: 20px auto; background-color: #34495e; color: #bdc3c7; text-align: center; padding: 18px 25px; border-radius: 10px; font-family: Arial, sans-serif;">
+                            <p style="margin: 0 0 12px 0; font-size: 14px;"><strong>Coupon Master</strong></p>
+                            <div style="font-size: 12px; color: #95a5a6; margin: 12px 0;">
+                                <p style="margin: 0 0 10px 0;">שלום {user.first_name}, קיבלת את המייל הזה כי אתה רשום לניוזלטר שלנו.</p>
+                                <p style="margin: 0;">
+                                    <a href="{unsubscribe_full_link}" style="color: #95a5a6; text-decoration: underline;">ביטול מנוי</a>
+                                    | 
+                                    <a href="{preferences_full_link}" style="color: #95a5a6; text-decoration: underline;">עדכון העדפות</a>
+                                </p>
+                            </div>
+                            <p style="margin: 12px 0 0 0; font-size: 11px;">© {current_year} Coupon Master. כל הזכויות שמורות.</p>
+                        </div>
+                    '''
+                    
+                    # בדיקה אם יש כבר </body> או </html> ואם כן, להוסיף לפני זה
+                    if '</body>' in html_content:
+                        html_content = html_content.replace('</body>', unsubscribe_section + '</body>')
+                    elif '</html>' in html_content:
+                        html_content = html_content.replace('</html>', unsubscribe_section + '</html>')
+                    else:
+                        html_content += unsubscribe_section
+                    
                     # החלפת משתנים בסיסיים
                     html_content = html_content.replace("{{ user.first_name }}", user.first_name)
                     html_content = html_content.replace("{{ user.last_name }}", user.last_name)
                     html_content = html_content.replace("{{ user.email }}", user.email)
                     html_content = html_content.replace("{{ unsubscribe_link }}", unsubscribe_link)
+                    
+                    # החלפת URL התמונה אם קיימת
+                    if newsletter.image_path:
+                        image_url = f"https://couponmasteril.com/static/{newsletter.image_path}"
+                        logger.info(f"Replacing newsletter_image_url with: {image_url}")
+                        html_content = html_content.replace("{{ newsletter_image_url }}", image_url)
+                    else:
+                        logger.info("No image path found, removing newsletter_image_url placeholder")
+                        html_content = html_content.replace("{{ newsletter_image_url }}", "")
                 else:
                     # שימוש בתבנית המובנית
                     hebrew_month_year = get_current_month_year_hebrew()
