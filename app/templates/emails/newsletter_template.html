@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>{{ newsletter.title }} - Coupon Master Newsletter</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -12,7 +13,8 @@
         
         /* כללי עברית - כיווניות */
         .newsletter-container, .newsletter-content {
-            direction: rtl;
+            direction: rtl !important;
+            unicode-bidi: bidi-override;
         }
         
         /* יוצאי דופן - אלמנטים שצריכים להיות מרוכזים */
@@ -22,14 +24,21 @@
         .feature-card h3, .features-section h2 {
             text-align: center !important;
         }
+        
+        /* תיקון כיווניות לטקסט עברית */
+        p, div, h1, h2, h3, h4, h5, h6, span {
+            unicode-bidi: embed;
+            direction: rtl;
+        }
         body {
             margin: 0;
             padding: 0;
             background-color: #f8f9fa;
             font-family: 'Heebo', Arial, sans-serif;
-            direction: rtl;
+            direction: rtl !important;
             text-align: center;
             color: #333;
+            unicode-bidi: embed;
         }
         .newsletter-container {
             width: 100%;
@@ -304,50 +313,50 @@
     </style>
 </head>
 <body dir="rtl">
-    <div class="newsletter-container">
-        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" dir="rtl">
+    <div class="newsletter-container" dir="rtl">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" dir="rtl" style="direction: rtl;">
             <tr>
-                <td align="center" dir="rtl">
-                    <div class="newsletter-content">
+                <td align="center" dir="rtl" style="direction: rtl;">
+                    <div class="newsletter-content" dir="rtl" style="direction: rtl;">
                         <!-- Header -->
-                        <div class="header">
+                        <div class="header" dir="rtl" style="direction: rtl;">
                             <h1>{{ newsletter.title }}</h1>
-                            <div class="subtitle">ניוזלטר Coupon Master - {{ hebrew_month_year }}</div>
+                            <div class="subtitle">‏ניוזלטר Coupon Master - {{ hebrew_month_year }}‏</div>
                         </div>
                         
                         <!-- סקציה מיוחדת לבוט טלגרם -->
-                        <div class="telegram-section">
-                            <h2>{{ newsletter.main_title if newsletter.main_title else 'הבוט החדש שלנו בטלגרם!' }}</h2>
+                        <div class="telegram-section" dir="rtl" style="direction: rtl;">
+                            <h2>{{ newsletter.main_title if newsletter.main_title else '‏הבוט החדש שלנו בטלגרם!‏' }}</h2>
                             {% if newsletter.telegram_bot_section %}
                                 {{ newsletter.telegram_bot_section|safe }}
                             {% else %}
-                                <p>אנחנו שמחים להכריז על השקת הבוט החדש שלנו בטלגרם! 🎉</p>
-                                <p>עכשיו תוכלו לנהל את הקופונים שלכם, לקבל התראות על קופונים שפגי תוקף, ולגלות הזדמנויות חדשות - הכל ישירות דרך טלגרם!</p>
+                                <p>‏אנחנו שמחים להכריז על השקת הבוט החדש שלנו בטלגרם! 🎉‏</p>
+                                <p>‏עכשיו תוכלו לנהל את הקופונים שלכם, לקבל התראות על קופונים שפגי תוקף, ולגלות הזדמנויות חדשות - הכל ישירות דרך טלגרם!‏</p>
                             {% endif %}
                             {% if newsletter.show_telegram_button %}
                             <div style="text-align: center; margin-top: 25px;">
-                                <a href="#" class="telegram-button" style="color: #0088cc; font-weight: bold;">הצטרפו לבוט עכשיו</a>
+                                <a href="#" class="telegram-button" style="color: #0088cc; font-weight: bold;">‏הצטרפו לבוט עכשיו‏</a>
                             </div>
                             {% endif %}
                         </div>
                         
                         <!-- תיבת היי (תוכן עיקרי) -->
                         {% if newsletter.content %}
-                        <div class="greeting-box">
+                        <div class="greeting-box" dir="rtl" style="direction: rtl;">
                             <div style="white-space: pre-line;">{{ newsletter.content|safe }}</div>
                         </div>
                         {% endif %}
                         
                         <!-- תיבת הדגשה -->
                         {% if newsletter.highlight_text %}
-                        <div class="highlight-box">
+                        <div class="highlight-box" dir="rtl" style="direction: rtl;">
                             {{ newsletter.highlight_text|safe }}
                         </div>
                         {% endif %}
                         
                         <!-- סקציה נוספת -->
                         {% if newsletter.additional_title or newsletter.website_features_section %}
-                        <div class="additional-section">
+                        <div class="additional-section" dir="rtl" style="direction: rtl;">
                             {% if newsletter.additional_title %}
                             <h2>{{ newsletter.additional_title }}</h2>
                             {% endif %}
@@ -360,10 +369,10 @@
                         {% endif %}
                         
                         <!-- תיבת הדגשה -->
-                        <div class="cta-section">
-                            <h2 style="margin: 0 0 20px 0; font-size: 24px;">מוכנים להתחיל לחסוך?</h2>
-                            <p style="margin: 0 0 25px 0; font-size: 16px; opacity: 0.9;">הצטרפו למגמה של החיסכון החכם</p>
-                            <a href="#" class="cta-button" style="color: #2E86C1; font-weight: bold;">כנסו לאתר עכשיו</a>
+                        <div class="cta-section" dir="rtl" style="direction: rtl;">
+                            <h2 style="margin: 0 0 20px 0; font-size: 24px;">‏מוכנים להתחיל לחסוך?‏</h2>
+                            <p style="margin: 0 0 25px 0; font-size: 16px; opacity: 0.9;">‏הצטרפו למגמה של החיסכון החכם‏</p>
+                            <a href="#" class="cta-button" style="color: #2E86C1; font-weight: bold;">‏כנסו לאתר עכשיו‏</a>
                         </div>
                         
                         <!-- תמונה של הניוזלטר -->
@@ -377,25 +386,25 @@
                         
                         <br>
                         <!-- Footer -->
-                        <div style="max-width: 500px; margin: 20px auto; background-color: #34495e; color: #bdc3c7; text-align: center; padding: 18px 25px; border-radius: 10px; font-family: Arial, sans-serif;">
+                        <div style="max-width: 500px; margin: 20px auto; background-color: #34495e; color: #bdc3c7; text-align: center; padding: 18px 25px; border-radius: 10px; font-family: Arial, sans-serif; direction: rtl;" dir="rtl">
                             <p style="margin: 0 0 12px 0; font-size: 14px;"><strong>Coupon Master</strong></p>
                             <div style="font-size: 12px; color: #95a5a6; margin: 12px 0;">
-                                <p style="margin: 0 0 10px 0;">שלום {{ user.first_name }}, קיבלת את המייל הזה כי אתה רשום לניוזלטר שלנו.</p>
+                                <p style="margin: 0 0 10px 0;">‏שלום {{ user.first_name }}, קיבלת את המייל הזה כי אתה רשום לניוזלטר שלנו.‏</p>
                                 <p style="margin: 0;">
                                     {% if unsubscribe_link and unsubscribe_link != '#' %}
-                                        <a href="{{ unsubscribe_link }}" style="color: #95a5a6; text-decoration: underline;">ביטול מנוי</a>
+                                        <a href="{{ unsubscribe_link }}" style="color: #95a5a6; text-decoration: underline;">‏ביטול מנוי‏</a>
                                     {% else %}
-                                        <a href="https://couponmasteril.com{{ url_for('profile.unsubscribe_newsletter', user_id=user.id, token=generate_unsubscribe_token(user)) }}" style="color: #95a5a6; text-decoration: underline;">ביטול מנוי</a>
+                                        <a href="https://couponmasteril.com{{ url_for('profile.unsubscribe_newsletter', user_id=user.id, token=generate_unsubscribe_token(user)) }}" style="color: #95a5a6; text-decoration: underline;">‏ביטול מנוי‏</a>
                                     {% endif %}
                                     | 
                                     {% if unsubscribe_link and unsubscribe_link != '#' %}
-                                        <a href="#" style="color: #95a5a6; text-decoration: underline;">עדכון העדפות</a>
+                                        <a href="#" style="color: #95a5a6; text-decoration: underline;">‏עדכון העדפות‏</a>
                                     {% else %}
-                                        <a href="https://couponmasteril.com{{ url_for('profile.preferences_from_email', user_id=user.id, token=generate_preferences_token(user)) }}" style="color: #95a5a6; text-decoration: underline;">עדכון העדפות</a>
+                                        <a href="https://couponmasteril.com{{ url_for('profile.preferences_from_email', user_id=user.id, token=generate_preferences_token(user)) }}" style="color: #95a5a6; text-decoration: underline;">‏עדכון העדפות‏</a>
                                     {% endif %}
                                 </p>
                             </div>
-                            <p style="margin: 12px 0 0 0; font-size: 11px;">© {{ "now"|strftime('%Y') }} Coupon Master. כל הזכויות שמורות.</p>
+                            <p style="margin: 12px 0 0 0; font-size: 11px;">‏© {{ "now"|strftime('%Y') }} Coupon Master. כל הזכויות שמורות.‏</p>
                         </div>
                     </div>
                 </td>
