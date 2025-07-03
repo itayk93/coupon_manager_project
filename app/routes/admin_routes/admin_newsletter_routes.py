@@ -357,14 +357,6 @@ def send_newsletter(newsletter_id):
         error_count = 0
         
         for user in users:
-            # בדיקה שהמשתמש עדיין לא קיבל את הניוזלטר הזה
-            existing_sending = NewsletterSending.query.filter_by(
-                newsletter_id=newsletter.id,
-                user_id=user.id
-            ).first()
-            
-            if existing_sending:
-                continue
             
             try:
                 # יצירת קישור ביטול הרשמה
@@ -459,24 +451,44 @@ def send_newsletter(newsletter_id):
                 )
                 
                 # רישום השליחה בבסיס הנתונים
-                sending = NewsletterSending(
+                existing_sending = NewsletterSending.query.filter_by(
                     newsletter_id=newsletter.id,
-                    user_id=user.id,
-                    delivery_status="sent"
-                )
-                db.session.add(sending)
+                    user_id=user.id
+                ).first()
+                
+                if existing_sending:
+                    existing_sending.delivery_status = "sent"
+                    existing_sending.sent_at = datetime.utcnow()
+                    existing_sending.error_message = None
+                else:
+                    sending = NewsletterSending(
+                        newsletter_id=newsletter.id,
+                        user_id=user.id,
+                        delivery_status="sent"
+                    )
+                    db.session.add(sending)
                 success_count += 1
                 
             except Exception as e:
                 logger.error(f"Failed to send newsletter to {user.email}: {e}")
                 # רישום שליחה כושלת
-                sending = NewsletterSending(
+                existing_sending = NewsletterSending.query.filter_by(
                     newsletter_id=newsletter.id,
-                    user_id=user.id,
-                    delivery_status="failed",
-                    error_message=str(e)
-                )
-                db.session.add(sending)
+                    user_id=user.id
+                ).first()
+                
+                if existing_sending:
+                    existing_sending.delivery_status = "failed"
+                    existing_sending.sent_at = datetime.utcnow()
+                    existing_sending.error_message = str(e)
+                else:
+                    sending = NewsletterSending(
+                        newsletter_id=newsletter.id,
+                        user_id=user.id,
+                        delivery_status="failed",
+                        error_message=str(e)
+                    )
+                    db.session.add(sending)
                 error_count += 1
         
         # עדכון מספר השליחות בניוזלטר
