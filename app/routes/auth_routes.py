@@ -103,6 +103,26 @@ def google_callback():
     # התחברות למערכת
     login_user(user)
     flash(f"ברוך הבא, {user.first_name}!", "success")
+    
+    # 🔹 בדיקה אם יש בקשות עומדות לביטול הרשמה או עדכון העדפות בסשן 🔹
+    if 'unsubscribe_user_id' in session and 'unsubscribe_token' in session:
+        if user.id == session['unsubscribe_user_id']:
+            return redirect(url_for("profile.complete_unsubscribe"))
+        else:
+            # אם המשתמש שהתחבר שונה מהמשתמש שביקש לבטל הרשמה
+            session.pop('unsubscribe_user_id', None)
+            session.pop('unsubscribe_token', None)
+            flash("לא ניתן לבטל הרשמה עבור משתמש אחר.", "error")
+    
+    if 'preferences_user_id' in session and 'preferences_token' in session:
+        if user.id == session['preferences_user_id']:
+            return redirect(url_for("profile.complete_preferences"))
+        else:
+            # אם המשתמש שהתחבר שונה מהמשתמש שביקש לעדכן העדפות
+            session.pop('preferences_user_id', None)
+            session.pop('preferences_token', None)
+            flash("לא ניתן לעדכן העדפות עבור משתמש אחר.", "error")
+    
     return redirect(url_for("profile.index"))
 
 
@@ -245,6 +265,25 @@ def login():
 
             # 🔹 שדרוג חשוב: קישור ההסכמה למשתמש לאחר התחברות 🔹
             update_consent_after_login(user.id)
+
+            # 🔹 בדיקה אם יש בקשות עומדות לביטול הרשמה או עדכון העדפות בסשן 🔹
+            if 'unsubscribe_user_id' in session and 'unsubscribe_token' in session:
+                if user.id == session['unsubscribe_user_id']:
+                    return redirect(url_for("profile.complete_unsubscribe"))
+                else:
+                    # אם המשתמש שהתחבר שונה מהמשתמש שביקש לבטל הרשמה
+                    session.pop('unsubscribe_user_id', None)
+                    session.pop('unsubscribe_token', None)
+                    flash("לא ניתן לבטל הרשמה עבור משתמש אחר.", "error")
+            
+            if 'preferences_user_id' in session and 'preferences_token' in session:
+                if user.id == session['preferences_user_id']:
+                    return redirect(url_for("profile.complete_preferences"))
+                else:
+                    # אם המשתמש שהתחבר שונה מהמשתמש שביקש לעדכן העדפות
+                    session.pop('preferences_user_id', None)
+                    session.pop('preferences_token', None)
+                    flash("לא ניתן לעדכן העדפות עבור משתמש אחר.", "error")
 
             return redirect(url_for("profile.index"))
         else:

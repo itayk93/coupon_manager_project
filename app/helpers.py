@@ -1232,6 +1232,7 @@ def send_html_email(
     recipient_name: str,
     subject: str,
     html_content: str,
+    add_timestamp: bool = True,
 ):
     """
     Sends an HTML email using the Brevo (SendinBlue) API.
@@ -1244,6 +1245,7 @@ def send_html_email(
     - recipient_name (str): Recipient's name.
     - subject (str): Subject of the email.
     - html_content (str): HTML content of the email.
+    - add_timestamp (bool): Whether to add timestamp to subject line.
 
     Returns:
     - dict: API response if successful.
@@ -1259,10 +1261,18 @@ def send_html_email(
     )
 
     # Define the email parameters
+    if add_timestamp:
+        # Use Israel timezone (UTC+3)
+        israel_tz = ZoneInfo('Asia/Jerusalem')
+        israel_time = datetime.now(israel_tz)
+        final_subject = f"{subject} - {israel_time.strftime('%d%m%Y %H:%M')}"
+    else:
+        final_subject = subject
+    
     send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
         to=[{"email": recipient_email, "name": recipient_name}],
         sender={"email": sender_email, "name": sender_name},
-        subject=f"{subject} - {datetime.now().strftime('%d%m%Y %H:%M')}",
+        subject=final_subject,
         html_content=html_content,
     )
 
@@ -1280,7 +1290,7 @@ def send_html_email(
 
 
 def send_email(
-    sender_email, sender_name, recipient_email, recipient_name, subject, html_content
+    sender_email, sender_name, recipient_email, recipient_name, subject, html_content, add_timestamp=True
 ):
     """
     Sends a general email.
@@ -1291,6 +1301,7 @@ def send_email(
     :param recipient_name: Recipient's name
     :param subject: Subject of the email
     :param html_content: HTML content of the email
+    :param add_timestamp: Whether to add timestamp to subject line
     """
     # Add the API key directly within the function
     api_key = BREVO_API_KEY
@@ -1302,8 +1313,9 @@ def send_email(
             sender_name=sender_name,
             recipient_email=recipient_email,
             recipient_name=recipient_name,
-            subject=f"{subject} - {datetime.now().strftime('%d%m%Y %H:%M')}",
+            subject=subject,
             html_content=html_content,
+            add_timestamp=add_timestamp,
         )
     except Exception as e:
         raise Exception(f"Error sending email: {e}")

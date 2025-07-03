@@ -1099,24 +1099,103 @@ def unsubscribe_newsletter():
             flash("קישור לא תקין לביטול הרשמה.", "error")
             return redirect(url_for('auth.login'))
         
-        # התחברות אוטומטית של המשתמש ליישום
-        from flask_login import login_user
-        login_user(user)
+        # שמירת נתוני הטוקן בסשן ודרישת התחברות
+        from flask import session
+        session['unsubscribe_user_id'] = user.id
+        session['unsubscribe_token'] = token
         
-        # ביטול הרשמה לניוזלטר
-        user.newsletter_subscription = False
-        db.session.commit()
-        
-        flash("ההרשמה לניוזלטר בוטלה בהצלחה. אנו מצטערים לראותכם הולכים!", "success")
+        flash("כדי לבטל הרשמה לניוזלטר, אנא התחבר לחשבון שלך", "info")
+        return redirect(url_for('auth.login'))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error in unsubscribe_newsletter: {str(e)}")
         flash("אירעה שגיאה בביטול ההרשמה. אנא נסה שוב מאוחר יותר.", "error")
     
-    return render_template("profile/unsubscribe_success.html")
+    return redirect(url_for('auth.login'))
 
 
+@profile_bp.route("/complete_unsubscribe")
+@login_required
+def complete_unsubscribe():
+    """השלמת ביטול הרשמה לניוזלטר אחרי התחברות"""
+    from flask import session
+    
+    # בדיקה שיש בסשן בקשה לביטול מנוי
+    if 'unsubscribe_user_id' not in session or 'unsubscribe_token' not in session:
+        flash("לא נמצאה בקשה לביטול הרשמה.", "error")
+        return redirect(url_for('profile.user_preferences'))
+    
+    # בדיקה שהמשתמש המחובר זהה למשתמש שביקש לבטל
+    if current_user.id != session['unsubscribe_user_id']:
+        flash("לא ניתן לבטל הרשמה עבור משתמש אחר.", "error")
+        session.pop('unsubscribe_user_id', None)
+        session.pop('unsubscribe_token', None)
+        return redirect(url_for('profile.user_preferences'))
+    
+    # אימות הטוקן שוב
+    from app.routes.admin_routes.admin_newsletter_routes import generate_unsubscribe_token
+    expected_token = generate_unsubscribe_token(current_user)
+    
+    if session['unsubscribe_token'] != expected_token:
+        flash("טוקן לא תקין לביטול הרשמה.", "error")
+        session.pop('unsubscribe_user_id', None)
+        session.pop('unsubscribe_token', None)
+        return redirect(url_for('profile.user_preferences'))
+    
+    try:
+        # ביטול הרשמה לניוזלטר
+        current_user.newsletter_subscription = False
+        db.session.commit()
+        
+        # ניקוי הסשן
+        session.pop('unsubscribe_user_id', None)
+        session.pop('unsubscribe_token', None)
+        
+        flash("ההרשמה לניוזלטר בוטלה בהצלחה. אנו מצטערים לראותכם הולכים!", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in complete_unsubscribe: {str(e)}")
+        flash("אירעה שגיאה בביטול ההרשמה. אנא נסה שוב מאוחר יותר.", "error")
+    
+    return redirect(url_for('profile.user_preferences'))
+
+
+@profile_bp.route("/complete_preferences")
+@login_required
+def complete_preferences():
+    """השלמת עדכון העדפות אחרי התחברות"""
+    from flask import session
+    
+    # בדיקה שיש בסשן בקשה לעדכון העדפות
+    if 'preferences_user_id' not in session or 'preferences_token' not in session:
+        flash("לא נמצאה בקשה לעדכון העדפות.", "error")
+        return redirect(url_for('profile.user_preferences'))
+    
+    # בדיקה שהמשתמש המחובר זהה למשתמש שביקש לעדכן
+    if current_user.id != session['preferences_user_id']:
+        flash("לא ניתן לעדכן העדפות עבור משתמש אחר.", "error")
+        session.pop('preferences_user_id', None)
+        session.pop('preferences_token', None)
+        return redirect(url_for('profile.user_preferences'))
+    
+    # אימות הטוקן שוב
+    from app.routes.admin_routes.admin_newsletter_routes import generate_preferences_token
+    expected_token = generate_preferences_token(current_user)
+    
+    if session['preferences_token'] != expected_token:
+        flash("טוקן לא תקין לעדכון העדפות.", "error")
+        session.pop('preferences_user_id', None)
+        session.pop('preferences_token', None)
+        return redirect(url_for('profile.user_preferences'))
+    
+    # ניקוי הסשן
+    session.pop('preferences_user_id', None)
+    session.pop('preferences_token', None)
+    
+    flash("כאן תוכלו לעדכן את העדפות הדוא\"ל והטלגרם שלכם", "info")
+    return redirect(url_for('profile.user_preferences'))
 
 
 @profile_bp.route("/preferences_from_email")
@@ -1143,13 +1222,13 @@ def preferences_from_email():
             flash("קישור לא תקין לעדכון העדפות.", "error")
             return redirect(url_for('auth.login'))
         
-        # התחברות אוטומטית של המשתמש ליישום
-        from flask_login import login_user
-        login_user(user)
+        # שמירת נתוני הטוקן בסשן ודרישת התחברות
+        from flask import session
+        session['preferences_user_id'] = user.id
+        session['preferences_token'] = token
         
-        # הפניה לעמוד ההעדפות עם הודעה
-        flash("כאן תוכלו לעדכן את העדפות הדוא\"ל והטלגרם שלכם", "info")
-        return redirect(url_for('profile.user_preferences'))
+        flash("כדי לעדכן את העדפות המייל, אנא התחבר לחשבון שלך", "info")
+        return redirect(url_for('auth.login'))
         
     except Exception as e:
         current_app.logger.error(f"Error in preferences_from_email: {str(e)}")

@@ -447,7 +447,8 @@ def send_newsletter(newsletter_id):
                     recipient_email=user.email,
                     recipient_name=f"{user.first_name} {user.last_name}",
                     subject=newsletter.title,
-                    html_content=html_content
+                    html_content=html_content,
+                    add_timestamp=False
                 )
                 
                 # רישום השליחה בבסיס הנתונים
