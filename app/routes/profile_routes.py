@@ -1091,13 +1091,17 @@ def unsubscribe_newsletter():
             flash("משתמש לא נמצא.", "error")
             return redirect(url_for('auth.login'))
         
-        # בדיקת תוקף הטוקן (ניתן להוסיף לוגיקה מתקדמת יותר)
-        # כאן נעשה בדיקה פשוטה
-        expected_token = str(abs(hash(f"{user.email}{user.id}")))[:10]
+        # בדיקת תוקף הטוקן
+        from app.routes.admin_routes.admin_newsletter_routes import generate_unsubscribe_token
+        expected_token = generate_unsubscribe_token(user)
         
         if token != expected_token:
             flash("קישור לא תקין לביטול הרשמה.", "error")
             return redirect(url_for('auth.login'))
+        
+        # התחברות אוטומטית של המשתמש ליישום
+        from flask_login import login_user
+        login_user(user)
         
         # ביטול הרשמה לניוזלטר
         user.newsletter_subscription = False
@@ -1113,14 +1117,6 @@ def unsubscribe_newsletter():
     return render_template("profile/unsubscribe_success.html")
 
 
-def generate_unsubscribe_token(user):
-    """יצירת טוקן לביטול הרשמה"""
-    return str(abs(hash(f"{user.email}{user.id}")))[:10]
-
-
-def generate_preferences_token(user):
-    """יצירת טוקן לעדכון העדפות"""
-    return str(abs(hash(f"{user.email}{user.id}preferences")))[:10]
 
 
 @profile_bp.route("/preferences_from_email")
@@ -1140,11 +1136,16 @@ def preferences_from_email():
             return redirect(url_for('auth.login'))
         
         # בדיקת תוקף הטוקן
+        from app.routes.admin_routes.admin_newsletter_routes import generate_preferences_token
         expected_token = generate_preferences_token(user)
         
         if token != expected_token:
             flash("קישור לא תקין לעדכון העדפות.", "error")
             return redirect(url_for('auth.login'))
+        
+        # התחברות אוטומטית של המשתמש ליישום
+        from flask_login import login_user
+        login_user(user)
         
         # הפניה לעמוד ההעדפות עם הודעה
         flash("כאן תוכלו לעדכן את העדפות הדוא\"ל והטלגרם שלכם", "info")

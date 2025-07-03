@@ -9,6 +9,19 @@
         /* ===================================================
            עיצוב ניוזלטר מתקדם ומעוצב
         =================================================== */
+        
+        /* כללי עברית - כיווניות */
+        .newsletter-container, .newsletter-content {
+            direction: rtl;
+        }
+        
+        /* יוצאי דופן - אלמנטים שצריכים להיות מרוכזים */
+        .header, .header h1, .header .subtitle,
+        .telegram-section h2, .additional-section h2,
+        .greeting-box h2, .cta-section, .cta-section h2,
+        .feature-card h3, .features-section h2 {
+            text-align: center !important;
+        }
         body {
             margin: 0;
             padding: 0;
@@ -44,7 +57,7 @@
             content: '🚀';
             position: absolute;
             top: 20px;
-            left: 30px;
+            right: 30px;
             font-size: 40px;
             opacity: 0.8;
             z-index: 1;
@@ -194,7 +207,7 @@
             content: '✨';
             position: absolute;
             top: 15px;
-            right: 20px;
+            left: 20px;
             font-size: 24px;
         }
         
@@ -292,9 +305,9 @@
 </head>
 <body dir="rtl">
     <div class="newsletter-container">
-        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" dir="rtl">
             <tr>
-                <td align="center">
+                <td align="center" dir="rtl">
                     <div class="newsletter-content">
                         <!-- Header -->
                         <div class="header">
