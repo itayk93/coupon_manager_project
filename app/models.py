@@ -790,22 +790,6 @@ class TelegramUser(db.Model):
         return False
 
 
-class TelegramUserAuditLog(db.Model):
-    """
-    טבלת לוג לשינויים בטבלת telegram_users
-    """
-    __tablename__ = "telegram_users_audit_log"
-
-    id = db.Column(db.Integer, primary_key=True)
-    telegram_user_id = db.Column(db.Integer, nullable=False)
-    action = db.Column(db.String(50), nullable=False)
-    changed_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
-    changed_by = db.Column(db.Integer)
-    old_values = db.Column(db.JSON)
-    new_values = db.Column(db.JSON)
-
-    def __repr__(self):
-        return f"<TelegramUserAuditLog {self.id}>"
 
 
 class Newsletter(db.Model):
