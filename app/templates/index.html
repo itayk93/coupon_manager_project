@@ -101,7 +101,20 @@
     </div>
 </section>
 
-
+{% if show_whatsapp_banner %}
+<section class="whatsapp-banner">
+    <div class="banner-content">
+        <div class="banner-text">
+            <h3>בשיתוף עם קבוצות ה-WhatsApp של<br> קוד קופון 1#💚עזרה הדדית בקופונים והטבות💚</h3>
+        </div>
+        <div class="banner-button">
+            <button class="whatsapp-btn" id="whatsapp-banner-btn">
+                <i class="fab fa-whatsapp"></i>
+            </button>
+        </div>
+    </div>
+</section>
+{% endif %}
 
 <!-- Company cards row -->
 <div id="company-cards-row" class="company-cards-row"></div>
@@ -2535,6 +2548,54 @@ document.addEventListener("DOMContentLoaded", function() {
       });
     {% endif %}
 });
+
+// WhatsApp Modal Functions - תיקון
+document.addEventListener("DOMContentLoaded", function() {
+    const whatsappBannerBtn = document.getElementById('whatsapp-banner-btn');
+
+    if (whatsappBannerBtn) {
+        whatsappBannerBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            openWhatsAppModal();
+        });
+    }
+
+    // Global functions for modal
+    window.openWhatsAppModal = function() {
+        const modal = document.getElementById('whatsappGroupsModal');
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    window.closeWhatsAppModal = function() {
+        const modal = document.getElementById('whatsappGroupsModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function(event) {
+        const modal = document.getElementById('whatsappGroupsModal');
+        if (event.target === modal) {
+            closeWhatsAppModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeWhatsAppModal();
+        }
+    });
+});
 </script>
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+
+<!-- Include WhatsApp Groups Modal -->
+{% include 'index_modals/whatsapp_groups_modal.html' %}
+
 {% endblock %}

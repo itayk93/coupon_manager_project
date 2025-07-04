@@ -114,6 +114,7 @@ class User(UserMixin, db.Model):
     # 🆕 Newsletter preferences
     newsletter_subscription = db.Column(db.Boolean, default=True, nullable=False)
     telegram_monthly_summary = db.Column(db.Boolean, default=True, nullable=False)
+    show_whatsapp_banner = db.Column(db.Boolean, default=True, nullable=False)
 
     # Relationships
     notifications = db.relationship("Notification", back_populates="user", lazy=True)

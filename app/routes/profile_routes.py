@@ -655,6 +655,8 @@ def index():
         show_review_modal=show_review_modal,
         # Add tour progress flag
         show_tour=show_tour,
+        # Add WhatsApp banner flag
+        show_whatsapp_banner=current_user.show_whatsapp_banner,
     )
 
 

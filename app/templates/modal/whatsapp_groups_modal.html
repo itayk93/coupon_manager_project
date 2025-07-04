@@ -1,0 +1,167 @@
+<!-- WhatsApp Groups Modal - Custom Modal -->
+<div class="custom-modal-overlay" id="whatsappGroupsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 9999;">
+    <div class="custom-modal-content" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 16px; width: 90%; max-width: 520px; max-height: 85vh; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); overflow: hidden; direction: rtl; z-index: 10000;">
+        <div class="modal-header" style="background: #25D366; color: white; padding: 16px 20px; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <h3 style="font-size: 18px; font-weight: 700; margin: 0; flex: 1; color: white;">
+                    <i class="fab fa-whatsapp" style="font-size: 20px; margin-left: 8px;"></i>
+                    קבוצות WhatsApp של קוד קופון
+                </h3>
+                <button type="button" class="close-modal" onclick="closeWhatsAppModal()" style="color: white; font-size: 24px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; padding: 4px; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.2); border: none; outline: none; position: absolute; left: 16px; top: 50%; transform: translateY(-50%);">&times;</button>
+            </div>
+        </div>
+        <div class="modal-body" style="padding: 20px; background: white; overflow-y: auto; max-height: calc(85vh - 64px);">
+            <div class="links-container" style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- WhatsApp Groups Section -->
+                <div>
+                    <h4 style="font-size: 16px; font-weight: 700; color: #25D366; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fab fa-whatsapp" style="font-size: 18px;"></i>
+                        קבוצות WhatsApp
+                    </h4>
+                    <div class="links-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <a href="https://chat.whatsapp.com/IwinaUuvpY2LBV1JuQhyu7" target="_blank" class="link-button whatsapp-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 8px; background: #25D366; color: white; text-decoration: none; font-weight: 600; border-radius: 12px; transition: all 0.3s ease; font-size: 14px; text-align: center;">
+                            <i class="fab fa-whatsapp" style="font-size: 16px;"></i>
+                            קוד קופון
+                        </a>
+                        <a href="https://chat.whatsapp.com/CxmRtTpeqcw1keG0oDFh5k" target="_blank" class="link-button whatsapp-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 8px; background: #25D366; color: white; text-decoration: none; font-weight: 600; border-radius: 12px; transition: all 0.3s ease; font-size: 14px; text-align: center;">
+                            <i class="fab fa-whatsapp" style="font-size: 16px;"></i>
+                            עדכונים
+                        </a>
+                        <a href="https://chat.whatsapp.com/G2FCo2ApcoC1ZNdlo5C67k" target="_blank" class="link-button whatsapp-btn" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 8px; background: #25D366; color: white; text-decoration: none; font-weight: 600; border-radius: 12px; transition: all 0.3s ease; font-size: 13px; text-align: center;">
+                            <i class="fab fa-whatsapp" style="font-size: 14px;"></i>
+                            כרטיסי הופעות
+                        </a>
+                        <a href="https://chat.whatsapp.com/CEbJ9XjucGmHE44oJlSPF" target="_blank" class="link-button whatsapp-btn" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 8px; background: #25D366; color: white; text-decoration: none; font-weight: 600; border-radius: 12px; transition: all 0.3s ease; font-size: 13px; text-align: center;">
+                            <i class="fab fa-whatsapp" style="font-size: 14px;"></i>
+                            כרטיסי ספורט
+                        </a>
+                        <a href="https://chat.whatsapp.com/HIVaGvghq2D8iu6bBM7uvh" target="_blank" class="link-button whatsapp-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 8px; background: #25D366; color: white; text-decoration: none; font-weight: 600; border-radius: 12px; transition: all 0.3s ease; font-size: 14px; text-align: center;">
+                            <i class="fab fa-whatsapp" style="font-size: 16px;"></i>
+                            מטיילים בארץ
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Social Media Section -->
+                <div>
+                    <h4 style="font-size: 16px; font-weight: 700; color: #6B7280; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-share-alt" style="font-size: 18px;"></i>
+                        רשתות חברתיות
+                    </h4>
+                    <div class="links-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <a href="https://www.facebook.com/groups/1661950784542323/?ref=share" target="_blank" class="link-button facebook-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 8px; background: #1877f2; color: white; text-decoration: none; font-weight: 600; border-radius: 12px; transition: all 0.3s ease; font-size: 14px; text-align: center;">
+                            <i class="fab fa-facebook-f" style="font-size: 16px;"></i>
+                            פייסבוק
+                        </a>
+                        <a href="https://www.instagram.com/kupunideal?igsh=dWU3ZGFtOWg3dnR0" target="_blank" class="link-button instagram-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 8px; background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); color: white; text-decoration: none; font-weight: 600; border-radius: 12px; transition: all 0.3s ease; font-size: 14px; text-align: center;">
+                            <i class="fab fa-instagram" style="font-size: 16px;"></i>
+                            אינסטגרם
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .link-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .whatsapp-btn:hover {
+        background: #1DA851 !important;
+    }
+
+    .facebook-btn:hover {
+        background: #166FE5 !important;
+    }
+
+    .instagram-btn:hover {
+        filter: brightness(1.1);
+    }
+
+    .close-modal:hover {
+        background: rgba(255, 255, 255, 0.3) !important;
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .custom-modal-content {
+            width: 95% !important;
+            max-width: none !important;
+            max-height: 90vh !important;
+        }
+        
+        .modal-header {
+            padding: 14px 16px !important;
+        }
+        
+        .modal-header h3 {
+            font-size: 16px !important;
+        }
+        
+        .close-modal {
+            width: 28px !important;
+            height: 28px !important;
+            font-size: 20px !important;
+            left: 12px !important;
+        }
+        
+        .modal-body {
+            padding: 16px !important;
+        }
+        
+        .links-container {
+            gap: 16px !important;
+        }
+        
+        .link-button {
+            padding: 10px 6px !important;
+            font-size: 13px !important;
+        }
+        
+        .link-button i {
+            font-size: 14px !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .custom-modal-content {
+            width: 98% !important;
+            max-height: 95vh !important;
+        }
+        
+        .modal-header {
+            padding: 12px 14px !important;
+        }
+        
+        .modal-header h3 {
+            font-size: 14px !important;
+        }
+        
+        .close-modal {
+            left: 10px !important;
+        }
+        
+        .modal-body {
+            padding: 14px !important;
+        }
+        
+        .links-grid {
+            gap: 8px !important;
+        }
+        
+        .link-button {
+            padding: 8px 4px !important;
+            font-size: 12px !important;
+            gap: 4px !important;
+        }
+        
+        .link-button i {
+            font-size: 12px !important;
+        }
+    }
+</style>
