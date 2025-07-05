@@ -5,6 +5,9 @@
 <!-- Add Shepherd.js CSS and JS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/css/shepherd.css"/>
 <script src="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/js/shepherd.min.js"></script>
+<!-- Add QRCode.js library -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
 <section class="coupon-detail-container">
     <div class="coupon-card-details">
@@ -125,13 +128,38 @@
 
 
                             {% if is_owner and coupon.status == 'פעיל' %}
-                                <div class="mark-as-used-container">
-                                    <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
-                                        {{ mark_form.hidden_tag() }}
-                                        {{ mark_form.submit(class="danger-button",
-                                            onclick="return confirmAction('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');") }}
-                                    </form>
-                                </div>
+                                {% if coupon.is_one_time %}
+                                    <!-- For one-time coupons: buttons side by side centered -->
+                                    <div class="one-time-buttons-container">
+                                        <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
+                                            {{ mark_form.hidden_tag() }}
+                                            <button type="submit" class="action-button danger-button" onclick="return confirmAction('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');">
+                                                <i class="fas fa-times-circle"></i> סימון הקופון כנוצל
+                                            </button>
+                                        </form>
+                                        
+                                        {% if can_share %}
+                                        <button class="action-button share-button" onclick="openShareModal()">
+                                            <i class="fas fa-share-alt"></i> 
+                                            {% if current_user.gender == 'נקבה' or current_user.gender == 'female' %}
+                                                שתפי את הקופון עם חבר
+                                            {% else %}
+                                                שתף את הקופון עם חבר
+                                            {% endif %}
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <!-- For regular coupons: only mark as used button centered -->
+                                    <div class="mark-as-used-container">
+                                        <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
+                                            {{ mark_form.hidden_tag() }}
+                                            <button type="submit" class="action-button danger-button" onclick="return confirmAction('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');">
+                                                <i class="fas fa-times-circle"></i> סימון הקופון כנוצל
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% endif %}
                             {% endif %}
                         {% endif %}
 
@@ -152,6 +180,20 @@
                             </div>
                         {% endif %}
                     </div>
+                    
+                    <!-- For regular coupons: share button in center -->
+                    {% if can_share and not coupon.is_one_time and is_owner and coupon.status == 'פעיל' %}
+                    <div class="share-container" style="margin-top: 30px; text-align: center;">
+                        <button class="action-button share-button" onclick="openShareModal()">
+                            <i class="fas fa-share-alt"></i> 
+                            {% if current_user.gender == 'נקבה' or current_user.gender == 'female' %}
+                                שתפי את הקופון עם חבר
+                            {% else %}
+                                שתף את הקופון עם חבר
+                            {% endif %}
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
 
                 {% if not coupon.is_for_sale %}
@@ -368,6 +410,30 @@
                 </div>
             {% endif %}
         </div>
+        
+        <!-- Sharing Information Section -->
+        {% if sharing_data %}
+        <div class="sharing-info-section">
+            <h4><i class="fas fa-users"></i> קופון משותף עם:</h4>
+            <div class="shared-users-list">
+                {% for share in sharing_data %}
+                <div class="shared-user-item">
+                    <div class="user-info">
+                        <i class="fas fa-user-circle"></i>
+                        <span class="user-name">{{ share.shared_with.first_name }} {{ share.shared_with.last_name }}</span>
+                        <span class="share-date">משותף מ-{{ share.accepted_at.strftime('%d/%m/%Y') if share.accepted_at else 'לא ידוע' }}</span>
+                    </div>
+                    {% if share.can_revoke %}
+                    <button class="revoke-button" onclick="revokeSharing({{ share.id }})">
+                        <i class="fas fa-times"></i> בטל שיתוף
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
         <div class="action-buttons secondary-row">
             <a href="{{ url_for('coupons.update_coupon_usage_route', id=coupon.id) }}" class="action-button update-button">
                 <i class="fas fa-sync-alt"></i> עדכון שימוש בקופון
@@ -750,6 +816,355 @@
                 }
             });
         });
+
+        // Sharing functionality
+        window.openShareModal = function() {
+            // Check current share status
+            fetch(`/get_current_share_link/{{ coupon.id }}`)
+                .then(response => response.json())
+                .then(data => {
+                    let modalContent = '';
+                    let modalTitle = 'שיתוף קופון';
+                    
+                    if (data.status === 'none') {
+                        modalContent = `
+                            <div class="share-modal-content-inner">
+                                <p>צור קישור שיתוף עבור קופון זה. הקישור יהיה תקף למשך 7 יום.</p>
+                                <button class="share-btn share-btn-primary" onclick="generateShareLink()">
+                                    <i class="fas fa-link"></i> צור קישור שיתוף
+                                </button>
+                            </div>
+                        `;
+                    } else if (data.status === 'expired') {
+                        modalContent = `
+                            <div class="share-modal-content-inner">
+                                <p>הקישור הקודם פג תוקף. תוכל ליצור קישור חדש.</p>
+                                <button class="share-btn share-btn-warning" onclick="generateShareLink()">
+                                    <i class="fas fa-redo"></i> צור קישור חדש
+                                </button>
+                            </div>
+                        `;
+                    } else if (data.status === 'active') {
+                        const expiresDate = new Date(data.expires_at).toLocaleDateString('he-IL');
+                        modalContent = `
+                            <div class="share-modal-content-inner">
+                                <p>קישור שיתוף פעיל (תוקף עד: ${expiresDate})</p>
+                                <div class="qr-code-container" style="text-align: center; margin: 20px 0;">
+                                    <div id="qrcode" style="margin: 0 auto;"></div>
+                                    <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                                        סרוק את ה-QR Code או השתמש בקישור למטה<br>
+                                        <small style="color: #999;">הקישור תקף ל-7 ימים ויכול לשמש פעם אחת בלבד</small>
+                                    </p>
+                                    <button class="share-btn share-btn-secondary" onclick="downloadQRCode()" style="margin-top: 10px; font-size: 0.9em;">
+                                        <i class="fas fa-download"></i> הורד QR Code
+                                    </button>
+                                </div>
+                                <div class="share-link-container">
+                                    <input type="text" id="shareLink" value="${data.link}" readonly>
+                                    <button class="share-btn share-btn-success" onclick="copyShareLink()">
+                                        <i class="fas fa-copy"></i> העתק
+                                    </button>
+                                </div>
+                                <div class="social-share-buttons" style="margin-top: 15px; text-align: center;">
+                                    <button class="share-btn share-social whatsapp-btn" onclick="shareToWhatsApp()">
+                                        <i class="fab fa-whatsapp"></i> שתף בווטסאפ
+                                    </button>
+                                    <button class="share-btn share-social telegram-btn" onclick="shareToTelegram()">
+                                        <i class="fab fa-telegram"></i> שתף בטלגרם
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    showModal(modalTitle, modalContent);
+                    
+                    // Generate QR Code for active share link
+                    if (data.status === 'active') {
+                        setTimeout(() => {
+                            const qrCodeContainer = document.getElementById('qrcode');
+                            if (qrCodeContainer) {
+                                qrCodeContainer.innerHTML = ''; // Clear any existing QR code
+                                
+                                try {
+                                    if (window.qrcode) {
+                                        // Create QR code using qrcode-generator library
+                                        const qr = qrcode(0, 'M');
+                                        qr.addData(data.link);
+                                        qr.make();
+                                        
+                                        // Create QR code as image with better styling
+                                        const qrHtml = qr.createImgTag(4, 4);
+                                        qrCodeContainer.innerHTML = qrHtml;
+                                    } else {
+                                        // Fallback: show text if QR library not loaded
+                                        qrCodeContainer.innerHTML = '<p style="color: #666; font-size: 0.9em;">QR Code לא זמין</p>';
+                                    }
+                                } catch (error) {
+                                    console.error('Error generating QR code:', error);
+                                    qrCodeContainer.innerHTML = '<p style="color: #666; font-size: 0.9em;">שגיאה ביצירת QR Code</p>';
+                                }
+                            }
+                        }, 150);
+                    }
+                });
+        };
+
+        window.generateShareLink = function() {
+            fetch(`/generate_share_link/{{ coupon.id }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const expiresDate = new Date(data.expires_at).toLocaleDateString('he-IL');
+                    const modalContent = `
+                        <div class="share-modal-content-inner">
+                            <p>קישור שיתוף קופון נוצר בהצלחה!</p>
+                            <div class="share-info" style="background: #e8f5e8; border-radius: 8px; padding: 15px; margin: 15px 0; text-align: center; direction: rtl;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                    <span style="color: #28a745; font-weight: 600;">
+                                        <i class="fas fa-calendar-alt"></i> תוקף עד: ${expiresDate}
+                                    </span>
+                                    <span style="color: #007bff; font-weight: 600;">
+                                        <i class="fas fa-clock"></i> נוצר עכשיו
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="qr-code-container" style="text-align: center; margin: 20px 0;">
+                                <div id="qrcode" style="margin: 0 auto;"></div>
+                                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                                    סרוק את ה-QR Code או השתמש בקישור למטה<br>
+                                    <small style="color: #999;">הקישור תקף ל-7 ימים ויכול לשמש פעם אחת בלבד</small>
+                                </p>
+                                <button class="share-btn share-btn-secondary" onclick="downloadQRCode()" style="margin-top: 10px; font-size: 0.9em;">
+                                    <i class="fas fa-download"></i> הורד QR Code
+                                </button>
+                            </div>
+                            <div class="share-link-container">
+                                <input type="text" id="shareLink" value="${data.share_link}" readonly>
+                                <button class="share-btn share-btn-success" onclick="copyShareLink()">
+                                    <i class="fas fa-copy"></i> העתק
+                                </button>
+                            </div>
+                            <div class="social-share-buttons" style="margin-top: 15px; text-align: center;">
+                                <button class="share-btn share-social whatsapp-btn" onclick="shareToWhatsApp()">
+                                    <i class="fab fa-whatsapp"></i> שתף בווטסאפ
+                                </button>
+                                <button class="share-btn share-social telegram-btn" onclick="shareToTelegram()">
+                                    <i class="fab fa-telegram"></i> שתף בטלגרם
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    showModal('קישור שיתוף קופון נוצר', modalContent);
+                    
+                    // Generate QR Code after modal is shown
+                    setTimeout(() => {
+                        const qrCodeContainer = document.getElementById('qrcode');
+                        if (qrCodeContainer) {
+                            qrCodeContainer.innerHTML = ''; // Clear any existing QR code
+                            
+                            try {
+                                if (window.qrcode) {
+                                    // Create QR code using qrcode-generator library
+                                    const qr = qrcode(0, 'M');
+                                    qr.addData(data.share_link);
+                                    qr.make();
+                                    
+                                    // Create QR code as image with better styling
+                                    const qrHtml = qr.createImgTag(4, 4);
+                                    qrCodeContainer.innerHTML = qrHtml;
+                                } else {
+                                    // Fallback: show text if QR library not loaded
+                                    qrCodeContainer.innerHTML = '<p style="color: #666; font-size: 0.9em;">QR Code לא זמין</p>';
+                                }
+                            } catch (error) {
+                                console.error('Error generating QR code:', error);
+                                qrCodeContainer.innerHTML = '<p style="color: #666; font-size: 0.9em;">שגיאה ביצירת QR Code</p>';
+                            }
+                        }
+                    }, 150);
+                } else {
+                    alert('שגיאה ביצירת קישור השיתוף');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('שגיאה ביצירת קישור השיתוף');
+            });
+        };
+
+        window.copyShareLink = function() {
+            const linkInput = document.getElementById('shareLink');
+            linkInput.select();
+            document.execCommand('copy');
+            
+            // Show success message
+            const copyButton = event.target.closest('button');
+            const originalText = copyButton.innerHTML;
+            copyButton.innerHTML = '<i class="fas fa-check"></i> הועתק!';
+            copyButton.classList.add('btn-success');
+            
+            setTimeout(() => {
+                copyButton.innerHTML = originalText;
+            }, 2000);
+        };
+
+        window.revokeSharing = function(shareId) {
+            if (confirm('האם אתה בטוח שברצונך לבטל את השיתוף?')) {
+                fetch(`/revoke_sharing/${shareId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('השיתוף בוטל בהצלחה');
+                        location.reload(); // Refresh to update the sharing display
+                    } else {
+                        alert('שגיאה בביטול השיתוף');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('שגיאה בביטול השיתוף');
+                });
+            }
+        };
+
+        function showModal(title, content) {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('shareModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'shareModal';
+                modal.className = 'share-modal';
+                modal.innerHTML = `
+                    <div class="share-modal-content">
+                        <div class="share-modal-header">
+                            <h3 class="share-modal-title"></h3>
+                            <button type="button" class="share-close-modal" onclick="closeModal()">&times;</button>
+                        </div>
+                        <div class="share-modal-body"></div>
+                        <div class="share-modal-footer">
+                            <button type="button" class="share-btn share-btn-secondary" onclick="closeModal()">סגור</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            // Update modal content
+            modal.querySelector('.share-modal-title').textContent = title;
+            modal.querySelector('.share-modal-body').innerHTML = content;
+            
+            // Show modal
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+        }
+
+        window.closeModal = function() {
+            const modal = document.getElementById('shareModal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('active');
+            }
+        };
+
+        window.downloadQRCode = function() {
+            const qrImg = document.querySelector('#qrcode img');
+            if (qrImg) {
+                try {
+                    // Create a temporary canvas to convert the QR code to a downloadable image
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Set canvas size - use natural dimensions or fallback
+                    const size = qrImg.naturalWidth || qrImg.width || 200;
+                    canvas.width = size;
+                    canvas.height = size;
+                    
+                    // Fill with white background first
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, size, size);
+                    
+                    // Draw the QR code image onto the canvas
+                    ctx.drawImage(qrImg, 0, 0, size, size);
+                    
+                    // Create download link
+                    const link = document.createElement('a');
+                    link.download = 'קופון-שיתוף-qr-code.png';
+                    link.href = canvas.toDataURL('image/png');
+                    
+                    // Trigger download
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Show success message
+                    const downloadBtn = event.target.closest('button');
+                    const originalHtml = downloadBtn.innerHTML;
+                    downloadBtn.innerHTML = '<i class="fas fa-check"></i> הורד בהצלחה!';
+                    setTimeout(() => {
+                        downloadBtn.innerHTML = originalHtml;
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('Error downloading QR code:', error);
+                    alert('שגיאה בהורדת QR Code');
+                }
+            } else {
+                alert('QR Code לא זמין להורדה');
+            }
+        };
+
+        window.shareToWhatsApp = function() {
+            const shareLink = document.getElementById('shareLink').value;
+            const companyName = "{{ coupon.company }}";
+            const userGender = "{{ current_user.gender }}";
+            
+            let greeting, verb, clickText;
+            if (userGender === 'נקבה' || userGender === 'female') {
+                greeting = "היי! משתפת";
+                verb = "איתך";
+                clickText = "לחצי";
+            } else {
+                greeting = "היי! משתף";
+                verb = "איתך";
+                clickText = "לחץ";
+            }
+            
+            const message = encodeURIComponent(`${greeting} ${verb} את הקופון של ${companyName}! ${clickText} על הקישור לצפייה: ${shareLink}`);
+            window.open(`https://wa.me/?text=${message}`, '_blank');
+        };
+
+        window.shareToTelegram = function() {
+            const shareLink = document.getElementById('shareLink').value;
+            const companyName = "{{ coupon.company }}";
+            const userGender = "{{ current_user.gender }}";
+            
+            let greeting, verb, clickText;
+            if (userGender === 'נקבה' || userGender === 'female') {
+                greeting = "היי! משתפת";
+                verb = "איתך";
+                clickText = "לחצי";
+            } else {
+                greeting = "היי! משתף";
+                verb = "איתך";
+                clickText = "לחץ";
+            }
+            
+            const message = encodeURIComponent(`${greeting} ${verb} את הקופון של ${companyName}! ${clickText} על הקישור לצפייה: ${shareLink}`);
+            window.open(`https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${message}`, '_blank');
+        };
 
         // עיצוב תאריכים בטבלת העסקאות
         document.querySelectorAll('.transaction-date').forEach(function (elem) {
@@ -1218,8 +1633,29 @@
 
 .danger-button,
 .delete-button {
-    background: var(--danger-color);
-    color: white;
+    background: linear-gradient(135deg, #dc3545, #c82333) !important;
+    color: white !important;
+    border: none !important;
+    padding: 15px 30px !important;
+    border-radius: 50px !important;
+    font-size: 1.1em !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3) !important;
+}
+
+.danger-button:hover,
+.delete-button:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4) !important;
+    background: linear-gradient(135deg, #c82333, #dc3545) !important;
+    color: white !important;
+    text-decoration: none !important;
 }
 
 .your-coupon-badge {
@@ -1451,32 +1887,401 @@
     grid-column: 1 / -1;
 }
 
-.mark-as-used-container .danger-button {
-    background: linear-gradient(to right, #e74c3c, #c0392b);
-    color: white;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 50px;
-    font-size: 1em;
+/* Sharing Functionality Styles */
+.sharing-info-section {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.sharing-info-section h4 {
+    color: #495057;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+
+.shared-users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.shared-user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-info i {
+    color: #007bff;
+    font-size: 1.2em;
+}
+
+.user-name {
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    transition: all 0.3s ease;
+    color: #495057;
+}
+
+.share-date {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-left: 10px;
+}
+
+.revoke-button {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.85em;
     cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.revoke-button:hover {
+    background: #c82333;
+}
+
+.share-button {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+    color: white !important;
+}
+
+.share-button:hover {
+    background: linear-gradient(135deg, #20c997, #28a745) !important;
+    transform: translateY(-2px);
+}
+
+/* Share Modal Styles - Based on quick_add_coupon_modal.html */
+.share-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1050;
+    background-color: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    direction: rtl;
+}
+
+.share-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.share-modal-content {
+    direction: rtl;
+    background-color: white;
+    width: 90%;
+    max-width: 500px;
+    max-height: 85vh;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    position: relative;
+    overflow-y: auto;
+    transform: translateY(0);
+    opacity: 1;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.share-modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f9fa;
+    position: relative;
+}
+
+.share-modal-title {
+    margin: 0;
+    color: #3498db;
+    font-size: 1.4em;
+    font-weight: 600;
+    text-align: center;
+    flex: 1;
+}
+
+.share-close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.2s ease;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.share-close-modal:hover {
+    color: #e74c3c;
+}
+
+.share-modal-body {
+    padding: 20px;
+    direction: rtl;
+    text-align: right;
+}
+
+.share-modal-content-inner {
+    text-align: center;
+}
+
+.share-modal-content-inner p {
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    color: #2c3e50;
+}
+
+.share-modal-footer {
+    display: flex;
+    justify-content: center;
+    padding: 15px 20px;
+    border-top: 1px solid #dee2e6;
+    gap: 10px;
+}
+
+.share-link-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    direction: ltr;
+}
+
+.qr-code-container {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 15px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 2px solid #dee2e6;
+    text-align: center;
+}
+
+.qr-code-container #qrcode {
+    display: inline-block;
+    padding: 10px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.qr-code-container #qrcode img {
+    display: block;
+    margin: 0 auto;
+    border-radius: 5px;
+}
+
+.qr-code-container p {
+    margin: 15px 0 0 0 !important;
+    color: #6c757d !important;
+    font-size: 0.9em !important;
+    font-weight: 500;
+}
+
+.social-share-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.share-social {
+    font-size: 0.9em;
+    padding: 8px 16px;
+    border-radius: 25px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.whatsapp-btn {
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: white;
+}
+
+.whatsapp-btn:hover {
+    background: linear-gradient(135deg, #128C7E, #25D366);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+}
+
+.telegram-btn {
+    background: linear-gradient(135deg, #0088cc, #006bb3);
+    color: white;
+}
+
+.telegram-btn:hover {
+    background: linear-gradient(135deg, #006bb3, #0088cc);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 136, 204, 0.3);
+}
+
+.share-link-container input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: #f8f9fa;
+    direction: ltr;
+    text-align: left;
+}
+
+.share-link-container input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
     outline: none;
-    transform: scale(0.9); /* מקטין את הכפתור ב-10% */
 }
 
-.mark-as-used-container .danger-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-    background: linear-gradient(to right, #c0392b, #e74c3c);
+.share-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 1em;
 }
 
-.mark-as-used-container .danger-button:active {
-    transform: translateY(1px);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+.share-btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.share-btn-primary:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+}
+
+.share-btn-warning {
+    background-color: #f39c12;
+    color: white;
+}
+
+.share-btn-warning:hover {
+    background-color: #e67e22;
+    transform: translateY(-2px);
+}
+
+.share-btn-success {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.share-btn-success:hover {
+    background-color: #27ae60;
+    transform: translateY(-2px);
+}
+
+.share-btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.share-btn-secondary:hover {
+    background-color: #545b62;
+    transform: translateY(-2px);
+}
+
+/* Responsive adjustments for share modal */
+@media (max-width: 768px) {
+    .share-modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .share-modal-title {
+        font-size: 1.2em;
+    }
+    
+    .share-link-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .share-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .social-share-buttons {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .share-social {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 16px;
+    }
+}
+
+/* One-time coupons buttons container */
+.one-time-buttons-container {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    width: 100%;
+    flex-direction: row; /* כוחן אחד ליד השני */
+}
+
+.one-time-buttons-container .action-button,
+.one-time-buttons-container .danger-button {
+    flex: 0 0 auto; /* לא לתת להם להתרחב או להתכווץ */
+    min-width: 200px; /* רוחב מינימלי */
+}
+
+@media (max-width: 600px) {
+    .one-time-buttons-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .one-time-buttons-container .action-button,
+    .one-time-buttons-container .danger-button {
+        width: 100%;
+        max-width: 300px;
+    }
 }
 
 /* Add Shepherd Tour Custom Styles */

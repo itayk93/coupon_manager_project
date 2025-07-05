@@ -4,7 +4,14 @@ import sys
 import logging
 import threading
 import asyncio
+from dotenv import load_dotenv
+
+# טען את קובץ .env קודם
+load_dotenv()
+
+# עכשיו יבא את create_app - אחרי שהמשתנים מוגדרים
 from app import create_app
+
 
 def setup_production_logging():
     """
@@ -157,11 +164,11 @@ if __name__ == '__main__':
         start_bot_if_enabled()
         
         # Start Flask server
-        logger.info("Starting Flask server on 0.0.0.0:10000")
-        print("Starting Flask server on 0.0.0.0:10000", flush=True)
+        logger.info("Starting Flask server on 127.0.0.1:10000")
+        print("Starting Flask server on 127.0.0.1:10000", flush=True)
         
         app.run(
-            host='0.0.0.0', 
+            host='127.0.0.1', 
             port=10000, 
             debug=False,
             use_reloader=False,

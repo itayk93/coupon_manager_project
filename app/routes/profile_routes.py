@@ -849,7 +849,7 @@ def rate_user(user_id, transaction_id):
 
     # לוודא שמשתמש לא יכול לדרג את עצמו
     if user_id == current_user.id:
-        flash("You cannot rate yourself!", "warning")
+        flash("לא ניתן לדרג את עצמך!", "warning")
         return redirect(url_for("profile.user_profile", user_id=user_id))
 
     # לוודא שהעסקה קיימת בין המשתמשים (transaction)
@@ -863,7 +863,7 @@ def rate_user(user_id, transaction_id):
     ).first()
 
     if not transaction:
-        flash("Transaction not found or unauthorized.", "error")
+        flash("עסקה לא נמצאה או אין הרשאה.", "error")
         return redirect(url_for("profile.user_profile", user_id=user_id))
 
     # לוודא שלא קיימת ביקורת על העסקה הזו
@@ -874,7 +874,7 @@ def rate_user(user_id, transaction_id):
     ).first()
 
     if existing_review:
-        flash("You have already written a review for this transaction.", "warning")
+        flash("כבר כתבת ביקורת על עסקה זו.", "warning")
         return redirect(url_for("profile.user_profile", user_id=user_id))
 
     if form.validate_on_submit():
@@ -887,7 +887,7 @@ def rate_user(user_id, transaction_id):
         )
         db.session.add(new_review)
         db.session.commit()
-        flash("Your review has been saved successfully!", "success")
+        flash("הביקורת שלך נשמרה בהצלחה!", "success")
         return redirect(url_for("profile.user_profile", user_id=current_user.id))
 
     return render_template(

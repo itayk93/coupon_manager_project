@@ -39,6 +39,8 @@ from app.models import (
     CouponTransaction,
     coupon_tags,
     UserTourProgress,
+    CouponShares,
+    CouponActiveViewers,
 )
 from app.forms import (
     ProfileForm,
@@ -361,12 +363,30 @@ def sell_coupon():
 def show_coupons():
     # log_user_activity("show_coupons", None)
 
-    coupons = (
+    # Get owned coupons
+    owned_coupons = (
         Coupon.query.options(joinedload(Coupon.tags))
         .filter_by(user_id=current_user.id, is_for_sale=False)
         .all()
     )
-    for coupon in coupons:
+    
+    # Get shared coupons (accepted shares)
+    shared_coupons = (
+        db.session.query(Coupon)
+        .options(joinedload(Coupon.tags))
+        .join(CouponShares, Coupon.id == CouponShares.coupon_id)
+        .filter(
+            CouponShares.shared_with_user_id == current_user.id,
+            CouponShares.status == "accepted",
+            Coupon.is_for_sale == False
+        )
+        .all()
+    )
+    
+    # Combine all accessible coupons
+    all_coupons = owned_coupons + shared_coupons
+    
+    for coupon in all_coupons:
         update_coupon_status(coupon)
     db.session.commit()
 
@@ -378,11 +398,11 @@ def show_coupons():
 
     active_coupons = [
         coupon
-        for coupon in coupons
+        for coupon in all_coupons
         if coupon.status == "פעיל" and not coupon.is_one_time
     ]
     active_one_time_coupons = [
-        coupon for coupon in coupons if coupon.status == "פעיל" and coupon.is_one_time
+        coupon for coupon in all_coupons if coupon.status == "פעיל" and coupon.is_one_time
     ]
 
     latest_usage_subquery = (
@@ -393,7 +413,8 @@ def show_coupons():
         .subquery()
     )
 
-    inactive_coupons_query = (
+    # Get inactive owned coupons
+    inactive_owned_query = (
         db.session.query(Coupon, latest_usage_subquery.c.latest_usage)
         .outerjoin(
             latest_usage_subquery, Coupon.id == latest_usage_subquery.c.coupon_id
@@ -409,14 +430,45 @@ def show_coupons():
             Coupon.company.asc(),
         )
     )
+    
+    # Get inactive shared coupons
+    inactive_shared_query = (
+        db.session.query(Coupon, latest_usage_subquery.c.latest_usage)
+        .outerjoin(
+            latest_usage_subquery, Coupon.id == latest_usage_subquery.c.coupon_id
+        )
+        .options(joinedload(Coupon.tags))
+        .join(CouponShares, Coupon.id == CouponShares.coupon_id)
+        .filter(
+            CouponShares.shared_with_user_id == current_user.id,
+            CouponShares.status == "accepted",
+            Coupon.status != "פעיל",
+            Coupon.is_for_sale == False,
+        )
+        .order_by(
+            latest_usage_subquery.c.latest_usage.desc().nullslast(),
+            Coupon.company.asc(),
+        )
+    )
 
-    inactive_coupons_with_usage = inactive_coupons_query.all()
+    inactive_coupons_with_usage = inactive_owned_query.all() + inactive_shared_query.all()
 
     coupons_for_sale = (
         Coupon.query.filter_by(user_id=current_user.id, is_for_sale=True)
         .order_by(Coupon.date_added.desc())
         .all()
     )
+    
+    # Add sharing information for template
+    sharing_info = {}
+    for coupon in all_coupons:
+        # Check if user is owner
+        is_owner = coupon.user_id == current_user.id
+        sharing_info[coupon.id] = {
+            'is_owner': is_owner,
+            'is_shared': not is_owner,  # If not owner, then it's shared with user
+            'can_share': is_owner and coupon.status == "פעיל"
+        }
 
     return render_template(
         "coupons.html",
@@ -425,6 +477,7 @@ def show_coupons():
         inactive_coupons_with_usage=inactive_coupons_with_usage,
         coupons_for_sale=coupons_for_sale,
         company_logo_mapping=company_logo_mapping,
+        sharing_info=sharing_info,
     )
 
 
@@ -1674,7 +1727,7 @@ def add_coupon():
                 if image_file and image_file.filename != "":
                     debug_print(f"Image file: {image_file.filename}")
                     try:
-                        flash("Starting image processing...", "info")
+                        flash("מתחיל עיבוד תמונה...", "info")
                         upload_folder = current_app.config.get(
                             "UPLOAD_FOLDER", "uploads"
                         )
@@ -1711,11 +1764,11 @@ def add_coupon():
                             companies_list=companies_list,
                         )
                         debug_print("Image processing completed")
-                        flash("extract_coupon_detail_image_proccess completed.", "info")
+                        flash("עיבוד פרטי הקופון מהתמונה הושלם.", "info")
 
                         if not coupon_df.empty:
                             debug_print("Coupon details extracted successfully")
-                            flash("Coupon details extracted successfully.", "success")
+                            flash("פרטי הקופון נחלצו בהצלחה.", "success")
 
                             extracted_company = coupon_df.loc[0, "חברה"]
                             debug_print(f"Extracted company: {extracted_company}")
@@ -1880,7 +1933,7 @@ def add_coupon():
                         )
                 else:
                     debug_print("No image provided", "WARNING")
-                    flash("Image is required.", "danger")
+                    flash("יש להעלות תמונה.", "danger")
                 debug_print("Rendering template after image processing")
                 return render_template(
                     "add_coupon.html",
@@ -2730,14 +2783,28 @@ def coupon_detail(id):
     """
 
     # ------------------------------------------------------------------
-    # 1) Fetch the coupon **only** if the current user is the owner.
-    #    first_or_404() automatically returns a 404 error if no record
-    #    matches (either coupon does not exist OR belongs to someone else).
+    # 1) Fetch the coupon if the current user is the owner OR has shared access.
     # ------------------------------------------------------------------
-    coupon = Coupon.query.filter_by(id=id, user_id=current_user.id).first_or_404()
-
-    # At this point we know the viewer is the owner.
-    is_owner = True
+    coupon = Coupon.query.get_or_404(id)
+    
+    # Check if user is owner
+    is_owner = coupon.user_id == current_user.id
+    
+    # Check if user has shared access
+    has_shared_access = False
+    if not is_owner:
+        shared_access = CouponShares.query.filter_by(
+            coupon_id=id,
+            shared_with_user_id=current_user.id,
+            status="accepted"
+        ).first()
+        has_shared_access = shared_access is not None
+    
+    # User must be owner or have shared access
+    if not (is_owner or has_shared_access):
+        # Use 404 to avoid revealing coupon existence
+        from flask import abort
+        abort(404)
 
     # ------------------------------------------------------------------
     # 2) Initialize WTForms instances used in the template.
@@ -2854,12 +2921,46 @@ def coupon_detail(id):
     )
 
     # ------------------------------------------------------------------
-    # 5) Render the template with all the gathered context.
+    # 5) Get sharing information for display
+    # ------------------------------------------------------------------
+    sharing_data = []
+    if is_owner:
+        # Get all accepted shares for this coupon
+        shares = CouponShares.query.filter_by(
+            coupon_id=id,
+            status="accepted"
+        ).all()
+        
+        for share in shares:
+            sharing_data.append({
+                'id': share.id,
+                'shared_with': share.shared_with_user,
+                'accepted_at': share.accepted_at,
+                'can_revoke': True
+            })
+    
+    # Check current share link status
+    current_share_status = "none"
+    if is_owner:
+        current_share = CouponShares.query.filter_by(
+            coupon_id=id,
+            shared_by_user_id=current_user.id,
+            status="pending"
+        ).order_by(CouponShares.created_at.desc()).first()
+        
+        if current_share:
+            if current_share.share_expires_at > datetime.now(timezone.utc):
+                current_share_status = "active"
+            else:
+                current_share_status = "expired"
+    
+    # ------------------------------------------------------------------
+    # 6) Render the template with all the gathered context.
     # ------------------------------------------------------------------
     return render_template(
         "coupon_detail.html",
         coupon=coupon,
-        is_owner=is_owner,  # always True here
+        is_owner=is_owner,
         mark_form=mark_form,
         delete_form=delete_form,
         update_form=update_form,
@@ -2870,7 +2971,10 @@ def coupon_detail(id):
         card_exp=coupon.card_exp,
         show_multipass_button=show_multipass_button,
         should_show_tour=should_show_tour,
-        coupon_detail_timestamp=coupon_detail_timestamp
+        coupon_detail_timestamp=coupon_detail_timestamp,
+        sharing_data=sharing_data,
+        current_share_status=current_share_status,
+        can_share=is_owner and coupon.status == "פעיל"
     )
 
 
@@ -2884,7 +2988,20 @@ def delete_coupon(id):
     if form.validate_on_submit():
         coupon = Coupon.query.get_or_404(id)
         if coupon.user_id != current_user.id:
-            flash("אינך מורשה למחוק קופון זה.", "danger")
+            # Check if this is a shared coupon
+            shared_access = CouponShares.query.filter_by(
+                coupon_id=id,
+                shared_with_user_id=current_user.id,
+                status="accepted"
+            ).first()
+            
+            if shared_access:
+                # This is a shared coupon - provide specific message
+                original_owner = coupon.user
+                flash(f"לא ניתן למחוק קופון זה. זהו קופון של {original_owner.first_name} {original_owner.last_name} שהוא שיתף איתך. רק בעל הקופון יכול למחוק אותו.", "danger")
+            else:
+                # Regular unauthorized access
+                flash("אינך מורשה למחוק קופון זה.", "danger")
             return redirect(url_for("coupons.show_coupons"))
 
         transactions = Transaction.query.filter_by(coupon_id=coupon.id).all()
@@ -2959,7 +3076,20 @@ def confirm_delete_coupon(id):
     # log_user_activity("confirm_delete_coupon_view", coupon.id)
 
     if coupon.user_id != current_user.id:
-        flash("אינך מורשה למחוק קופון זה.", "danger")
+        # Check if this is a shared coupon
+        shared_access = CouponShares.query.filter_by(
+            coupon_id=id,
+            shared_with_user_id=current_user.id,
+            status="accepted"
+        ).first()
+        
+        if shared_access:
+            # This is a shared coupon - provide specific message
+            original_owner = coupon.user
+            flash(f"לא ניתן למחוק קופון זה. זהו קופון של {original_owner.first_name} {original_owner.last_name} שהוא שיתף איתך. רק בעל הקופון יכול למחוק אותו.", "danger")
+        else:
+            # Regular unauthorized access
+            flash("אינך מורשה למחוק קופון זה.", "danger")
         return redirect(url_for("coupons.show_coupons"))
 
     form = ConfirmDeleteForm()

@@ -849,3 +849,54 @@ class NewsletterSending(db.Model):
     
     def __repr__(self):
         return f"<NewsletterSending {self.id}: Newsletter {self.newsletter_id} to User {self.user_id}>"
+
+
+class CouponShares(db.Model):
+    """
+    Coupon shares table - manages coupon sharing lifecycle
+    """
+    __tablename__ = "coupon_shares"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    coupon_id = db.Column(db.Integer, db.ForeignKey("coupon.id"), nullable=False)
+    shared_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    shared_with_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    share_token = db.Column(db.String(255), unique=True, nullable=False)
+    status = db.Column(db.String(20), default="pending", nullable=False)  # pending, accepted, cancelled, expired, revoked
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    accepted_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    revoked_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    share_expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    revocation_token = db.Column(db.String(255), nullable=True)
+    revocation_token_expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    revocation_requested_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    revocation_requested_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    coupon = db.relationship("Coupon", backref="shares")
+    shared_by_user = db.relationship("User", foreign_keys=[shared_by_user_id], backref="shares_given")
+    shared_with_user = db.relationship("User", foreign_keys=[shared_with_user_id], backref="shares_received")
+    revocation_requested_by_user = db.relationship("User", foreign_keys=[revocation_requested_by])
+    
+    def __repr__(self):
+        return f"<CouponShares {self.id}: Coupon {self.coupon_id} shared by {self.shared_by_user_id}>"
+
+
+class CouponActiveViewers(db.Model):
+    """
+    Coupon active viewers table - tracks users currently viewing coupon details
+    """
+    __tablename__ = "coupon_active_viewers"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    coupon_id = db.Column(db.Integer, db.ForeignKey("coupon.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    last_activity = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    session_id = db.Column(db.String(255), nullable=False)
+    
+    # Relationships
+    coupon = db.relationship("Coupon", backref="active_viewers")
+    user = db.relationship("User", backref="active_coupon_views")
+    
+    def __repr__(self):
+        return f"<CouponActiveViewers {self.id}: User {self.user_id} viewing Coupon {self.coupon_id}>"

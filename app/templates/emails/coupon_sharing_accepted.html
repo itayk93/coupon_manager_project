@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>שיתוף הקופון אושר - Coupon Master</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+        }
+        .email-container {
+            width: 100%;
+            background-color: #f9f9f9;
+            padding: 20px 0;
+        }
+        .email-content {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: #ffffff;
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .header .icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+        .body {
+            padding: 30px 20px;
+            color: #2C3E50;
+            text-align: right;
+            line-height: 1.6;
+        }
+        .body p {
+            margin-bottom: 15px;
+        }
+        .greeting {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2C3E50;
+            margin-bottom: 20px;
+        }
+        .coupon-info {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 25px 0;
+            border-right: 4px solid #28a745;
+        }
+        .coupon-info h3 {
+            color: #28a745;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .coupon-info ul {
+            margin: 0;
+            padding-right: 20px;
+        }
+        .coupon-info li {
+            margin-bottom: 8px;
+            color: #495057;
+        }
+        .highlight {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .warning-section {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border: 1px solid #ffd700;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 25px 0;
+            border-right: 4px solid #ffc107;
+        }
+        .warning-section h4 {
+            color: #856404;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .warning-section p {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .button {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: #ffffff;
+            padding: 15px 25px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-block;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+        .button:hover {
+            background: linear-gradient(135deg, #c82333, #dc3545);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+            color: #ffffff;
+            text-decoration: none;
+        }
+        .footer {
+            background-color: #f0f0f0;
+            color: #7f8c8d;
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .signature {
+            margin-top: 30px;
+            font-weight: 600;
+            color: #2C3E50;
+        }
+        @media only screen and (max-width: 600px) {
+            .email-content {
+                width: 100% !important;
+                margin: 0 10px;
+            }
+            .body {
+                padding: 20px 15px;
+            }
+            .header {
+                padding: 25px 15px;
+            }
+            .button {
+                width: 90%;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body dir="rtl">
+    <div class="email-container">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+                <td align="center">
+                    <div class="email-content">
+                        <!-- Header -->
+                        <div class="header">
+                            <div class="icon">🎉</div>
+                            <h1>שיתוף הקופון אושר!</h1>
+                        </div>
+                        <!-- Body -->
+                        <div class="body">
+                            <p class="greeting">שלום {{ user.first_name }},</p>
+                            
+                            <p>יש לנו חדשות טובות! <span class="highlight">{{ accepting_user.first_name }} {{ accepting_user.last_name }}</span> אישר/ה את שיתוף הקופון שלך.</p>
+                            
+                            <div class="coupon-info">
+                                <h3>פרטי הקופון:</h3>
+                                <ul>
+                                    <li><strong>חברה:</strong> {{ coupon.company }}</li>
+                                    <li><strong>ערך:</strong> ₪{{ "%.2f"|format(coupon.value) }}</li>
+                                    <li><strong>יתרה נוכחית:</strong> ₪{{ "%.2f"|format(coupon.remaining_value) }}</li>
+                                    {% if coupon.expiration %}
+                                    <li><strong>תוקף עד:</strong> {{ coupon.expiration }}</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            
+                            <p>עכשיו שניכם יכולים לצפות ולהשתמש בקופון זה. כל שינוי ביתרה יעודכן עבור שני הצדדים.</p>
+                            
+                            <div class="warning-section">
+                                <h4>⚠️ ביטול מהיר (זמין ל-15 דקות בלבד)</h4>
+                                <p>אם ברצונך לבטל את השיתוף מיד, תוכל ללחוץ על הכפתור הבא. כפתור זה זמין רק ל-15 דקות מרגע האישור:</p>
+                                <div class="button-container">
+                                    <a href="{{ revocation_link }}" class="button">ביטול שיתוף מיידי</a>
+                                </div>
+                                <p><small>לאחר 15 דקות, תוכל לבטל את השיתוף דרך אזור הקופונים באתר.</small></p>
+                            </div>
+                            
+                            <p class="signature">תודה שאתה משתמש בשירותי Coupon Master!</p>
+                        </div>
+                        <!-- Footer -->
+                        <div class="footer">
+                            <p>© 2025 Coupon Master. כל הזכויות שמורות.</p>
+                            <p>זהו הודעה אוטומטית - אל תשיב על הודעה זו.</p>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

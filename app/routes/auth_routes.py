@@ -58,73 +58,84 @@ def register_google():
     return redirect(url_for("google.login"))  # ניתן להוסיף לוגיקה לרישום נפרד אם צריך
 
 
-@auth_bp.route("/login/google/callback")
-def google_callback():
+@auth_bp.route("/login/google/authorized")  # שונה מ-callback ל-authorized
+def google_callback():    
     if not google.authorized:
+        print("Google not authorized")
         flash("ההתחברות נכשלה!", "danger")
         return redirect(url_for("auth.login"))
 
-    # קבלת נתוני המשתמש מגוגל
-    resp = google.get("/oauth2/v1/userinfo")
-    if resp.status_code != 200:
-        flash("נכשל בשליפת הנתונים מגוגל.", "danger")
-        return redirect(url_for("auth.login"))
+    print("Getting user info from Google...")
+    try:
+        # קבלת נתוני המשתמש מגוגל
+        resp = google.get("/oauth2/v1/userinfo")
+        print(f"Response status: {resp.status_code}")
+        
+        if resp.status_code != 200:
+            print(f"Error response: {resp.text}")
+            flash("נכשל בשליפת הנתונים מגוגל.", "danger")
+            return redirect(url_for("auth.login"))
 
-    user_info = resp.json()
-    google_id = user_info.get("id")  # ✅ שים לב לשינוי כאן!
-    email = user_info.get("email")
-    first_name = user_info.get("given_name", "")
-    last_name = user_info.get("family_name", "")
+        user_info = resp.json()
+        print(f"User info: {user_info}")
+        
+        google_id = user_info.get("id")
+        email = user_info.get("email")
+        first_name = user_info.get("given_name", "")
+        last_name = user_info.get("family_name", "")
 
-    # current_app.logger.info(f"User info from Google: {user_info}")
 
-    # חיפוש המשתמש לפי אימייל
-    user = User.query.filter_by(email=email).first()
+        # חיפוש המשתמש לפי אימייל
+        user = User.query.filter_by(email=email).first()
+        print(f"Existing user found: {user is not None}")
 
-    if not user:
-        # יצירת משתמש חדש
-        user = User(
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            google_id=google_id,  # ✅ עכשיו יישמר נכון
-            is_confirmed=True,
-        )
-        db.session.add(user)
-        db.session.commit()
-        # current_app.logger.info(f"User {email} created with Google ID: {google_id}")
-    else:
-        # אם המשתמש קיים ואין לו Google ID, נוסיף אותו
-        if not user.google_id:
-            user.google_id = google_id
+        if not user:
+            # יצירת משתמש חדש
+            user = User(
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                google_id=google_id,
+                is_confirmed=True,
+            )
+            db.session.add(user)
             db.session.commit()
-            # current_app.logger.info(f"Updated Google ID for {email}: {google_id}")
-
-    # התחברות למערכת
-    login_user(user)
-    flash(f"ברוך הבא, {user.first_name}!", "success")
-    
-    # 🔹 בדיקה אם יש בקשות עומדות לביטול הרשמה או עדכון העדפות בסשן 🔹
-    if 'unsubscribe_user_id' in session and 'unsubscribe_token' in session:
-        if user.id == session['unsubscribe_user_id']:
-            return redirect(url_for("profile.complete_unsubscribe"))
         else:
-            # אם המשתמש שהתחבר שונה מהמשתמש שביקש לבטל הרשמה
-            session.pop('unsubscribe_user_id', None)
-            session.pop('unsubscribe_token', None)
-            flash("לא ניתן לבטל הרשמה עבור משתמש אחר.", "error")
-    
-    if 'preferences_user_id' in session and 'preferences_token' in session:
-        if user.id == session['preferences_user_id']:
-            return redirect(url_for("profile.complete_preferences"))
-        else:
-            # אם המשתמש שהתחבר שונה מהמשתמש שביקש לעדכן העדפות
-            session.pop('preferences_user_id', None)
-            session.pop('preferences_token', None)
-            flash("לא ניתן לעדכן העדפות עבור משתמש אחר.", "error")
-    
-    return redirect(url_for("profile.index"))
+            # אם המשתמש קיים ואין לו Google ID, נוסיף אותו
+            if not user.google_id:
+                user.google_id = google_id
+                db.session.commit()
 
+        # התחברות למערכת
+        login_user(user)
+        flash(f"ברוך הבא, {user.first_name}!", "success")
+        
+        # 🔹 בדיקה אם יש בקשות עומדות לביטול הרשמה או עדכון העדפות בסשן 🔹
+        if 'unsubscribe_user_id' in session and 'unsubscribe_token' in session:
+            if user.id == session['unsubscribe_user_id']:
+                return redirect(url_for("profile.complete_unsubscribe"))
+            else:
+                # אם המשתמש שהתחבר שונה מהמשתמש שביקש לבטל הרשמה
+                session.pop('unsubscribe_user_id', None)
+                session.pop('unsubscribe_token', None)
+                flash("לא ניתן לבטל הרשמה עבור משתמש אחר.", "error")
+        
+        if 'preferences_user_id' in session and 'preferences_token' in session:
+            if user.id == session['preferences_user_id']:
+                return redirect(url_for("profile.complete_preferences"))
+            else:
+                # אם המשתמש שהתחבר שונה מהמשתמש שביקש לעדכן העדפות
+                session.pop('preferences_user_id', None)
+                session.pop('preferences_token', None)
+                flash("לא ניתן לעדכן העדפות עבור משתמש אחר.", "error")
+        
+        return redirect(url_for("profile.index"))
+        
+    except Exception as e:
+        print(f"Error in Google callback: {e}")
+        current_app.logger.error(f"Google OAuth error: {e}")
+        flash("שגיאה בהתחברות עם Google. נסה שוב.", "danger")
+        return redirect(url_for("auth.login"))
 
 ip_address = None
 

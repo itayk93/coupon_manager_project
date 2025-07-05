@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}אישור שיתוף קופון{% endblock %}
+
+{% block content %}
+<style>
+/* Copy styles from coupon_detail.html for consistent design */
+.coupon-detail-container {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 20px;
+    direction: rtl;
+}
+
+.coupon-card-details {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    overflow: hidden;
+    position: relative;
+}
+
+.coupon-header {
+    background: #f8f9fa;
+    padding: 30px;
+    text-align: center;
+    color: #2c3e50;
+    position: relative;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.company-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.company-logo {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 2px solid #e9ecef;
+    object-fit: cover;
+    background: white;
+    padding: 5px;
+    margin-bottom: 10px;
+}
+
+.company-name {
+    font-size: 2em;
+    font-weight: 700;
+    margin: 0;
+    color: #2c3e50;
+    text-align: center;
+}
+
+.sharing-alert {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    margin: 0;
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.coupon-content {
+    padding: 30px;
+    text-align: center;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.info-box {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.info-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.info-icon {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    flex-shrink: 0;
+}
+
+.info-content {
+    flex: 1;
+}
+
+.info-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.info-value {
+    font-size: 1.1em;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.active {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.status-badge.inactive {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+}
+
+.warning-section {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border: 1px solid #ffd700;
+    border-radius: 12px;
+    padding: 25px;
+    margin: 30px 0;
+    text-align: center;
+}
+
+.warning-title {
+    color: #856404;
+    font-size: 1.2em;
+    font-weight: 700;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.warning-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.warning-list li {
+    padding: 8px 0;
+    color: #856404;
+    position: relative;
+    padding-right: 20px;
+}
+
+.warning-list li:before {
+    content: "•";
+    color: #ffc107;
+    font-weight: bold;
+    position: absolute;
+    right: 0;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    width: 100%;
+    text-align: center;
+}
+
+.action-button {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 50px;
+    font-size: 1.1em;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.action-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+    color: white;
+    text-decoration: none;
+}
+
+.action-button.secondary {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 50px;
+    font-size: 1.1em;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.action-button.secondary:hover {
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+    transform: translateY(-3px);
+    color: white;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .coupon-detail-container {
+        margin: 10px;
+        padding: 10px;
+    }
+    
+    .company-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .company-name {
+        font-size: 1.6em;
+    }
+    
+    .company-logo {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .action-button {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+    }
+}
+</style>
+
+<section class="coupon-detail-container">
+    <div class="coupon-card-details">
+        <div class="coupon-header">
+            <div class="company-info">
+                <img src="{{ url_for('static', filename=company_logo) }}" alt="{{ coupon.company }} Logo" class="company-logo" onerror="this.src='{{ url_for('static', filename='images/default.png') }}'">
+                <h1 class="company-name">{{ coupon.company }}</h1>
+            </div>
+        </div>
+
+        <div class="sharing-alert">
+            <i class="fas fa-share-alt"></i>
+            <strong>{{ sharing_user.first_name }} {{ sharing_user.last_name }}</strong> 
+            {% if sharing_user.gender == 'נקבה' %}
+                שיתפה איתך קופון!
+            {% else %}
+                שיתף איתך קופון!
+            {% endif %}
+        </div>
+
+        <div class="coupon-content">
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="info-icon"><i class="fas fa-tag"></i></div>
+                    <div class="info-content">
+                        <span class="info-title">ערך הקופון:</span>
+                        <span class="info-value">₪{{ "%.2f"|format(coupon.value) }}</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-icon"><i class="fas fa-coins"></i></div>
+                    <div class="info-content">
+                        <span class="info-title">יתרה נותרת:</span>
+                        <span class="info-value">₪{{ "%.2f"|format(coupon.remaining_value) }}</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="info-content">
+                        <span class="info-title">סטטוס:</span>
+                        <span class="status-badge {% if coupon.status == 'פעיל' %}active{% else %}inactive{% endif %}">
+                            {{ coupon.status }}
+                        </span>
+                    </div>
+                </div>
+
+                {% if coupon.expiration %}
+                <div class="info-box">
+                    <div class="info-icon"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="info-content">
+                        <span class="info-title">תוקף עד:</span>
+                        <span class="info-value">{{ coupon.expiration }}</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if coupon.description %}
+                <div class="info-box">
+                    <div class="info-icon"><i class="fas fa-info-circle"></i></div>
+                    <div class="info-content">
+                        <span class="info-title">תיאור:</span>
+                        <span class="info-value">{{ coupon.description }}</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="warning-section">
+                <h4 class="warning-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    {% if current_user.gender == 'נקבה' or current_user.gender == 'female' %}
+                        חשוב שתדעי:
+                    {% else %}
+                        חשוב שתדע:
+                    {% endif %}
+                </h4>
+                <ul class="warning-list">
+                    <li>
+                        {% if current_user.gender == 'נקבה' or current_user.gender == 'female' %}
+                            לאחר האישור, תוכלי לצפות ולהשתמש בקופון זה
+                        {% else %}
+                            לאחר האישור, תוכל לצפות ולהשתמש בקופון זה
+                        {% endif %}
+                    </li>
+                    <li>הקופון יהיה משותף - שני הצדדים יכולים להשתמש בו</li>
+                    <li>כל שינוי ביתרה יעודכן עבור כל הצדדים</li>
+                    <li>בעל הקופון או המשתמש המשותף יכולים לבטל את השיתוף בכל עת</li>
+                </ul>
+            </div>
+            
+            <div class="action-buttons">
+                <form method="POST" action="{{ url_for('sharing.confirm_share', token=share_token) }}" style="display: contents;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="action-button">
+                        <i class="fas fa-check"></i> 
+                        {% if current_user.gender == 'נקבה' or current_user.gender == 'female' %}
+                            אשרי שיתוף
+                        {% else %}
+                            אשר שיתוף
+                        {% endif %}
+                    </button>
+                </form>
+                <a href="{{ url_for('coupons.show_coupons') }}" class="action-button secondary">
+                    <i class="fas fa-times"></i> ביטול
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
