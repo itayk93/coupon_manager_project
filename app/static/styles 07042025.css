@@ -2324,3 +2324,34 @@ h2 {
 .fadeIn {
     animation: fadeIn 0.5s ease-out;
 }
+
+.multipass-update-button {
+    background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.multipass-update-button:hover {
+    background: linear-gradient(45deg, var(--accent-color), var(--primary-color));
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+.multipass-update-button .fa-refresh {
+    transition: transform 0.5s ease;
+}
+
+.multipass-update-button:hover .fa-refresh {
+    transform: rotate(180deg);
+}
+

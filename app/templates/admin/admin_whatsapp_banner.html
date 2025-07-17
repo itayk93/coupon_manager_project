@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}
+ניהול בנר WhatsApp
+{% endblock %}
+
+{% block content %}
+<section class="admin-whatsapp-banner">
+    <div class="dashboard-header">
+        <h1>ניהול בנר WhatsApp</h1>
+        <p>קבע את הגדרות ברירת המחדל להצגת בנר WhatsApp למשתמשים חדשים</p>
+    </div>
+
+    <div class="admin-cards">
+        <div class="settings-card">
+            <h2>הגדרות כלליות</h2>
+            <form method="POST" action="{{ url_for('admin_bp.admin_whatsapp_banner_bp.admin_whatsapp_banner') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="form-group">
+                    <label for="default_whatsapp_banner">ברירת מחדל למשתמשים חדשים:</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="default_whatsapp_banner" name="default_whatsapp_banner" 
+                               value="true" {% if default_banner %}checked{% endif %}>
+                        <label for="default_whatsapp_banner" class="toggle-label">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-text">
+                            {% if default_banner %}
+                                הבנר יוצג למשתמשים חדשים
+                            {% else %}
+                                הבנר לא יוצג למשתמשים חדשים
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">שמור הגדרות</button>
+                    <a href="{{ url_for('admin_bp.admin_whatsapp_banner_bp.admin_whatsapp_banner_users') }}" class="btn btn-secondary">
+                        ניהול משתמשים קיימים
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="preview-card">
+            <h2>תצוגה מקדימה של הבנר</h2>
+            <div class="banner-preview">
+                <section class="whatsapp-banner">
+                    <div class="banner-content">
+                        <div class="banner-text">
+                            <h3 data-asw-org-font-size="14" style="font-size: 14px;">בשיתוף עם קבוצות ה-WhatsApp של<br> קוד קופון 1#💚עזרה הדדית בקופונים והטבות💚</h3>
+                        </div>
+                        <div class="banner-button">
+                            <button class="whatsapp-btn" disabled>
+                                <i class="fab fa-whatsapp"></i>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+:root {
+    --primary-color: #4895ef;
+    --primary-hover: #3a56d4;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --text-color: #2b2d42;
+    --background-light: #f8f9fa;
+    --card-shadow: 0 10px 20px rgba(0,0,0,0.05), 0 6px 6px rgba(0,0,0,0.07);
+    --border-color: #e0e0e0;
+}
+
+.admin-whatsapp-banner {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--background-light);
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    direction: rtl;
+}
+
+.dashboard-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.dashboard-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0 0 1rem 0;
+}
+
+.dashboard-header p {
+    color: #6c757d;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.admin-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.settings-card,
+.preview-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--border-color);
+}
+
+.settings-card h2,
+.preview-card h2 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.5rem;
+    color: var(--text-color);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.toggle-switch input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-label {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    background-color: #ccc;
+    border-radius: 34px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 30px;
+    height: 30px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-label {
+    background-color: var(--success-color);
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-label .toggle-slider {
+    transform: translateX(26px);
+}
+
+.toggle-text {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.banner-preview {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    background-color: #f8f9fa;
+}
+
+.whatsapp-banner {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin: 0;
+}
+
+.banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.banner-text h3 {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.whatsapp-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: not-allowed;
+    transition: all 0.3s;
+}
+
+.whatsapp-btn i {
+    font-size: 1.5rem;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .admin-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .admin-whatsapp-banner {
+        padding: 1rem;
+        margin: 1rem;
+    }
+    
+    .dashboard-header h1 {
+        font-size: 2rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleCheckbox = document.getElementById('default_whatsapp_banner');
+    const toggleText = document.querySelector('.toggle-text');
+    
+    toggleCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            toggleText.textContent = 'הבנר יוצג למשתמשים חדשים';
+        } else {
+            toggleText.textContent = 'הבנר לא יוצג למשתמשים חדשים';
+        }
+    });
+});
+</script>
+{% endblock %}

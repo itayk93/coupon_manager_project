@@ -15,7 +15,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 from itsdangerous import SignatureExpired, BadTimeSignature
 from app.extensions import db
-from app.models import User, UserConsent
+from app.models import User, UserConsent, AdminSettings
 from app.forms import LoginForm, RegisterForm
 from app.helpers import generate_confirmation_token, confirm_token, send_email
 from app.helpers import send_coupon_purchase_request_email, get_geo_location  # אם צריך
@@ -91,12 +91,14 @@ def google_callback():
 
         if not user:
             # יצירת משתמש חדש
+            default_whatsapp_banner = AdminSettings.get_setting("default_whatsapp_banner_for_new_users", True)
             user = User(
                 email=email,
                 first_name=first_name,
                 last_name=last_name,
                 google_id=google_id,
                 is_confirmed=True,
+                show_whatsapp_banner=default_whatsapp_banner,
             )
             db.session.add(user)
             db.session.commit()
@@ -323,6 +325,7 @@ def register():
             return redirect(url_for("auth.register"))
 
         # <-- הוספנו gender=form.gender.data -->
+        default_whatsapp_banner = AdminSettings.get_setting("default_whatsapp_banner_for_new_users", True)
         new_user = User(
             email=email,
             password=generate_password_hash(form.password.data),
@@ -330,6 +333,7 @@ def register():
             last_name=form.last_name.data.strip(),
             gender=form.gender.data,
             is_confirmed=False,
+            show_whatsapp_banner=default_whatsapp_banner,
         )
         try:
             db.session.add(new_user)

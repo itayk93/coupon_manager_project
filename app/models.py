@@ -900,3 +900,74 @@ class CouponActiveViewers(db.Model):
     
     def __repr__(self):
         return f"<CouponActiveViewers {self.id}: User {self.user_id} viewing Coupon {self.coupon_id}>"
+
+
+class AdminSettings(db.Model):
+    """
+    Admin settings table - stores global configuration settings
+    """
+    __tablename__ = "admin_settings"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    setting_key = db.Column(db.String(255), unique=True, nullable=False)
+    setting_value = db.Column(db.Text, nullable=True)
+    setting_type = db.Column(db.String(50), nullable=False, default='string')  # string, boolean, integer, float, json
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    updated_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    def __repr__(self):
+        return f"<AdminSettings {self.setting_key}: {self.setting_value}>"
+    
+    @classmethod
+    def get_setting(cls, key, default=None):
+        """Get a setting value by key"""
+        setting = cls.query.filter_by(setting_key=key).first()
+        if not setting:
+            return default
+        
+        if setting.setting_type == 'boolean':
+            return setting.setting_value.lower() in ['true', '1', 'yes', 'on']
+        elif setting.setting_type == 'integer':
+            try:
+                return int(setting.setting_value)
+            except (ValueError, TypeError):
+                return default
+        elif setting.setting_type == 'float':
+            try:
+                return float(setting.setting_value)
+            except (ValueError, TypeError):
+                return default
+        elif setting.setting_type == 'json':
+            import json
+            try:
+                return json.loads(setting.setting_value)
+            except (ValueError, TypeError):
+                return default
+        else:
+            return setting.setting_value
+    
+    @classmethod
+    def set_setting(cls, key, value, setting_type='string', description=None):
+        """Set a setting value"""
+        setting = cls.query.filter_by(setting_key=key).first()
+        if not setting:
+            setting = cls(setting_key=key, setting_type=setting_type, description=description)
+            db.session.add(setting)
+        
+        if setting_type == 'boolean':
+            setting.setting_value = 'true' if value else 'false'
+        elif setting_type in ['integer', 'float']:
+            setting.setting_value = str(value)
+        elif setting_type == 'json':
+            import json
+            setting.setting_value = json.dumps(value)
+        else:
+            setting.setting_value = str(value)
+        
+        setting.setting_type = setting_type
+        if description:
+            setting.description = description
+        
+        db.session.commit()
+        return setting
