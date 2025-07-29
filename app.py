@@ -72,6 +72,7 @@ from app.routes.admin_routes import admin_bp
 from app.routes.admin_routes.admin_newsletter_routes import admin_newsletter_bp
 from app.routes.telegram_routes import telegram_bp
 from app.routes.statistics_routes import statistics_bp
+from app.routes.cron_routes import cron_bp
 
 # Register Blueprints
 app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -86,6 +87,7 @@ app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(admin_newsletter_bp)
 app.register_blueprint(telegram_bp, url_prefix="/telegram")
 app.register_blueprint(statistics_bp)
+app.register_blueprint(cron_bp)
 
 # Create instance folder if it doesn't exist
 if not os.path.exists("instance"):
