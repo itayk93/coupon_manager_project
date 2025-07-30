@@ -339,10 +339,28 @@ def configure_scheduler(app=None):
         if app:
             with app.app_context():
                 from app.models import AdminSettings
-                email_hour = AdminSettings.get_setting('daily_email_hour', 6)
-                email_minute = AdminSettings.get_setting('daily_email_minute', 0)
+                import pytz
+                from datetime import datetime
+                
+                # Get Israel time settings (user input is in Israel time)
+                israel_hour = AdminSettings.get_setting('daily_email_hour', 6)
+                israel_minute = AdminSettings.get_setting('daily_email_minute', 0)
+                
+                # Convert Israel time to server UTC time for scheduler
+                israel_tz = pytz.timezone('Asia/Jerusalem')
+                utc_tz = pytz.UTC
+                
+                # Create a sample Israel time for today to calculate offset
+                today = datetime.now().date()
+                israel_time = israel_tz.localize(datetime.combine(today, datetime.min.time().replace(hour=israel_hour, minute=israel_minute)))
+                utc_time = israel_time.astimezone(utc_tz)
+                
+                email_hour = utc_time.hour
+                email_minute = utc_time.minute
+                
+                logging.info(f"Email scheduler: Israel time {israel_hour:02d}:{israel_minute:02d} -> UTC time {email_hour:02d}:{email_minute:02d}")
         else:
-            # Default values if no app context
+            # Default values if no app context (UTC time)
             email_hour = 6
             email_minute = 0
         
@@ -350,7 +368,7 @@ def configure_scheduler(app=None):
             func=daily_email_flow,
             trigger=CronTrigger(hour=email_hour, minute=email_minute),
             id="daily_email",
-            name=f"Send daily email at {email_hour:02d}:{email_minute:02d}",
+            name=f"Send daily email at {israel_hour if 'israel_hour' in locals() else email_hour:02d}:{israel_minute if 'israel_minute' in locals() else email_minute:02d} Israel time",
             replace_existing=True,
         )
 
@@ -396,15 +414,21 @@ def configure_scheduler(app=None):
                     )
 
                 # Process C: Sending daily email (daily email)
-                if now.hour >= 6 and not load_process_status("daily_email"):
+                # Check Israel time instead of server time
+                import pytz
+                israel_tz = pytz.timezone('Asia/Jerusalem')
+                israel_now = datetime.datetime.now(israel_tz)
+                israel_target_hour = AdminSettings.get_setting('daily_email_hour', 6)
+                
+                if israel_now.hour >= israel_target_hour and not load_process_status("daily_email"):
                     logging.info(
-                        "Process 'daily_email' not executed today and time is after 8:00. Executing daily email now..."
+                        f"Process 'daily_email' not executed today and Israel time is after {israel_target_hour}:00. Executing daily email now..."
                     )
                     daily_email_flow()
                     save_process_status("daily_email", True)
                 else:
                     logging.info(
-                        "Process 'daily_email' already executed today or time is before 8:00."
+                        f"Process 'daily_email' already executed today or Israel time ({israel_now.hour:02d}:{israel_now.minute:02d}) is before {israel_target_hour}:00."
                     )
 
                 # Process D: Resetting dismissed alerts (dismissed alerts reset)

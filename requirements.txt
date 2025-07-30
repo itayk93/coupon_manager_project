@@ -34,3 +34,4 @@ webdriver-manager
 flask_mail
 python-telegram-bot==20.8
 asyncpg==0.29.0
+pytz==2024.1
