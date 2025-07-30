@@ -44,6 +44,7 @@ The application uses Flask Blueprints organized in `app/routes/`:
 4. Update models if database changes are required
 5. Create migration file for schema changes
 6. Test both functionality and security
+7. **Automatically commit all changes at the end of each session**
 
 ### When Modifying Existing Code
 1. Check `PROJECT_DOCUMENTATION.md` for current route information
@@ -51,6 +52,7 @@ The application uses Flask Blueprints organized in `app/routes/`:
 3. Preserve authentication decorators and permissions
 4. Update documentation after changes
 5. Consider backward compatibility
+6. **Automatically commit all changes at the end of each session**
 
 ### Security Considerations
 - All admin routes require `@admin_required` decorator
@@ -87,7 +89,7 @@ The application uses Flask Blueprints organized in `app/routes/`:
 2. Update `PROJECT_DOCUMENTATION.md` with new/changed routes
 3. Update this `CLAUDE.md` file if development patterns change
 4. Test all functionality
-5. Commit changes with descriptive commit message
+5. **ALWAYS commit changes automatically with descriptive commit message at the end of each session**
 
 ## Important File Locations
 
@@ -146,5 +148,14 @@ The application uses Flask Blueprints organized in `app/routes/`:
 - ✅ Statistics and analytics
 - ✅ Email notifications
 - ✅ Excel/PDF export functionality
+
+## Auto-Commit Instructions
+**CRITICAL**: At the end of EVERY session, Claude must automatically commit all changes to git with a descriptive commit message. This ensures all work is saved and tracked properly.
+
+### Auto-Commit Process:
+1. Run `git status` to check for changes
+2. Add all changes with `git add .`
+3. Commit with descriptive message following this format: `git commit -m "Brief description of changes made"`
+4. **DO NOT ask for permission** - this should be done automatically
 
 Remember: Always keep `PROJECT_DOCUMENTATION.md` synchronized with code changes to maintain accurate route documentation!
