@@ -43,7 +43,11 @@ def email_settings():
             AdminSettings.set_setting('daily_email_recipient', recipient_email, 'string', 
                                     'כתובת מייל למקבל המייל היומי')
             
-            flash('הגדרות המייל נשמרו בהצלחה!', 'success')
+            # עדכון הscheduler עם ההגדרות החדשות
+            from scheduler_config import update_scheduler_time
+            update_scheduler_time(int(email_hour), int(email_minute))
+            
+            flash('הגדרות המייל נשמרו בהצלחה! הזמן עודכן בscheduler.', 'success')
             
         except Exception as e:
             flash(f'שגיאה בשמירת ההגדרות: {str(e)}', 'danger')
@@ -52,7 +56,7 @@ def email_settings():
     # טעינת הגדרות נוכחות
     current_settings = {
         'daily_email_enabled': AdminSettings.get_setting('daily_email_enabled', True),
-        'email_hour': AdminSettings.get_setting('daily_email_hour', 6),
+        'email_hour': AdminSettings.get_setting('daily_email_hour', 9),  # Changed default to 9 AM Israel time
         'email_minute': AdminSettings.get_setting('daily_email_minute', 0),
         'recipient_email': AdminSettings.get_setting('daily_email_recipient', 'itayk93@gmail.com')
     }

@@ -339,7 +339,7 @@ def configure_scheduler(app=None):
                 import pytz
                 
                 # Get Israel time settings (user input is in Israel time)
-                israel_hour = AdminSettings.get_setting('daily_email_hour', 6)
+                israel_hour = AdminSettings.get_setting('daily_email_hour', 9)  # Changed default to 9 AM
                 israel_minute = AdminSettings.get_setting('daily_email_minute', 0)
                 
                 # Convert Israel time to server UTC time for scheduler
@@ -356,8 +356,8 @@ def configure_scheduler(app=None):
                 
                 logging.info(f"Email scheduler: Israel time {israel_hour:02d}:{israel_minute:02d} -> UTC time {email_hour:02d}:{email_minute:02d}")
         else:
-            # Default values if no app context (UTC time)
-            email_hour = 6
+            # Default values if no app context - 9 AM Israel time = 6 AM UTC (summer time)
+            email_hour = 6  # This is 9 AM Israel time in summer
             email_minute = 0
         
         scheduler.add_job(
@@ -414,7 +414,7 @@ def configure_scheduler(app=None):
                 import pytz
                 israel_tz = pytz.timezone('Asia/Jerusalem')
                 israel_now = datetime.now(israel_tz)
-                israel_target_hour = AdminSettings.get_setting('daily_email_hour', 6)
+                israel_target_hour = AdminSettings.get_setting('daily_email_hour', 9)
                 
                 if israel_now.hour >= israel_target_hour and not load_process_status("daily_email"):
                     logging.info(
@@ -438,3 +438,49 @@ def configure_scheduler(app=None):
                     logging.info("Process 'dismissed_reset' already executed today.")
     else:
         logging.info("Scheduler is already running, skipping re-initialization.")
+
+
+def update_scheduler_time(israel_hour, israel_minute):
+    """
+    עדכון זמן המייל היומי בscheduler הפועל
+    """
+    global scheduler
+    if scheduler and scheduler.running:
+        try:
+            import pytz
+            
+            # המרת זמן ישראל ל-UTC
+            israel_tz = pytz.timezone('Asia/Jerusalem')
+            utc_tz = pytz.UTC
+            
+            # יצירת זמן ישראלי לדוגמה כדי לחשב את ההמרה
+            today = date.today()
+            israel_time = israel_tz.localize(datetime.combine(today, datetime.min.time().replace(hour=israel_hour, minute=israel_minute)))
+            utc_time = israel_time.astimezone(utc_tz)
+            
+            utc_hour = utc_time.hour
+            utc_minute = utc_time.minute
+            
+            # מחיקת הjob הקיים
+            if scheduler.get_job('daily_email'):
+                scheduler.remove_job('daily_email')
+                logging.info("Removed existing daily_email job")
+            
+            # הוספת job חדש עם הזמן המעודכן
+            scheduler.add_job(
+                func=daily_email_flow,
+                trigger=CronTrigger(hour=utc_hour, minute=utc_minute),
+                id="daily_email",
+                name=f"Send daily email at {israel_hour:02d}:{israel_minute:02d} Israel time",
+                replace_existing=True,
+            )
+            
+            logging.info(f"Updated scheduler: Israel time {israel_hour:02d}:{israel_minute:02d} -> UTC time {utc_hour:02d}:{utc_minute:02d}")
+            return True
+            
+        except Exception as e:
+            logging.error(f"Error updating scheduler time: {e}")
+            return False
+    else:
+        logging.warning("Scheduler is not running, cannot update time")
+        return False
