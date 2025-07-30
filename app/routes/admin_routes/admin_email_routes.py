@@ -88,7 +88,7 @@ def send_email_now():
         flash(f'שגיאה בשליחת המייל: {str(e)}', 'danger')
         logging.error(f"Error sending email manually: {e}")
     
-    return redirect(url_for('admin_email_bp.email_settings'))
+    return redirect(url_for('admin_bp.admin_email_bp.email_settings'))
 
 @admin_email_bp.route('/reset-status', methods=['POST'])
 @login_required
@@ -106,7 +106,7 @@ def reset_email_status():
         flash(f'שגיאה באיפוס הסטטוס: {str(e)}', 'danger')
         logging.error(f"Error resetting email status: {e}")
     
-    return redirect(url_for('admin_email_bp.email_settings'))
+    return redirect(url_for('admin_bp.admin_email_bp.email_settings'))
 
 @admin_email_bp.route('/test-email', methods=['POST'])
 @login_required
@@ -148,4 +148,4 @@ def test_email():
         flash(f'שגיאה בשליחת מייל הבדיקה: {str(e)}', 'danger')
         logging.error(f"Error sending test email: {e}")
     
-    return redirect(url_for('admin_email_bp.email_settings'))
+    return redirect(url_for('admin_bp.admin_email_bp.email_settings'))

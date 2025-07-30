@@ -306,15 +306,12 @@ def save_process_status(process, was_sent):
 
 
 # --- Scheduler Configuration Function ---
-def configure_scheduler():
+def configure_scheduler(app=None):
     """
     Configures the Scheduler jobs so that each process (reset, notifications, daily email, dismissed alerts reset)
     is scheduled to run at fixed times (00:00 or 8:00), and if the system was down and the action wasn't performed,
     it will be executed the first time the system starts up on that day.
     """
-    # Import create_app only inside the function to break the circle
-    from app import create_app
-
     global scheduler
     if not scheduler.running:
         logging.info("Starting scheduler and adding jobs...")
@@ -339,11 +336,15 @@ def configure_scheduler():
 
         # --- Process C: Sending daily email (daily email) ---
         # Get configured time from admin settings
-        app = create_app()
-        with app.app_context():
-            from app.models import AdminSettings
-            email_hour = AdminSettings.get_setting('daily_email_hour', 6)
-            email_minute = AdminSettings.get_setting('daily_email_minute', 0)
+        if app:
+            with app.app_context():
+                from app.models import AdminSettings
+                email_hour = AdminSettings.get_setting('daily_email_hour', 6)
+                email_minute = AdminSettings.get_setting('daily_email_minute', 0)
+        else:
+            # Default values if no app context
+            email_hour = 6
+            email_minute = 0
         
         scheduler.add_job(
             func=daily_email_flow,
@@ -368,52 +369,52 @@ def configure_scheduler():
         )
 
         # Now check for each process – if not executed today, execute it immediately on the first startup of the system on that day
-        app = create_app()
-        with app.app_context():
-            now = datetime.datetime.now()
-            logging.info("Current time: %s:%s", now.hour, now.minute)
+        if app:
+            with app.app_context():
+                now = datetime.datetime.now()
+                logging.info("Current time: %s:%s", now.hour, now.minute)
 
-            # Process A: Status Reset (reset)
-            if not load_process_status("reset"):
-                logging.info(
-                    "Process 'reset' not executed today. Executing reset process now..."
-                )
-                save_process_status("reset", False)
-            else:
-                logging.info("Process 'reset' already executed today.")
+                # Process A: Status Reset (reset)
+                if not load_process_status("reset"):
+                    logging.info(
+                        "Process 'reset' not executed today. Executing reset process now..."
+                    )
+                    save_process_status("reset", False)
+                else:
+                    logging.info("Process 'reset' already executed today.")
 
-            # Process B: Sending notifications (expiration warnings)
-            if now.hour >= 6 and not load_process_status("expiration"):
-                logging.info(
-                    "Process 'expiration' not executed today and time is after 8:00. Executing expiration warnings now..."
-                )
-                send_expiration_warnings()
-                save_process_status("expiration", True)
-            else:
-                logging.info(
-                    "Process 'expiration' already executed today or time is before 8:00."
-                )
+                # Process B: Sending notifications (expiration warnings)
+                if now.hour >= 6 and not load_process_status("expiration"):
+                    logging.info(
+                        "Process 'expiration' not executed today and time is after 8:00. Executing expiration warnings now..."
+                    )
+                    send_expiration_warnings()
+                    save_process_status("expiration", True)
+                else:
+                    logging.info(
+                        "Process 'expiration' already executed today or time is before 8:00."
+                    )
 
-            # Process C: Sending daily email (daily email)
-            if now.hour >= 6 and not load_process_status("daily_email"):
-                logging.info(
-                    "Process 'daily_email' not executed today and time is after 8:00. Executing daily email now..."
-                )
-                daily_email_flow()
-                save_process_status("daily_email", True)
-            else:
-                logging.info(
-                    "Process 'daily_email' already executed today or time is before 8:00."
-                )
+                # Process C: Sending daily email (daily email)
+                if now.hour >= 6 and not load_process_status("daily_email"):
+                    logging.info(
+                        "Process 'daily_email' not executed today and time is after 8:00. Executing daily email now..."
+                    )
+                    daily_email_flow()
+                    save_process_status("daily_email", True)
+                else:
+                    logging.info(
+                        "Process 'daily_email' already executed today or time is before 8:00."
+                    )
 
-            # Process D: Resetting dismissed alerts (dismissed alerts reset)
-            if not load_process_status("dismissed_reset"):
-                logging.info(
-                    "Process 'dismissed_reset' not executed today. Executing dismissed alerts reset now..."
-                )
-                reset_dismissed_alerts()
-                save_process_status("dismissed_reset", True)
-            else:
-                logging.info("Process 'dismissed_reset' already executed today.")
+                # Process D: Resetting dismissed alerts (dismissed alerts reset)
+                if not load_process_status("dismissed_reset"):
+                    logging.info(
+                        "Process 'dismissed_reset' not executed today. Executing dismissed alerts reset now..."
+                    )
+                    reset_dismissed_alerts()
+                    save_process_status("dismissed_reset", True)
+                else:
+                    logging.info("Process 'dismissed_reset' already executed today.")
     else:
         logging.info("Scheduler is already running, skipping re-initialization.")

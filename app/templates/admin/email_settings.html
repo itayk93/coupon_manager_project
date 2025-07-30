@@ -268,7 +268,7 @@
     </div>
 
     <!-- Settings Form -->
-    <form method="POST" action="{{ url_for('admin_email_bp.email_settings') }}">
+    <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.email_settings') }}">
         <div class="settings-section">
             <h3 class="section-title">
                 <i class="fas fa-cog"></i>
@@ -329,7 +329,7 @@
 
     <!-- Action Buttons -->
     <div class="actions-row">
-        <form method="POST" action="{{ url_for('admin_email_bp.send_email_now') }}" style="display: inline;">
+        <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.send_email_now') }}" style="display: inline;">
             <button type="submit" class="btn btn-success" 
                     onclick="return confirm('האם אתה בטוח שברצונך לשלוח את המייל עכשיו?')">
                 <i class="fas fa-paper-plane"></i>
@@ -338,7 +338,7 @@
         </form>
 
         {% if email_sent_today %}
-        <form method="POST" action="{{ url_for('admin_email_bp.reset_email_status') }}" style="display: inline;">
+        <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.reset_email_status') }}" style="display: inline;">
             <button type="submit" class="btn btn-warning" 
                     onclick="return confirm('האם תרצה לאפס את סטטוס המייל? זה יאפשר שליחה מחדש.')">
                 <i class="fas fa-redo"></i>
@@ -362,7 +362,7 @@
                 <h5 class="modal-title" id="testEmailModalLabel">שליחת מייל בדיקה</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('admin_email_bp.test_email') }}">
+            <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.test_email') }}">
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="form-label" for="test_email">כתובת מייל לבדיקה</label>

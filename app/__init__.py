@@ -138,7 +138,7 @@ def create_app():
     # 📌 Call the scheduler **only after the application is loaded**
     from scheduler_config import configure_scheduler
 
-    configure_scheduler()
+    configure_scheduler(app)
 
     @app.context_processor
     def utility_processor():
