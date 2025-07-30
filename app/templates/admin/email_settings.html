@@ -269,6 +269,7 @@
 
     <!-- Settings Form -->
     <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.email_settings') }}">
+        {{ csrf_token() }}
         <div class="settings-section">
             <h3 class="section-title">
                 <i class="fas fa-cog"></i>
@@ -330,6 +331,7 @@
     <!-- Action Buttons -->
     <div class="actions-row">
         <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.send_email_now') }}" style="display: inline;">
+            {{ csrf_token() }}
             <button type="submit" class="btn btn-success" 
                     onclick="return confirm('האם אתה בטוח שברצונך לשלוח את המייל עכשיו?')">
                 <i class="fas fa-paper-plane"></i>
@@ -339,6 +341,7 @@
 
         {% if email_sent_today %}
         <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.reset_email_status') }}" style="display: inline;">
+            {{ csrf_token() }}
             <button type="submit" class="btn btn-warning" 
                     onclick="return confirm('האם תרצה לאפס את סטטוס המייל? זה יאפשר שליחה מחדש.')">
                 <i class="fas fa-redo"></i>
@@ -363,6 +366,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.test_email') }}">
+                {{ csrf_token() }}
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="form-label" for="test_email">כתובת מייל לבדיקה</label>
