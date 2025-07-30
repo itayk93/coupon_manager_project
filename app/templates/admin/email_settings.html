@@ -269,7 +269,7 @@
 
     <!-- Settings Form -->
     <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.email_settings') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="csrf_token" value=""/>
         <div class="settings-section">
             <h3 class="section-title">
                 <i class="fas fa-cog"></i>
@@ -335,7 +335,7 @@
     <!-- Action Buttons -->
     <div class="actions-row">
         <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.send_email_now') }}" style="display: inline;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="csrf_token" value=""/>
             <button type="submit" class="btn btn-success" 
                     onclick="return confirm('האם אתה בטוח שברצונך לשלוח את המייל עכשיו?')">
                 <i class="fas fa-paper-plane"></i>
@@ -345,7 +345,7 @@
 
         {% if email_sent_today %}
         <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.reset_email_status') }}" style="display: inline;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="csrf_token" value=""/>
             <button type="submit" class="btn btn-warning" 
                     onclick="return confirm('האם תרצה לאפס את סטטוס המייל? זה יאפשר שליחה מחדש.')">
                 <i class="fas fa-redo"></i>
@@ -370,7 +370,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="{{ url_for('admin_bp.admin_email_bp.test_email') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="csrf_token" value=""/>
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="form-label" for="test_email">כתובת מייל לבדיקה</label>
@@ -389,4 +389,17 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    // Set CSRF token in all hidden inputs
+    const csrfInputs = document.querySelectorAll('input[name="csrf_token"]');
+    csrfInputs.forEach(input => {
+        input.value = csrfToken;
+    });
+});
+</script>
 {% endblock %}
