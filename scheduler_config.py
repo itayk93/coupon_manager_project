@@ -217,9 +217,16 @@ def daily_email_flow():
     from scheduler_utils import update_company_counts_and_send_email
     from app.extensions import db
     from scheduler_utils import load_status, save_status  # Verify import is correct
+    from app.models import AdminSettings
 
     app = create_app()
     with app.app_context():  # Wrap all calls in Flask context
+        # Check if daily email is enabled in admin settings
+        daily_email_enabled = AdminSettings.get_setting('daily_email_enabled', True)
+        if not daily_email_enabled:
+            logging.info("daily_email_flow - Daily email is disabled in admin settings. Skipping.")
+            return
+            
         if load_status():
             logging.info("daily_email_flow - Email already sent today. Skipping.")
             return
@@ -331,11 +338,18 @@ def configure_scheduler():
         )
 
         # --- Process C: Sending daily email (daily email) ---
+        # Get configured time from admin settings
+        app = create_app()
+        with app.app_context():
+            from app.models import AdminSettings
+            email_hour = AdminSettings.get_setting('daily_email_hour', 6)
+            email_minute = AdminSettings.get_setting('daily_email_minute', 0)
+        
         scheduler.add_job(
             func=daily_email_flow,
-            trigger=CronTrigger(hour=6, minute=0),
+            trigger=CronTrigger(hour=email_hour, minute=email_minute),
             id="daily_email",
-            name="Send daily email at 8:00",
+            name=f"Send daily email at {email_hour:02d}:{email_minute:02d}",
             replace_existing=True,
         )
 

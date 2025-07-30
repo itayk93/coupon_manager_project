@@ -235,13 +235,15 @@ def update_company_counts_and_send_email(app):
             """
 
             # 4. Send email
-            recipient_email = "itayk93@gmail.com"
+            # Get recipient email from admin settings
+            from app.models import AdminSettings
+            recipient_email = AdminSettings.get_setting('daily_email_recipient', 'itayk93@gmail.com')
             subject = "דוח יומי: נתוני קופונים לחברות"
             send_email(
                 sender_email="noreply@couponmasteril.com",
                 sender_name="Coupon Master",
                 recipient_email=recipient_email,
-                recipient_name="Itay",
+                recipient_name="Admin",
                 subject=subject,
                 html_content=html_content,
             )

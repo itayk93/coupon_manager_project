@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block title %}
+ניהול הגדרות מייל יומי
+{% endblock %}
+
+{% block styles %}
+<style>
+  :root {
+    --primary-color: #4361ee;
+    --success-color: #4CAF50;
+    --warning-color: #ff9800;
+    --danger-color: #f44336;
+    --info-color: #2196F3;
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #343a40;
+    --border-color: #dee2e6;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --transition-speed: 0.3s;
+    --border-radius: 6px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+  }
+
+  .email-settings {
+    background-color: #fff;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px var(--shadow-color);
+    padding: var(--spacing-lg);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .page-title {
+    color: var(--dark-gray);
+    margin-bottom: var(--spacing-lg);
+    font-size: 1.8rem;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: var(--spacing-sm);
+  }
+
+  .settings-section {
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--light-gray);
+  }
+
+  .section-title {
+    font-size: 1.3rem;
+    margin-bottom: var(--spacing-md);
+    color: var(--dark-gray);
+    display: flex;
+    align-items: center;
+  }
+
+  .section-title i {
+    margin-left: var(--spacing-sm);
+    color: var(--primary-color);
+  }
+
+  .form-group {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    color: var(--dark-gray);
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: border-color var(--transition-speed);
+    background-color: #fff;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  }
+
+  .form-check {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .form-check-input {
+    margin-left: var(--spacing-sm);
+    transform: scale(1.2);
+  }
+
+  .form-check-label {
+    font-weight: 500;
+    color: var(--dark-gray);
+  }
+
+  .time-inputs {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: end;
+  }
+
+  .time-inputs .form-group {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  .btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
+  .btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: #3951db;
+    transform: translateY(-2px);
+  }
+
+  .btn-success {
+    background-color: var(--success-color);
+    color: white;
+  }
+
+  .btn-success:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+  }
+
+  .btn-warning {
+    background-color: var(--warning-color);
+    color: white;
+  }
+
+  .btn-warning:hover {
+    background-color: #e68900;
+    transform: translateY(-2px);
+  }
+
+  .btn-info {
+    background-color: var(--info-color);
+    color: white;
+  }
+
+  .btn-info:hover {
+    background-color: #1976D2;
+    transform: translateY(-2px);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    gap: 6px;
+  }
+
+  .status-badge.sent {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: var(--success-color);
+  }
+
+  .status-badge.not-sent {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--danger-color);
+  }
+
+  .actions-row {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+    margin-top: var(--spacing-lg);
+  }
+
+  .info-box {
+    background-color: rgba(33, 150, 243, 0.1);
+    border: 1px solid rgba(33, 150, 243, 0.3);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .info-box p {
+    margin: 0;
+    color: var(--info-color);
+    font-weight: 500;
+  }
+
+  .current-status {
+    background-color: rgba(67, 97, 238, 0.1);
+    border: 1px solid rgba(67, 97, 238, 0.3);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .current-status h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--primary-color);
+  }
+
+  @media (max-width: 768px) {
+    .time-inputs {
+      flex-direction: column;
+      gap: var(--spacing-sm);
+    }
+    
+    .actions-row {
+      flex-direction: column;
+    }
+    
+    .btn {
+      justify-content: center;
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="email-settings">
+    <h1 class="page-title">
+        <i class="fas fa-envelope"></i>
+        ניהול הגדרות מייל יומי
+    </h1>
+
+    <!-- Current Status -->
+    <div class="current-status">
+        <h4><i class="fas fa-info-circle"></i> סטטוס נוכחי</h4>
+        <p>מייל יומי היום: 
+            {% if email_sent_today %}
+                <span class="status-badge sent">
+                    <i class="fas fa-check-circle"></i>
+                    נשלח
+                </span>
+            {% else %}
+                <span class="status-badge not-sent">
+                    <i class="fas fa-times-circle"></i>
+                    לא נשלח
+                </span>
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Settings Form -->
+    <form method="POST" action="{{ url_for('admin_email_bp.email_settings') }}">
+        <div class="settings-section">
+            <h3 class="section-title">
+                <i class="fas fa-cog"></i>
+                הגדרות כלליות
+            </h3>
+
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="daily_email_enabled" 
+                       name="daily_email_enabled" {% if settings.daily_email_enabled %}checked{% endif %}>
+                <label class="form-check-label" for="daily_email_enabled">
+                    הפעלת מייל יומי אוטומטי
+                </label>
+            </div>
+
+            <div class="info-box">
+                <p><i class="fas fa-info-circle"></i> המייל מכיל טבלה עם נתוני קופונים מפורטים לכל חברה - כמות קופונים, מחיר ממוצע, הנחה ממוצעת ועוד.</p>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3 class="section-title">
+                <i class="fas fa-clock"></i>
+                זמן שליחה
+            </h3>
+
+            <div class="time-inputs">
+                <div class="form-group">
+                    <label class="form-label" for="email_hour">שעה (0-23)</label>
+                    <input type="number" class="form-control" id="email_hour" name="email_hour" 
+                           min="0" max="23" value="{{ settings.email_hour }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="email_minute">דקה (0-59)</label>
+                    <input type="number" class="form-control" id="email_minute" name="email_minute" 
+                           min="0" max="59" value="{{ settings.email_minute }}" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3 class="section-title">
+                <i class="fas fa-user"></i>
+                נמען המייל
+            </h3>
+
+            <div class="form-group">
+                <label class="form-label" for="recipient_email">כתובת מייל</label>
+                <input type="email" class="form-control" id="recipient_email" name="recipient_email" 
+                       value="{{ settings.recipient_email }}" required>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i>
+            שמירת הגדרות
+        </button>
+    </form>
+
+    <!-- Action Buttons -->
+    <div class="actions-row">
+        <form method="POST" action="{{ url_for('admin_email_bp.send_email_now') }}" style="display: inline;">
+            <button type="submit" class="btn btn-success" 
+                    onclick="return confirm('האם אתה בטוח שברצונך לשלוח את המייל עכשיו?')">
+                <i class="fas fa-paper-plane"></i>
+                שליחת מייל עכשיו
+            </button>
+        </form>
+
+        {% if email_sent_today %}
+        <form method="POST" action="{{ url_for('admin_email_bp.reset_email_status') }}" style="display: inline;">
+            <button type="submit" class="btn btn-warning" 
+                    onclick="return confirm('האם תרצה לאפס את סטטוס המייל? זה יאפשר שליחה מחדש.')">
+                <i class="fas fa-redo"></i>
+                איפוס סטטוס מייל
+            </button>
+        </form>
+        {% endif %}
+
+        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#testEmailModal">
+            <i class="fas fa-vial"></i>
+            שליחת מייל בדיקה
+        </button>
+    </div>
+</div>
+
+<!-- Test Email Modal -->
+<div class="modal fade" id="testEmailModal" tabindex="-1" aria-labelledby="testEmailModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="testEmailModalLabel">שליחת מייל בדיקה</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin_email_bp.test_email') }}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="test_email">כתובת מייל לבדיקה</label>
+                        <input type="email" class="form-control" id="test_email" name="test_email" 
+                               value="{{ current_user.email }}" required>
+                    </div>
+                    <p class="text-muted">
+                        <small>יישלח מייל בדיקה פשוט כדי לוודא שהמערכת עובדת כראוי.</small>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+                    <button type="submit" class="btn btn-info">שליחת מייל בדיקה</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
