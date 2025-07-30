@@ -2,8 +2,6 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import AdminSettings
-from scheduler_utils import update_company_counts_and_send_email, save_process_status, load_process_status
-from app import create_app
 import logging
 from datetime import datetime
 
@@ -60,6 +58,7 @@ def email_settings():
     }
     
     # בדיקת סטטוס שליחה היום
+    from scheduler_utils import load_process_status  # Local import
     email_sent_today = load_process_status('daily_email')
     
     return render_template('admin/email_settings.html', 
@@ -74,6 +73,8 @@ def send_email_now():
     שליחת מייל מיידית (ללא תלות בזמן הזמנה)
     """
     try:
+        from app import create_app  # Local import to avoid circular dependency
+        from scheduler_utils import update_company_counts_and_send_email, save_process_status  # Local import
         app = create_app()
         with app.app_context():
             # שליחת המייל
@@ -97,6 +98,7 @@ def reset_email_status():
     איפוס סטטוס שליחת המייל (מאפשר שליחה מחדש)
     """
     try:
+        from scheduler_utils import save_process_status  # Local import
         save_process_status('daily_email', False)
         flash('סטטוס המייל אופס בהצלחה. המייל יכול להישלח שוב.', 'success')
         
