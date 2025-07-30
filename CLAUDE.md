@@ -43,16 +43,18 @@ The application uses Flask Blueprints organized in `app/routes/`:
 3. Add corresponding template if needed
 4. Update models if database changes are required
 5. Create migration file for schema changes
-6. Test both functionality and security
-7. **Automatically commit all changes at the end of each session**
+6. **If adding new library imports, update requirements.txt with the new dependencies**
+7. Test both functionality and security
+8. **Automatically commit all changes at the end of each session**
 
 ### When Modifying Existing Code
 1. Check `PROJECT_DOCUMENTATION.md` for current route information
 2. Maintain existing URL patterns and HTTP methods
 3. Preserve authentication decorators and permissions
-4. Update documentation after changes
-5. Consider backward compatibility
-6. **Automatically commit all changes at the end of each session**
+4. **If adding new library imports, update requirements.txt with the new dependencies**
+5. Update documentation after changes
+6. Consider backward compatibility
+7. **Automatically commit all changes at the end of each session**
 
 ### Security Considerations
 - All admin routes require `@admin_required` decorator
@@ -67,6 +69,7 @@ The application uses Flask Blueprints organized in `app/routes/`:
 - Use SQLAlchemy ORM for database operations
 - Implement proper error handling and logging
 - Use flash messages for user feedback
+- **When importing new libraries, always update requirements.txt with proper version specifications**
 
 ### Testing & Deployment
 - Test all routes after modifications
@@ -97,6 +100,7 @@ The application uses Flask Blueprints organized in `app/routes/`:
 - Environment variables in `.env` (not in repository)
 - Flask config in `app/config.py`
 - Database URL and secret keys in environment
+- **Python dependencies in `requirements.txt` - MUST be updated when adding new imports**
 
 ### Templates
 - Base template: `app/templates/base.html`
