@@ -1,5 +1,5 @@
 import logging
-import datetime
+from datetime import datetime, date, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from app.extensions import db
@@ -24,9 +24,6 @@ def reset_was_sent_today():
     logging.info("reset_was_sent_today - Resetting WAS_SENT_TODAY to False")
 
 
-from datetime import date, timedelta
-
-
 def categorize_coupons(coupons):
     """
     Divides coupons into three categories: today, tomorrow, and rest of the month.
@@ -35,7 +32,7 @@ def categorize_coupons(coupons):
     tomorrow = today + timedelta(days=1)
     categorized = {"today_coupons": [], "tomorrow_coupons": [], "future_coupons": []}
     for coupon in coupons:
-        expiration_date = datetime.datetime.strptime(
+        expiration_date = datetime.strptime(
             coupon["expiration"], "%Y-%m-%d"
         ).date()
         if expiration_date == today:
@@ -102,7 +99,7 @@ def send_expiration_warnings():
         users = {}
         for coupon in coupons:
             user_id = coupon.user_id
-            expiration_date = datetime.datetime.strptime(
+            expiration_date = datetime.strptime(
                 coupon.expiration, "%Y-%m-%d"
             ).date()
             days_left = (expiration_date - date.today()).days
@@ -271,7 +268,7 @@ def load_process_status(process):
     Loads the status of a specific process (e.g., 'reset', 'expiration', 'daily_email', 'dismissed_reset')
     for the current date.
     """
-    today = datetime.date.today()
+    today = date.today()
     query = text(
         "SELECT was_sent FROM daily_email_status WHERE date = :today AND process = :process"
     )
@@ -284,7 +281,7 @@ def save_process_status(process, was_sent):
     Saves the status of a specific process for the current date.
     Uses UPSERT.
     """
-    today = datetime.date.today()
+    today = date.today()
     query = text(
         """
         INSERT INTO daily_email_status (date, process, was_sent)
@@ -340,7 +337,6 @@ def configure_scheduler(app=None):
             with app.app_context():
                 from app.models import AdminSettings
                 import pytz
-                from datetime import datetime
                 
                 # Get Israel time settings (user input is in Israel time)
                 israel_hour = AdminSettings.get_setting('daily_email_hour', 6)
@@ -351,7 +347,7 @@ def configure_scheduler(app=None):
                 utc_tz = pytz.UTC
                 
                 # Create a sample Israel time for today to calculate offset
-                today = datetime.now().date()
+                today = date.today()
                 israel_time = israel_tz.localize(datetime.combine(today, datetime.min.time().replace(hour=israel_hour, minute=israel_minute)))
                 utc_time = israel_time.astimezone(utc_tz)
                 
@@ -389,7 +385,7 @@ def configure_scheduler(app=None):
         # Now check for each process – if not executed today, execute it immediately on the first startup of the system on that day
         if app:
             with app.app_context():
-                now = datetime.datetime.now()
+                now = datetime.now()
                 logging.info("Current time: %s:%s", now.hour, now.minute)
 
                 # Process A: Status Reset (reset)
@@ -417,7 +413,7 @@ def configure_scheduler(app=None):
                 # Check Israel time instead of server time
                 import pytz
                 israel_tz = pytz.timezone('Asia/Jerusalem')
-                israel_now = datetime.datetime.now(israel_tz)
+                israel_now = datetime.now(israel_tz)
                 israel_target_hour = AdminSettings.get_setting('daily_email_hour', 6)
                 
                 if israel_now.hour >= israel_target_hour and not load_process_status("daily_email"):

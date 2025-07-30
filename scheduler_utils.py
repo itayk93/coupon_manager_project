@@ -272,7 +272,7 @@ AND is_for_sale = FALSE;  -- לא למכירה
     return result.fetchall()  # Or other processing
 
 
-import datetime
+from datetime import datetime, date
 import logging
 from sqlalchemy.sql import text
 from app.extensions import db
@@ -285,7 +285,7 @@ def load_status():
     from app import create_app  # Local import to avoid circular dependency
     app = create_app()  # יצירת מופע של האפליקציה
     with app.app_context():  # שימוש ב-context כדי למנוע שגיאות
-        today = datetime.date.today()
+        today = date.today()
         query = text("SELECT was_sent FROM daily_email_status WHERE date = :today")
         result = db.session.execute(query, {"today": today}).fetchone()
         return result[0] if result else False  # אם אין רשומה להיום, נחזיר False
@@ -296,7 +296,7 @@ def save_status(was_sent):
     שומר בטבלה את מצב השליחה עבור התאריך הנוכחי.
     משתמש ב-UPSERT (INSERT ... ON CONFLICT) כך שהרשומה תתעדכן אם היא קיימת.
     """
-    today = datetime.date.today()
+    today = date.today()
     query = text(
         """
         INSERT INTO daily_email_status (date, process, was_sent)
@@ -324,7 +324,7 @@ def load_process_status(process):
     טוען מהטבלה את הסטטוס של תהליך מסוים עבור התאריך הנוכחי.
     מחזיר True אם תהליך זה כבר בוצע היום, אחרת False.
     """
-    today = datetime.date.today()
+    today = date.today()
     query = text(
         "SELECT was_sent FROM daily_email_status WHERE date = :today AND process = :process"
     )
@@ -337,7 +337,7 @@ def save_process_status_old(process, was_sent):
     שומר בטבלה את סטטוס ביצוע התהליך (process) עבור התאריך הנוכחי.
     משתמש ב-UPsert (INSERT ... ON CONFLICT) כדי לעדכן או להוסיף את הרשומה.
     """
-    today = datetime.date.today()
+    today = date.today()
     query = text(
         """
         INSERT INTO daily_email_status (date, process, was_sent)
@@ -363,7 +363,7 @@ def save_process_status(process, was_sent):
     שומר את סטטוס ביצוע התהליך (process) עבור התאריך הנוכחי.
     במקום להשתמש ב-ON CONFLICT, נבדוק קודם אם קיימת רשומה עבור (date, process)
     """
-    today = datetime.date.today()
+    today = date.today()
     existing = db.session.execute(
         text(
             "SELECT * FROM daily_email_status WHERE date = :today AND process = :process"
