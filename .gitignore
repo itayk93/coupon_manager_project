@@ -4,6 +4,7 @@ uploads/
 __pycache__/
 .DS_Store
 sample_text/
-.env
 reports_to_improve/
-project_structure.txt/
+project_structure.txt
+CLAUDE.md
+PROJECT_DOCUMENTATION.md

@@ -1,37 +1,195 @@
-coupon_manager_project/
-├── __pycache__/
-├── .git/
-├── .gitattributes
-├── .gitignore
-├── .DS_Store
-├── Aptfile
-├── Procfile
-├── app.py
-├── graphs.py
-├── requirements.txt
-├── runtime.txt
-├── scheduler_config.py
-├── scheduler_utils.py
-├── telegram_bot.py
-├── telegram_bot.log
-├── telegram_bot_make.json
-├── wsgi.py
-├── admin_manage_coupon_tags.html
-├── app/
-│   ├── __pycache__/
-│   ├── .DS_Store
-│   ├── __init__.py
-│   ├── config.py
-│   ├── extensions.py
-│   ├── forms.py
-│   ├── helpers.py
-│   ├── models.py
-│   ├── send_mail.py
-│   ├── routes/
-│   ├── static/
-│   └── templates/
-├── automatic_coupon_update/
-├── exports/
-├── instance/
-├── migrations/
-└── uploads/ 
+./.claude/settings.local.json
+./.pytest_cache/README.md
+./CLAUDE.md
+./PROJECT_DOCUMENTATION.md
+./app.py
+./app/__init__.py
+./app/config.py
+./app/extensions.py
+./app/forms.py
+./app/helpers.py
+./app/models.py
+./app/routes/__init__.py
+./app/routes/admin_routes.py
+./app/routes/admin_routes/__init__.py
+./app/routes/admin_routes/admin_companies_routes.py
+./app/routes/admin_routes/admin_coupon_tags_routes.py
+./app/routes/admin_routes/admin_coupons.py
+./app/routes/admin_routes/admin_dashboard_routes copy.py
+./app/routes/admin_routes/admin_dashboard_routes.py
+./app/routes/admin_routes/admin_dashboard_routes_first_dashboard.py
+./app/routes/admin_routes/admin_email_routes.py
+./app/routes/admin_routes/admin_messages_routes.py
+./app/routes/admin_routes/admin_newsletter_routes.py
+./app/routes/admin_routes/admin_tags_routes.py
+./app/routes/admin_routes/admin_users_routes.py
+./app/routes/admin_routes/admin_whatsapp_banner_routes.py
+./app/routes/auth_routes.py
+./app/routes/coupons.py
+./app/routes/coupons_routes.py
+./app/routes/cron_routes.py
+./app/routes/export_routes.py
+./app/routes/marketplace_routes.py
+./app/routes/profile_routes.py
+./app/routes/profile_routes/__init__.py.py
+./app/routes/requests_routes.py
+./app/routes/sharing_routes.py
+./app/routes/statistics_routes.py
+./app/routes/telegram_routes.py
+./app/routes/transactions_routes.py
+./app/routes/usage_data_routes.py
+./app/send_mail.py
+./app/static/css/tooltip.css
+./app/static/js/statistics.js
+./app/static/js/tooltip copy.js
+./app/static/js/tooltip.js
+./app/static/old/styles גיבוי 04042025.css
+./app/static/old/styles גיבוי.css
+./app/static/script.js
+./app/static/styles 07042025.css
+./app/static/styles.css
+./app/templates/about.html
+./app/templates/access_denied.html
+./app/templates/add_coupon.html
+./app/templates/add_coupon_with_image.html
+./app/templates/add_coupons copy.html
+./app/templates/add_coupons.html
+./app/templates/admin/admin_auto_coupons.html
+./app/templates/admin/admin_create_newsletter.html
+./app/templates/admin/admin_dashboard.html
+./app/templates/admin/admin_edit_newsletter.html
+./app/templates/admin/admin_manage_companies.html
+./app/templates/admin/admin_manage_coupon_tags.html
+./app/templates/admin/admin_manage_messages.html
+./app/templates/admin/admin_manage_newsletters.html
+./app/templates/admin/admin_manage_tags.html
+./app/templates/admin/admin_manage_users.html
+./app/templates/admin/admin_send_newsletter.html
+./app/templates/admin/admin_whatsapp_banner.html
+./app/templates/admin/admin_whatsapp_banner_users.html
+./app/templates/admin/email_settings.html
+./app/templates/admin/old/admin_dashboard.html
+./app/templates/admin/old/admin_manage_companies.html
+./app/templates/admin/old/admin_manage_coupon_tags.html
+./app/templates/admin/old/admin_manage_tags.html
+./app/templates/admin/old/admin_manage_users.html
+./app/templates/approve_transaction.html
+./app/templates/base.html
+./app/templates/base_landing.html
+./app/templates/buy_slots.html
+./app/templates/buyer_confirm_transfer.html
+./app/templates/confirm_delete.html
+./app/templates/coupon_detail.html
+./app/templates/coupon_request_detail.html
+./app/templates/coupons.html
+./app/templates/cron_task.html
+./app/templates/delete_coupons.html
+./app/templates/edit_coupon.html
+./app/templates/edit_usage.html
+./app/templates/emails/account_confirmation.html
+./app/templates/emails/account_delete_confirmation.html
+./app/templates/emails/buyer_confirmed_transfer.html
+./app/templates/emails/coupon_expiration_warning.html
+./app/templates/emails/coupon_sharing_accepted.html
+./app/templates/emails/coupon_sharing_revoked.html
+./app/templates/emails/delete_account_confirmation ישן.html
+./app/templates/emails/new_coupon_request.html
+./app/templates/emails/newsletter_template.html
+./app/templates/emails/offer_coupon_email.html
+./app/templates/emails/password_change_confirmation.html
+./app/templates/emails/password_reset_email.html
+./app/templates/emails/seller_approved_transaction.html
+./app/templates/emails/seller_canceled_transaction.html
+./app/templates/emails/seller_confirmed_transfer.html
+./app/templates/emails/seller_new_buyer.html
+./app/templates/emails/transaction_completed_seller.html
+./app/templates/faq.html
+./app/templates/forgot_password.html
+./app/templates/index.html
+./app/templates/index_modals/coupon_modals.html
+./app/templates/index_modals/quick_add_coupon_modal.html
+./app/templates/index_modals/stats_modal copy.html
+./app/templates/index_modals/stats_modal.html
+./app/templates/index_modals/usage_report_modal.html
+./app/templates/index_modals/whatsapp_groups_modal.html
+./app/templates/landing_page.html
+./app/templates/login.html
+./app/templates/marketplace.html
+./app/templates/modal/whatsapp_groups_modal.html
+./app/templates/my_transactions.html
+./app/templates/notifications.html
+./app/templates/privacy_policy.html
+./app/templates/profile/change_password.html
+./app/templates/profile/edit_profile.html
+./app/templates/profile/rate_user.html
+./app/templates/profile/unsubscribe_success.html
+./app/templates/profile/user_preferences.html
+./app/templates/profile/user_profile.html
+./app/templates/register.html
+./app/templates/request_coupon.html
+./app/templates/reset_password_form.html
+./app/templates/review_seller.html
+./app/templates/review_usage.html
+./app/templates/review_usage_modal.html
+./app/templates/select_coupon_offer_options.html
+./app/templates/select_coupon_to_offer.html
+./app/templates/sell_coupon.html
+./app/templates/seller_add_coupon_code.html
+./app/templates/share_confirmation.html
+./app/templates/share_expired.html
+./app/templates/share_success.html
+./app/templates/statistics.html
+./app/templates/telegram/already_connected.html
+./app/templates/telegram/bot_landing.html
+./app/templates/telegram/connect.html
+./app/templates/telegram/error.html
+./app/templates/transaction_about.html
+./app/templates/transactions_upload.html
+./app/templates/update_coupon_usage.html
+./app/templates/upload_coupons.html
+./app/templates/usage_order.html
+./app/templates/ישן/add_coupon לפני העריכה של הjs 040402025.html
+./app/templates/ישן/add_coupons לפני העריכות 02042025.html
+./app/templates/ישן/add_coupons עיצוב חדש.html
+./app/templates/ישן/approve_transaction copy.html
+./app/templates/ישן/coupon_detail copy.html
+./app/templates/ישן/edit_coupon copy 2.html
+./app/templates/ישן/edit_coupon copy.html
+./app/templates/ישן/index 06042025.html
+./app/templates/ישן/index copy.html
+./app/templates/ישן/index שינוי עיצוב.html
+./app/templates/ישן/marketplace old.html
+./app/templates/ישן/review_usage copy.html
+./app/templates/ישן/review_usage_modal1111.html
+./app/templates/ישן/stats_modal copy.html
+./app/templates/ישן/stats_modal לפני העריכות 17042025.html
+./app/templates/ישן/stats_modal עריכות 18042025.html
+./app/templates/ישן/transaction_about copy.html
+./automatic_coupon_update/input_html/buyme_before_8937 - 7807 - 1121 - 9376.html
+./automatic_coupon_update/input_html/buyme_before_9376-1167-7242-1955.html
+./automatic_coupon_update/input_html/buyme_before_9376-1199-5638-7927.html
+./db_inspector.py
+./graphs.py
+./migrations/versions/81096b03fd20_merge_migrations.py
+./migrations/versions/97bc16fd57fa_merge_migration_heads.py
+./migrations/versions/99d197bcf7d0_add_user_preferences_for_newsletter_and_.py
+./migrations/versions/add_coupon_sharing_tables.py
+./migrations/versions/add_id_to_user_tour_progress.py
+./migrations/versions/add_modern_newsletter_fields.py
+./migrations/versions/add_newsletter_image_path.py
+./migrations/versions/add_newsletter_models.py
+./migrations/versions/add_newsletter_type_and_custom_html.py
+./migrations/versions/add_performance_indexes.py
+./migrations/versions/b43b720fccd5_merge_migration_heads_before_adding_.py
+./migrations/versions/e2e6c6fd2c3b_merge_multiple_heads.py
+./migrations/versions/ef0f1e525b3f_add_custom_titles_to_newsletter.py
+./migrations/versions/f2fd28cef0de_initial_migration_with_user_id_in_coupon.py
+./migrations/versions/f78a2e3a929a_merge_heads_before_adding_user_.py
+./project_structure.txt
+./requirements.txt
+./runtime.txt
+./scheduler_config.py
+./scheduler_utils.py
+./sql_query_tool.py
+./telegram_bot.py
+./wsgi.py

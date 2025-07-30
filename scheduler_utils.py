@@ -9,7 +9,6 @@ from app.helpers import send_email  # Make sure you have a send_email function
 
 # in app.helpers or another appropriate file
 from sqlalchemy import text
-from app.extensions import db
 
 
 def update_company_counts_and_send_email_old(app):
@@ -278,14 +277,12 @@ import logging
 from sqlalchemy.sql import text
 from app.extensions import db
 
-from app import create_app
-
-
 def load_status():
     """
     טוען מהטבלה אם המייל נשלח עבור התאריך הנוכחי.
     מחזיר True אם נשלח, אחרת False.
     """
+    from app import create_app  # Local import to avoid circular dependency
     app = create_app()  # יצירת מופע של האפליקציה
     with app.app_context():  # שימוש ב-context כדי למנוע שגיאות
         today = datetime.date.today()

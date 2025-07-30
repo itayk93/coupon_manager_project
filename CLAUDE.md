@@ -44,17 +44,19 @@ The application uses Flask Blueprints organized in `app/routes/`:
 4. Update models if database changes are required
 5. Create migration file for schema changes
 6. **If adding new library imports, update requirements.txt with the new dependencies**
-7. Test both functionality and security
-8. **Automatically commit all changes at the end of each session**
+7. **Update project_structure.txt with new files/directories added**
+8. Test both functionality and security
+9. **Automatically commit all changes at the end of each session**
 
 ### When Modifying Existing Code
 1. Check `PROJECT_DOCUMENTATION.md` for current route information
 2. Maintain existing URL patterns and HTTP methods
 3. Preserve authentication decorators and permissions
 4. **If adding new library imports, update requirements.txt with the new dependencies**
-5. Update documentation after changes
-6. Consider backward compatibility
-7. **Automatically commit all changes at the end of each session**
+5. **Update project_structure.txt if file structure changes**
+6. Update documentation after changes
+7. Consider backward compatibility
+8. **Automatically commit all changes at the end of each session**
 
 ### Security Considerations
 - All admin routes require `@admin_required` decorator
@@ -153,13 +155,28 @@ The application uses Flask Blueprints organized in `app/routes/`:
 - ✅ Email notifications
 - ✅ Excel/PDF export functionality
 
+## Project Structure Updates
+**IMPORTANT**: When adding new files or directories, update the project structure documentation:
+
+### Project Structure Update Process:
+1. **When adding new files/directories**: Always update `project_structure.txt` with the new structure
+2. **Use this command** to regenerate the structure: `tree -I '__pycache__|*.pyc|.git|.env|instance|uploads|.DS_Store|sample_text|reports_to_improve' > project_structure.txt`
+3. **Before committing**: Ensure `project_structure.txt` reflects current file organization
+
+### Files Excluded from Git:
+- `CLAUDE.md` - Internal development instructions
+- `PROJECT_DOCUMENTATION.md` - Internal route documentation
+- `project_structure.txt` - Auto-generated structure file
+- `reports_to_improve/` - Development reports directory
+
 ## Auto-Commit Instructions
 **CRITICAL**: At the end of EVERY session, Claude must automatically commit all changes to git with a descriptive commit message. This ensures all work is saved and tracked properly.
 
 ### Auto-Commit Process:
-1. Run `git status` to check for changes
-2. Add all changes with `git add .`
-3. Commit with descriptive message following this format: `git commit -m "Brief description of changes made"`
-4. **DO NOT ask for permission** - this should be done automatically
+1. **Update project structure**: Run `tree -I '__pycache__|*.pyc|.git|.env|instance|uploads|.DS_Store|sample_text|reports_to_improve' > project_structure.txt`
+2. Run `git status` to check for changes
+3. Add all changes with `git add .`
+4. Commit with descriptive message following this format: `git commit -m "Brief description of changes made"`
+5. **DO NOT ask for permission** - this should be done automatically
 
 Remember: Always keep `PROJECT_DOCUMENTATION.md` synchronized with code changes to maintain accurate route documentation!
