@@ -5,211 +5,417 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>דוח קופונים יומי - {{ report_date }}</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --primary-color: #4a5568;
+            --primary-dark: #2d3748;
+            --secondary-color: #718096;
+            --success-color: #68d391;
+            --warning-color: #fbb020;
+            --error-color: #fc8181;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-primary: #1a202c;
+            --text-secondary: #4a5568;
+            --bg-primary: #f7fafc;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --accent-blue: #4299e1;
+            --accent-purple: #805ad5;
+            --accent-green: #48bb78;
+            --accent-orange: #ed8936;
+            --shadow-soft: 0 20px 25px -5px rgba(74, 85, 104, 0.15), 0 10px 10px -5px rgba(74, 85, 104, 0.08);
+            --shadow-glow: 0 0 50px rgba(74, 85, 104, 0.3);
+            --shadow-card: 0 4px 6px -1px rgba(74, 85, 104, 0.1), 0 2px 4px -1px rgba(74, 85, 104, 0.06);
+            --border-radius: 20px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --text-primary: #f7fafc;
+            --text-secondary: #a0aec0;
+            --bg-primary: #1a202c;
+            --bg-card: rgba(45, 55, 72, 0.95);
+            --glass-bg: rgba(0, 0, 0, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary-color: #718096;
+            --primary-dark: #4a5568;
+        }
+
         * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
             direction: rtl;
-            text-align: right;
         }
+
         body {
-            font-family: 'Segoe UI', 'Arial', 'Helvetica', sans-serif;
-            margin: 0;
-            padding: 15px;
-            background-color: #f8f9fa;
-            color: #333;
-            direction: rtl;
-            text-align: right;
-            line-height: 1.4;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            transition: var(--transition);
         }
+
+        /* Animated Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(74, 85, 104, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(113, 128, 150, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(104, 211, 145, 0.08) 0%, transparent 50%);
+            z-index: -1;
+            animation: backgroundMove 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundMove {
+            0%, 100% { transform: translateX(0) translateY(0); }
+            33% { transform: translateX(-30px) translateY(-50px); }
+            66% { transform: translateX(20px) translateY(30px); }
+        }
+
         .container {
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #4361ee 0%, #3951db 100%);
-            color: white;
-            padding: 15px 20px;
-            text-align: center;
-            direction: rtl;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 20px;
-            font-weight: 600;
-        }
-        .date {
-            margin-top: 5px;
-            font-size: 13px;
-            opacity: 0.9;
-        }
-        .content {
             padding: 20px;
-            direction: rtl;
-            text-align: right;
+            position: relative;
         }
-        .summary-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 25px;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .stat-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border: none;
-            border-radius: 12px;
-            padding: 16px 12px;
+
+        /* Header Section */
+        .header {
+            background: var(--primary-color);
+            border-radius: var(--border-radius);
+            padding: 30px 25px;
             text-align: center;
-            box-shadow: 0 2px 8px rgba(67, 97, 238, 0.08);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-bottom: 30px;
             position: relative;
             overflow: hidden;
+            box-shadow: var(--shadow-soft);
+            backdrop-filter: blur(20px);
         }
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(67, 97, 238, 0.12);
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: rotate 10s linear infinite;
         }
-        .stat-card::before {
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 8px;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            animation: slideInDown 0.8s ease-out;
+        }
+
+        .header .date {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+            animation: slideInUp 0.8s ease-out 0.2s both;
+        }
+
+        /* Insights Section */
+        .insights-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+            animation: slideInRight 0.8s ease-out 0.4s both;
+        }
+
+        .insights-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--secondary-color);
+            border-radius: 2px;
+        }
+
+        .insights-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+
+        .insight-item {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            transform: translateX(20px);
+            opacity: 0;
+            animation: slideInItem 0.5s ease-out forwards;
+        }
+
+        .insight-item:nth-child(2) { animation-delay: 0.1s; }
+        .insight-item:nth-child(3) { animation-delay: 0.2s; }
+        .insight-item:nth-child(4) { animation-delay: 0.3s; }
+
+        .insight-item:hover {
+            transform: translateY(-3px) scale(1.01);
+            box-shadow: var(--shadow-card);
+        }
+
+        @keyframes slideInItem {
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* ROI Highlight */
+        .roi-highlight {
+            background: var(--primary-color);
+            border-radius: var(--border-radius);
+            padding: 25px 20px;
+            text-align: center;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+            animation: slideInLeft 0.8s ease-out 0.6s both;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .roi-highlight::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.3; }
+        }
+
+        .roi-value {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 6px;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 2;
+        }
+
+        .roi-label {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+            position: relative;
+            z-index: 2;
+            margin-bottom: 8px;
+        }
+
+        .roi-details {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.8);
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            animation: slideInUp 0.8s ease-out 0.8s both;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 20px 15px;
+            text-align: center;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: var(--shadow-card);
+        }
+
+        .metric-card::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
-            right: 0;
+            width: 100%;
             height: 3px;
-            background: linear-gradient(90deg, #4361ee, #7209b7);
+            background: var(--primary-color);
+            transform: scaleX(0);
+            transition: var(--transition);
         }
-        .stat-value {
-            font-size: 24px;
+
+        .metric-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .metric-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .metric-card:nth-child(1) .metric-value { color: var(--accent-blue); }
+        .metric-card:nth-child(2) .metric-value { color: var(--accent-purple); }
+        .metric-card:nth-child(3) .metric-value { color: var(--accent-green); }
+
+        .metric-value {
+            font-size: 1.8rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 4px;
-            line-height: 1.2;
+            color: var(--primary-color);
+            margin-bottom: 6px;
+            animation: countUp 1s ease-out 1s both;
         }
-        .stat-label {
-            font-size: 12px;
-            color: #64748b;
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
-        .insights-compact {
-            background: linear-gradient(135deg, #f0f9ff 0%, #faf5ff 100%);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: none;
-            direction: rtl;
-            text-align: right;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.08);
+
+        @keyframes countUp {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
         }
-        .insights-compact::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            width: 4px;
-            background: linear-gradient(180deg, #4361ee 0%, #7209b7 100%);
+
+        /* Table Section */
+        .section {
+            margin-bottom: 30px;
+            animation: fadeInUp 0.8s ease-out 1s both;
         }
-        .insights-title {
-            color: #1e293b;
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .insight-item {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            border-radius: 10px;
-            border: 1px solid rgba(67, 97, 238, 0.1);
-            font-size: 13px;
-            font-weight: 500;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-            transition: transform 0.2s ease;
-        }
-        .insight-item:hover {
-            transform: translateX(-2px);
-        }
-        .top-companies {
-            margin-bottom: 15px;
-        }
+
         .section-title {
-            font-size: 18px;
+            font-size: 1.3rem;
             font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
             position: relative;
-            padding-bottom: 8px;
+            padding-bottom: 10px;
+            color: var(--primary-color);
+            text-align: right;
         }
+
         .section-title::after {
             content: '';
             position: absolute;
             bottom: 0;
             right: 0;
-            width: 40px;
+            width: 50px;
             height: 3px;
-            background: linear-gradient(90deg, #4361ee, #7209b7);
+            background: var(--primary-color);
             border-radius: 2px;
         }
-        .compact-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            background: white;
-            border-radius: 12px;
+
+        .table-container {
             overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            direction: rtl;
-            font-size: 12px;
+            border-radius: var(--border-radius);
             margin-bottom: 20px;
+            box-shadow: var(--shadow-soft);
         }
-        .compact-table th {
-            background: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            font-size: 0.75rem;
+        }
+
+        th {
+            background: var(--primary-color);
             color: white;
-            padding: 14px 12px;
+            padding: 12px 8px;
             text-align: right;
             font-weight: 700;
-            font-size: 12px;
-            letter-spacing: 0.3px;
-            text-transform: uppercase;
+            font-size: 0.7rem;
+            position: relative;
         }
-        .compact-table td {
-            padding: 12px;
+
+        th::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        td {
+            padding: 10px 8px;
             text-align: right;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 12px;
+            border-bottom: 1px solid var(--glass-border);
             font-weight: 500;
+            font-size: 0.7rem;
+            transition: var(--transition);
         }
-        .compact-table tr:nth-child(even) {
-            background-color: #f8fafc;
+
+        tr:hover td {
+            background: var(--glass-bg);
+            transform: scale(1.005);
         }
-        .compact-table tr:hover {
-            background-color: #f0f9ff;
+
+        tr:nth-child(even) {
+            background: rgba(74, 85, 104, 0.03);
         }
+
+        /* View Full Report Button */
         .view-full-section {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border: 1px solid rgba(67, 97, 238, 0.1);
-            border-radius: 16px;
-            padding: 24px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 20px;
             text-align: center;
             margin-bottom: 20px;
             position: relative;
             overflow: hidden;
         }
+
         .view-full-section::before {
             content: '';
             position: absolute;
@@ -217,91 +423,48 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(67, 97, 238, 0.03) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(74, 85, 104, 0.03) 0%, transparent 70%);
             animation: float 6s ease-in-out infinite;
         }
+
         @keyframes float {
             0%, 100% { transform: rotate(0deg); }
             50% { transform: rotate(180deg); }
         }
+
         .view-full-btn {
             display: inline-block;
-            background: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            background: var(--primary-color);
             color: white;
-            padding: 14px 28px;
+            padding: 12px 24px;
             text-decoration: none;
             border-radius: 12px;
-            font-size: 14px;
+            font-size: 0.9rem;
             font-weight: 700;
             margin: 8px 0;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+            transition: var(--transition);
+            box-shadow: var(--shadow-card);
             position: relative;
             z-index: 1;
-            text-transform: none;
-            letter-spacing: 0.3px;
         }
+
         .view-full-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+            box-shadow: var(--shadow-soft);
             color: white;
         }
-        .footer {
-            background-color: #f8f9fa;
-            padding: 12px;
-            text-align: center;
-            color: #666;
-            font-size: 11px;
-            border-top: 1px solid #e0e0e0;
-        }
-        .roi-highlight {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-            position: relative;
-            overflow: hidden;
-        }
-        .roi-highlight::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            animation: shimmer 2s infinite;
-        }
-        @keyframes shimmer {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-        .roi-value {
-            font-size: 28px;
-            font-weight: 800;
-            margin-bottom: 4px;
-            position: relative;
-            z-index: 1;
-        }
-        .roi-label {
-            font-size: 13px;
-            opacity: 0.95;
-            font-weight: 500;
-            position: relative;
-            z-index: 1;
-        }
+
+        /* Expiring Alert */
         .expiring-alert {
             background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
             border: 1px solid rgba(245, 158, 11, 0.2);
-            border-radius: 12px;
-            padding: 16px;
+            border-radius: var(--border-radius);
+            padding: 15px;
             margin-bottom: 20px;
             position: relative;
             overflow: hidden;
         }
+
         .expiring-alert::before {
             content: '';
             position: absolute;
@@ -311,85 +474,179 @@
             width: 4px;
             background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
         }
+
         .expiring-alert h4 {
             color: #92400e;
-            margin: 0 0 10px 0;
-            font-size: 14px;
+            margin: 0 0 8px 0;
+            font-size: 0.9rem;
             font-weight: 700;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 30px;
+            animation: fadeIn 0.8s ease-out 1.4s both;
+            font-size: 0.8rem;
+        }
+
+        /* Animations */
+        @keyframes slideInDown {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideInUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header {
+                padding: 20px 15px;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+            
+            .insights-section,
+            .roi-highlight {
+                padding: 20px;
+            }
+            
+            th, td {
+                padding: 8px 6px;
+                font-size: 0.65rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .metric-card {
+                padding: 15px 12px;
+            }
+            
+            .metric-value {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📊 דוח קופונים יומי</h1>
-            <div class="date">{{ report_date }}</div>
+            <div class="header-content">
+                <h1>📊 דוח קופונים יומי</h1>
+                <div class="date">{{ report_date }}</div>
+            </div>
         </div>
 
-        <div class="content">
-            <!-- Quick Stats -->
-            {% if recent_activity %}
-            <div class="summary-stats">
-                <div class="stat-card">
-                    <div class="stat-value">{{ recent_activity.get('today_count', 0) }}</div>
-                    <div class="stat-label">קופונים היום</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">{{ recent_activity.get('week_count', 0) }}</div>
-                    <div class="stat-label">השבוע</div>
-                </div>
-                {% if roi_metrics %}
-                <div class="stat-card">
-                    <div class="stat-value">{{ roi_metrics.average_roi }}%</div>
-                    <div class="stat-label">חיסכון ממוצע</div>
-                </div>
-                {% endif %}
-                {% if basic_stats %}
-                <div class="stat-card">
-                    <div class="stat-value">{{ basic_stats|length }}</div>
-                    <div class="stat-label">חברות פעילות</div>
-                </div>
-                {% endif %}
+        <!-- Quick Stats -->
+        {% if recent_activity %}
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value">{{ recent_activity.get('today_count', 0) }}</div>
+                <div class="metric-label">קופונים היום</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">{{ recent_activity.get('week_count', 0) }}</div>
+                <div class="metric-label">השבוע</div>
+            </div>
+            {% if roi_metrics %}
+            <div class="metric-card">
+                <div class="metric-value">{{ roi_metrics.average_roi }}%</div>
+                <div class="metric-label">חיסכון ממוצע</div>
             </div>
             {% endif %}
-
-            <!-- Top Insights -->
-            {% if options.get('insights_top3') and insights %}
-            <div class="insights-compact">
-                <div class="insights-title">💡 תובנות מרכזיות</div>
-                {% for insight in insights[:2] %}
-                <div class="insight-item">{{ insight }}</div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- ROI Highlight -->
-            {% if options.get('metrics_roi') and roi_metrics %}
-            <div class="roi-highlight">
-                <div class="roi-value">{{ roi_metrics.average_roi }}%</div>
-                <div class="roi-label">חיסכון ממוצע - שווי כולל: ₪{{ "{:,.0f}".format(roi_metrics.total_value) }}</div>
-            </div>
-            {% endif %}
-
-            <!-- Expiring Alert -->
-            {% if options.get('metrics_expiring') and expiring_coupons %}
-            <div class="expiring-alert">
-                <h4>⚠️ קופונים שפגים השבוע הקרוב</h4>
-                {% set total_expiring = expiring_coupons|sum(attribute='expiring_count') %}
-                <div style="font-size: 12px;">
-                    <strong>{{ total_expiring }}</strong> קופונים עומדים לפוג תוקף השבוע
-                    {% if expiring_coupons|length > 0 %}
-                    - <strong>{{ expiring_coupons[0].company }}</strong> ({{ expiring_coupons[0].expiring_count }})
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Top Companies (First 5) -->
             {% if basic_stats %}
-            <div class="top-companies">
-                <div class="section-title">🏆 5 החברות המובילות</div>
-                <table class="compact-table">
+            <div class="metric-card">
+                <div class="metric-value">{{ basic_stats|length }}</div>
+                <div class="metric-label">חברות פעילות</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Top Insights -->
+        {% if options.get('insights_top3') and insights %}
+        <div class="insights-section">
+            <div class="insights-title">💡 תובנות מרכזיות</div>
+            {% for insight in insights[:2] %}
+            <div class="insight-item">{{ insight }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- ROI Highlight -->
+        {% if options.get('metrics_roi') and roi_metrics %}
+        <div class="roi-highlight">
+            <div class="roi-value">{{ roi_metrics.average_roi }}%</div>
+            <div class="roi-label">חיסכון ממוצע</div>
+            <div class="roi-details">
+                שווי כולל: ₪{{ "{:,.0f}".format(roi_metrics.total_value) }} | 
+                עלות כוללת: ₪{{ "{:,.0f}".format(roi_metrics.total_cost) }} | 
+                חיסכון: ₪{{ "{:,.0f}".format(roi_metrics.total_savings) }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Expiring Alert -->
+        {% if options.get('metrics_expiring') and expiring_coupons %}
+        <div class="expiring-alert">
+            <h4>⚠️ קופונים שפגים השבוע הקרוב</h4>
+            {% set total_expiring = expiring_coupons|sum(attribute='expiring_count') %}
+            <div>
+                <strong>{{ total_expiring }}</strong> קופונים עומדים לפוג תוקף השבוע
+                {% if expiring_coupons|length > 0 %}
+                - <strong>{{ expiring_coupons[0].company }}</strong> ({{ expiring_coupons[0].expiring_count }})
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Top Companies (First 5) -->
+        {% if basic_stats %}
+        <div class="section">
+            <div class="section-title">🏆 5 החברות המובילות</div>
+            <div class="table-container">
+                <table>
                     <thead>
                         <tr>
                             <th>חברה</th>
@@ -410,19 +667,19 @@
                     </tbody>
                 </table>
             </div>
-            {% endif %}
+        </div>
+        {% endif %}
 
-            <!-- View Full Report Button -->
-            <div class="view-full-section">
-                <div style="margin-bottom: 10px; font-size: 13px; color: #666;">
-                    רוצה לראות את הדוח המלא עם גרפים ונתונים מפורטים?
-                </div>
-                <a href="http://127.0.0.1:10000/admin/email/view-full-report" class="view-full-btn" target="_blank">
-                    📊 צפייה בדוח המלא
-                </a>
-                <div style="margin-top: 8px; font-size: 11px; color: #888;">
-                    הדוח המלא כולל גרפים אינטראקטיביים, נתוני חברות מפורטים ואנליטיקה מתקדמת
-                </div>
+        <!-- View Full Report Button -->
+        <div class="view-full-section">
+            <div style="margin-bottom: 10px; font-size: 0.85rem; color: var(--text-secondary);">
+                רוצה לראות את הדוח המלא עם גרפים ונתונים מפורטים?
+            </div>
+            <a href="http://127.0.0.1:10000/admin/email/view-full-report" class="view-full-btn" target="_blank">
+                📊 צפייה בדוח המלא
+            </a>
+            <div style="margin-top: 8px; font-size: 0.7rem; color: var(--text-secondary);">
+                הדוח המלא כולל גרפים אינטראקטיביים, נתוני חברות מפורטים ואנליטיקה מתקדמת
             </div>
         </div>
 

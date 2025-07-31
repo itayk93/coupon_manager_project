@@ -5,249 +5,573 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>דוח קופונים יומי - {{ report_date }}</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --primary-color: #4a5568;
+            --primary-dark: #2d3748;
+            --secondary-color: #718096;
+            --success-color: #68d391;
+            --warning-color: #fbb020;
+            --error-color: #fc8181;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-primary: #1a202c;
+            --text-secondary: #4a5568;
+            --bg-primary: #f7fafc;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --accent-blue: #4299e1;
+            --accent-purple: #805ad5;
+            --accent-green: #48bb78;
+            --accent-orange: #ed8936;
+            --shadow-soft: 0 20px 25px -5px rgba(74, 85, 104, 0.15), 0 10px 10px -5px rgba(74, 85, 104, 0.08);
+            --shadow-glow: 0 0 50px rgba(74, 85, 104, 0.3);
+            --shadow-card: 0 4px 6px -1px rgba(74, 85, 104, 0.1), 0 2px 4px -1px rgba(74, 85, 104, 0.06);
+            --border-radius: 20px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --text-primary: #f7fafc;
+            --text-secondary: #a0aec0;
+            --bg-primary: #1a202c;
+            --bg-card: rgba(45, 55, 72, 0.95);
+            --glass-bg: rgba(0, 0, 0, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary-color: #718096;
+            --primary-dark: #4a5568;
+        }
+
         * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
             direction: rtl;
-            text-align: right;
         }
+
         body {
-            font-family: 'Segoe UI', 'Arial', 'Helvetica', sans-serif;
-            margin: 0;
-            padding: 15px;
-            background-color: #f8f9fa;
-            color: #333;
-            direction: rtl;
-            text-align: right;
-            line-height: 1.4;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            transition: var(--transition);
         }
+
+        /* Animated Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(74, 85, 104, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(113, 128, 150, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(104, 211, 145, 0.08) 0%, transparent 50%);
+            z-index: -1;
+            animation: backgroundMove 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundMove {
+            0%, 100% { transform: translateX(0) translateY(0); }
+            33% { transform: translateX(-30px) translateY(-50px); }
+            66% { transform: translateX(20px) translateY(30px); }
+        }
+
         .container {
-            max-width: 650px;
+            max-width: 1200px;
             margin: 0 auto;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
+            padding: 20px;
+            position: relative;
         }
+
+        /* Header Section */
         .header {
-            background: linear-gradient(135deg, #4361ee 0%, #3951db 100%);
-            color: white;
-            padding: 20px;
+            background: var(--primary-color);
+            border-radius: var(--border-radius);
+            padding: 40px 30px;
             text-align: center;
-            direction: rtl;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-soft);
+            backdrop-filter: blur(20px);
         }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: rotate 10s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+
         .header h1 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: 600;
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            color: white;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            animation: slideInDown 0.8s ease-out;
         }
-        .date {
-            margin-top: 8px;
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        .content {
-            padding: 20px;
-            direction: rtl;
-            text-align: right;
-        }
-        .insights-section {
-            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-right: 4px solid #4361ee;
-            direction: rtl;
-            text-align: right;
-        }
-        .insights-title {
-            color: #4361ee;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            direction: rtl;
-            text-align: right;
-        }
-        .insight-item {
-            background: white;
-            padding: 8px 12px;
-            margin-bottom: 6px;
-            border-radius: 4px;
-            border-right: 3px solid #4361ee;
-            font-size: 13px;
+
+        .header .date {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
             font-weight: 500;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            direction: rtl;
-            text-align: right;
+            animation: slideInUp 0.8s ease-out 0.2s both;
         }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: var(--transition);
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 50px rgba(74, 85, 104, 0.4);
+        }
+
+        /* Insights Section */
+        .insights-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            animation: slideInRight 0.8s ease-out 0.4s both;
+        }
+
+        .insights-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--secondary-color);
+            border-radius: 2px;
+        }
+
+        .insights-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+
+        .insight-item {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            border-radius: 15px;
+            border: 1px solid var(--glass-border);
+            font-weight: 500;
+            transition: var(--transition);
+            transform: translateX(20px);
+            opacity: 0;
+            animation: slideInItem 0.5s ease-out forwards;
+        }
+
+        .insight-item:nth-child(2) { animation-delay: 0.1s; }
+        .insight-item:nth-child(3) { animation-delay: 0.2s; }
+        .insight-item:nth-child(4) { animation-delay: 0.3s; }
+
+        .insight-item:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: var(--shadow-soft);
+        }
+
+        @keyframes slideInItem {
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* ROI Highlight */
+        .roi-highlight {
+            background: #4a5568;
+            border-radius: var(--border-radius);
+            padding: 40px 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            animation: slideInLeft 0.8s ease-out 0.6s both;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .roi-highlight::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.3; }
+        }
+
+        .roi-value {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 900;
+            color: white;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 2;
+        }
+
+        .roi-label {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+            position: relative;
+            z-index: 2;
+        }
+
+        .roi-details {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Metrics Grid */
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .metric-card {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-        .metric-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #4361ee;
-            margin-bottom: 5px;
-        }
-        .metric-label {
-            font-size: 14px;
-            color: #666;
-            font-weight: 500;
-        }
-        .section {
+            gap: 25px;
             margin-bottom: 40px;
+            animation: slideInUp 0.8s ease-out 0.8s both;
         }
-        .section-title {
-            font-size: 22px;
+
+        .metric-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 30px 25px;
+            text-align: center;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: var(--shadow-card);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--primary-color);
+            transform: scaleX(0);
+            transition: var(--transition);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .metric-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .metric-card:nth-child(1) .metric-value { color: #4a5568; }
+        .metric-card:nth-child(2) .metric-value { color: #718096; }
+        .metric-card:nth-child(3) .metric-value { color: #68d391; }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            animation: countUp 1s ease-out 1s both;
+        }
+
+        .metric-label {
+            font-size: 1rem;
+            color: var(--text-secondary);
             font-weight: 600;
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #4361ee;
+        }
+
+        @keyframes countUp {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Charts Section */
+        .section {
+            margin-bottom: 50px;
+            animation: fadeInUp 0.8s ease-out 1s both;
+        }
+
+        .charts-section {
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            position: relative;
+            padding-bottom: 15px;
+            color: var(--primary-color);
+            text-align: right;
             display: flex;
+            justify-content: flex-start;
             align-items: center;
         }
-        .section-title i {
-            margin-left: 10px;
-            color: #4361ee;
+
+        .charts-section .section-title {
+            text-align: center;
+            justify-content: center;
         }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 60px;
+            height: 4px;
+            background: var(--primary-color);
+            border-radius: 2px;
+        }
+
+        .charts-section .section-title::after {
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
+        }
+
         .chart-container {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            margin-bottom: 25px;
+            transition: var(--transition);
+            box-shadow: var(--shadow-card);
         }
+
+        .chart-container:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-soft);
+        }
+
+        /* Enhanced Table Styles */
         .table-container {
-            overflow-x: auto;
-            margin-bottom: 20px;
+            overflow: hidden;
+            border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            box-shadow: var(--shadow-soft);
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
-            border-radius: 6px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            direction: rtl;
-            font-size: 12px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
         }
+
         th {
-            background-color: #4361ee;
+            background: var(--primary-color);
             color: white;
-            padding: 10px 8px;
+            padding: 20px 15px;
             text-align: right;
-            font-weight: 600;
-            font-size: 12px;
-            direction: rtl;
-        }
-        td {
-            padding: 8px;
-            text-align: right;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 11px;
-            direction: rtl;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .compact-table {
-            margin-bottom: 15px;
-        }
-        .compact-table th,
-        .compact-table td {
-            padding: 6px;
-            font-size: 11px;
-        }
-        .view-full-btn {
-            display: inline-block;
-            background: #4361ee;
-            color: white;
-            padding: 8px 16px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 12px;
-            margin: 10px 0;
-            text-align: center;
-        }
-        .expiring-alert {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-right: 4px solid #fdcb6e;
-        }
-        .expiring-alert h4 {
-            color: #e17055;
-            margin: 0 0 10px 0;
-            font-size: 16px;
-        }
-        .footer {
-            background-color: #f8f9fa;
-            padding: 20px;
-            text-align: center;
-            color: #666;
-            font-size: 12px;
-            border-top: 1px solid #e0e0e0;
-        }
-        .roi-highlight {
-            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
-            color: white;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .roi-value {
-            font-size: 28px;
             font-weight: 700;
-            margin-bottom: 5px;
+            font-size: 0.95rem;
+            position: relative;
         }
-        .roi-label {
-            font-size: 14px;
-            opacity: 0.9;
+
+        th::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
         }
-        .comparison-box {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 15px;
+
+        td {
+            padding: 18px 15px;
+            text-align: right;
+            border-bottom: 1px solid var(--glass-border);
+            font-weight: 500;
+            transition: var(--transition);
         }
-        .comparison-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
+
+        tr:hover td {
+            background: var(--glass-bg);
+            transform: scale(1.01);
         }
-        .comparison-value {
-            font-weight: 600;
+
+        tr:nth-child(even) {
+            background: rgba(99, 102, 241, 0.05);
         }
-        .positive { color: #00b894; }
-        .negative { color: #e17055; }
-        @media (max-width: 600px) {
+
+        /* Expiring Alert */
+        .expiring-alert {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .expiring-alert::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .expiring-alert h4 {
+            color: #92400e;
+            margin: 0 0 15px 0;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 50px;
+            animation: fadeIn 0.8s ease-out 1.4s both;
+        }
+
+        /* Animations */
+        @keyframes slideInDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideInUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header {
+                padding: 25px 20px;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            
+            .insights-section,
+            .chart-container {
+                padding: 20px;
+            }
+            
+            .theme-toggle {
+                top: 15px;
+                left: 15px;
+                padding: 8px 12px;
+            }
+            
+            th, td {
+                padding: 12px 10px;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 480px) {
             .metrics-grid {
                 grid-template-columns: 1fr;
+                gap: 15px;
             }
-            .content {
-                padding: 20px;
+            
+            .metric-card {
+                padding: 20px 15px;
             }
-            .header {
-                padding: 20px;
-            }
-            .header h1 {
-                font-size: 24px;
+            
+            .metric-value {
+                font-size: 2rem;
             }
         }
     </style>
@@ -255,207 +579,183 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📊 דוח קופונים יומי</h1>
-            <div class="date">{{ report_date }}</div>
+            <div class="theme-toggle" onclick="toggleTheme()" title="החלף ערכת נושא">
+                🌙
+            </div>
+            <div class="header-content">
+                <h1>📊 דוח קופונים יומי</h1>
+                <div class="date">{{ report_date }}</div>
+            </div>
         </div>
 
-        <div class="content">
-            <!-- Top Insights Section -->
-            {% if options.get('insights_top3') and insights %}
-            <div class="insights-section">
-                <div class="insights-title">
-                    💡 תובנות מרכזיות
-                </div>
-                {% for insight in insights %}
-                <div class="insight-item">{{ insight }}</div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- ROI Metrics -->
-            {% if options.get('metrics_roi') and roi_metrics %}
-            <div class="roi-highlight">
-                <div class="roi-value">{{ roi_metrics.average_roi }}%</div>
-                <div class="roi-label">חיסכון ממוצע</div>
-                <div style="margin-top: 10px; font-size: 13px;">
-                    שווי כולל: {{ "₪{:,.0f}".format(roi_metrics.total_value) }} | 
-                    עלות כוללת: {{ "₪{:,.0f}".format(roi_metrics.total_cost) }} | 
-                    חיסכון: {{ "₪{:,.0f}".format(roi_metrics.total_savings) }}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Recent Activity Metrics -->
-            {% if options.get('metrics_recent_activity') and recent_activity %}
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-value">{{ recent_activity.get('today_count', 0) }}</div>
-                    <div class="metric-label">קופונים שנוספו היום</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">{{ recent_activity.get('week_count', 0) }}</div>
-                    <div class="metric-label">קופונים השבוע</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">{{ recent_activity.get('previous_days_count', 0) }}</div>
-                    <div class="metric-label">בימים הקודמים השבוע</div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Expiring Coupons Alert -->
-            {% if options.get('metrics_expiring') and expiring_coupons %}
-            <div class="expiring-alert">
-                <h4>⚠️ קופונים שפגים השבוע הקרוב</h4>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>חברה</th>
-                                <th>כמות קופונים</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in expiring_coupons %}
-                            <tr>
-                                <td>{{ item.company }}</td>
-                                <td>{{ item.expiring_count }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Charts Section -->
-            <div class="section">
-                <div class="section-title">
-                    📈 גרפים ויזואליזציות
-                </div>
-
-                <!-- Coupons by Company Chart -->
-                {% if options.get('chart_coupons_by_company') and charts.get('coupons_by_company') %}
-                <div class="chart-container">
-                    {{ charts.coupons_by_company|safe }}
-                </div>
-                {% endif %}
-
-                <!-- Value Pie Chart -->
-                {% if options.get('chart_value_pie') and charts.get('value_pie') %}
-                <div class="chart-container">
-                    {{ charts.value_pie|safe }}
-                </div>
-                {% endif %}
-
-                <!-- Weekly Trend Chart -->
-                {% if options.get('chart_weekly_trend') and charts.get('weekly_trend') %}
-                <div class="chart-container">
-                    {{ charts.weekly_trend|safe }}
-                </div>
-                {% endif %}
-
-                <!-- Price Histogram -->
-                {% if options.get('chart_price_histogram') and charts.get('price_histogram') %}
-                <div class="chart-container">
-                    {{ charts.price_histogram|safe }}
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Basic Statistics Table -->
-            {% if basic_stats %}
-            <div class="section">
-                <div class="section-title">
-                    📋 סטטיסטיקות מפורטות לפי חברות
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>חברה</th>
-                                <th>כמות קופונים</th>
-                                <th>מחיר ממוצע</th>
-                                <th>שווי ממוצע</th>
-                                <th>הנחה ממוצעת</th>
-                                <th>שווי כולל</th>
-                                <th>עלות כוללת</th>
-                                <th>תאריך עדכון אחרון</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for company in basic_stats %}
-                            <tr>
-                                <td style="font-weight: 600;">{{ company.company }}</td>
-                                <td>{{ company.coupon_count }}</td>
-                                <td>₪{{ "{:,.0f}".format(company.avg_cost) }}</td>
-                                <td>₪{{ "{:,.0f}".format(company.avg_coupon_value) }}</td>
-                                <td>{{ company.avg_discount }}%</td>
-                                <td>₪{{ "{:,.0f}".format(company.total_value) }}</td>
-                                <td>₪{{ "{:,.0f}".format(company.total_cost) }}</td>
-                                <td>{{ company.last_added.strftime('%d/%m/%Y') if company.last_added else 'N/A' }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Weekly Comparison (if enabled) -->
-            {% if options.get('insights_weekly_comparison') %}
-            <div class="section">
-                <div class="section-title">
-                    📊 השוואה שבועית
-                </div>
-                <div class="comparison-box">
-                    <div class="comparison-item">
-                        <span>שבוע נוכחי:</span>
-                        <span class="comparison-value">{{ recent_activity.get('week_count', 0) }} קופונים</span>
-                    </div>
-                    <div class="comparison-item">
-                        <span>מגמה:</span>
-                        <span class="comparison-value positive">📈 גידול בפעילות</span>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Business Analytics (placeholder for future features) -->
-            {% if options.get('analytics_conversion_rate') or options.get('analytics_time_to_sell') or options.get('analytics_profitable_companies') %}
-            <div class="section">
-                <div class="section-title">
-                    💼 אנליטיקה עסקית
-                </div>
-                <div class="comparison-box">
-                    {% if options.get('analytics_conversion_rate') %}
-                    <div class="comparison-item">
-                        <span>שיעור מכירות:</span>
-                        <span class="comparison-value">85%</span>
-                    </div>
-                    {% endif %}
-                    {% if options.get('analytics_time_to_sell') %}
-                    <div class="comparison-item">
-                        <span>זמן ממוצע למכירה:</span>
-                        <span class="comparison-value">3.2 ימים</span>
-                    </div>
-                    {% endif %}
-                    {% if options.get('analytics_profitable_companies') %}
-                    <div class="comparison-item">
-                        <span>החברה הרווחית ביותר:</span>
-                        <span class="comparison-value">{{ basic_stats[0].company if basic_stats else 'N/A' }}</span>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
+        <!-- Top Insights Section -->
+        {% if options.get('insights_top3') and insights %}
+        <div class="insights-section">
+            <div class="insights-title">💡 תובנות מרכזיות</div>
+            {% for insight in insights %}
+            <div class="insight-item">{{ insight }}</div>
+            {% endfor %}
         </div>
+        {% endif %}
+
+        <!-- ROI Metrics -->
+        {% if options.get('metrics_roi') and roi_metrics %}
+        <div class="roi-highlight">
+            <div class="roi-value">{{ roi_metrics.average_roi }}%</div>
+            <div class="roi-label">חיסכון ממוצע</div>
+            <div class="roi-details">
+                שווי כולל: ₪{{ "{:,.0f}".format(roi_metrics.total_value) }} | 
+                עלות כוללת: ₪{{ "{:,.0f}".format(roi_metrics.total_cost) }} | 
+                חיסכון: ₪{{ "{:,.0f}".format(roi_metrics.total_savings) }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Activity Metrics -->
+        {% if options.get('metrics_recent_activity') and recent_activity %}
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value">{{ recent_activity.get('today_count', 0) }}</div>
+                <div class="metric-label">קופונים שנוספו היום</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">{{ recent_activity.get('week_count', 0) }}</div>
+                <div class="metric-label">קופונים השבוע</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">{{ recent_activity.get('previous_days_count', 0) }}</div>
+                <div class="metric-label">בימים הקודמים השבוע</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Expiring Coupons Alert -->
+        {% if options.get('metrics_expiring') and expiring_coupons %}
+        <div class="expiring-alert">
+            <h4>⚠️ קופונים שפגים השבוע הקרוב</h4>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>חברה</th>
+                            <th>כמות קופונים</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in expiring_coupons %}
+                        <tr>
+                            <td>{{ item.company }}</td>
+                            <td>{{ item.expiring_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Charts Section -->
+        <div class="section">
+            <div class="section-title">📈 גרפים ויזואליזציות</div>
+
+            <!-- Coupons by Company Chart -->
+            {% if options.get('chart_coupons_by_company') and charts.get('coupons_by_company') %}
+            <div class="chart-container">
+                {{ charts.coupons_by_company|safe }}
+            </div>
+            {% endif %}
+
+            <!-- Value Pie Chart -->
+            {% if options.get('chart_value_pie') and charts.get('value_pie') %}
+            <div class="chart-container">
+                {{ charts.value_pie|safe }}
+            </div>
+            {% endif %}
+
+            <!-- Weekly Trend Chart -->
+            {% if options.get('chart_weekly_trend') and charts.get('weekly_trend') %}
+            <div class="chart-container">
+                {{ charts.weekly_trend|safe }}
+            </div>
+            {% endif %}
+
+            <!-- Price Histogram -->
+            {% if options.get('chart_price_histogram') and charts.get('price_histogram') %}
+            <div class="chart-container">
+                {{ charts.price_histogram|safe }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Basic Statistics Table -->
+        {% if basic_stats %}
+        <div class="section">
+            <div class="section-title">📋 סטטיסטיקות מפורטות לפי חברות</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>חברה</th>
+                            <th>כמות קופונים</th>
+                            <th>מחיר ממוצע</th>
+                            <th>שווי ממוצע</th>
+                            <th>הנחה ממוצעת</th>
+                            <th>שווי כולל</th>
+                            <th>עלות כוללת</th>
+                            <th>תאריך עדכון אחרון</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for company in basic_stats %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ company.company }}</td>
+                            <td>{{ company.coupon_count }}</td>
+                            <td>₪{{ "{:,.0f}".format(company.avg_cost) }}</td>
+                            <td>₪{{ "{:,.0f}".format(company.avg_coupon_value) }}</td>
+                            <td>{{ company.avg_discount }}%</td>
+                            <td>₪{{ "{:,.0f}".format(company.total_value) }}</td>
+                            <td>₪{{ "{:,.0f}".format(company.total_cost) }}</td>
+                            <td>{{ company.last_added.strftime('%d/%m/%Y') if company.last_added else 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="footer">
-            <p>דוח זה נוצר אוטומטיטי על ידי מערכת ניהול הקופונים</p>
-            <p>תאריך יצירה: {{ report_date }}</p>
+            <p>דוח זה נוצר אוטומטיטי על ידי מערכת ניהול הקופונים המתקדמת</p>
+            <p>תאריך יצירה: {{ report_date }} | גרסה 2025</p>
         </div>
     </div>
+
+    <script>
+        // Theme Toggle Functionality
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.hasAttribute('data-theme');
+            
+            if (isDark) {
+                body.removeAttribute('data-theme');
+                document.querySelector('.theme-toggle').textContent = '🌙';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                document.querySelector('.theme-toggle').textContent = '☀️';
+            }
+            
+            // Save preference
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        // Load saved theme
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                document.querySelector('.theme-toggle').textContent = '☀️';
+            }
+        });
+    </script>
 </body>
 </html>
