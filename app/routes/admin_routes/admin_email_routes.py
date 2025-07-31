@@ -28,9 +28,39 @@ def email_settings():
     if request.method == 'POST':
         # קבלת הגדרות מהטופס
         daily_email_enabled = request.form.get('daily_email_enabled') == 'on'
-        email_hour = request.form.get('email_hour', '6')
+        email_hour = request.form.get('email_hour', '9')
         email_minute = request.form.get('email_minute', '0')
         recipient_email = request.form.get('recipient_email', 'itayk93@gmail.com')
+        
+        # קבלת כל אפשרויות הדוח המתקדם
+        report_options = {
+            # גרפים ויזואליזציות
+            'chart_coupons_by_company': request.form.get('chart_coupons_by_company') == 'on',
+            'chart_value_pie': request.form.get('chart_value_pie') == 'on',
+            'chart_weekly_trend': request.form.get('chart_weekly_trend') == 'on',
+            'chart_price_histogram': request.form.get('chart_price_histogram') == 'on',
+            
+            # מטריקות מתקדמות
+            'metrics_roi': request.form.get('metrics_roi') == 'on',
+            'metrics_recent_activity': request.form.get('metrics_recent_activity') == 'on',
+            'metrics_expiring': request.form.get('metrics_expiring') == 'on',
+            'metrics_top_companies': request.form.get('metrics_top_companies') == 'on',
+            
+            # תובנות חכמות
+            'insights_top3': request.form.get('insights_top3') == 'on',
+            'insights_weekly_comparison': request.form.get('insights_weekly_comparison') == 'on',
+            'insights_expiring_alerts': request.form.get('insights_expiring_alerts') == 'on',
+            
+            # אנליטיקה עסקית
+            'analytics_conversion_rate': request.form.get('analytics_conversion_rate') == 'on',
+            'analytics_time_to_sell': request.form.get('analytics_time_to_sell') == 'on',
+            'analytics_profitable_companies': request.form.get('analytics_profitable_companies') == 'on',
+            
+            # פילוח מתקדם
+            'segmentation_categories': request.form.get('segmentation_categories') == 'on',
+            'segmentation_price_ranges': request.form.get('segmentation_price_ranges') == 'on',
+            'comparisons_monthly': request.form.get('comparisons_monthly') == 'on',
+        }
         
         try:
             # שמירת ההגדרות
@@ -42,6 +72,8 @@ def email_settings():
                                     'דקה לשליחת המייל היומי (0-59)')
             AdminSettings.set_setting('daily_email_recipient', recipient_email, 'string', 
                                     'כתובת מייל למקבל המייל היומי')
+            AdminSettings.set_setting('email_report_options', report_options, 'json', 
+                                    'אפשרויות תוכן הדוח המתקדם')
             
             # עדכון הscheduler עם ההגדרות החדשות
             from scheduler_config import update_scheduler_time
@@ -54,11 +86,33 @@ def email_settings():
             logging.error(f"Error saving email settings: {e}")
     
     # טעינת הגדרות נוכחות
+    # ברירות מחדל לאפשרויות הדוח
+    default_report_options = {
+        'chart_coupons_by_company': True,
+        'chart_value_pie': True,
+        'chart_weekly_trend': True,
+        'chart_price_histogram': False,
+        'metrics_roi': True,
+        'metrics_recent_activity': True,
+        'metrics_expiring': True,
+        'metrics_top_companies': True,
+        'insights_top3': True,
+        'insights_weekly_comparison': True,
+        'insights_expiring_alerts': True,
+        'analytics_conversion_rate': False,
+        'analytics_time_to_sell': False,
+        'analytics_profitable_companies': False,
+        'segmentation_categories': False,
+        'segmentation_price_ranges': False,
+        'comparisons_monthly': False,
+    }
+    
     current_settings = {
         'daily_email_enabled': AdminSettings.get_setting('daily_email_enabled', True),
         'email_hour': AdminSettings.get_setting('daily_email_hour', 9),  # Changed default to 9 AM Israel time
         'email_minute': AdminSettings.get_setting('daily_email_minute', 0),
-        'recipient_email': AdminSettings.get_setting('daily_email_recipient', 'itayk93@gmail.com')
+        'recipient_email': AdminSettings.get_setting('daily_email_recipient', 'itayk93@gmail.com'),
+        'report_options': AdminSettings.get_setting('email_report_options', default_report_options)
     }
     
     # בדיקת סטטוס שליחה היום

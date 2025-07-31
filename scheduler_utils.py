@@ -84,13 +84,8 @@ def update_company_counts_and_send_email_old(app):
 
 def update_company_counts_and_send_email(app):
     """
-    Updates the coupon count for each company and sends an email report showing
-    for each company:
-      - Company name
-      - Number of coupons (company_count)
-      - Average coupon price (average of cost column)
-      - Average discount percentage (average of discount_percentage column, where NULL is translated to 0)
-      - Date of the last entered coupon (maximum value of date_added)
+    Updates the coupon count for each company and sends an enhanced email report
+    with analytics, charts, and comprehensive statistics based on admin settings.
     """
     with app.app_context():
         try:
@@ -102,7 +97,7 @@ def update_company_counts_and_send_email(app):
                 FROM (
                     SELECT c.id, COUNT(cp.company) AS company_count
                     FROM companies c
-                    LEFT JOIN coupon cp ON c.name = cp.company
+                    LEFT JOIN coupon cp ON c.name = cp.company AND cp.status = 'פעיל'
                     GROUP BY c.id
                 ) AS subquery
                 WHERE c.id = subquery.id;
@@ -111,133 +106,29 @@ def update_company_counts_and_send_email(app):
             db.session.execute(update_query)
             db.session.commit()
 
-            # 2. Fetch statistics from the coupon table with appropriate conversions
-            stats_query = text(
-                """
-                SELECT
-                    company,
-                    COUNT(*) AS coupon_count,
-                    ROUND(AVG(cost)::numeric, 2) AS avg_cost,
-                    ROUND(AVG(value)::numeric, 2) AS avg_coupon_value,
-                    ROUND(AVG(((value - cost) / NULLIF(value, 0)) * 100)::numeric, 2) AS avg_discount,
-                    MAX(date_added) AS last_added
-                FROM coupon
-                GROUP BY company
-                ORDER BY coupon_count DESC;  -- מיון לפי סה"כ קופונים
-            """
-            )
-            # Using .mappings() to get results as dictionaries (dict)
-            coupon_stats = db.session.execute(stats_query).mappings().all()
-
-            # 3. Build enhanced HTML content with internal CSS
-            html_content = f"""
-            <html>
-              <head>
-                <meta charset="utf-8">
-                <style>
-                  body {{
-                    font-family: Arial, sans-serif;
-                    background-color: #f4f4f4;
-                    margin: 0;
-                    padding: 20px;
-                    direction: rtl;  /* Adding RTL */
-                  }}
-                  .container {{
-                    background-color: #fff;
-                    padding: 20px;
-                    border-radius: 8px;
-                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                    max-width: 800px;
-                    margin: auto;
-                  }}
-                  h2 {{
-                    color: #333;
-                    text-align: center;
-                  }}
-                  table {{
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 20px;
-                  }}
-                  th, td {{
-                    padding: 12px;
-                    border: 1px solid #ddd;
-                    text-align: center;
-                  }}
-                  th {{
-                    background-color: #007BFF;
-                    color: #fff;
-                  }}
-                  tr:nth-child(even) {{
-                    background-color: #f9f9f9;
-                  }}
-                  .footer {{
-                    margin-top: 20px;
-                    text-align: center;
-                    font-size: 0.9em;
-                    color: #777;
-                  }}
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <h2>דוח עדכון יומי: נתוני קופונים לחברות</h2>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>שם חברה</th>
-                        <th>סה"כ קופונים בדאטהבייס</th>
-                        <th>מחיר קניית קופון ממוצע (₪)</th>
-                        <th>שווי ממוצע של קופון (₪)</th>
-                        <th>אחוז הנחה ממוצע (%)</th>
-                        <th>קופון אחרון</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-            """
-            for row in coupon_stats:
-                company = row["company"]
-                coupon_count = row["coupon_count"]
-                avg_cost = row["avg_cost"] if row["avg_cost"] is not None else "N/A"
-                avg_coupon_value = (
-                    row["avg_coupon_value"]
-                    if row["avg_coupon_value"] is not None
-                    else "N/A"
-                )
-                avg_discount = (
-                    row["avg_discount"] if row["avg_discount"] is not None else "N/A"
-                )
-                last_added = (
-                    row["last_added"].strftime("%Y-%m-%d %H:%M:%S")
-                    if row["last_added"]
-                    else "N/A"
-                )
-                html_content += f"""
-                      <tr>
-                        <td>{company}</td>
-                        <td>{coupon_count}</td>
-                        <td>{avg_cost}</td>
-                        <td>{avg_coupon_value}</td>
-                        <td>{avg_discount}</td>
-                        <td>{last_added}</td>
-                      </tr>
-                """
-            html_content += f"""
-                    </tbody>
-                  </table>
-                  <div class="footer">
-                    <p>דוח זה נוצר אוטומטית בתאריך: {datetime.date.today().strftime("%Y-%m-%d")}</p>
-                  </div>
-                </div>
-              </body>
-            </html>
-            """
-
-            # 4. Send email
-            # Get recipient email from admin settings
+            # 2. Check if enhanced reporting is enabled
             from app.models import AdminSettings
+            report_options = AdminSettings.get_setting('email_report_options', {})
+            
+            # If any advanced features are enabled, use the enhanced email system
+            if any(report_options.values()):
+                try:
+                    from app.analytics.email_analytics import generate_enhanced_email_content
+                    html_content = generate_enhanced_email_content(app)
+                    subject = "📊 דוח קופונים יומי מתקדם"
+                    logging.info("Using enhanced email template with analytics")
+                except Exception as e:
+                    logging.error(f"Error generating enhanced email content: {e}")
+                    # Fallback to basic email
+                    html_content = generate_basic_email_content()
+                    subject = "דוח יומי: נתוני קופונים לחברות"
+            else:
+                # Use basic email template
+                html_content = generate_basic_email_content()
+                subject = "דוח יומי: נתוני קופונים לחברות"
+
+            # 3. Send email
             recipient_email = AdminSettings.get_setting('daily_email_recipient', 'itayk93@gmail.com')
-            subject = "דוח יומי: נתוני קופונים לחברות"
             send_email(
                 sender_email="noreply@couponmasteril.com",
                 sender_name="Coupon Master",
@@ -247,13 +138,143 @@ def update_company_counts_and_send_email(app):
                 html_content=html_content,
             )
 
-            logging.info(
-                "Daily company update and coupon statistics email sent successfully."
-            )
+            logging.info("Daily company update and email sent successfully.")
 
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error in update_company_counts_and_send_email: {e}")
+
+
+def generate_basic_email_content():
+    """
+    Generates basic email content (fallback when enhanced features are disabled)
+    """
+    # Fetch statistics from the coupon table
+    stats_query = text(
+        """
+        SELECT
+            company,
+            COUNT(*) AS coupon_count,
+            ROUND(AVG(cost)::numeric, 2) AS avg_cost,
+            ROUND(AVG(value)::numeric, 2) AS avg_coupon_value,
+            ROUND(AVG(((value - cost) / NULLIF(value, 0)) * 100)::numeric, 2) AS avg_discount,
+            MAX(date_added) AS last_added
+        FROM coupon
+        WHERE status = 'פעיל'
+        GROUP BY company
+        ORDER BY coupon_count DESC;
+    """
+    )
+    coupon_stats = db.session.execute(stats_query).mappings().all()
+
+    # Build HTML content
+    html_content = f"""
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body {{
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+          }}
+          .container {{
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: auto;
+          }}
+          h2 {{
+            color: #333;
+            text-align: center;
+          }}
+          table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }}
+          th, td {{
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+          }}
+          th {{
+            background-color: #007BFF;
+            color: #fff;
+          }}
+          tr:nth-child(even) {{
+            background-color: #f9f9f9;
+          }}
+          .footer {{
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #777;
+          }}
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h2>דוח עדכון יומי: נתוני קופונים לחברות</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>שם חברה</th>
+                <th>סה"כ קופונים בדאטהבייס</th>
+                <th>מחיר קניית קופון ממוצע (₪)</th>
+                <th>שווי ממוצע של קופון (₪)</th>
+                <th>אחוז הנחה ממוצע (%)</th>
+                <th>קופון אחרון</th>
+              </tr>
+            </thead>
+            <tbody>
+    """
+    
+    for row in coupon_stats:
+        company = row["company"]
+        coupon_count = row["coupon_count"]
+        avg_cost = row["avg_cost"] if row["avg_cost"] is not None else "N/A"
+        avg_coupon_value = (
+            row["avg_coupon_value"]
+            if row["avg_coupon_value"] is not None
+            else "N/A"
+        )
+        avg_discount = (
+            row["avg_discount"] if row["avg_discount"] is not None else "N/A"
+        )
+        last_added = (
+            row["last_added"].strftime("%Y-%m-%d %H:%M:%S")
+            if row["last_added"]
+            else "N/A"
+        )
+        html_content += f"""
+              <tr>
+                <td>{company}</td>
+                <td>{coupon_count}</td>
+                <td>{avg_cost}</td>
+                <td>{avg_coupon_value}</td>
+                <td>{avg_discount}</td>
+                <td>{last_added}</td>
+              </tr>
+        """
+    
+    from datetime import date
+    html_content += f"""
+            </tbody>
+          </table>
+          <div class="footer">
+            <p>דוח זה נוצר אוטומטית בתאריך: {date.today().strftime("%Y-%m-%d")}</p>
+          </div>
+        </div>
+      </body>
+    </html>
+    """
+    
+    return html_content
 
 
 def get_coupons_expiring_in_30_days():

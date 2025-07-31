@@ -224,6 +224,38 @@
     color: var(--primary-color);
   }
 
+  .report-options {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .report-options h4 {
+    margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-sm);
+  }
+
+  .report-options h4:first-child {
+    margin-top: 0;
+  }
+
+  .form-check {
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    transition: background-color var(--transition-speed);
+  }
+
+  .form-check:hover {
+    background-color: rgba(67, 97, 238, 0.05);
+  }
+
+  .form-check-input:checked + .form-check-label {
+    color: var(--primary-color);
+    font-weight: 600;
+  }
+
   @media (max-width: 768px) {
     .time-inputs {
       flex-direction: column;
@@ -237,6 +269,14 @@
     .btn {
       justify-content: center;
       width: 100%;
+    }
+
+    .report-options h4 {
+      font-size: 1rem;
+    }
+
+    .form-check {
+      padding: var(--spacing-sm) var(--spacing-sm);
     }
   }
 </style>
@@ -323,6 +363,160 @@
                 <label class="form-label" for="recipient_email">כתובת מייל</label>
                 <input type="email" class="form-control" id="recipient_email" name="recipient_email" 
                        value="{{ settings.recipient_email }}" required>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3 class="section-title">
+                <i class="fas fa-chart-bar"></i>
+                תוכן הדוח המתקדם
+            </h3>
+
+            <div class="report-options">
+                <h4>📊 גרפים ויזואליזציות</h4>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="chart_coupons_by_company" name="chart_coupons_by_company" 
+                           {% if settings.report_options.get('chart_coupons_by_company', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="chart_coupons_by_company">
+                        גרף עמודות - כמות קופונים לכל חברה
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="chart_value_pie" name="chart_value_pie"
+                           {% if settings.report_options.get('chart_value_pie', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="chart_value_pie">
+                        גרף עוגה - חלוקה לפי שווי קופונים של כל חברה
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="chart_weekly_trend" name="chart_weekly_trend"
+                           {% if settings.report_options.get('chart_weekly_trend', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="chart_weekly_trend">
+                        גרף קווים - מגמת הוספת קופונים לאורך השבוע האחרון
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="chart_price_histogram" name="chart_price_histogram"
+                           {% if settings.report_options.get('chart_price_histogram', False) %}checked{% endif %}>
+                    <label class="form-check-label" for="chart_price_histogram">
+                        היסטוגרמה - התפלגות מחירי קופונים
+                    </label>
+                </div>
+
+                <h4>📈 מטריקות מתקדמות</h4>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="metrics_roi" name="metrics_roi"
+                           {% if settings.report_options.get('metrics_roi', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="metrics_roi">
+                        ROI ממוצע - אחוז החיסכון הכולל
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="metrics_recent_activity" name="metrics_recent_activity"
+                           {% if settings.report_options.get('metrics_recent_activity', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="metrics_recent_activity">
+                        קופונים שנוספו היום/השבוע
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="metrics_expiring" name="metrics_expiring"
+                           {% if settings.report_options.get('metrics_expiring', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="metrics_expiring">
+                        קופונים שפגו השבוע
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="metrics_top_companies" name="metrics_top_companies"
+                           {% if settings.report_options.get('metrics_top_companies', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="metrics_top_companies">
+                        חברות הכי פופולריות (לפי כמות)
+                    </label>
+                </div>
+
+                <h4>💡 תובנות חכמות</h4>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="insights_top3" name="insights_top3"
+                           {% if settings.report_options.get('insights_top3', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="insights_top3">
+                        Top 3 insights בראש המייל
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="insights_weekly_comparison" name="insights_weekly_comparison"
+                           {% if settings.report_options.get('insights_weekly_comparison', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="insights_weekly_comparison">
+                        השוואה לשבוע קודם (+/- %)
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="insights_expiring_alerts" name="insights_expiring_alerts"
+                           {% if settings.report_options.get('insights_expiring_alerts', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="insights_expiring_alerts">
+                        התראות על קופונים שעומדים לפוג השבוע
+                    </label>
+                </div>
+
+                <h4>📊 אנליטיקה עסקית</h4>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="analytics_conversion_rate" name="analytics_conversion_rate"
+                           {% if settings.report_options.get('analytics_conversion_rate', False) %}checked{% endif %}>
+                    <label class="form-check-label" for="analytics_conversion_rate">
+                        Conversion rate - כמה קופונים נמכרו מכמה שהוצעו
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="analytics_time_to_sell" name="analytics_time_to_sell"
+                           {% if settings.report_options.get('analytics_time_to_sell', False) %}checked{% endif %}>
+                    <label class="form-check-label" for="analytics_time_to_sell">
+                        Average time to sell - זמן ממוצע למכירת קופון
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="analytics_profitable_companies" name="analytics_profitable_companies"
+                           {% if settings.report_options.get('analytics_profitable_companies', False) %}checked{% endif %}>
+                    <label class="form-check-label" for="analytics_profitable_companies">
+                        Most profitable companies - איזה חברות מביאות הכי הרבה כסף
+                    </label>
+                </div>
+
+                <h4>🔍 פילוח מתקדם</h4>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="segmentation_categories" name="segmentation_categories"
+                           {% if settings.report_options.get('segmentation_categories', False) %}checked{% endif %}>
+                    <label class="form-check-label" for="segmentation_categories">
+                        לפי קטגוריות - אוכל, אופנה, טכנולוגיה וכו'
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="segmentation_price_ranges" name="segmentation_price_ranges"
+                           {% if settings.report_options.get('segmentation_price_ranges', False) %}checked{% endif %}>
+                    <label class="form-check-label" for="segmentation_price_ranges">
+                        לפי טווח מחירים - זול/בינוני/יקר
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="comparisons_monthly" name="comparisons_monthly"
+                           {% if settings.report_options.get('comparisons_monthly', False) %}checked{% endif %}>
+                    <label class="form-check-label" for="comparisons_monthly">
+                        חודש זה לעומת חודש קודם
+                    </label>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <p><i class="fas fa-lightbulb"></i> <strong>טיפ:</strong> בחירת יותר מדי תכונות עלולה להפוך את המייל לכבד וארוך. מומלץ לבחור 5-8 תכונות מרכזיות.</p>
             </div>
         </div>
 

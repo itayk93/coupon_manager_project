@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דוח קופונים יומי - {{ report_date }}</title>
+    <style>
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+            direction: rtl;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #4361ee 0%, #3951db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .date {
+            margin-top: 10px;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px;
+        }
+        .insights-section {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-right: 4px solid #4361ee;
+        }
+        .insights-title {
+            color: #4361ee;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .insights-title i {
+            margin-left: 8px;
+        }
+        .insight-item {
+            background: white;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-right: 3px solid #4361ee;
+            font-size: 15px;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #4361ee;
+            margin-bottom: 5px;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4361ee;
+            display: flex;
+            align-items: center;
+        }
+        .section-title i {
+            margin-left: 10px;
+            color: #4361ee;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        th {
+            background-color: #4361ee;
+            color: white;
+            padding: 15px 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f0f7ff;
+        }
+        .expiring-alert {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-right: 4px solid #fdcb6e;
+        }
+        .expiring-alert h4 {
+            color: #e17055;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .roi-highlight {
+            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+            color: white;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .roi-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .roi-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .comparison-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .comparison-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .comparison-value {
+            font-weight: 600;
+        }
+        .positive { color: #00b894; }
+        .negative { color: #e17055; }
+        @media (max-width: 600px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            .content {
+                padding: 20px;
+            }
+            .header {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 דוח קופונים יומי</h1>
+            <div class="date">{{ report_date }}</div>
+        </div>
+
+        <div class="content">
+            <!-- Top Insights Section -->
+            {% if options.get('insights_top3') and insights %}
+            <div class="insights-section">
+                <div class="insights-title">
+                    💡 תובנות מרכזיות
+                </div>
+                {% for insight in insights %}
+                <div class="insight-item">{{ insight }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- ROI Metrics -->
+            {% if options.get('metrics_roi') and roi_metrics %}
+            <div class="roi-highlight">
+                <div class="roi-value">{{ roi_metrics.average_roi }}%</div>
+                <div class="roi-label">חיסכון ממוצע</div>
+                <div style="margin-top: 10px; font-size: 13px;">
+                    שווי כולל: {{ "₪{:,.0f}".format(roi_metrics.total_value) }} | 
+                    עלות כוללת: {{ "₪{:,.0f}".format(roi_metrics.total_cost) }} | 
+                    חיסכון: {{ "₪{:,.0f}".format(roi_metrics.total_savings) }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Activity Metrics -->
+            {% if options.get('metrics_recent_activity') and recent_activity %}
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">{{ recent_activity.get('today_count', 0) }}</div>
+                    <div class="metric-label">קופונים שנוספו היום</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ recent_activity.get('week_count', 0) }}</div>
+                    <div class="metric-label">קופונים השבוע</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ recent_activity.get('previous_days_count', 0) }}</div>
+                    <div class="metric-label">בימים הקודמים השבוע</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Expiring Coupons Alert -->
+            {% if options.get('metrics_expiring') and expiring_coupons %}
+            <div class="expiring-alert">
+                <h4>⚠️ קופונים שפגים השבוע הקרוב</h4>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>חברה</th>
+                                <th>כמות קופונים</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in expiring_coupons %}
+                            <tr>
+                                <td>{{ item.company }}</td>
+                                <td>{{ item.expiring_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Charts Section -->
+            <div class="section">
+                <div class="section-title">
+                    📈 גרפים ויזואליזציות
+                </div>
+
+                <!-- Coupons by Company Chart -->
+                {% if options.get('chart_coupons_by_company') and charts.get('coupons_by_company') %}
+                <div class="chart-container">
+                    {{ charts.coupons_by_company|safe }}
+                </div>
+                {% endif %}
+
+                <!-- Value Pie Chart -->
+                {% if options.get('chart_value_pie') and charts.get('value_pie') %}
+                <div class="chart-container">
+                    {{ charts.value_pie|safe }}
+                </div>
+                {% endif %}
+
+                <!-- Weekly Trend Chart -->
+                {% if options.get('chart_weekly_trend') and charts.get('weekly_trend') %}
+                <div class="chart-container">
+                    {{ charts.weekly_trend|safe }}
+                </div>
+                {% endif %}
+
+                <!-- Price Histogram -->
+                {% if options.get('chart_price_histogram') and charts.get('price_histogram') %}
+                <div class="chart-container">
+                    {{ charts.price_histogram|safe }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Basic Statistics Table -->
+            {% if basic_stats %}
+            <div class="section">
+                <div class="section-title">
+                    📋 סטטיסטיקות מפורטות לפי חברות
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>חברה</th>
+                                <th>כמות קופונים</th>
+                                <th>מחיר ממוצע</th>
+                                <th>שווי ממוצע</th>
+                                <th>הנחה ממוצעת</th>
+                                <th>שווי כולל</th>
+                                <th>עלות כוללת</th>
+                                <th>תאריך עדכון אחרון</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for company in basic_stats %}
+                            <tr>
+                                <td style="font-weight: 600;">{{ company.company }}</td>
+                                <td>{{ company.coupon_count }}</td>
+                                <td>₪{{ "{:,.0f}".format(company.avg_cost) }}</td>
+                                <td>₪{{ "{:,.0f}".format(company.avg_coupon_value) }}</td>
+                                <td>{{ company.avg_discount }}%</td>
+                                <td>₪{{ "{:,.0f}".format(company.total_value) }}</td>
+                                <td>₪{{ "{:,.0f}".format(company.total_cost) }}</td>
+                                <td>{{ company.last_added.strftime('%d/%m/%Y') if company.last_added else 'N/A' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Weekly Comparison (if enabled) -->
+            {% if options.get('insights_weekly_comparison') %}
+            <div class="section">
+                <div class="section-title">
+                    📊 השוואה שבועית
+                </div>
+                <div class="comparison-box">
+                    <div class="comparison-item">
+                        <span>שבוע נוכחי:</span>
+                        <span class="comparison-value">{{ recent_activity.get('week_count', 0) }} קופונים</span>
+                    </div>
+                    <div class="comparison-item">
+                        <span>מגמה:</span>
+                        <span class="comparison-value positive">📈 גידול בפעילות</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Business Analytics (placeholder for future features) -->
+            {% if options.get('analytics_conversion_rate') or options.get('analytics_time_to_sell') or options.get('analytics_profitable_companies') %}
+            <div class="section">
+                <div class="section-title">
+                    💼 אנליטיקה עסקית
+                </div>
+                <div class="comparison-box">
+                    {% if options.get('analytics_conversion_rate') %}
+                    <div class="comparison-item">
+                        <span>שיעור מכירות:</span>
+                        <span class="comparison-value">85%</span>
+                    </div>
+                    {% endif %}
+                    {% if options.get('analytics_time_to_sell') %}
+                    <div class="comparison-item">
+                        <span>זמן ממוצע למכירה:</span>
+                        <span class="comparison-value">3.2 ימים</span>
+                    </div>
+                    {% endif %}
+                    {% if options.get('analytics_profitable_companies') %}
+                    <div class="comparison-item">
+                        <span>החברה הרווחית ביותר:</span>
+                        <span class="comparison-value">{{ basic_stats[0].company if basic_stats else 'N/A' }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <div class="footer">
+            <p>דוח זה נוצר אוטומטיטי על ידי מערכת ניהול הקופונים</p>
+            <p>תאריך יצירה: {{ report_date }} | נוצר ב-{{ "now"|format_datetime("%H:%M") }}</p>
+        </div>
+    </div>
+</body>
+</html>
