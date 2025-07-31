@@ -604,9 +604,15 @@ def index():
         # Get earliest expiration date for this company
         earliest_expiration = None
         if company in company_earliest_expirations:
-            earliest_expiration = company_earliest_expirations[company].strftime(
-                "%Y-%m-%d"
-            )
+            exp_date = company_earliest_expirations[company]
+            if exp_date:
+                # Handle both string and date objects
+                if isinstance(exp_date, str):
+                    earliest_expiration = exp_date
+                elif hasattr(exp_date, 'strftime'):
+                    earliest_expiration = exp_date.strftime("%Y-%m-%d")
+                else:
+                    earliest_expiration = str(exp_date)
 
         # Create company data entry
         sorted_company_data.append(
