@@ -112,89 +112,195 @@ def get_recent_activity():
     return dict(result) if result else {}
 
 def create_coupons_by_company_chart(data):
-    """יצירת גרף עמודות - כמות קופונים לכל חברה"""
+    """יצירת גרף עמודות מודרני - כמות קופונים לכל חברה"""
     if not data:
         return None
     
     # לקחת את ה-10 חברות המובילות
     top_companies = data[:10]
     
+    # צבעים מודרניים מהפלטה שלך
+    colors = ['#4a5568', '#718096', '#68d391', '#4299e1', '#805ad5', 
+              '#48bb78', '#ed8936', '#f56565', '#9f7aea', '#38d9a9']
+    
     fig = go.Figure(data=[
         go.Bar(
             x=[item['company'] for item in top_companies],
             y=[item['coupon_count'] for item in top_companies],
-            text=[item['coupon_count'] for item in top_companies],
+            text=[f"<b>{item['coupon_count']}</b>" for item in top_companies],
             textposition='auto',
-            marker_color='rgb(67, 97, 238)'
+            textfont=dict(size=14, color='white'),
+            marker=dict(
+                color=colors[:len(top_companies)],
+                line=dict(color='rgba(255,255,255,0.1)', width=1),
+                pattern_fillmode="overlay",
+                pattern_fgcolor="rgba(255,255,255,0.05)"
+            ),
+            hovertemplate='<b>%{x}</b><br>קופונים: %{y}<extra></extra>',
+            hoverlabel=dict(bgcolor="rgba(74, 85, 104, 0.9)", font_color="white")
         )
     ])
     
     fig.update_layout(
-        title='כמות קופונים לכל חברה (Top 10)',
-        xaxis_title='חברה',
-        yaxis_title='כמות קופונים',
-        font=dict(family="Arial", size=12),
-        height=400,
-        margin=dict(l=50, r=50, t=50, b=100)
+        title=dict(
+            text='<b>📊 כמות קופונים לכל חברה</b>',
+            font=dict(size=18, color='#2d3748', family='Inter'),
+            x=0.5
+        ),
+        xaxis=dict(
+            title=dict(text='<b>חברה</b>', font=dict(size=14, color='#4a5568')),
+            tickfont=dict(size=12, color='#4a5568'),
+            showgrid=False,
+            tickangle=45
+        ),
+        yaxis=dict(
+            title=dict(text='<b>כמות קופונים</b>', font=dict(size=14, color='#4a5568')),
+            tickfont=dict(size=12, color='#4a5568'),
+            showgrid=True,
+            gridcolor='rgba(74, 85, 104, 0.1)',
+            gridwidth=1
+        ),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(255,255,255,0.95)',
+        height=450,
+        margin=dict(l=60, r=40, t=80, b=120),
+        font=dict(family='Inter, Arial', size=12),
+        showlegend=False,
+        hovermode='x unified'
     )
     
-    # סיבוב שמות החברות לקריאות טובה יותר
-    fig.update_xaxes(tickangle=45)
-    
-    return fig.to_html(full_html=False, include_plotlyjs=True)
+    return fig.to_html(full_html=False, include_plotlyjs=True, config={'displayModeBar': False})
 
 def create_value_pie_chart(data):
-    """יצירת גרף עוגה - חלוקה לפי שווי קופונים"""
+    """יצירת גרף עוגה מודרני - חלוקה לפי שווי קופונים"""
     if not data:
         return None
     
     # לקחת את ה-8 חברות המובילות לפי שווי
     sorted_by_value = sorted(data, key=lambda x: x['total_value'], reverse=True)[:8]
     
+    # צבעים אלגנטיים מהפלטה שלך
+    colors = ['#4a5568', '#718096', '#68d391', '#4299e1', '#805ad5', 
+              '#48bb78', '#ed8936', '#f56565']
+    
     fig = go.Figure(data=[
         go.Pie(
             labels=[item['company'] for item in sorted_by_value],
             values=[item['total_value'] for item in sorted_by_value],
-            hole=0.3,
-            textinfo='label+percent'
+            hole=0.4,
+            textinfo='label+percent+value',
+            texttemplate='<b>%{label}</b><br>%{percent}<br>₪%{value:,.0f}',
+            textfont=dict(size=11, color='white'),
+            textposition='inside',
+            marker=dict(
+                colors=colors[:len(sorted_by_value)],
+                line=dict(color='rgba(255,255,255,0.8)', width=2)
+            ),
+            hovertemplate='<b>%{label}</b><br>שווי: ₪%{value:,.0f}<br>אחוז: %{percent}<extra></extra>',
+            hoverlabel=dict(bgcolor="rgba(74, 85, 104, 0.9)", font_color="white"),
+            rotation=90
         )
     ])
     
     fig.update_layout(
-        title='חלוקת שווי הקופונים לפי חברות',
-        font=dict(family="Arial", size=12),
-        height=500
+        title=dict(
+            text='<b>💰 חלוקת שווי הקופונים לפי חברות</b>',
+            font=dict(size=18, color='#2d3748', family='Inter'),
+            x=0.5
+        ),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(255,255,255,0.95)',
+        height=550,
+        margin=dict(l=20, r=20, t=80, b=20),
+        font=dict(family='Inter, Arial', size=12),
+        showlegend=True,
+        legend=dict(
+            orientation="v",
+            yanchor="middle",
+            y=0.5,
+            xanchor="left",
+            x=1.02,
+            bgcolor="rgba(255,255,255,0.8)",
+            bordercolor="rgba(74, 85, 104, 0.2)",
+            borderwidth=1
+        )
     )
     
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    return fig.to_html(full_html=False, include_plotlyjs=False, config={'displayModeBar': False})
 
 def create_weekly_trend_chart(trend_data):
-    """יצירת גרף קווים - מגמת השבוע האחרון"""
+    """יצירת גרף קווים מודרני - מגמת השבוע האחרון"""
     if not trend_data:
         return None
     
-    fig = go.Figure(data=[
-        go.Scatter(
-            x=[item['date'] for item in trend_data],
-            y=[item['coupons_added'] for item in trend_data],
-            mode='lines+markers',
-            line=dict(color='rgb(67, 97, 238)', width=3),
-            marker=dict(size=8)
-        )
-    ])
+    fig = go.Figure()
+    
+    # קו המגמה
+    fig.add_trace(go.Scatter(
+        x=[item['date'] for item in trend_data],
+        y=[item['coupons_added'] for item in trend_data],
+        mode='lines+markers',
+        name='קופונים שנוספו',
+        line=dict(
+            color='#4a5568',
+            width=4,
+            shape='spline',
+            smoothing=0.3
+        ),
+        marker=dict(
+            size=10,
+            color='#68d391',
+            line=dict(color='white', width=2)
+        ),
+        fill='tonexty',
+        fillcolor='rgba(104, 211, 145, 0.1)',
+        hovertemplate='<b>%{x}</b><br>קופונים: %{y}<extra></extra>',
+        hoverlabel=dict(bgcolor="rgba(74, 85, 104, 0.9)", font_color="white")
+    ))
+    
+    # קו בסיס לצביעה
+    fig.add_trace(go.Scatter(
+        x=[item['date'] for item in trend_data],
+        y=[0] * len(trend_data),
+        mode='lines',
+        line=dict(width=0),
+        showlegend=False,
+        hoverinfo='skip'
+    ))
     
     fig.update_layout(
-        title='מגמת הוספת קופונים - 7 ימים אחרונים',
-        xaxis_title='תאריך',
-        yaxis_title='קופונים שנוספו',
-        font=dict(family="Arial", size=12),
-        height=400
+        title=dict(
+            text='<b>📈 מגמת הוספת קופונים - 7 ימים אחרונים</b>',
+            font=dict(size=18, color='#2d3748', family='Inter'),
+            x=0.5
+        ),
+        xaxis=dict(
+            title=dict(text='<b>תאריך</b>', font=dict(size=14, color='#4a5568')),
+            tickfont=dict(size=12, color='#4a5568'),
+            showgrid=True,
+            gridcolor='rgba(74, 85, 104, 0.1)',
+            gridwidth=1
+        ),
+        yaxis=dict(
+            title=dict(text='<b>קופונים שנוספו</b>', font=dict(size=14, color='#4a5568')),
+            tickfont=dict(size=12, color='#4a5568'),
+            showgrid=True,
+            gridcolor='rgba(74, 85, 104, 0.1)',
+            gridwidth=1
+        ),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(255,255,255,0.95)',
+        height=450,
+        margin=dict(l=60, r=40, t=80, b=60),
+        font=dict(family='Inter, Arial', size=12),
+        showlegend=False,
+        hovermode='x unified'
     )
     
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    return fig.to_html(full_html=False, include_plotlyjs=False, config={'displayModeBar': False})
 
 def create_price_histogram(data):
-    """יצירת היסטוגרמה - התפלגות מחירי קופונים"""
+    """יצירת היסטוגרמה מודרנית - התפלגות מחירי קופונים"""
     if not data:
         return None
     
@@ -207,21 +313,47 @@ def create_price_histogram(data):
     fig = go.Figure(data=[
         go.Histogram(
             x=all_costs,
-            nbinsx=20,
-            marker_color='rgb(67, 97, 238)',
-            opacity=0.7
+            nbinsx=25,
+            marker=dict(
+                color='#4a5568',
+                opacity=0.8,
+                line=dict(color='rgba(255,255,255,0.6)', width=1)
+            ),
+            hovertemplate='מחיר: ₪%{x}<br>כמות: %{y}<extra></extra>',
+            hoverlabel=dict(bgcolor="rgba(74, 85, 104, 0.9)", font_color="white")
         )
     ])
     
     fig.update_layout(
-        title='התפלגות מחירי קופונים',
-        xaxis_title='מחיר (₪)',
-        yaxis_title='כמות קופונים',
-        font=dict(family="Arial", size=12),
-        height=400
+        title=dict(
+            text='<b>💹 התפלגות מחירי קופונים</b>',
+            font=dict(size=18, color='#2d3748', family='Inter'),
+            x=0.5
+        ),
+        xaxis=dict(
+            title=dict(text='<b>מחיר (₪)</b>', font=dict(size=14, color='#4a5568')),
+            tickfont=dict(size=12, color='#4a5568'),
+            showgrid=True,
+            gridcolor='rgba(74, 85, 104, 0.1)',
+            gridwidth=1
+        ),
+        yaxis=dict(
+            title=dict(text='<b>כמות קופונים</b>', font=dict(size=14, color='#4a5568')),
+            tickfont=dict(size=12, color='#4a5568'),
+            showgrid=True,
+            gridcolor='rgba(74, 85, 104, 0.1)',
+            gridwidth=1
+        ),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(255,255,255,0.95)',
+        height=450,
+        margin=dict(l=60, r=40, t=80, b=60),
+        font=dict(family='Inter, Arial', size=12),
+        showlegend=False,
+        bargap=0.1
     )
     
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    return fig.to_html(full_html=False, include_plotlyjs=False, config={'displayModeBar': False})
 
 def calculate_roi_metrics(data):
     """חישוב מטריקות ROI"""
@@ -297,10 +429,10 @@ def generate_enhanced_email_content(app):
         if options.get('insights_top3'):
             insights = get_top_insights(basic_stats, recent_activity, expiring_coupons)
         
-        # יצירת HTML - משתמש במייל קומפקטי למייל רגיל ומלא לצפייה בדפדפן
+        # יצירת HTML - משתמש בתבנית מותאמת למייל
         from flask import render_template
         html_content = render_template(
-            'emails/compact_daily_report.html',
+            'emails/email_optimized_report.html',
             basic_stats=basic_stats,
             charts=charts,
             insights=insights,

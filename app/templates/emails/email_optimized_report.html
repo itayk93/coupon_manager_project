@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דוח קופונים יומי - {{ report_date }}</title>
+    <!--[if mso]>
+    <style type="text/css">
+        body, table, td, th { font-family: Arial, sans-serif !important; }
+    </style>
+    <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; direction: rtl;">
+    
+    <!-- Main Container -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0; padding: 0;">
+        <tr>
+            <td style="padding: 20px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(74, 85, 104, 0.15), 0 10px 10px -5px rgba(74, 85, 104, 0.08);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); padding: 40px 30px; text-align: center; position: relative;">
+                            <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 800; color: #ffffff; text-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                                📊 דוח קופונים יומי
+                            </h1>
+                            <p style="margin: 0; font-size: 16px; color: rgba(255, 255, 255, 0.9); font-weight: 500;">
+                                {{ report_date }}
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Quick Stats Grid -->
+                    {% if recent_activity %}
+                    <tr>
+                        <td style="padding: 30px 25px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td width="48%" style="vertical-align: top; padding: 0 1% 15px 0;">
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(74, 85, 104, 0.1); border-radius: 15px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(74, 85, 104, 0.1);">
+                                            <tr>
+                                                <td>
+                                                    <div style="font-size: 32px; font-weight: 800; color: #4299e1; margin-bottom: 6px;">
+                                                        {{ recent_activity.get('today_count', 0) }}
+                                                    </div>
+                                                    <div style="font-size: 14px; color: #4a5568; font-weight: 600;">
+                                                        קופונים היום
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td width="48%" style="vertical-align: top; padding: 0 0 15px 1%;">
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(74, 85, 104, 0.1); border-radius: 15px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(74, 85, 104, 0.1);">
+                                            <tr>
+                                                <td>
+                                                    <div style="font-size: 32px; font-weight: 800; color: #805ad5; margin-bottom: 6px;">
+                                                        {{ recent_activity.get('week_count', 0) }}
+                                                    </div>
+                                                    <div style="font-size: 14px; color: #4a5568; font-weight: 600;">
+                                                        השבוע
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    {% if roi_metrics %}
+                                    <td width="48%" style="vertical-align: top; padding: 0 1% 0 0;">
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(74, 85, 104, 0.1); border-radius: 15px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(74, 85, 104, 0.1);">
+                                            <tr>
+                                                <td>
+                                                    <div style="font-size: 32px; font-weight: 800; color: #48bb78; margin-bottom: 6px;">
+                                                        {{ roi_metrics.average_roi }}%
+                                                    </div>
+                                                    <div style="font-size: 14px; color: #4a5568; font-weight: 600;">
+                                                        חיסכון ממוצע
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    {% endif %}
+                                    {% if basic_stats %}
+                                    <td width="48%" style="vertical-align: top; padding: 0 0 0 1%;">
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(74, 85, 104, 0.1); border-radius: 15px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(74, 85, 104, 0.1);">
+                                            <tr>
+                                                <td>
+                                                    <div style="font-size: 32px; font-weight: 800; color: #ed8936; margin-bottom: 6px;">
+                                                        {{ basic_stats|length }}
+                                                    </div>
+                                                    <div style="font-size: 14px; color: #4a5568; font-weight: 600;">
+                                                        חברות פעילות
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    
+                    <!-- Top Insights -->
+                    {% if options.get('insights_top3') and insights %}
+                    <tr>
+                        <td style="padding: 0 25px 25px 25px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px; position: relative;">
+                                <tr>
+                                    <td>
+                                        <h3 style="margin: 0 0 15px 0; font-size: 20px; font-weight: 700; color: #4a5568;">
+                                            💡 תובנות מרכזיות
+                                        </h3>
+                                        {% for insight in insights[:2] %}
+                                        <div style="background: rgba(255, 255, 255, 0.95); padding: 12px 16px; margin-bottom: 8px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2); font-weight: 500; font-size: 14px;">
+                                            {{ insight }}
+                                        </div>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    
+                    <!-- ROI Highlight -->
+                    {% if options.get('metrics_roi') and roi_metrics %}
+                    <tr>
+                        <td style="padding: 0 25px 25px 25px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); border-radius: 20px; padding: 25px 20px; text-align: center; box-shadow: 0 20px 25px -5px rgba(74, 85, 104, 0.15);">
+                                <tr>
+                                    <td>
+                                        <div style="font-size: 48px; font-weight: 900; color: #ffffff; margin-bottom: 6px; text-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                                            {{ roi_metrics.average_roi }}%
+                                        </div>
+                                        <div style="font-size: 16px; color: rgba(255, 255, 255, 0.9); font-weight: 600; margin-bottom: 8px;">
+                                            חיסכון ממוצע
+                                        </div>
+                                        <div style="font-size: 13px; color: rgba(255, 255, 255, 0.8);">
+                                            שווי כולל: ₪{{ "{:,.0f}".format(roi_metrics.total_value) }} | 
+                                            עלות כוללת: ₪{{ "{:,.0f}".format(roi_metrics.total_cost) }} | 
+                                            חיסכון: ₪{{ "{:,.0f}".format(roi_metrics.total_savings) }}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    
+                    <!-- Expiring Alert -->
+                    {% if options.get('metrics_expiring') and expiring_coupons %}
+                    <tr>
+                        <td style="padding: 0 25px 20px 25px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 20px; padding: 15px; position: relative;">
+                                <tr>
+                                    <td>
+                                        <h4 style="color: #92400e; margin: 0 0 8px 0; font-size: 16px; font-weight: 700;">
+                                            ⚠️ קופונים שפגים השבוע הקרוב
+                                        </h4>
+                                        {% set total_expiring = expiring_coupons|sum(attribute='expiring_count') %}
+                                        <div style="font-size: 14px; color: #92400e;">
+                                            <strong>{{ total_expiring }}</strong> קופונים עומדים לפוג תוקף השבוע
+                                            {% if expiring_coupons|length > 0 %}
+                                            - <strong>{{ expiring_coupons[0].company }}</strong> ({{ expiring_coupons[0].expiring_count }})
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    
+                    <!-- Charts Section -->
+                    {% if charts %}
+                    <tr>
+                        <td style="padding: 0 25px 30px 25px;">
+                            <h3 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700; color: #4a5568; text-align: center;">
+                                📈 גרפים ויזואליזציות
+                            </h3>
+                            
+                            <!-- Charts will be inserted here -->
+                            {% if options.get('chart_coupons_by_company') and charts.get('coupons_by_company') %}
+                            <div style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
+                                {{ charts.coupons_by_company|safe }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if options.get('chart_value_pie') and charts.get('value_pie') %}
+                            <div style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
+                                {{ charts.value_pie|safe }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if options.get('chart_weekly_trend') and charts.get('weekly_trend') %}
+                            <div style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
+                                {{ charts.weekly_trend|safe }}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    
+                    <!-- Top Companies Table -->
+                    {% if basic_stats %}
+                    <tr>
+                        <td style="padding: 0 25px 30px 25px;">
+                            <h3 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700; color: #4a5568; text-align: right;">
+                                🏆 5 החברות המובילות
+                            </h3>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.95); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(74, 85, 104, 0.15);">
+                                <thead>
+                                    <tr style="background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);">
+                                        <th style="color: #ffffff; padding: 12px 8px; text-align: right; font-weight: 700; font-size: 12px;">חברה</th>
+                                        <th style="color: #ffffff; padding: 12px 8px; text-align: right; font-weight: 700; font-size: 12px;">קופונים</th>
+                                        <th style="color: #ffffff; padding: 12px 8px; text-align: right; font-weight: 700; font-size: 12px;">מחיר ממוצע</th>
+                                        <th style="color: #ffffff; padding: 12px 8px; text-align: right; font-weight: 700; font-size: 12px;">הנחה</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for company in basic_stats[:5] %}
+                                    <tr style="{% if loop.index % 2 == 0 %}background: rgba(74, 85, 104, 0.03);{% endif %}">
+                                        <td style="padding: 10px 8px; text-align: right; font-weight: 600; font-size: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">{{ company.company }}</td>
+                                        <td style="padding: 10px 8px; text-align: right; font-weight: 500; font-size: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">{{ company.coupon_count }}</td>
+                                        <td style="padding: 10px 8px; text-align: right; font-weight: 500; font-size: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">₪{{ "{:,.0f}".format(company.avg_cost) if company.avg_cost else 'N/A' }}</td>
+                                        <td style="padding: 10px 8px; text-align: right; font-weight: 500; font-size: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">{{ company.avg_discount }}%</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    
+                    <!-- View Full Report Button -->
+                    <tr>
+                        <td style="padding: 0 25px 30px 25px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 20px; text-align: center;">
+                                <tr>
+                                    <td>
+                                        <div style="margin-bottom: 10px; font-size: 14px; color: #4a5568;">
+                                            רוצה לראות את הדוח המלא עם גרפים ונתונים מפורטים?
+                                        </div>
+                                        <a href="http://127.0.0.1:10000/admin/email/view-full-report" 
+                                           style="display: inline-block; background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 700; margin: 8px 0; box-shadow: 0 4px 6px -1px rgba(74, 85, 104, 0.1);">
+                                            📊 צפייה בדוח המלא
+                                        </a>
+                                        <div style="margin-top: 8px; font-size: 12px; color: #4a5568;">
+                                            הדוח המלא כולל גרפים אינטראקטיביים, נתוני חברות מפורטים ואנליטיקה מתקדמת
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 25px; background: rgba(255, 255, 255, 0.15); border-top: 1px solid rgba(255, 255, 255, 0.2); text-align: center; color: #4a5568;">
+                            <p style="margin: 0 0 5px 0; font-size: 14px;">
+                                דוח זה נוצר אוטומטיטי על ידי מערכת ניהול הקופונים
+                            </p>
+                            <p style="margin: 0; font-size: 12px;">
+                                תאריך יצירה: {{ report_date }}
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
