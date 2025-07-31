@@ -118,8 +118,8 @@ def get_new_users_count():
     
     query = text("""
         SELECT COUNT(*) as new_users_count
-        FROM user 
-        WHERE date_joined >= :week_ago
+        FROM users 
+        WHERE DATE(created_at) >= :week_ago
     """)
     
     result = db.session.execute(query, {"week_ago": week_ago}).mappings().first()
@@ -423,6 +423,7 @@ def generate_enhanced_email_content(app):
         expiring_coupons = get_expiring_coupons() if options.get('metrics_expiring') else []
         recent_activity = get_recent_activity() if options.get('metrics_recent_activity') else {}
         roi_metrics = calculate_roi_metrics(basic_stats) if options.get('metrics_roi') else {}
+        new_users_count = get_new_users_count() if options.get('metrics_recent_activity') else 0
         
         # יצירת גרפים
         charts = {}
@@ -453,6 +454,7 @@ def generate_enhanced_email_content(app):
             roi_metrics=roi_metrics,
             recent_activity=recent_activity,
             expiring_coupons=expiring_coupons,
+            new_users_count=new_users_count,
             options=options,
             report_date=date.today().strftime("%Y-%m-%d")
         )
@@ -474,6 +476,7 @@ def generate_full_email_content(app):
         expiring_coupons = get_expiring_coupons() if options.get('metrics_expiring') else []
         recent_activity = get_recent_activity() if options.get('metrics_recent_activity') else {}
         roi_metrics = calculate_roi_metrics(basic_stats) if options.get('metrics_roi') else {}
+        new_users_count = get_new_users_count() if options.get('metrics_recent_activity') else 0
         
         # יצירת גרפים
         charts = {}
@@ -504,6 +507,7 @@ def generate_full_email_content(app):
             roi_metrics=roi_metrics,
             recent_activity=recent_activity,
             expiring_coupons=expiring_coupons,
+            new_users_count=new_users_count,
             options=options,
             report_date=date.today().strftime("%Y-%m-%d")
         )

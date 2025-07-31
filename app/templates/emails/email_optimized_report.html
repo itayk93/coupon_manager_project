@@ -66,22 +66,20 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    {% if roi_metrics %}
                                     <td width="48%" style="vertical-align: top; padding: 0 1% 0 0;">
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(74, 85, 104, 0.1); border-radius: 15px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(74, 85, 104, 0.1);">
                                             <tr>
                                                 <td>
                                                     <div style="font-size: 32px; font-weight: 800; color: #48bb78; margin-bottom: 6px;">
-                                                        {{ roi_metrics.average_roi }}%
+                                                        {{ new_users_count }}
                                                     </div>
                                                     <div style="font-size: 14px; color: #4a5568; font-weight: 600;">
-                                                        חיסכון ממוצע
+                                                        משתמשים חדשים השבוע
                                                     </div>
                                                 </td>
                                             </tr>
                                         </table>
                                     </td>
-                                    {% endif %}
                                     {% if basic_stats %}
                                     <td width="48%" style="vertical-align: top; padding: 0 0 0 1%;">
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(74, 85, 104, 0.1); border-radius: 15px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(74, 85, 104, 0.1);">
@@ -175,35 +173,28 @@
                     </tr>
                     {% endif %}
                     
-                    <!-- Charts Section -->
-                    {% if charts %}
+                    <!-- Compact Summary Instead of Charts -->
                     <tr>
-                        <td style="padding: 0 25px 30px 25px;">
-                            <h3 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700; color: #4a5568; text-align: center;">
-                                📈 גרפים ויזואליזציות
-                            </h3>
-                            
-                            <!-- Charts will be inserted here -->
-                            {% if options.get('chart_coupons_by_company') and charts.get('coupons_by_company') %}
-                            <div style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
-                                {{ charts.coupons_by_company|safe }}
-                            </div>
-                            {% endif %}
-                            
-                            {% if options.get('chart_value_pie') and charts.get('value_pie') %}
-                            <div style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
-                                {{ charts.value_pie|safe }}
-                            </div>
-                            {% endif %}
-                            
-                            {% if options.get('chart_weekly_trend') and charts.get('weekly_trend') %}
-                            <div style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
-                                {{ charts.weekly_trend|safe }}
-                            </div>
-                            {% endif %}
+                        <td style="padding: 0 25px 25px 25px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border: 2px solid #4a5568; border-radius: 20px; padding: 25px; text-align: center;">
+                                <tr>
+                                    <td>
+                                        <h3 style="margin: 0 0 15px 0; font-size: 22px; font-weight: 800; color: #2d3748;">
+                                            📊 סיכום מהיר
+                                        </h3>
+                                        <p style="margin: 0 0 20px 0; font-size: 16px; color: #4a5568; line-height: 1.6;">
+                                            המייל מכיל רק את הנתונים הבסיסיים. לצפייה בגרפים האינטראקטיביים, <br>
+                                            נתונים מפורטים ואנליטיקה מתקדמת - לחץ על הכפתור למטה
+                                        </p>
+                                        <a href="http://127.0.0.1:10000/admin/email/view-full-report" 
+                                           style="display: inline-block; background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: 800; margin: 10px 0; box-shadow: 0 8px 15px -3px rgba(74, 85, 104, 0.3); transform: translateY(0); transition: all 0.3s ease;">
+                                            🚀 צפייה בדוח המלא + גרפים
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
-                    {% endif %}
                     
                     <!-- Top Companies Table -->
                     {% if basic_stats %}
@@ -236,27 +227,6 @@
                     </tr>
                     {% endif %}
                     
-                    <!-- View Full Report Button -->
-                    <tr>
-                        <td style="padding: 0 25px 30px 25px;">
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 20px; text-align: center;">
-                                <tr>
-                                    <td>
-                                        <div style="margin-bottom: 10px; font-size: 14px; color: #4a5568;">
-                                            רוצה לראות את הדוח המלא עם גרפים ונתונים מפורטים?
-                                        </div>
-                                        <a href="http://127.0.0.1:10000/admin/email/view-full-report" 
-                                           style="display: inline-block; background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 700; margin: 8px 0; box-shadow: 0 4px 6px -1px rgba(74, 85, 104, 0.1);">
-                                            📊 צפייה בדוח המלא
-                                        </a>
-                                        <div style="margin-top: 8px; font-size: 12px; color: #4a5568;">
-                                            הדוח המלא כולל גרפים אינטראקטיביים, נתוני חברות מפורטים ואנליטיקה מתקדמת
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
                     
                     <!-- Footer -->
                     <tr>
