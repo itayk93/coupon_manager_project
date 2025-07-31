@@ -355,6 +355,54 @@
 
         <div class="settings-section">
             <h3 class="section-title">
+                <i class="fas fa-calendar"></i>
+                תזמון שליחה
+            </h3>
+
+            <div class="form-group">
+                <label class="form-label" for="schedule_type">סוג תזמון</label>
+                <select class="form-control" id="schedule_type" name="schedule_type" onchange="toggleScheduleOptions()">
+                    <option value="daily" {% if settings.schedule_type == 'daily' %}selected{% endif %}>יומי</option>
+                    <option value="weekly" {% if settings.schedule_type == 'weekly' %}selected{% endif %}>שבועי</option>
+                    <option value="monthly" {% if settings.schedule_type == 'monthly' %}selected{% endif %}>חודשי</option>
+                    <option value="specific_dates" {% if settings.schedule_type == 'specific_dates' %}selected{% endif %}>תאריכים ספציפיים</option>
+                </select>
+            </div>
+
+            <div id="weekly_options" class="form-group" style="display: {% if settings.schedule_type == 'weekly' %}block{% else %}none{% endif %};">
+                <label class="form-label" for="weekly_day">יום בשבוע</label>
+                <select class="form-control" id="weekly_day" name="weekly_day">
+                    <option value="1" {% if settings.weekly_day == 1 %}selected{% endif %}>ב׳</option>
+                    <option value="2" {% if settings.weekly_day == 2 %}selected{% endif %}>ג׳</option>
+                    <option value="3" {% if settings.weekly_day == 3 %}selected{% endif %}>ד׳</option>
+                    <option value="4" {% if settings.weekly_day == 4 %}selected{% endif %}>ה׳</option>
+                    <option value="5" {% if settings.weekly_day == 5 %}selected{% endif %}>ו׳</option>
+                    <option value="6" {% if settings.weekly_day == 6 %}selected{% endif %}>ש׳</option>
+                    <option value="7" {% if settings.weekly_day == 7 %}selected{% endif %}>א׳</option>
+                </select>
+            </div>
+
+            <div id="monthly_options" class="form-group" style="display: {% if settings.schedule_type == 'monthly' %}block{% else %}none{% endif %};">
+                <label class="form-label" for="monthly_day">יום בחודש</label>
+                <input type="number" class="form-control" id="monthly_day" name="monthly_day" 
+                       min="1" max="31" value="{{ settings.monthly_day }}">
+            </div>
+
+            <div id="specific_dates_options" class="form-group" style="display: {% if settings.schedule_type == 'specific_dates' %}block{% else %}none{% endif %};">
+                <label class="form-label" for="specific_dates">תאריכים ספציפיים (מופרדים בפסיקים)</label>
+                <input type="text" class="form-control" id="specific_dates" name="specific_dates" 
+                       placeholder="2024-01-15, 2024-02-15, 2024-03-15" 
+                       value="{{ settings.specific_dates }}">
+                <small class="form-text text-muted">פורמט: YYYY-MM-DD (לדוגמה: 2024-01-15)</small>
+            </div>
+
+            <div class="info-box">
+                <p><i class="fas fa-info-circle"></i> בחר את סוג התזמון המתאים לצרכים שלך - יומי לעדכון קבוע, שבועי לסיכום שבועי, חודשי לדוח חודשי, או תאריכים ספציפיים לאירועים מיוחדים.</p>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3 class="section-title">
                 <i class="fas fa-user"></i>
                 נמען המייל
             </h3>
@@ -595,5 +643,23 @@ document.addEventListener('DOMContentLoaded', function() {
         input.value = csrfToken;
     });
 });
+
+function toggleScheduleOptions() {
+    const scheduleType = document.getElementById('schedule_type').value;
+    
+    // Hide all options first
+    document.getElementById('weekly_options').style.display = 'none';
+    document.getElementById('monthly_options').style.display = 'none';
+    document.getElementById('specific_dates_options').style.display = 'none';
+    
+    // Show relevant option
+    if (scheduleType === 'weekly') {
+        document.getElementById('weekly_options').style.display = 'block';
+    } else if (scheduleType === 'monthly') {
+        document.getElementById('monthly_options').style.display = 'block';
+    } else if (scheduleType === 'specific_dates') {
+        document.getElementById('specific_dates_options').style.display = 'block';
+    }
+}
 </script>
 {% endblock %}

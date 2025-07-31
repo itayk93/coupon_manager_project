@@ -55,7 +55,7 @@ def get_basic_stats():
         FROM coupon
         WHERE status = 'פעיל'
         GROUP BY company
-        ORDER BY coupon_count DESC
+        ORDER BY avg_discount DESC, coupon_count DESC
     """)
     
     results = db.session.execute(query).mappings().all()

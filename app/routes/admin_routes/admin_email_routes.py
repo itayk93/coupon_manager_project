@@ -35,6 +35,12 @@ def email_settings():
         email_minute = request.form.get('email_minute', '0')
         recipient_email = request.form.get('recipient_email', 'itayk93@gmail.com')
         
+        # הגדרות תזמון חדשות
+        schedule_type = request.form.get('schedule_type', 'daily')  # daily, weekly, monthly, specific_dates
+        weekly_day = request.form.get('weekly_day', '1')  # יום בשבוע (1=ב׳, 7=א׳)
+        monthly_day = request.form.get('monthly_day', '1')  # יום בחודש
+        specific_dates = request.form.get('specific_dates', '')  # תאריכים ספציפיים מופרדים בפסיקים
+        
         logging.info(f"Basic settings - enabled: {daily_email_enabled}, hour: {email_hour}, minute: {email_minute}")
         
         # קבלת כל אפשרויות הדוח המתקדם
@@ -90,6 +96,17 @@ def email_settings():
                                     'כתובת מייל למקבל המייל היומי')
             logging.info("Saved daily_email_recipient")
             
+            # שמירת הגדרות תזמון חדשות
+            AdminSettings.set_setting('email_schedule_type', schedule_type, 'string', 
+                                    'סוג תזמון המייל (daily/weekly/monthly/specific_dates)')
+            AdminSettings.set_setting('email_weekly_day', int(weekly_day), 'integer', 
+                                    'יום בשבוע לשליחה (1=ב׳, 7=א׳)')
+            AdminSettings.set_setting('email_monthly_day', int(monthly_day), 'integer', 
+                                    'יום בחודש לשליחה')
+            AdminSettings.set_setting('email_specific_dates', specific_dates, 'string', 
+                                    'תאריכים ספציפיים מופרדים בפסיקים')
+            logging.info("Saved scheduling settings")
+            
             AdminSettings.set_setting('email_report_options', report_options, 'json', 
                                     'אפשרויות תוכן הדוח המתקדם')
             logging.info("Saved email_report_options")
@@ -133,7 +150,12 @@ def email_settings():
         'email_hour': AdminSettings.get_setting('daily_email_hour', 9),  # Changed default to 9 AM Israel time
         'email_minute': AdminSettings.get_setting('daily_email_minute', 0),
         'recipient_email': AdminSettings.get_setting('daily_email_recipient', 'itayk93@gmail.com'),
-        'report_options': AdminSettings.get_setting('email_report_options', default_report_options)
+        'report_options': AdminSettings.get_setting('email_report_options', default_report_options),
+        # הגדרות תזמון חדשות
+        'schedule_type': AdminSettings.get_setting('email_schedule_type', 'daily'),
+        'weekly_day': AdminSettings.get_setting('email_weekly_day', 1),
+        'monthly_day': AdminSettings.get_setting('email_monthly_day', 1),
+        'specific_dates': AdminSettings.get_setting('email_specific_dates', '')
     }
     
     # בדיקת סטטוס שליחה היום
