@@ -710,8 +710,8 @@
                         <tr>
                             <td style="font-weight: 600;">{{ company.company }}</td>
                             <td>{{ company.coupon_count }}</td>
-                            <td>₪{{ "{:,.0f}".format(company.avg_cost) }}</td>
-                            <td>₪{{ "{:,.0f}".format(company.avg_coupon_value) }}</td>
+                            <td>₪{{ "{:,.0f}".format(company.avg_cost if company.avg_cost else 0) }}</td>
+                            <td>₪{{ "{:,.0f}".format(company.avg_coupon_value if company.avg_coupon_value else 0) }}</td>
                             <td>{{ company.avg_discount }}%</td>
                             <td>₪{{ "{:,.0f}".format(company.total_value) }}</td>
                             <td>₪{{ "{:,.0f}".format(company.total_cost) }}</td>

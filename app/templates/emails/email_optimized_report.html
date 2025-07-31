@@ -306,7 +306,7 @@
                     <tr>
                         <td style="padding: 0 25px 30px 25px;">
                             <h3 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700; color: #4a5568; text-align: right;">
-                                🏆 10 החברות עם ההנחות הגבוהות ביותר
+                                🏆 10 החברות עם ההנחות הגבוהות ביותר (5+ קופונים)
                             </h3>
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(255, 255, 255, 0.95); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(74, 85, 104, 0.15);">
                                 <thead>
@@ -323,8 +323,8 @@
                                     <tr style="{% if loop.index % 2 == 0 %}background: rgba(74, 85, 104, 0.03);{% endif %}">
                                         <td style="padding: 8px 6px; text-align: right; font-weight: 600; font-size: 11px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">{{ company.company }}</td>
                                         <td style="padding: 8px 6px; text-align: right; font-weight: 500; font-size: 11px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">{{ company.coupon_count }}</td>
-                                        <td style="padding: 8px 6px; text-align: right; font-weight: 500; font-size: 11px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">₪{{ "{:,.0f}".format(company.avg_cost) if company.avg_cost else 'N/A' }}</td>
-                                        <td style="padding: 8px 6px; text-align: right; font-weight: 500; font-size: 11px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">₪{{ "{:,.0f}".format(company.avg_coupon_value) if company.avg_coupon_value else 'N/A' }}</td>
+                                        <td style="padding: 8px 6px; text-align: right; font-weight: 500; font-size: 11px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">₪{{ "{:,.0f}".format(company.avg_cost if company.avg_cost else 0) }}</td>
+                                        <td style="padding: 8px 6px; text-align: right; font-weight: 500; font-size: 11px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">₪{{ "{:,.0f}".format(company.avg_coupon_value if company.avg_coupon_value else 0) }}</td>
                                         <td style="padding: 8px 6px; text-align: right; font-weight: 500; font-size: 11px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">{{ company.avg_discount }}%</td>
                                     </tr>
                                     {% endfor %}

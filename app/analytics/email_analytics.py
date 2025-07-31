@@ -46,15 +46,16 @@ def get_basic_stats():
         SELECT
             company,
             COUNT(*) AS coupon_count,
-            ROUND(AVG(cost)::numeric, 2) AS avg_cost,
-            ROUND(AVG(value)::numeric, 2) AS avg_coupon_value,
-            ROUND(AVG(((value - cost) / NULLIF(value, 0)) * 100)::numeric, 2) AS avg_discount,
+            ROUND(COALESCE(AVG(cost), 0)::numeric, 2) AS avg_cost,
+            ROUND(COALESCE(AVG(value), 0)::numeric, 2) AS avg_coupon_value,
+            ROUND(COALESCE(AVG(((value - cost) / NULLIF(value, 0)) * 100), 0)::numeric, 2) AS avg_discount,
             MAX(date_added) AS last_added,
-            SUM(value) AS total_value,
-            SUM(cost) AS total_cost
+            COALESCE(SUM(value), 0) AS total_value,
+            COALESCE(SUM(cost), 0) AS total_cost
         FROM coupon
         WHERE status = 'פעיל'
         GROUP BY company
+        HAVING COUNT(*) >= 5
         ORDER BY avg_discount DESC, coupon_count DESC
     """)
     
