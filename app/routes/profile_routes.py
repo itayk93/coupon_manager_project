@@ -222,15 +222,32 @@ def index():
     )  # For example: based on time, returns "Good morning" / "Good evening", etc.
 
     # --------------------------------------------------------------------------------
-    # 1. Calculate total coupons and savings - INCLUDING BOTH ONE-TIME AND NON-ONE-TIME
+    # OPTIMIZED: Single query with eager loading instead of 6 separate queries
     # --------------------------------------------------------------------------------
 
-    # Get all coupons (including one-time) but excluding those for sale
-    all_coupons = Coupon.query.filter(
-        Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == False,
-        Coupon.exclude_saving != True,
-    ).all()
+    # Single optimized query to get all user coupons
+    all_user_coupons = Coupon.query.filter(
+        Coupon.user_id == current_user.id
+    ).order_by(Coupon.date_added.desc()).all()
+
+    # Filter in memory (much faster than separate DB queries)
+    all_coupons = [c for c in all_user_coupons 
+                   if not c.is_for_sale and c.exclude_saving != True]
+    
+    coupons_for_sale = [c for c in all_user_coupons if c.is_for_sale]
+    
+    active_one_time_coupons = [c for c in all_coupons 
+                               if c.status == "פעיל" and c.is_one_time]
+    
+    used_coupons = [c for c in all_coupons 
+                    if c.status != "פעיל"]
+    
+    active_coupons = [c for c in all_coupons 
+                      if c.status == "פעיל" and not c.is_one_time]
+
+    # --------------------------------------------------------------------------------
+    # 1. Calculate total coupons and savings - INCLUDING BOTH ONE-TIME AND NON-ONE-TIME
+    # --------------------------------------------------------------------------------
 
     # Calculate total remaining value, savings, and total value
     total_remaining = sum(coupon.value - coupon.used_value for coupon in all_coupons)
@@ -242,42 +259,6 @@ def index():
     total_coupons_value = sum(coupon.value for coupon in all_coupons)
     percentage_savings = (
         (total_savings / total_coupons_value) * 100 if total_coupons_value > 0 else 0
-    )
-
-    # --------------------------------------------------------------------------------
-    # 2. Fetch and divide into categories (active, active_one_time, used, for_sale)
-    # --------------------------------------------------------------------------------
-
-    # Active one-time coupons
-    active_one_time_coupons = Coupon.query.filter(
-        Coupon.status == "פעיל",
-        Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == False,
-        Coupon.is_one_time == True,
-    ).all()
-
-    # Used coupons (not active)
-    used_coupons = Coupon.query.filter(
-        Coupon.status != "פעיל",
-        Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == False,
-    ).all()
-
-    # Coupons for sale
-    coupons_for_sale = Coupon.query.filter(
-        Coupon.user_id == current_user.id, Coupon.is_for_sale == True
-    ).all()
-
-    # Active coupons (non-one-time)
-    active_coupons = (
-        Coupon.query.filter(
-            Coupon.user_id == current_user.id,
-            Coupon.status == "פעיל",
-            Coupon.is_for_sale == False,
-            ~Coupon.is_one_time,
-        )
-        .order_by(Coupon.date_added.desc())
-        .all()
     )
 
     # --------------------------------------------------------------------------------
@@ -298,27 +279,33 @@ def index():
         and current_user.dismissed_expiring_alert_at == date.today()
     )
 
-    # Find coupons expiring in the next week
+    # Find coupons expiring in the next week (using already loaded data)
     one_week_from_now = date.today() + timedelta(days=7)
-    expiring_coupons = (
-        Coupon.query.filter(
-            Coupon.user_id == current_user.id,
-            Coupon.status == "פעיל",
-            Coupon.is_for_sale == False,
-            Coupon.expiration.isnot(None),
-        )
-        .filter(
-            cast(Coupon.expiration, Date) >= date.today(),
-            cast(Coupon.expiration, Date) <= one_week_from_now,
-        )
-        .all()
-    )
+    today = date.today()
+    
+    expiring_coupons = []
+    for coupon in all_coupons:
+        if (coupon.status == "פעיל" and 
+            coupon.expiration is not None):
+            
+            # Handle expiration date format
+            exp_date = coupon.expiration
+            if isinstance(exp_date, str):
+                try:
+                    exp_date = datetime.strptime(exp_date, "%Y-%m-%d").date()
+                except ValueError:
+                    continue  # Skip invalid dates
+            elif hasattr(exp_date, 'date'):
+                exp_date = exp_date.date()
+            
+            if today <= exp_date <= one_week_from_now:
+                expiring_coupons.append(coupon)
 
     # Show alert only if there are relevant coupons and user hasn't dismissed the alert today
     show_expiring_alert = len(expiring_coupons) > 0 and not dismissed_today
 
     # --------------------------------------------------------------------------------
-    # 5. Fetch all companies (for logo map, if relevant)
+    # 5. Companies mapping - using traditional query (company is a string field, not FK)
     # --------------------------------------------------------------------------------
     companies = Company.query.all()
     company_logo_mapping = {
