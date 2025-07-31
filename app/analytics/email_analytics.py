@@ -111,6 +111,20 @@ def get_recent_activity():
     result = db.session.execute(query, {"today": today, "week_ago": week_ago}).mappings().first()
     return dict(result) if result else {}
 
+def get_new_users_count():
+    """ספירת משתמשים חדשים השבוע"""
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+    
+    query = text("""
+        SELECT COUNT(*) as new_users_count
+        FROM user 
+        WHERE date_joined >= :week_ago
+    """)
+    
+    result = db.session.execute(query, {"week_ago": week_ago}).mappings().first()
+    return result['new_users_count'] if result else 0
+
 def create_coupons_by_company_chart(data):
     """יצירת גרף עמודות מודרני - כמות קופונים לכל חברה"""
     if not data:
