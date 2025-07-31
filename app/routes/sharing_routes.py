@@ -188,14 +188,14 @@ def confirm_share(token):
         # For sharing user
         notification_sharing = Notification(
             user_id=share.shared_by_user_id,
-            message=f"{current_user.first_name} {current_user.last_name} accepted your shared coupon",
+            message=f"{current_user.first_name} {current_user.last_name} קיבל גישה לקופון שלך",
             link=url_for('coupons.coupon_detail', id=share.coupon_id)
         )
         
         # For accepting user
         notification_accepting = Notification(
             user_id=current_user.id,
-            message=f"You now have access to {share.coupon.company} coupon",
+            message=f"קיבלת גישה לקופון {share.coupon.company}",
             link=url_for('coupons.coupon_detail', id=share.coupon_id)
         )
         
@@ -258,13 +258,13 @@ def revoke_sharing(share_id):
         
         notification_current = Notification(
             user_id=current_user.id,
-            message=f"You revoked access to {share.coupon.company} coupon",
+            message=f"ביטלת את הגישה לקופון {share.coupon.company}",
             link=url_for('coupons.coupon_detail', id=share.coupon_id)
         )
         
         notification_other = Notification(
             user_id=other_user_id,
-            message=f"Access to {share.coupon.company} coupon was revoked",
+            message=f"הגישה לקופון {share.coupon.company} בוטלה",
             link=url_for('coupons.show_coupons')
         )
         
@@ -328,13 +328,13 @@ def quick_revoke(token):
         # Create notifications
         notification_owner = Notification(
             user_id=share.shared_by_user_id,
-            message=f"You revoked access to {share.coupon.company} coupon",
+            message=f"ביטלת את הגישה לקופון {share.coupon.company}",
             link=url_for('coupons.coupon_detail', id=share.coupon_id)
         )
         
         notification_recipient = Notification(
             user_id=share.shared_with_user_id,
-            message=f"Access to {share.coupon.company} coupon was revoked",
+            message=f"הגישה לקופון {share.coupon.company} בוטלה",
             link=url_for('coupons.show_coupons')
         )
         

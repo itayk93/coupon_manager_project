@@ -3,34 +3,478 @@
 
 {% block title %}התראות{% endblock %}
 
-{% block content %}
-<div class="notifications-page">
-    <h2>התראות</h2>
+{% block head %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+/* Modern Notifications Page Styling */
+* {
+    box-sizing: border-box;
+}
 
-    <!-- כפתור מחיקת כל ההתראות -->
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+.notifications-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    min-height: 100vh;
+}
+
+.notifications-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.notifications-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0.05;
+    border-radius: 20px;
+    z-index: -1;
+}
+
+.notifications-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+    position: relative;
+    display: inline-block;
+}
+
+.notifications-title::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 2px;
+}
+
+.notifications-subtitle {
+    color: #64748b;
+    font-size: 1.1rem;
+    font-weight: 400;
+    margin-top: 1rem;
+}
+
+.notifications-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+}
+
+.notifications-count {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+    color: #475569;
+}
+
+.count-badge {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    min-width: 2rem;
+    text-align: center;
+}
+
+.delete-all-btn {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.3);
+}
+
+.delete-all-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px 0 rgba(239, 68, 68, 0.4);
+}
+
+.delete-all-btn:active {
+    transform: translateY(0);
+}
+
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.notification-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    position: relative;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.notification-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.notification-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border-color: #cbd5e1;
+}
+
+.notification-card:hover::before {
+    opacity: 1;
+}
+
+.notification-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.notification-message {
+    flex: 1;
+}
+
+.notification-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #374151;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+}
+
+.notification-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.notification-timestamp {
+    font-size: 0.875rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 400;
+}
+
+.notification-link {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.notification-link:hover {
+    background: rgba(102, 126, 234, 0.2);
+    transform: translateY(-1px);
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+}
+
+.notification-close:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    transform: scale(1.1);
+}
+
+.no-notifications {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 16px;
+    border: 2px dashed #e2e8f0;
+    color: #64748b;
+    font-size: 1.1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.no-notifications::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0.02;
+    z-index: -1;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    color: #cbd5e1;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.empty-state-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-description {
+    color: #64748b;
+    font-weight: 400;
+}
+
+/* Loading State */
+.notification-card.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.notification-card.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animation for notification removal */
+.notification-card.removing {
+    animation: slideOut 0.3s ease-in-out forwards;
+}
+
+@keyframes slideOut {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+        max-height: 200px;
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(100%);
+        max-height: 0;
+        padding: 0;
+        margin: 0;
+    }
+}
+
+/* Fade in animation for new notifications */
+.notification-card.new {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .notifications-container {
+        padding: 1rem;
+    }
+    
+    .notifications-title {
+        font-size: 2rem;
+    }
+    
+    .notifications-controls {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .notification-content {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .notification-close {
+        align-self: flex-end;
+    }
+    
+    .notification-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .notifications-title {
+        font-size: 1.75rem;
+    }
+    
+    .notification-card {
+        padding: 1rem;
+    }
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #0f172a;
+        color: #e2e8f0;
+    }
+    
+    .notifications-container {
+        background: #0f172a;
+    }
+    
+    .notifications-title {
+        color: #f1f5f9;
+    }
+    
+    .notifications-controls,
+    .notification-card,
+    .no-notifications {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    
+    .notification-text {
+        color: #cbd5e1;
+    }
+    
+    .notification-timestamp {
+        color: #94a3b8;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="notifications-container">
+    <div class="notifications-header">
+        <h1 class="notifications-title">
+            <i class="fas fa-bell"></i>
+            התראות
+        </h1>
+        <p class="notifications-subtitle">נהל את ההתראות שלך בקלות</p>
+    </div>
+
     {% if notifications %}
-        <button id="delete-all-btn" class="delete-all-btn">מחק את כל ההתראות</button>
+    <div class="notifications-controls">
+        <div class="notifications-count">
+            <i class="fas fa-list-ul"></i>
+            <span>סה"כ התראות:</span>
+            <span class="count-badge">{{ notifications|length }}</span>
+        </div>
+        <button id="delete-all-btn" class="delete-all-btn">
+            <i class="fas fa-trash-alt"></i>
+            מחק את כל ההתראות
+        </button>
+    </div>
     {% endif %}
 
-    <!-- רשימת ההתראות -->
     <div class="notifications-list">
         {% if notifications %}
             {% for notification in notifications %}
-                <div class="notification-card" id="notification-{{ notification.id }}">
-                    <div class="notification-message">
-                        <p>{{ notification.message }}</p>
-                        {% if notification.link %}
-                            <a href="{{ notification.link }}" class="notification-link">פרטים</a>
-                        {% endif %}
-                        <div class="notification-timestamp">{{ notification.timestamp | to_israel_time }}</div>
+                <div class="notification-card new" id="notification-{{ notification.id }}">
+                    <div class="notification-content">
+                        <div class="notification-message">
+                            <p class="notification-text">{{ notification.message }}</p>
+                            <div class="notification-meta">
+                                <div class="notification-timestamp">
+                                    <i class="fas fa-clock"></i>
+                                    {{ notification.timestamp | to_israel_time }}
+                                </div>
+                            </div>
+                        </div>
+                        <button class="notification-close" data-id="{{ notification.id }}" title="מחק התראה">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
-                    <button class="notification-close" data-id="{{ notification.id }}" title="מחק התראה">
-                        &times;
-                    </button>
                 </div>
             {% endfor %}
         {% else %}
-            <p class="no-notifications">אין התראות להצגה.</p>
+            <div class="no-notifications">
+                <i class="fas fa-bell-slash empty-state-icon"></i>
+                <div class="empty-state-title">אין התראות חדשות</div>
+                <div class="empty-state-description">כל ההתראות שלך מעודכנות! נודיע לך כאשר יהיו עדכונים חדשים.</div>
+            </div>
         {% endif %}
     </div>
 </div>
@@ -38,83 +482,478 @@
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+class NotificationManager {
+    constructor() {
+        this.notifications = new Map();
+        this.isLoading = false;
+        this.init();
+    }
+
+    init() {
+        this.bindEvents();
+        this.setupIntersectionObserver();
+        this.addNotificationAnimations();
+    }
+
+    bindEvents() {
         // מחיקת התראה בודדת
+        this.bindDeleteButtons();
+        
+        // מחיקת כל ההתראות
+        this.bindDeleteAllButton();
+        
+        // הוספת ליסנר לקיצורי מקלדת
+        this.bindKeyboardShortcuts();
+    }
+
+    bindDeleteButtons() {
         const closeButtons = document.querySelectorAll('.notification-close');
-        closeButtons.forEach(function(button) {
-            button.addEventListener('click', function() {
-                const notificationId = this.getAttribute('data-id');
-                if (confirm('האם אתה בטוח שברצונך למחוק את ההתראה הזו?')) {
-                    fetch(`/delete_notification/${notificationId}`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({})
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            // הסרת ההתראה מהדף
-                            const notificationCard = document.getElementById(`notification-${notificationId}`);
-                            if (notificationCard) {
-                                notificationCard.remove();
-                            }
-                            // בדיקה אם אין התראות נוספות
-                            if (document.querySelectorAll('.notification-card').length === 0) {
-                                const notificationsList = document.querySelector('.notifications-list');
-                                notificationsList.innerHTML = '<p class="no-notifications">אין התראות להצגה.</p>';
-                                // הסתרת כפתור מחיקת כל ההתראות
-                                const deleteAllBtn = document.getElementById('delete-all-btn');
-                                if (deleteAllBtn) {
-                                    deleteAllBtn.style.display = 'none';
-                                }
-                            }
-                        } else {
-                            alert('שגיאה במחיקת ההתראה.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('שגיאה במחיקת ההתראה.');
-                    });
-                }
+        closeButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.deleteNotification(button.getAttribute('data-id'), button);
             });
         });
+    }
 
-        // מחיקת כל ההתראות
+    bindDeleteAllButton() {
         const deleteAllBtn = document.getElementById('delete-all-btn');
         if (deleteAllBtn) {
-            deleteAllBtn.addEventListener('click', function() {
-                if (confirm('האם אתה בטוח שברצונך למחוק את כל ההתראות?')) {
-                    fetch(`/delete_all_notifications`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({})
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            // הסרת כל ההתראות מהדף
-                            const notificationsList = document.querySelector('.notifications-list');
-                            notificationsList.innerHTML = '<p class="no-notifications">אין התראות להצגה.</p>';
-                            // הסתרת כפתור מחיקת כל ההתראות
-                            deleteAllBtn.style.display = 'none';
-                        } else {
-                            alert('שגיאה במחיקת כל ההתראות.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('שגיאה במחיקת כל ההתראות.');
-                    });
-                }
+            deleteAllBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.deleteAllNotifications();
             });
         }
-    });
+    }
+
+    bindKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + A = בחירת הכל
+            if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+                e.preventDefault();
+                this.selectAllNotifications();
+            }
+            
+            // Delete = מחיקת נבחרים
+            if (e.key === 'Delete') {
+                this.deleteSelectedNotifications();
+            }
+            
+            // Escape = ביטול בחירה
+            if (e.key === 'Escape') {
+                this.clearSelection();
+            }
+        });
+    }
+
+    selectAllNotifications() {
+        const cards = document.querySelectorAll('.notification-card');
+        cards.forEach(card => card.classList.add('selected'));
+    }
+
+    clearSelection() {
+        const cards = document.querySelectorAll('.notification-card.selected');
+        cards.forEach(card => card.classList.remove('selected'));
+    }
+
+    async deleteNotification(notificationId, buttonElement) {
+        if (this.isLoading) return;
+
+        const card = document.getElementById(`notification-${notificationId}`);
+        if (!card) return;
+
+        // הצגת דיאלוג אישור מותאם אישית
+        const confirmed = await this.showCustomConfirm('האם אתה בטוח שברצונך למחוק את ההתראה הזו?');
+        if (!confirmed) return;
+
+        this.isLoading = true;
+        card.classList.add('loading');
+
+        try {
+            const response = await fetch(`/delete_notification/${notificationId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken()
+                },
+                body: JSON.stringify({})
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                await this.animateCardRemoval(card);
+                this.updateNotificationCount(-1);
+                this.checkEmptyState();
+                this.showToast('ההתראה נמחקה בהצלחה', 'success');
+            } else {
+                throw new Error(data.message || 'שגיאה במחיקת ההתראה');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            card.classList.remove('loading');
+            this.showToast('שגיאה במחיקת ההתראה', 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    async deleteAllNotifications() {
+        if (this.isLoading) return;
+
+        const notificationCards = document.querySelectorAll('.notification-card');
+        if (notificationCards.length === 0) return;
+
+        const confirmed = await this.showCustomConfirm(
+            `האם אתה בטוח שברצונך למחוק את כל ${notificationCards.length} ההתראות?`
+        );
+        if (!confirmed) return;
+
+        this.isLoading = true;
+        const deleteAllBtn = document.getElementById('delete-all-btn');
+        if (deleteAllBtn) {
+            deleteAllBtn.innerHTML = '<i class=\"fas fa-spinner fa-spin\"></i> מוחק...';
+            deleteAllBtn.disabled = true;
+        }
+
+        try {
+            const response = await fetch('/delete_all_notifications', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken()
+                },
+                body: JSON.stringify({})
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                await this.animateAllCardsRemoval();
+                this.showEmptyState();
+                this.showToast(`${data.deleted} התראות נמחקו בהצלחה`, 'success');
+            } else {
+                throw new Error(data.message || 'שגיאה במחיקת כל ההתראות');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            this.showToast('שגיאה במחיקת כל ההתראות', 'error');
+        } finally {
+            this.isLoading = false;
+            if (deleteAllBtn) {
+                deleteAllBtn.innerHTML = '<i class=\"fas fa-trash-alt\"></i> מחק את כל ההתראות';
+                deleteAllBtn.disabled = false;
+            }
+        }
+    }
+
+    async animateCardRemoval(card) {
+        return new Promise(resolve => {
+            card.classList.add('removing');
+            card.addEventListener('animationend', () => {
+                card.remove();
+                resolve();
+            }, { once: true });
+        });
+    }
+
+    async animateAllCardsRemoval() {
+        const cards = Array.from(document.querySelectorAll('.notification-card'));
+        const promises = cards.map((card, index) => {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    card.classList.add('removing');
+                    card.addEventListener('animationend', resolve, { once: true });
+                }, index * 100);
+            });
+        });
+        await Promise.all(promises);
+    }
+
+    updateNotificationCount(delta) {
+        const countBadge = document.querySelector('.count-badge');
+        if (countBadge) {
+            const currentCount = parseInt(countBadge.textContent) || 0;
+            const newCount = Math.max(0, currentCount + delta);
+            countBadge.textContent = newCount;
+            
+            if (newCount === 0) {
+                const controls = document.querySelector('.notifications-controls');
+                if (controls) controls.style.display = 'none';
+            }
+        }
+    }
+
+    checkEmptyState() {
+        const remainingCards = document.querySelectorAll('.notification-card:not(.removing)');
+        if (remainingCards.length === 0) {
+            setTimeout(() => this.showEmptyState(), 300);
+        }
+    }
+
+    showEmptyState() {
+        const notificationsList = document.querySelector('.notifications-list');
+        const controls = document.querySelector('.notifications-controls');
+        
+        if (controls) controls.style.display = 'none';
+        
+        notificationsList.innerHTML = `
+            <div class="no-notifications">
+                <i class="fas fa-bell-slash empty-state-icon"></i>
+                <div class="empty-state-title">אין התראות חדשות</div>
+                <div class="empty-state-description">כל ההתראות שלך מעודכנות! נודיע לך כאשר יהיו עדכונים חדשים.</div>
+            </div>
+        `;
+    }
+
+    addNotificationAnimations() {
+        // הוספת אנימציות כניסה לכרטיסי התראות
+        const cards = document.querySelectorAll('.notification-card');
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
+    }
+
+    setupIntersectionObserver() {
+        // אנימציות כשהקרטיסים נכנסים לנוף
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.notification-card').forEach(card => {
+            observer.observe(card);
+        });
+    }
+
+    async showCustomConfirm(message) {
+        return new Promise(resolve => {
+            // יצירת דיאלוג מותאם אישית
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal';
+            modal.innerHTML = `
+                <div class="modal-overlay">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>אישור פעולה</h3>
+                        </div>
+                        <div class="modal-body">
+                            <p>${message}</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn-cancel">ביטול</button>
+                            <button class="btn-confirm">אישור</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // הוספת סטיילים למודל
+            const style = document.createElement('style');
+            style.textContent = `
+                .custom-modal {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0;
+                    padding: 1rem;
+                }
+                .modal-overlay {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    backdrop-filter: blur(4px);
+                }
+                .modal-content {
+                    background: white;
+                    border-radius: 16px;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                    max-width: 400px;
+                    width: 90%;
+                    position: relative;
+                    z-index: 1;
+                    animation: modalSlideIn 0.3s ease-out;
+                    margin: auto;
+                }
+                @keyframes modalSlideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-20px) scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                    }
+                }
+                .modal-header {
+                    padding: 1.5rem 1.5rem 1rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    color: #f59e0b;
+                }
+                .modal-header i {
+                    font-size: 1.5rem;
+                }
+                .modal-header h3 {
+                    margin: 0;
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                }
+                .modal-body {
+                    padding: 0 1.5rem 1.5rem;
+                    color: #374151;
+                    line-height: 1.6;
+                }
+                .modal-footer {
+                    padding: 1rem 1.5rem 1.5rem;
+                    display: flex;
+                    gap: 0.75rem;
+                    justify-content: flex-end;
+                }
+                .modal-footer button {
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 8px;
+                    border: none;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+                .btn-cancel {
+                    background: #f3f4f6;
+                    color: #374151;
+                }
+                .btn-cancel:hover {
+                    background: #e5e7eb;
+                }
+                .btn-confirm {
+                    background: linear-gradient(135deg, #ef4444, #dc2626);
+                    color: white;
+                }
+                .btn-confirm:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+                }
+            `;
+            
+            document.head.appendChild(style);
+            document.body.appendChild(modal);
+
+            const cleanup = () => {
+                document.body.removeChild(modal);
+                document.head.removeChild(style);
+            };
+
+            modal.querySelector('.btn-cancel').onclick = () => {
+                cleanup();
+                resolve(false);
+            };
+            
+            modal.querySelector('.btn-confirm').onclick = () => {
+                cleanup();
+                resolve(true);
+            };
+            
+            modal.querySelector('.modal-overlay').onclick = (e) => {
+                if (e.target === e.currentTarget) {
+                    cleanup();
+                    resolve(false);
+                }
+            };
+        });
+    }
+
+    showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        const icon = type === 'success' ? 'check-circle' : 
+                    type === 'error' ? 'exclamation-circle' : 'info-circle';
+        
+        toast.innerHTML = `
+            <i class="fas fa-${icon}"></i>
+            <span>${message}</span>
+        `;
+
+        // הוספת סטיילים לטוסט
+        if (!document.querySelector('#toast-styles')) {
+            const style = document.createElement('style');
+            style.id = 'toast-styles';
+            style.textContent = `
+                .toast {
+                    position: fixed;
+                    top: 2rem;
+                    right: 2rem;
+                    background: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 12px;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    font-weight: 500;
+                    animation: toastSlideIn 0.3s ease-out;
+                    border-right: 4px solid;
+                }
+                .toast-success { border-color: #10b981; color: #065f46; }
+                .toast-error { border-color: #ef4444; color: #991b1b; }
+                .toast-info { border-color: #3b82f6; color: #1e40af; }
+                
+                @keyframes toastSlideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateX(100%);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                }
+                
+                @keyframes toastSlideOut {
+                    to {
+                        opacity: 0;
+                        transform: translateX(100%);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'toastSlideOut 0.3s ease-in forwards';
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+
+    getCSRFToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+}
+
+// אתחול מנהל ההתראות
+document.addEventListener('DOMContentLoaded', function() {
+    new NotificationManager();
+});
 </script>
 {% endblock %}
