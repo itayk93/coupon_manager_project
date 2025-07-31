@@ -110,6 +110,9 @@ class User(UserMixin, db.Model):
 
     # 🆕 New field: When the user dismissed the alert about expiring coupons
     dismissed_expiring_alert_at = db.Column(db.DateTime, nullable=True)
+    
+    # 🆕 New field: Last time status updates were processed for this user
+    last_status_update = db.Column(db.Date, nullable=True)
 
     # 🆕 Newsletter preferences
     newsletter_subscription = db.Column(db.Boolean, default=True, nullable=False)
@@ -458,46 +461,77 @@ class Company(db.Model):
         return f"<Company {self.name}>"
 
 
-def update_coupon_status(coupon):
-    try:
-        current_date = datetime.now(timezone.utc).date()
-        status = "פעיל"
+# Cache for current date to avoid repeated datetime calls
+_status_update_cache = {}
 
+def update_coupon_status(coupon):
+    """
+    OPTIMIZED: Update coupon status with caching and duplicate prevention
+    """
+    try:
+        # Use cached current date (only calculate once per request)
+        cache_key = 'current_date'
+        if cache_key not in _status_update_cache:
+            _status_update_cache[cache_key] = datetime.now(timezone.utc).date()
+        current_date = _status_update_cache[cache_key]
+        
+        status = "פעיל"
+        notification_needed = None
+
+        # Check expiration
         if coupon.expiration:
             expiration_date = coupon.expiration
             if current_date > expiration_date:
                 status = "פג תוקף"
-                # Create notification for expired coupon
-                try:
-                    from flask import url_for
-                    notification = Notification(
-                        user_id=coupon.user_id,
-                        message=f"הקופון {coupon.code} פג תוקף.",
-                        link=url_for('coupon_detail', id=coupon.id)
-                    )
-                    db.session.add(notification)
-                except Exception as e:
-                    print(f"Error creating expiration notification: {e}")
+                # Only create notification if status changed
+                if coupon.status != status:
+                    notification_needed = {
+                        'type': 'expired',
+                        'message': f"הקופון {coupon.code} פג תוקף."
+                    }
 
+        # Check if fully used
         if coupon.used_value >= coupon.value:
             status = "נוצל"
-            # Create notification for fully used coupon
-            try:
-                from flask import url_for
-                notification = Notification(
-                    user_id=coupon.user_id,
-                    message=f"הקופון {coupon.code} נוצל במלואו.",
-                    link=url_for('coupon_detail', id=coupon.id)
-                )
-                db.session.add(notification)
-            except Exception as e:
-                print(f"Error creating fully used notification: {e}")
+            # Only create notification if status changed
+            if coupon.status != status and notification_needed is None:
+                notification_needed = {
+                    'type': 'fully_used', 
+                    'message': f"הקופון {coupon.code} נוצל במלואו."
+                }
 
+        # Update status if changed
         if coupon.status != status:
             coupon.status = status
+            
+            # Create notification only if needed and not already exists
+            if notification_needed:
+                try:
+                    # Check if notification already exists to prevent duplicates
+                    existing_notification = Notification.query.filter_by(
+                        user_id=coupon.user_id,
+                        message=notification_needed['message']
+                    ).first()
+                    
+                    if not existing_notification:
+                        from flask import url_for
+                        notification = Notification(
+                            user_id=coupon.user_id,
+                            message=notification_needed['message'],
+                            link=url_for('coupons.coupon_detail', id=coupon.id)
+                        )
+                        db.session.add(notification)
+                except Exception as e:
+                    print(f"Error creating {notification_needed['type']} notification: {e}")
 
     except Exception as e:
         print(f"Error in update_coupon_status: {e}")
+
+
+def clear_status_update_cache():
+    """Clear the status update cache - call this after processing all coupons"""
+    global _status_update_cache
+    _status_update_cache.clear()
 
 
 class CouponTransaction(db.Model):

@@ -176,49 +176,6 @@ def faq():
     return render_template("faq.html")
 
 
-@profile_bp.route("/load_more_coupons")
-@login_required
-def load_more_coupons():
-    """
-    AJAX endpoint to load more coupons for lazy loading
-    """
-    try:
-        offset = request.args.get('offset', 0, type=int)
-        limit = request.args.get('limit', 50, type=int)
-        
-        # Load next batch of coupons
-        more_coupons = Coupon.query.filter(
-            Coupon.user_id == current_user.id
-        ).order_by(Coupon.date_added.desc()).offset(offset).limit(limit).all()
-        
-        # Convert to JSON format
-        coupons_data = []
-        for coupon in more_coupons:
-            coupons_data.append({
-                'id': coupon.id,
-                'code': coupon.code,
-                'company': coupon.company,
-                'value': coupon.value,
-                'remaining_value': coupon.value - coupon.used_value,
-                'status': coupon.status,
-                'is_one_time': coupon.is_one_time,
-                'is_for_sale': coupon.is_for_sale,
-                'expiration': coupon.expiration.strftime('%Y-%m-%d') if coupon.expiration else None
-            })
-        
-        return jsonify({
-            'success': True,
-            'coupons': coupons_data,
-            'has_more': len(more_coupons) == limit
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
 @profile_bp.route("/index", methods=["GET", "POST"])
 @login_required
 def index():
@@ -265,53 +222,15 @@ def index():
     )  # For example: based on time, returns "Good morning" / "Good evening", etc.
 
     # --------------------------------------------------------------------------------
-    # OPTIMIZED: Single query with eager loading instead of 6 separate queries
-    # --------------------------------------------------------------------------------
-
-    # LAZY LOADING: Initial load with pagination for better performance
-    INITIAL_LOAD_LIMIT = 200  # Load only first 200 coupons initially
-    
-    # Check if user has many coupons and apply lazy loading
-    total_user_coupons_count = Coupon.query.filter(
-        Coupon.user_id == current_user.id
-    ).count()
-    
-    if total_user_coupons_count > INITIAL_LOAD_LIMIT:
-        # Lazy loading: Load only recent coupons initially
-        all_user_coupons = Coupon.query.filter(
-            Coupon.user_id == current_user.id
-        ).order_by(Coupon.date_added.desc()).limit(INITIAL_LOAD_LIMIT).all()
-        
-        # Add flag to indicate more coupons are available
-        has_more_coupons = True
-        remaining_count = total_user_coupons_count - INITIAL_LOAD_LIMIT
-    else:
-        # Load all coupons if count is reasonable
-        all_user_coupons = Coupon.query.filter(
-            Coupon.user_id == current_user.id
-        ).order_by(Coupon.date_added.desc()).all()
-        
-        has_more_coupons = False
-        remaining_count = 0
-
-    # Filter in memory (much faster than separate DB queries)
-    all_coupons = [c for c in all_user_coupons 
-                   if not c.is_for_sale and c.exclude_saving != True]
-    
-    coupons_for_sale = [c for c in all_user_coupons if c.is_for_sale]
-    
-    active_one_time_coupons = [c for c in all_coupons 
-                               if c.status == "פעיל" and c.is_one_time]
-    
-    used_coupons = [c for c in all_coupons 
-                    if c.status != "פעיל"]
-    
-    active_coupons = [c for c in all_coupons 
-                      if c.status == "פעיל" and not c.is_one_time]
-
-    # --------------------------------------------------------------------------------
     # 1. Calculate total coupons and savings - INCLUDING BOTH ONE-TIME AND NON-ONE-TIME
     # --------------------------------------------------------------------------------
+
+    # Get all coupons (including one-time) but excluding those for sale
+    all_coupons = Coupon.query.filter(
+        Coupon.user_id == current_user.id,
+        Coupon.is_for_sale == False,
+        Coupon.exclude_saving != True,
+    ).all()
 
     # Calculate total remaining value, savings, and total value
     total_remaining = sum(coupon.value - coupon.used_value for coupon in all_coupons)
@@ -326,31 +245,48 @@ def index():
     )
 
     # --------------------------------------------------------------------------------
-    # 3. BACKGROUND JOB: Update status only once per day - MAJOR OPTIMIZATION
+    # 2. Fetch and divide into categories (active, active_one_time, used, for_sale)
     # --------------------------------------------------------------------------------
-    from app.models import clear_status_update_cache
-    from datetime import date
-    
-    today = date.today()
-    
-    # Only update statuses if not done today (massive performance boost)
-    # Check if field exists (for backward compatibility)
-    last_update = getattr(current_user, 'last_status_update', None)
-    if last_update != today:
-        all_to_update = all_coupons + coupons_for_sale
-        for coupon in all_to_update:
-            update_coupon_status(coupon)
-        
-        # Mark as updated today (if field exists)
-        if hasattr(current_user, 'last_status_update'):
-            current_user.last_status_update = today
-        
-        # Clear cache after processing all coupons
-        clear_status_update_cache()
-        db.session.commit()
-    else:
-        # Status already updated today - skip expensive operations
-        pass
+
+    # Active one-time coupons
+    active_one_time_coupons = Coupon.query.filter(
+        Coupon.status == "פעיל",
+        Coupon.user_id == current_user.id,
+        Coupon.is_for_sale == False,
+        Coupon.is_one_time == True,
+    ).all()
+
+    # Used coupons (not active)
+    used_coupons = Coupon.query.filter(
+        Coupon.status != "פעיל",
+        Coupon.user_id == current_user.id,
+        Coupon.is_for_sale == False,
+    ).all()
+
+    # Coupons for sale
+    coupons_for_sale = Coupon.query.filter(
+        Coupon.user_id == current_user.id, Coupon.is_for_sale == True
+    ).all()
+
+    # Active coupons (non-one-time)
+    active_coupons = (
+        Coupon.query.filter(
+            Coupon.user_id == current_user.id,
+            Coupon.status == "פעיל",
+            Coupon.is_for_sale == False,
+            ~Coupon.is_one_time,
+        )
+        .order_by(Coupon.date_added.desc())
+        .all()
+    )
+
+    # --------------------------------------------------------------------------------
+    # 3. Update status (for all categories) and then commit
+    # --------------------------------------------------------------------------------
+    all_to_update = all_coupons + coupons_for_sale
+    for coupon in all_to_update:
+        update_coupon_status(coupon)
+    db.session.commit()
 
     # --------------------------------------------------------------------------------
     # 4. Check "Are there coupons expiring in the next 7 days" + show banner once a day
@@ -362,33 +298,27 @@ def index():
         and current_user.dismissed_expiring_alert_at == date.today()
     )
 
-    # Find coupons expiring in the next week (using already loaded data)
+    # Find coupons expiring in the next week
     one_week_from_now = date.today() + timedelta(days=7)
-    today = date.today()
-    
-    expiring_coupons = []
-    for coupon in all_coupons:
-        if (coupon.status == "פעיל" and 
-            coupon.expiration is not None):
-            
-            # Handle expiration date format
-            exp_date = coupon.expiration
-            if isinstance(exp_date, str):
-                try:
-                    exp_date = datetime.strptime(exp_date, "%Y-%m-%d").date()
-                except ValueError:
-                    continue  # Skip invalid dates
-            elif hasattr(exp_date, 'date'):
-                exp_date = exp_date.date()
-            
-            if today <= exp_date <= one_week_from_now:
-                expiring_coupons.append(coupon)
+    expiring_coupons = (
+        Coupon.query.filter(
+            Coupon.user_id == current_user.id,
+            Coupon.status == "פעיל",
+            Coupon.is_for_sale == False,
+            Coupon.expiration.isnot(None),
+        )
+        .filter(
+            cast(Coupon.expiration, Date) >= date.today(),
+            cast(Coupon.expiration, Date) <= one_week_from_now,
+        )
+        .all()
+    )
 
     # Show alert only if there are relevant coupons and user hasn't dismissed the alert today
     show_expiring_alert = len(expiring_coupons) > 0 and not dismissed_today
 
     # --------------------------------------------------------------------------------
-    # 5. Companies mapping - using traditional query (company is a string field, not FK)
+    # 5. Fetch all companies (for logo map, if relevant)
     # --------------------------------------------------------------------------------
     companies = Company.query.all()
     company_logo_mapping = {
@@ -401,52 +331,59 @@ def index():
             company_logo_mapping[company_name] = "images/default.png"
 
     # --------------------------------------------------------------------------------
-    # 6. OPTIMIZED: Database aggregation for company statistics instead of Python loops
+    # 6. Accurate statistics by company for the charts
     # --------------------------------------------------------------------------------
-    from sqlalchemy import case
-    
-    # Single aggregated query for company statistics
-    company_stats_query = db.session.query(
-        Coupon.company,
-        func.count(Coupon.id).label('count'),
-        func.sum(Coupon.value).label('total_value'),
-        func.sum(Coupon.used_value).label('used_value'),
-        func.sum(Coupon.value - Coupon.used_value).label('remaining_value'),
-        func.sum(case((Coupon.value > Coupon.cost, Coupon.value - Coupon.cost), else_=0)).label('savings'),
-        func.sum(case((Coupon.is_one_time == True, 1), else_=0)).label('one_time_count'),
-        func.sum(case((Coupon.is_one_time == False, 1), else_=0)).label('non_one_time_count'),
-        func.min(case([(Coupon.status == "פעיל", Coupon.expiration)], else_=None)).label('earliest_expiration')
-    ).filter(
-        Coupon.user_id == current_user.id,
-        Coupon.is_for_sale == False,
-        Coupon.exclude_saving != True
-    ).group_by(Coupon.company).all()
-    
-    # Convert query results to dictionaries
+    # Organize data by company
     companies_stats = {}
+
+    # Create dictionary to track earliest expiration date per company
     company_earliest_expirations = {}
+
+    # Track coupon types per company
     company_coupon_types = {}
-    
-    for stat in company_stats_query:
-        company = stat.company
-        companies_stats[company] = {
-            "total_value": float(stat.total_value or 0),
-            "used_value": float(stat.used_value or 0),
-            "remaining_value": float(stat.remaining_value or 0),
-            "savings": float(stat.savings or 0),
-            "count": stat.count,
-            "one_time_count": stat.one_time_count,
-            "non_one_time_count": stat.non_one_time_count,
-        }
-        company_coupon_types[company] = {
-            "one_time": stat.one_time_count,
-            "non_one_time": stat.non_one_time_count
-        }
-        
-        # Track earliest expiration
-        if stat.earliest_expiration:
-            company_earliest_expirations[company] = stat.earliest_expiration
-    
+
+    for coupon in all_coupons:
+        company = coupon.company
+        if company not in companies_stats:
+            companies_stats[company] = {
+                "total_value": 0,
+                "used_value": 0,
+                "remaining_value": 0,
+                "savings": 0,
+                "count": 0,
+                "one_time_count": 0,
+                "non_one_time_count": 0,
+            }
+            company_coupon_types[company] = {"one_time": 0, "non_one_time": 0}
+
+        companies_stats[company]["total_value"] += coupon.value
+        companies_stats[company]["used_value"] += coupon.used_value
+        companies_stats[company]["remaining_value"] += coupon.value - coupon.used_value
+        companies_stats[company]["savings"] += max(0, coupon.value - coupon.cost)
+        companies_stats[company]["count"] += 1
+
+        # Track coupon type counts
+        if coupon.is_one_time:
+            companies_stats[company]["one_time_count"] += 1
+            company_coupon_types[company]["one_time"] += 1
+        else:
+            companies_stats[company]["non_one_time_count"] += 1
+            company_coupon_types[company]["non_one_time"] += 1
+
+        # Track earliest expiration date for each company
+        if coupon.expiration and coupon.status == "פעיל":
+            # Convert string to date if needed
+            exp_date = coupon.expiration
+            if isinstance(exp_date, str):
+                exp_date = datetime.strptime(exp_date, "%Y-%m-%d").date()
+
+            # Update the earliest date for this company
+            if (
+                company not in company_earliest_expirations
+                or exp_date < company_earliest_expirations[company]
+            ):
+                company_earliest_expirations[company] = exp_date
+
     # Sort companies by savings amount
     sorted_companies = sorted(
         companies_stats.items(), key=lambda x: x[1]["savings"], reverse=True
@@ -472,23 +409,23 @@ def index():
         "12": "דצמבר",
     }
 
-    # OPTIMIZED: Simplified monthly timeline processing (avoid PostgreSQL complexity)
+    # Group coupons by month added
     monthly_data = {}
-    
-    # Use memory processing for monthly data (still much faster than original nested loops)
+
     for coupon in all_coupons:
+        # Use date_added as the reference month
         if hasattr(coupon, "date_added") and coupon.date_added:
             month_key = coupon.date_added.strftime("%Y-%m")
 
             if month_key not in monthly_data:
                 monthly_data[month_key] = {
-                    "savings": 0,
+                    "savings": 0,  # Value - cost (the actual savings)
                     "count": 0,
-                    "original_value": 0,
-                    "remaining_value": 0,
-                    "companies": set(),
-                    "one_time_count": 0,
-                    "non_one_time_count": 0,
+                    "original_value": 0,  # Total face value
+                    "remaining_value": 0,  # Remaining value
+                    "companies": set(),  # Set of companies for this month
+                    "one_time_count": 0,  # Count of one-time coupons
+                    "non_one_time_count": 0,  # Count of non-one-time coupons
                 }
 
             # Add coupon data to the month
@@ -560,46 +497,31 @@ def index():
     # 9. Calculate additional metrics for general statistics
     # --------------------------------------------------------------------------------
 
-    # OPTIMIZED: Use already calculated values instead of loops
+    # Basic counts
     total_coupons_count = len(all_coupons)
     active_coupons_count = len(active_coupons) + len(active_one_time_coupons)
     total_companies_count = len(companies_stats)
 
-    # Calculate average usage percentage using existing totals
+    # Calculate average usage percentage
     average_usage_percentage = 0
     if total_coupons_value > 0:
         total_used_value = sum(coupon.used_value for coupon in all_coupons)
         average_usage_percentage = (total_used_value / total_coupons_value) * 100
 
-    # Use memory filtering instead of loops for counts
-    one_time_count = len(active_one_time_coupons) + len([c for c in used_coupons if c.is_one_time])
+    # Count one-time vs non-one-time coupons
+    one_time_count = sum(1 for coupon in all_coupons if coupon.is_one_time)
     non_one_time_count = total_coupons_count - one_time_count
 
     # --------------------------------------------------------------------------------
-    # 10. OPTIMIZED: Convert data for JSON and template rendering with caching
+    # 10. Convert data for JSON and template rendering
     # --------------------------------------------------------------------------------
-    
-    # Cache for parsed dates to avoid repeated parsing
-    _date_parse_cache = {}
-    
-    def parse_date_cached(date_str):
-        if date_str not in _date_parse_cache:
-            _date_parse_cache[date_str] = datetime.strptime(date_str, "%Y-%m-%d").date()
-        return _date_parse_cache[date_str]
 
-    # Convert expiration from String to Date (if it's not None) with caching
+    # Convert expiration from String to Date (if it's not None)
     for coupon in expiring_coupons:
         if isinstance(coupon.expiration, str):  # If expiration is a string
-            coupon.expiration = parse_date_cached(coupon.expiration)
+            coupon.expiration = datetime.strptime(coupon.expiration, "%Y-%m-%d").date()
 
-    # OPTIMIZED: Convert companies data to format for JavaScript with pre-calculated values
-    
-    # Pre-calculate active coupons per company to avoid repeated loops
-    active_coupons_by_company = {}
-    for coupon in active_coupons + active_one_time_coupons:
-        company = coupon.company
-        active_coupons_by_company[company] = active_coupons_by_company.get(company, 0) + 1
-    
+    # Convert companies data to format for JavaScript
     sorted_company_data = []
     for company, stats in sorted_companies:
         # Get earliest expiration date for this company
@@ -620,7 +542,12 @@ def index():
                 "coupons_count": stats["count"],
                 "one_time_count": stats["one_time_count"],
                 "non_one_time_count": stats["non_one_time_count"],
-                "active_coupons": active_coupons_by_company.get(company, 0),
+                "active_coupons": sum(
+                    1 for coupon in active_coupons if coupon.company == company
+                )
+                + sum(
+                    1 for coupon in active_one_time_coupons if coupon.company == company
+                ),
                 "usage_percentage": (stats["used_value"] / stats["total_value"] * 100)
                 if stats["total_value"] > 0
                 else 0,
@@ -730,10 +657,6 @@ def index():
         show_tour=show_tour,
         # Add WhatsApp banner flag
         show_whatsapp_banner=current_user.show_whatsapp_banner,
-        # Lazy loading variables
-        has_more_coupons=has_more_coupons,
-        remaining_count=remaining_count,
-        total_user_coupons_count=total_user_coupons_count,
     )
 
 
