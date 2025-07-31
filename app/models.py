@@ -110,9 +110,6 @@ class User(UserMixin, db.Model):
 
     # 🆕 New field: When the user dismissed the alert about expiring coupons
     dismissed_expiring_alert_at = db.Column(db.DateTime, nullable=True)
-    
-    # 🆕 New field: Last time status updates were processed for this user
-    last_status_update = db.Column(db.Date, nullable=True)
 
     # 🆕 Newsletter preferences
     newsletter_subscription = db.Column(db.Boolean, default=True, nullable=False)

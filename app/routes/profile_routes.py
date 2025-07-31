@@ -326,24 +326,23 @@ def index():
     )
 
     # --------------------------------------------------------------------------------
-    # 3. BACKGROUND JOB: Update status only once per day - MAJOR OPTIMIZATION
+    # 3. OPTIMIZED: Status updates with session-based caching
     # --------------------------------------------------------------------------------
     from app.models import clear_status_update_cache
+    from flask import session
     from datetime import date
     
-    today = date.today()
+    today = date.today().isoformat()
+    cache_key = f'status_updated_{current_user.id}'
     
-    # Only update statuses if not done today (massive performance boost)
-    # Check if field exists (for backward compatibility)
-    last_update = getattr(current_user, 'last_status_update', None)
-    if last_update != today:
+    # Only update statuses if not done today (using session cache)
+    if session.get(cache_key) != today:
         all_to_update = all_coupons + coupons_for_sale
         for coupon in all_to_update:
             update_coupon_status(coupon)
         
-        # Mark as updated today (if field exists)
-        if hasattr(current_user, 'last_status_update'):
-            current_user.last_status_update = today
+        # Mark as updated today in session
+        session[cache_key] = today
         
         # Clear cache after processing all coupons
         clear_status_update_cache()
