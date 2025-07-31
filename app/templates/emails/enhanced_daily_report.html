@@ -697,7 +697,7 @@
                         <tr>
                             <th>חברה</th>
                             <th>כמות קופונים</th>
-                            <th>מחיר ממוצע</th>
+                            <th>שילמו ממוצע</th>
                             <th>שווי ממוצע</th>
                             <th>הנחה ממוצעת</th>
                             <th>שווי כולל</th>
@@ -716,6 +716,33 @@
                             <td>₪{{ "{:,.0f}".format(company.total_value) }}</td>
                             <td>₪{{ "{:,.0f}".format(company.total_cost) }}</td>
                             <td>{{ company.last_added.strftime('%d/%m/%Y') if company.last_added else 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- New Users Details Section -->
+        {% if new_users_details and new_users_details|length > 0 %}
+        <div class="section">
+            <div class="section-title">👥 משתמשים חדשים השבוע</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>שם פרטי</th>
+                            <th>תאריך הצטרפות</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in new_users_details %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ user.id }}</td>
+                            <td>{{ user.first_name }}</td>
+                            <td>{{ user.created_at.strftime('%d/%m/%Y %H:%M') if user.created_at else 'N/A' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

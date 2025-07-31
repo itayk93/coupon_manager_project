@@ -125,6 +125,21 @@ def get_new_users_count():
     result = db.session.execute(query, {"week_ago": week_ago}).mappings().first()
     return result['new_users_count'] if result else 0
 
+def get_new_users_details():
+    """קבלת פרטי המשתמשים החדשים השבוע"""
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+    
+    query = text("""
+        SELECT id, first_name, created_at
+        FROM users 
+        WHERE DATE(created_at) >= :week_ago
+        ORDER BY created_at DESC
+    """)
+    
+    results = db.session.execute(query, {"week_ago": week_ago}).mappings().all()
+    return [dict(row) for row in results]
+
 def create_coupons_by_company_chart(data):
     """יצירת גרף עמודות מודרני - כמות קופונים לכל חברה"""
     if not data:
@@ -424,6 +439,7 @@ def generate_enhanced_email_content(app):
         recent_activity = get_recent_activity() if options.get('metrics_recent_activity') else {}
         roi_metrics = calculate_roi_metrics(basic_stats) if options.get('metrics_roi') else {}
         new_users_count = get_new_users_count() if options.get('metrics_recent_activity') else 0
+        new_users_details = get_new_users_details() if options.get('metrics_recent_activity') else []
         
         # יצירת גרפים
         charts = {}
@@ -455,6 +471,7 @@ def generate_enhanced_email_content(app):
             recent_activity=recent_activity,
             expiring_coupons=expiring_coupons,
             new_users_count=new_users_count,
+            new_users_details=new_users_details,
             options=options,
             report_date=date.today().strftime("%Y-%m-%d")
         )
@@ -477,6 +494,7 @@ def generate_full_email_content(app):
         recent_activity = get_recent_activity() if options.get('metrics_recent_activity') else {}
         roi_metrics = calculate_roi_metrics(basic_stats) if options.get('metrics_roi') else {}
         new_users_count = get_new_users_count() if options.get('metrics_recent_activity') else 0
+        new_users_details = get_new_users_details() if options.get('metrics_recent_activity') else []
         
         # יצירת גרפים
         charts = {}
@@ -508,6 +526,7 @@ def generate_full_email_content(app):
             recent_activity=recent_activity,
             expiring_coupons=expiring_coupons,
             new_users_count=new_users_count,
+            new_users_details=new_users_details,
             options=options,
             report_date=date.today().strftime("%Y-%m-%d")
         )
