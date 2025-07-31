@@ -97,6 +97,162 @@ The application uses Flask Blueprints organized in `app/routes/`:
 
 This prevents the "Port in use" error and eliminates the need for manual port cleanup.
 
+## Code Quality & Automation
+**CRITICAL**: Implement automated code quality tools to ensure consistent, high-quality code across all sessions and reduce manual oversight.
+
+### Linter and Formatter Setup
+**REQUIRED TOOLS**: Install and configure the following code quality tools for consistent Python development:
+
+#### Black (Code Formatter)
+- **Purpose**: Ensures uniform code formatting across all Python files
+- **Installation**: `pip install black`
+- **Configuration**: Create `pyproject.toml` with Black settings:
+```toml
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = """
+(
+  migrations/
+  | static/
+  | uploads/
+)
+"""
+```
+- **Usage**: Run `black .` before each commit
+
+#### Flake8 (Linter)
+- **Purpose**: Identifies code quality issues, style violations, and potential bugs
+- **Installation**: `pip install flake8`
+- **Configuration**: Create `.flake8` config file:
+```ini
+[flake8]
+max-line-length = 88
+extend-ignore = E203, W503
+exclude = 
+    migrations/,
+    __pycache__/,
+    .git/,
+    .venv/,
+    static/,
+    uploads/
+```
+- **Usage**: Run `flake8` before each commit
+
+#### isort (Import Sorting)
+- **Purpose**: Automatically sorts and organizes Python imports
+- **Installation**: `pip install isort`
+- **Configuration**: Add to `pyproject.toml`:
+```toml
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+```
+- **Usage**: Run `isort .` before each commit
+
+### Pre-commit Hooks Implementation
+**AUTOMATED QUALITY CONTROL**: Use pre-commit hooks to automatically run quality checks before each commit.
+
+#### Pre-commit Setup Process:
+1. **Install pre-commit**: `pip install pre-commit`
+2. **Create `.pre-commit-config.yaml`** in project root:
+```yaml
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+
+  - repo: local
+    hooks:
+      - id: update-project-structure
+        name: Update project structure
+        entry: bash -c 'tree -I "__pycache__|*.pyc|.git|.env|instance|uploads|.DS_Store|sample_text|reports_to_improve" > project_structure.txt'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: update-requirements
+        name: Check requirements.txt is up to date
+        entry: bash -c 'pip freeze | grep -E "(Flask|SQLAlchemy|Werkzeug|openpyxl|requests)" > temp_req.txt && echo "Verify requirements.txt is updated" && rm temp_req.txt'
+        language: system
+        pass_filenames: false
+```
+
+3. **Install the hooks**: `pre-commit install`
+4. **Test the setup**: `pre-commit run --all-files`
+
+### Automated Code Quality Integration
+
+#### Updated Auto-Commit Process with Quality Checks:
+1. **Run code quality tools automatically**:
+   - `black .` (format code)
+   - `isort .` (sort imports)
+   - `flake8` (check for issues)
+2. **Update project structure**: `tree -I '__pycache__|*.pyc|.git|.env|instance|uploads|.DS_Store|sample_text|reports_to_improve' > project_structure.txt`
+3. **Stage all changes**: `git add .`
+4. **Pre-commit hooks run automatically** (no manual intervention needed)
+5. **Commit with descriptive message**: `git commit -m "Brief description of changes made"`
+6. **Update Git tracking Excel file**
+
+#### Quality Control Commands to Run Before Each Commit:
+```bash
+# Format and organize code
+black .
+isort .
+
+# Check for code quality issues
+flake8
+
+# Update project structure
+tree -I '__pycache__|*.pyc|.git|.env|instance|uploads|.DS_Store|sample_text|reports_to_improve' > project_structure.txt
+
+# Stage and commit (pre-commit hooks will run automatically)
+git add .
+git commit -m "Description of changes"
+```
+
+### Requirements.txt Updates
+**IMPORTANT**: When adding code quality tools, update `requirements.txt`:
+```
+black==23.3.0
+flake8==6.0.0
+isort==5.12.0
+pre-commit==3.3.2
+openpyxl==3.1.2
+```
+
+### Benefits of Automation:
+- ✅ **Consistent code style** across all sessions
+- ✅ **Automatic error detection** before commits
+- ✅ **Reduced manual oversight** needed
+- ✅ **Professional code quality** standards
+- ✅ **Automated project structure updates**
+- ✅ **Prevention of low-quality commits**
+- ✅ **Time savings** on repetitive tasks
+
+### Error Handling:
+If pre-commit hooks fail:
+1. **Review the errors** displayed by the hooks
+2. **Fix the issues** (usually formatting or linting problems)
+3. **Re-stage the changes**: `git add .`
+4. **Try committing again**
+
+**Note**: Pre-commit hooks will automatically format code and may modify files. Always review changes before the final commit.
+
 ## Maintenance Instructions
 
 ### Documentation Updates Required When:
@@ -191,12 +347,17 @@ This prevents the "Port in use" error and eliminates the need for manual port cl
 **CRITICAL**: At the end of EVERY session, Claude must automatically commit all changes to git with a descriptive commit message. This ensures all work is saved and tracked properly.
 
 ### Auto-Commit Process:
-1. **Update project structure**: Run `tree -I '__pycache__|*.pyc|.git|.env|instance|uploads|.DS_Store|sample_text|reports_to_improve' > project_structure.txt`
-2. Run `git status` to check for changes
-3. Add all changes with `git add .`
-4. Commit with descriptive message following this format: `git commit -m "Brief description of changes made"`
-5. **Update Git tracking Excel file** (see Git Tracking System below)
-6. **DO NOT ask for permission** - this should be done automatically
+1. **Run code quality tools** (if they are installed):
+   - `black .` (format Python code)
+   - `isort .` (organize imports) 
+   - `flake8` (check for code quality issues)
+2. **Update project structure**: Run `tree -I '__pycache__|*.pyc|.git|.env|instance|uploads|.DS_Store|sample_text|reports_to_improve' > project_structure.txt`
+3. Run `git status` to check for changes
+4. Add all changes with `git add .`
+5. Commit with descriptive message following this format: `git commit -m "Brief description of changes made"`
+   - **Note**: Pre-commit hooks will run automatically if configured
+6. **Update Git tracking Excel file** (see Git Tracking System below)  
+7. **DO NOT ask for permission** - this should be done automatically
 
 ## Git Tracking System
 **IMPORTANT**: Every Git commit must be tracked in an Excel file for project management and audit purposes.
