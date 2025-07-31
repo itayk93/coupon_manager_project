@@ -5,68 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>דוח קופונים יומי - {{ report_date }}</title>
     <style>
+        * {
+            direction: rtl;
+            text-align: right;
+        }
         body {
-            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-family: 'Segoe UI', 'Arial', 'Helvetica', sans-serif;
             margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+            padding: 15px;
+            background-color: #f8f9fa;
             color: #333;
             direction: rtl;
+            text-align: right;
+            line-height: 1.4;
         }
         .container {
-            max-width: 900px;
+            max-width: 650px;
             margin: 0 auto;
             background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }
         .header {
             background: linear-gradient(135deg, #4361ee 0%, #3951db 100%);
             color: white;
-            padding: 30px;
+            padding: 20px;
             text-align: center;
+            direction: rtl;
         }
         .header h1 {
             margin: 0;
-            font-size: 28px;
-            font-weight: 300;
+            font-size: 22px;
+            font-weight: 600;
         }
         .date {
-            margin-top: 10px;
-            font-size: 16px;
+            margin-top: 8px;
+            font-size: 14px;
             opacity: 0.9;
         }
         .content {
-            padding: 30px;
+            padding: 20px;
+            direction: rtl;
+            text-align: right;
         }
         .insights-section {
             background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
             border-right: 4px solid #4361ee;
+            direction: rtl;
+            text-align: right;
         }
         .insights-title {
             color: #4361ee;
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-        }
-        .insights-title i {
-            margin-left: 8px;
+            margin-bottom: 12px;
+            direction: rtl;
+            text-align: right;
         }
         .insight-item {
             background: white;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            border-radius: 4px;
             border-right: 3px solid #4361ee;
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 500;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            direction: rtl;
+            text-align: right;
         }
         .metrics-grid {
             display: grid;
@@ -126,29 +136,49 @@
             width: 100%;
             border-collapse: collapse;
             background: white;
-            border-radius: 8px;
+            border-radius: 6px;
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            direction: rtl;
+            font-size: 12px;
         }
         th {
             background-color: #4361ee;
             color: white;
-            padding: 15px 12px;
-            text-align: center;
+            padding: 10px 8px;
+            text-align: right;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 12px;
+            direction: rtl;
         }
         td {
-            padding: 12px;
-            text-align: center;
+            padding: 8px;
+            text-align: right;
             border-bottom: 1px solid #f0f0f0;
-            font-size: 13px;
+            font-size: 11px;
+            direction: rtl;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;
         }
-        tr:hover {
-            background-color: #f0f7ff;
+        .compact-table {
+            margin-bottom: 15px;
+        }
+        .compact-table th,
+        .compact-table td {
+            padding: 6px;
+            font-size: 11px;
+        }
+        .view-full-btn {
+            display: inline-block;
+            background: #4361ee;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 10px 0;
+            text-align: center;
         }
         .expiring-alert {
             background: #fff3cd;

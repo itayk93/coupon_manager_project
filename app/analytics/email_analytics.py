@@ -297,7 +297,58 @@ def generate_enhanced_email_content(app):
         if options.get('insights_top3'):
             insights = get_top_insights(basic_stats, recent_activity, expiring_coupons)
         
-        # יצירת HTML
+        # יצירת HTML - משתמש במייל קומפקטי למייל רגיל ומלא לצפייה בדפדפן
+        from flask import render_template
+        html_content = render_template(
+            'emails/compact_daily_report.html',
+            basic_stats=basic_stats,
+            charts=charts,
+            insights=insights,
+            roi_metrics=roi_metrics,
+            recent_activity=recent_activity,
+            expiring_coupons=expiring_coupons,
+            options=options,
+            report_date=date.today().strftime("%Y-%m-%d")
+        )
+        
+        return html_content
+
+
+def generate_full_email_content(app):
+    """יצירת תוכן המייל המלא לצפייה בדפדפן"""
+    with app.app_context():
+        # קבלת אפשרויות הדוח
+        options = get_report_options()
+        
+        # איסוף נתונים בסיסיים
+        basic_stats = get_basic_stats()
+        
+        # חישוב נתונים נוספים לפי הצורך
+        weekly_trend = get_weekly_trend_data() if options.get('chart_weekly_trend') else []
+        expiring_coupons = get_expiring_coupons() if options.get('metrics_expiring') else []
+        recent_activity = get_recent_activity() if options.get('metrics_recent_activity') else {}
+        roi_metrics = calculate_roi_metrics(basic_stats) if options.get('metrics_roi') else {}
+        
+        # יצירת גרפים
+        charts = {}
+        if options.get('chart_coupons_by_company'):
+            charts['coupons_by_company'] = create_coupons_by_company_chart(basic_stats)
+        
+        if options.get('chart_value_pie'):
+            charts['value_pie'] = create_value_pie_chart(basic_stats)
+        
+        if options.get('chart_weekly_trend'):
+            charts['weekly_trend'] = create_weekly_trend_chart(weekly_trend)
+        
+        if options.get('chart_price_histogram'):
+            charts['price_histogram'] = create_price_histogram(basic_stats)
+        
+        # יצירת תובנות
+        insights = []
+        if options.get('insights_top3'):
+            insights = get_top_insights(basic_stats, recent_activity, expiring_coupons)
+        
+        # יצירת HTML מלא
         from flask import render_template
         html_content = render_template(
             'emails/enhanced_daily_report.html',

@@ -187,6 +187,26 @@ def reset_email_status():
     
     return redirect(url_for('admin_bp.admin_email_bp.email_settings'))
 
+
+@admin_email_bp.route('/view-full-report', methods=['GET'])
+def view_full_report():
+    """
+    צפייה בדוח המלא כ-HTML מעוצב
+    """
+    try:
+        from app import create_app
+        from app.analytics.email_analytics import generate_full_email_content
+        
+        app = create_app()
+        html_content = generate_full_email_content(app)
+        
+        return html_content
+        
+    except Exception as e:
+        logging.error(f"Error generating full report: {e}")
+        return f"<h1 style='direction: rtl; text-align: right; font-family: Arial;'>שגיאה בטעינת הדוח: {str(e)}</h1>"
+
+
 @admin_email_bp.route('/test-email', methods=['POST'])
 @login_required
 @admin_required
