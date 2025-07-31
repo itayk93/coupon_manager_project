@@ -26,11 +26,16 @@ def email_settings():
     עמוד הגדרות המייל היומי
     """
     if request.method == 'POST':
+        logging.info("POST request received for email settings")
+        logging.info(f"Form data keys: {list(request.form.keys())}")
+        
         # קבלת הגדרות מהטופס
         daily_email_enabled = request.form.get('daily_email_enabled') == 'on'
         email_hour = request.form.get('email_hour', '9')
         email_minute = request.form.get('email_minute', '0')
         recipient_email = request.form.get('recipient_email', 'itayk93@gmail.com')
+        
+        logging.info(f"Basic settings - enabled: {daily_email_enabled}, hour: {email_hour}, minute: {email_minute}")
         
         # קבלת כל אפשרויות הדוח המתקדם
         report_options = {
@@ -62,28 +67,44 @@ def email_settings():
             'comparisons_monthly': request.form.get('comparisons_monthly') == 'on',
         }
         
+        logging.info(f"Report options collected: {report_options}")
+        enabled_features = [k for k, v in report_options.items() if v]
+        logging.info(f"Enabled features: {enabled_features}")
+        
         try:
             # שמירת ההגדרות
+            logging.info("Starting to save settings...")
             AdminSettings.set_setting('daily_email_enabled', daily_email_enabled, 'boolean', 
                                     'האם לשלוח מייל יומי עם נתוני קופונים')
+            logging.info("Saved daily_email_enabled")
+            
             AdminSettings.set_setting('daily_email_hour', int(email_hour), 'integer', 
                                     'שעה לשליחת המייל היומי (0-23)')
+            logging.info("Saved daily_email_hour")
+            
             AdminSettings.set_setting('daily_email_minute', int(email_minute), 'integer', 
                                     'דקה לשליחת המייל היומי (0-59)')
+            logging.info("Saved daily_email_minute")
+            
             AdminSettings.set_setting('daily_email_recipient', recipient_email, 'string', 
                                     'כתובת מייל למקבל המייל היומי')
+            logging.info("Saved daily_email_recipient")
+            
             AdminSettings.set_setting('email_report_options', report_options, 'json', 
                                     'אפשרויות תוכן הדוח המתקדם')
+            logging.info("Saved email_report_options")
             
             # עדכון הscheduler עם ההגדרות החדשות
             from scheduler_config import update_scheduler_time
             update_scheduler_time(int(email_hour), int(email_minute))
+            logging.info("Updated scheduler time")
             
             flash('הגדרות המייל נשמרו בהצלחה! הזמן עודכן בscheduler.', 'success')
+            logging.info("Settings saved successfully!")
             
         except Exception as e:
             flash(f'שגיאה בשמירת ההגדרות: {str(e)}', 'danger')
-            logging.error(f"Error saving email settings: {e}")
+            logging.error(f"Error saving email settings: {e}", exc_info=True)
     
     # טעינת הגדרות נוכחות
     # ברירות מחדל לאפשרויות הדוח
