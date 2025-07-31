@@ -414,7 +414,7 @@ def index():
         func.sum(case((Coupon.value > Coupon.cost, Coupon.value - Coupon.cost), else_=0)).label('savings'),
         func.sum(case((Coupon.is_one_time == True, 1), else_=0)).label('one_time_count'),
         func.sum(case((Coupon.is_one_time == False, 1), else_=0)).label('non_one_time_count'),
-        func.min(case([(Coupon.status == "פעיל", Coupon.expiration)], else_=None)).label('earliest_expiration')
+        func.min(case((Coupon.status == "פעיל", Coupon.expiration), else_=None)).label('earliest_expiration')
     ).filter(
         Coupon.user_id == current_user.id,
         Coupon.is_for_sale == False,
