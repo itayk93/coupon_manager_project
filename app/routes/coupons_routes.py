@@ -82,48 +82,108 @@ coupons_bp = Blueprint("coupons", __name__)
 def find_matching_company(company_name_raw):
     """
     Advanced company matching using fuzzy matching and GPT fallback
-    1. Try fuzzy matching with 90%+ similarity
-    2. If no match, use GPT-4 mini for intelligent matching
-    3. If still no match, create new company
+    1. Try fuzzy matching with 80%+ similarity (lowered threshold)
+    2. If no match, use GPT-4 mini for intelligent matching with translation
+    3. If still no match, return original name
     """
-    debug_print(f"Starting company matching for: {company_name_raw}")
+    debug_print(f"=== STARTING COMPANY MATCHING ===")
+    debug_print(f"Input company name: '{company_name_raw}'")
     
     # Get all companies from database
     companies = Company.query.all()
     company_names = [c.name for c in companies]
     
+    debug_print(f"Found {len(company_names)} companies in database")
+    debug_print(f"Companies list (first 10): {company_names[:10]}")
+    
     if not company_names:
         debug_print("No companies found in database, returning original name")
         return company_name_raw
     
-    # Step 1: Fuzzy matching with 90%+ similarity
-    debug_print("Attempting fuzzy matching...")
+    # Clean the input name for better matching
+    clean_input = company_name_raw.strip()
+    # Remove common prefixes/suffixes that might interfere
+    clean_input = clean_input.replace('₪', '').replace('שח', '').replace('ש״ח', '').strip()
+    # Remove numbers and common words
+    import re
+    clean_input = re.sub(r'\d+', '', clean_input).strip()
+    clean_input = re.sub(r'\b(קופון|שובר|ל|של|עם|כרטיס|גיפט|gift|card)\b', '', clean_input, flags=re.IGNORECASE).strip()
+    
+    debug_print(f"Cleaned input name: '{clean_input}'")
+    
+    # Create Hebrew-English translation variations for common cases
+    hebrew_to_english_map = {
+        'דרים קארד': 'dream card',
+        'מקדונלדס': 'mcdonalds',
+        'בורגר קינג': 'burger king',
+        'פיצה האט': 'pizza hut',
+        'דומינוס': 'dominos',
+        'קפה קפה': 'cafe cafe',
+        'רולדין': 'roladin',
+        'קרפור': 'carrefour'
+    }
+    
+    # Create variation list for testing
+    test_variations = [clean_input.lower()]
+    if clean_input.lower() in hebrew_to_english_map:
+        test_variations.append(hebrew_to_english_map[clean_input.lower()])
+        debug_print(f"Added Hebrew-English variation: '{hebrew_to_english_map[clean_input.lower()]}'")
+    
+    debug_print(f"Test variations: {test_variations}")
+    
+    # Step 1: Fuzzy matching with different approaches
+    debug_print("=== STARTING FUZZY MATCHING ===")
     best_match = None
     best_score = 0
+    detailed_scores = []
     
     for company_name in company_names:
-        # Use different fuzzy matching algorithms
-        ratio = fuzz.ratio(company_name_raw.lower(), company_name.lower())
-        partial_ratio = fuzz.partial_ratio(company_name_raw.lower(), company_name.lower())
-        token_sort_ratio = fuzz.token_sort_ratio(company_name_raw.lower(), company_name.lower())
-        token_set_ratio = fuzz.token_set_ratio(company_name_raw.lower(), company_name.lower())
+        company_lower = company_name.lower()
+        max_score_for_company = 0
         
-        # Take the maximum score from all algorithms
-        max_score = max(ratio, partial_ratio, token_sort_ratio, token_set_ratio)
+        # Test all variations against this company
+        for test_name in test_variations + [company_name_raw.lower()]:
+            if not test_name.strip():
+                continue
+                
+            # Use different fuzzy matching algorithms
+            ratio = fuzz.ratio(test_name, company_lower)
+            partial_ratio = fuzz.partial_ratio(test_name, company_lower)
+            token_sort_ratio = fuzz.token_sort_ratio(test_name, company_lower)
+            token_set_ratio = fuzz.token_set_ratio(test_name, company_lower)
+            
+            # Take the maximum score from all algorithms
+            max_score = max(ratio, partial_ratio, token_sort_ratio, token_set_ratio)
+            max_score_for_company = max(max_score_for_company, max_score)
+            
+            # Special debugging for potential matches
+            if max_score > 70:
+                debug_print(f"  Testing '{test_name}' vs '{company_lower}': {max_score}% (best: {ratio}, {partial_ratio}, {token_sort_ratio}, {token_set_ratio})")
         
-        if max_score > best_score:
-            best_score = max_score
+        detailed_scores.append({
+            'company': company_name,
+            'score': max_score_for_company
+        })
+        
+        if max_score_for_company > best_score:
+            best_score = max_score_for_company
             best_match = company_name
     
-    debug_print(f"Best fuzzy match: {best_match} with score: {best_score}")
+    # Sort and show top matches for debugging
+    detailed_scores.sort(key=lambda x: x['score'], reverse=True)
+    debug_print(f"Top 5 fuzzy matches:")
+    for i, match in enumerate(detailed_scores[:5]):
+        debug_print(f"  {i+1}. {match['company']}: {match['score']}%")
     
-    # If fuzzy matching score is 90% or higher, use it
-    if best_score >= 90:
+    debug_print(f"Best fuzzy match: '{best_match}' with score: {best_score}%")
+    
+    # Lowered threshold to 80% for better matches
+    if best_score >= 80:
         debug_print(f"Fuzzy match successful! Using: {best_match}")
         return best_match
     
     # Step 2: Try GPT-4 mini for intelligent matching
-    debug_print("Fuzzy matching failed, trying GPT-4 mini...")
+    debug_print("=== STARTING GPT-4 MINI MATCHING ===")
     try:
         import openai
         import os
@@ -137,17 +197,31 @@ def find_matching_company(company_name_raw):
         # Set up OpenAI client
         openai.api_key = api_key
         
-        # Prepare prompt for GPT
+        debug_print(f"Calling GPT-4 mini with input: '{company_name_raw}'")
+        
+        # Prepare prompt for GPT with translation capability
         companies_list_str = "\n".join([f"- {name}" for name in company_names])
         
-        prompt = f"""אתה מומחה בזיהוי שמות חברות בעברית. יש לי רשימה של חברות קיימות ואני רוצה למצוא את החברה המתאימה ביותר לשם שקיבלתי.
+        prompt = f"""אתה מומחה בזיהוי שמות חברות בעברית ואנגלית. יש לי רשימה של חברות קיימות ואני רוצה למצוא את החברה המתאימה ביותר לשם שקיבלתי.
+
+חשוב: השם שקיבלתי עשוי להיות בעברית או באנגלית, עם ניסוח שונה, מילים נוספות, או תרגום. עליך לזהות את החברה הנכונה גם אם:
+- השם בעברית והחברה ברשימה באנגלית (או להפך)
+- יש מילים נוספות כמו מספרים, "קופון", "כרטיס", וכו'
+- השם מתורגם בצורה חופשית
 
 שם החברה שקיבלתי: "{company_name_raw}"
+שם מנוקה: "{clean_input}"
 
 רשימת החברות הקיימות:
 {companies_list_str}
 
-אנא החזר רק את השם המדויק של החברה מהרשימה שמתאים ביותר לשם שקיבלתי. אם אין התאמה טובה, החזר "NO_MATCH".
+דוגמאות להתאמות:
+- "דרים קארד" → "Dream Card"
+- "מקדונלדס" → "McDonalds"  
+- "50 ₪ דרים קארד" → "Dream Card"
+- "קופון לרולדין" → "רולדין"
+
+אנא החזר רק את השם המדויק של החברה מהרשימה שמתאים ביותר. אם אין התאמה בטוחה, החזר "NO_MATCH".
 
 תשובה:"""
 
@@ -155,23 +229,31 @@ def find_matching_company(company_name_raw):
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "אתה מומחה בזיהוי שמות חברות בעברית. תחזיר רק את השם המדויק מהרשימה או NO_MATCH."},
+                {"role": "system", "content": "אתה מומחה בזיהוי שמות חברות בעברית ואנגלית. זהה חברות גם עם תרגום ומילים נוספות. תחזיר רק את השם המדויק מהרשימה או NO_MATCH."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=100,
+            max_tokens=150,
             temperature=0
         )
         
         gpt_result = response.choices[0].message.content.strip()
-        debug_print(f"GPT-4 mini result: {gpt_result}")
+        debug_print(f"GPT-4 mini raw result: '{gpt_result}'")
+        
+        # Clean the GPT result (remove quotes, extra spaces, etc.)
+        gpt_result = gpt_result.replace('"', '').replace("'", '').strip()
+        debug_print(f"GPT-4 mini cleaned result: '{gpt_result}'")
         
         # Check if GPT found a match
         if gpt_result != "NO_MATCH" and gpt_result in company_names:
-            debug_print(f"GPT match successful! Using: {gpt_result}")
+            debug_print(f"GPT match successful! Using: '{gpt_result}'")
             return gpt_result
+        else:
+            debug_print(f"GPT result '{gpt_result}' not found in company names or is NO_MATCH")
             
     except Exception as e:
-        debug_print(f"GPT matching failed: {e}")
+        debug_print(f"GPT matching failed with error: {e}")
+        import traceback
+        debug_print(f"Full traceback: {traceback.format_exc()}")
     
     # Step 3: If no match found, return original name (will be created as new company)
     debug_print(f"No match found, returning original name: {company_name_raw}")
@@ -1425,7 +1507,7 @@ def add_coupon_with_image_html():
 
 
 # Debug control - set this to True to enable debug prints, False to disable
-DEBUG_ENABLED = False
+DEBUG_ENABLED = True  # Enable for debugging company matching
 
 
 def debug_print(message, level="INFO"):
