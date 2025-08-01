@@ -194,7 +194,14 @@ The application uses Flask Blueprints organized in `app/routes/`:
 2. Add all changes with `git add .`
 3. **Commit with descriptive message in ENGLISH following this format**: `git commit -m "Brief description of changes made in English"`
 4. **ALL COMMIT MESSAGES MUST BE WRITTEN IN ENGLISH** - never use Hebrew or other languages
-5. **Update git_commits_log.xlsx with commit details**
+5. **IMMEDIATELY AFTER EACH COMMIT** - update git_commits_log.xlsx with:
+   - Date & Time (YYYY-MM-DD HH:MM format)
+   - Commit Hash (first 7 characters from `git log --oneline -1`)
+   - Commit Message (brief description)
+   - Files Changed count (from `git show --stat HEAD`)
+   - Additions/Deletions count
+   - Session Description (what was accomplished)
+   - Status: "Pushed" (after push) or "Local" (before push)
 6. **DO NOT ask for permission** - this should be done automatically
 
 Remember: Always keep `PROJECT_DOCUMENTATION.md` synchronized with code changes to maintain accurate route documentation!
