@@ -251,3 +251,95 @@ def reject_logo(company_id):
         flash(f"שגיאה בדחיית הלוגו: {str(e)}", "danger")
     
     return redirect(url_for("admin_companies_bp.manage_companies"))
+
+
+@admin_companies_bp.route("/upload_logo/<int:company_id>", methods=["POST"])
+@login_required
+def upload_logo(company_id):
+    """Handle manual logo upload for a company"""
+    if not current_user.is_admin:
+        flash("אין לך הרשאה לביצוע פעולה זו.", "danger")
+        return redirect(url_for("index"))
+
+    company = Company.query.get_or_404(company_id)
+    
+    # Check if file was uploaded
+    if 'logo_file' not in request.files:
+        flash("לא נבחר קובץ להעלאה", "danger")
+        return redirect(url_for("admin_companies_bp.manage_companies"))
+    
+    file = request.files['logo_file']
+    
+    # Check if file is empty
+    if file.filename == '':
+        flash("לא נבחר קובץ להעלאה", "danger")
+        return redirect(url_for("admin_companies_bp.manage_companies"))
+    
+    try:
+        # Import image processing utilities
+        from app.utils.logo_fetcher import LogoFetcher
+        from PIL import Image
+        from werkzeug.utils import secure_filename
+        import os
+        
+        # Validate file type
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'webp'}
+        if not ('.' in file.filename and 
+                file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+            flash("סוג קובץ לא נתמך. אנא העלה PNG, JPG, JPEG או WebP", "danger")
+            return redirect(url_for("admin_companies_bp.manage_companies"))
+        
+        # Read file content
+        file_content = file.read()
+        
+        # Validate file size (5MB)
+        if len(file_content) > 5 * 1024 * 1024:
+            flash("גודל הקובץ חייב להיות פחות מ-5MB", "danger")
+            return redirect(url_for("admin_companies_bp.manage_companies"))
+        
+        # Process and save the image
+        fetcher = LogoFetcher()
+        
+        # Create a unique filename
+        file_extension = file.filename.rsplit('.', 1)[1].lower()
+        safe_name = "".join(c for c in company.name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        safe_name = safe_name.replace(' ', '_').lower()[:50]
+        filename = f"{safe_name}_{company_id}_manual.{file_extension}"
+        
+        # Process the image (resize to 128x128, convert to PNG)
+        from io import BytesIO
+        image = Image.open(BytesIO(file_content))
+        
+        # Convert to RGB if necessary (for PNG with transparency)
+        if image.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            if image.mode == 'P':
+                image = image.convert('RGBA')
+            background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
+            image = background
+        elif image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Resize image
+        image = image.resize((128, 128), Image.Resampling.LANCZOS)
+        
+        # Save image
+        file_path = os.path.join(fetcher.static_images_path, filename)
+        image.save(file_path, 'PNG', optimize=True)
+        
+        # Update database
+        relative_path = f"images/{filename}"
+        success = fetcher.update_company_logo_path(company_id, relative_path)
+        
+        if success:
+            flash(f"לוגו עבור '{company.name}' הועלה ונשמר בהצלחה!", "success")
+        else:
+            flash("שגיאה בשמירת הלוגו למסד הנתונים", "danger")
+            # Clean up file if database update failed
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                
+    except Exception as e:
+        flash(f"שגיאה בעיבוד הקובץ: {str(e)}", "danger")
+    
+    return redirect(url_for("admin_companies_bp.manage_companies"))

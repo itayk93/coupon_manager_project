@@ -125,6 +125,19 @@
     text-decoration: none;
   }
 
+  .btn-upload {
+    background-color: #fd7e14;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-upload:hover {
+    background-color: #e76500;
+  }
+
   .logo-cell {
     text-align: center;
     vertical-align: middle;
@@ -157,6 +170,109 @@
   }
 
   .logo-status.no-logo {
+    color: #6c757d;
+  }
+
+  /* Upload Modal Styles */
+  .upload-modal {
+    max-width: 600px;
+  }
+
+  .company-info-section {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .company-info-section h4 {
+    margin: 0 0 10px 0;
+    color: #495057;
+  }
+
+  .upload-instructions {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9em;
+  }
+
+  .upload-section {
+    margin-bottom: 25px;
+  }
+
+  .file-input-wrapper {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .file-input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+
+  .file-input-label {
+    display: block;
+    padding: 40px 20px;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background-color: #f8f9fa;
+  }
+
+  .file-input-label:hover {
+    border-color: #007bff;
+    background-color: #e3f2fd;
+  }
+
+  .file-input-label i {
+    font-size: 2em;
+    color: #6c757d;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .file-input-label span {
+    display: block;
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 5px;
+  }
+
+  .file-input-label small {
+    color: #6c757d;
+    font-size: 0.85em;
+  }
+
+  .image-preview {
+    text-align: center;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+  }
+
+  .image-preview h5 {
+    margin-bottom: 15px;
+    color: #495057;
+  }
+
+  .image-preview img {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+  }
+
+  .preview-info {
+    display: flex;
+    justify-content: space-around;
+    font-size: 0.9em;
     color: #6c757d;
   }
 
@@ -497,9 +613,14 @@
                     </button>
                     <a href="{{ url_for('admin_companies_bp.find_logo_for_approval', company_id=company.id) }}" 
                        class="btn btn-logo" 
-                       title="חיפוש לוגו">
+                       title="חיפוש לוגו אוטומטי">
                       <i class="fas fa-search"></i>
                     </a>
+                    <button class="btn btn-upload" 
+                            onclick="openUploadModal({{ company.id }}, '{{ company.name }}')"
+                            title="העלאת לוגו ידנית">
+                      <i class="fas fa-upload"></i>
+                    </button>
                     <form method="POST" action="{{ url_for('admin_companies_bp.delete_company', company_id=company.id) }}" class="inline-form delete-form">
                       {{ delete_form.hidden_tag() }}
                       <input type="hidden" name="company_id" value="{{ company.id }}">
@@ -543,6 +664,59 @@
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" onclick="closeModal()">ביטול</button>
             {{ form.submit(class="btn btn-primary") }}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Logo Modal -->
+  <div id="uploadModal" class="modal">
+    <div class="modal-content upload-modal">
+      <div class="modal-header">
+        <h3 id="uploadModalTitle">העלאת לוגו ידנית</h3>
+        <button class="close-btn" onclick="closeUploadModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="company-info-section">
+          <h4>חברה: <span id="uploadCompanyName"></span></h4>
+          <p class="upload-instructions">אנא בחר קובץ תמונה עבור הלוגו של החברה</p>
+        </div>
+
+        <form id="uploadForm" method="POST" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" id="uploadCompanyId" name="company_id">
+
+          <div class="upload-section">
+            <div class="file-input-wrapper">
+              <input type="file" 
+                     id="logoFile" 
+                     name="logo_file" 
+                     accept="image/*"
+                     class="file-input"
+                     onchange="previewImage(this)">
+              <label for="logoFile" class="file-input-label">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>בחר קובץ תמונה או גרור לכאן</span>
+                <small>PNG, JPG, JPEG, WebP עד 5MB</small>
+              </label>
+            </div>
+
+            <div id="imagePreview" class="image-preview" style="display: none;">
+              <h5>תצוגה מקדימה:</h5>
+              <img id="previewImg" src="" alt="תצוגה מקדימה">
+              <div class="preview-info">
+                <span id="fileName"></span>
+                <span id="fileSize"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeUploadModal()">ביטול</button>
+            <button type="submit" class="btn btn-primary" id="uploadBtn" disabled>
+              <i class="fas fa-upload"></i> העלה לוגו
+            </button>
           </div>
         </form>
       </div>
@@ -668,6 +842,96 @@
   window.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
       closeModal();
+      closeUploadModal();
+    }
+  });
+
+  // Upload Modal Functions
+  function openUploadModal(companyId, companyName) {
+    const modal = document.getElementById('uploadModal');
+    const companyNameSpan = document.getElementById('uploadCompanyName');
+    const companyIdInput = document.getElementById('uploadCompanyId');
+    const form = document.getElementById('uploadForm');
+    
+    // Reset form
+    form.reset();
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('uploadBtn').disabled = true;
+    
+    // Set company info
+    companyNameSpan.textContent = companyName;
+    companyIdInput.value = companyId;
+    
+    // Set form action
+    form.action = `/admin/companies/upload_logo/${companyId}`;
+    
+    modal.classList.add('active');
+  }
+
+  function closeUploadModal() {
+    const modal = document.getElementById('uploadModal');
+    modal.classList.remove('active');
+  }
+
+  function previewImage(input) {
+    const file = input.files[0];
+    const preview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        alert('אנא בחר קובץ תמונה תקין (PNG, JPG, JPEG, WebP)');
+        input.value = '';
+        return;
+      }
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('גודל הקובץ חייב להיות פחות מ-5MB');
+        input.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        previewImg.src = e.target.result;
+        fileName.textContent = file.name;
+        fileSize.textContent = `גודל: ${(file.size / 1024).toFixed(1)} KB`;
+        preview.style.display = 'block';
+        uploadBtn.disabled = false;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      preview.style.display = 'none';
+      uploadBtn.disabled = true;
+    }
+  }
+
+  // Handle upload form submission
+  document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('logoFile');
+    if (!fileInput.files[0]) {
+      e.preventDefault();
+      alert('אנא בחר קובץ תמונה');
+      return;
+    }
+
+    // Show loading state
+    const uploadBtn = document.getElementById('uploadBtn');
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> מעלה...';
+    uploadBtn.disabled = true;
+  });
+
+  // Close upload modal if clicked outside
+  window.addEventListener('click', function(event) {
+    const uploadModal = document.getElementById('uploadModal');
+    if (event.target === uploadModal) {
+      closeUploadModal();
     }
   });
 </script>
