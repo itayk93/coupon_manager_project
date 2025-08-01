@@ -1543,6 +1543,16 @@ def add_coupon():
                     debug_print("No Strauss URL provided", "WARNING")
                     return jsonify(success=False, message="לא הוזן קישור לקופון שטראוס")
                 
+                # Check slots availability for Strauss detection
+                if current_user.slots_automatic_coupons <= 0:
+                    debug_print("No slots available for Strauss detection", "WARNING")
+                    return jsonify(success=False, message="אין לך מספיק סלוטים לזיהוי אוטומטי של קופונים.")
+                
+                # Decrease slots for Strauss detection (same as SMS detection)
+                current_user.slots_automatic_coupons -= 1
+                db.session.commit()
+                debug_print(f"Slot used for Strauss detection. Remaining slots: {current_user.slots_automatic_coupons}")
+                
                 # Validate URL format
                 if not strauss_url.startswith("https://cc.strauss-group.com/Vouchers/VoucherInfo/"):
                     debug_print("Invalid Strauss URL format", "WARNING")

@@ -326,38 +326,105 @@
     -webkit-overflow-scrolling: touch; /* # Improve scrolling on iOS */
   }
   
-  /* # === Color variables and theme settings === */
+  /* # === Modern Color Variables & Design System === */
   :root {
-    --primary-color: #3498db;       /* # Main blue color */
-    --primary-hover: #2980b9;       /* # Darker blue for hover states */
-    --secondary-color: #e74c3c;     /* # Error/warning red */
-    --success-color: #2ecc71;       /* # Success green */
-    --warning-color: #f39c12;       /* # Warning orange */
-    --light-bg: #f8f9fa;            /* # Light background color */
-    --dark-bg: #2c3e50;             /* # Dark background for tooltips */
-    --text-color: #333;             /* # Main text color */
-    --border-color: #ddd;           /* # Border color */
-    --light-text: #f8f9fa;          /* # Light text color */
-    --card-shadow: 0 1px 3px rgba(0,0,0,0.1); /* # Subtle shadow */
-    --modal-shadow: 0 4px 16px rgba(0,0,0,0.2); /* # More prominent shadow */
-    --transition: all 0.3s ease;    /* # Standard transition */
+    /* # Primary brand colors */
+    --primary-color: #6366f1;       /* # Modern indigo */
+    --primary-hover: #4f46e5;       /* # Darker indigo */
+    --primary-light: #e0e7ff;       /* # Light indigo background */
+    
+    /* # Semantic colors */
+    --success-color: #10b981;       /* # Modern green */
+    --success-light: #d1fae5;       /* # Light green background */
+    --warning-color: #f59e0b;       /* # Modern amber */
+    --warning-light: #fef3c7;       /* # Light amber background */
+    --error-color: #ef4444;         /* # Modern red */
+    --error-light: #fee2e2;         /* # Light red background */
+    
+    /* # Neutral colors */
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    
+    /* # Background and surface colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: var(--gray-50);
+    --bg-tertiary: var(--gray-100);
+    
+    /* # Text colors */
+    --text-primary: var(--gray-900);
+    --text-secondary: var(--gray-600);
+    --text-tertiary: var(--gray-400);
+    
+    /* # Border and divider colors */
+    --border-light: var(--gray-200);
+    --border-medium: var(--gray-300);
+    --border-dark: var(--gray-400);
+    
+    /* # Shadow system */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    /* # Spacing system */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    
+    /* # Border radius system */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    
+    /* # Animation and transitions */
+    --transition-fast: 150ms ease-in-out;
+    --transition-normal: 250ms ease-in-out;
+    --transition-slow: 350ms ease-in-out;
+    
+    /* # Typography scale */
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
   }
   
-  /* # === Modal container styling === */
+  /* # === Modern Modal Container === */
   #quickAddModal.modal {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     z-index: 1000;
-    background-color: rgba(0,0,0,0.5);
+    background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.6));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
     justify-content: center;
     align-items: center;
+    padding: var(--space-4);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: all var(--transition-normal);
   }
   
   #quickAddModal.modal.active {
@@ -365,63 +432,83 @@
     visibility: visible;
   }
   
-  /* # === Modal content styling === */
+  /* # === Modern Modal Content === */
   #quickAddModal .modal-content {
     direction: rtl;
-    background-color: white;
-    width: 90%;
-    max-width: 550px;
-    max-height: 85vh;
-    border-radius: 12px;
-    box-shadow: var(--modal-shadow);
+    background: var(--bg-primary);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-xl);
     position: relative;
-    overflow-y: auto;
-    transform: translateY(0);
-    opacity: 1;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+    transform: scale(0.95) translateY(20px);
+    opacity: 0;
+    transition: all var(--transition-normal);
   }
   
+  #quickAddModal.modal.active .modal-content {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  
+  /* # === Modern Modal Header === */
   #quickAddModal .modal-header {
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--border-color);
+    padding: var(--space-6) var(--space-6) var(--space-4);
+    border-bottom: 1px solid var(--border-light);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: var(--light-bg);
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
     position: relative;
   }
   
   #quickAddModal .modal-header h3 {
     margin: 0;
-    color: var(--primary-color);
-    font-size: 1.4em;
-    font-weight: 600;
+    color: var(--text-primary);
+    font-size: var(--text-xl);
+    font-weight: 700;
     text-align: center;
     flex: 1;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
   
+  /* # Modern Close Button */
   #quickAddModal .close-modal {
-    background: none;
-    border: none;
-    font-size: 24px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    width: 40px;
+    height: 40px;
     cursor: pointer;
-    color: #999;
-    transition: color 0.2s ease;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
     position: absolute;
-    right: 15px;
+    right: var(--space-6);
     top: 50%;
     transform: translateY(-50%);
-    padding: 0;
-    width: 24px;
-    height: 24px;
-    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: var(--text-lg);
+    font-weight: 500;
+    box-shadow: var(--shadow-sm);
   }
   
   #quickAddModal .close-modal:hover {
-    color: var(--secondary-color);
+    background: var(--error-light);
+    color: var(--error-color);
+    border-color: var(--error-color);
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: var(--shadow-md);
+  }
+  
+  #quickAddModal .close-modal:active {
+    transform: translateY(-50%) scale(0.95);
   }
   
   #quickAddModal .modal-body {
@@ -429,100 +516,147 @@
     overflow: hidden;
   }
   
-  /* # === Swipe container styles === */
+  /* # === Modern Swipe Container === */
   #quickAddModal .swipe-container {
     position: relative;
     width: 100%;
-    height: 540px;
+    height: 520px;
     overflow: hidden;
+    background: var(--bg-primary);
   }
   
+  /* # Modern Step Indicator */
   #quickAddModal .swipe-indicator {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    background-color: rgba(0,0,0,0.1);
-    color: var(--text-color);
-    font-size: 0.8em;
-    padding: 2px 8px;
-    border-radius: 15px;
+    top: var(--space-4);
+    left: var(--space-4);
+    background: var(--primary-light);
+    color: var(--primary-color);
+    font-size: var(--text-sm);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-xl);
     z-index: 10;
-    font-weight: bold;
+    font-weight: 600;
+    border: 1px solid var(--primary-color);
+    box-shadow: var(--shadow-sm);
   }
   
+  /* # Modern Progress Bar */
   #quickAddModal .swipe-progress {
     position: absolute;
     top: 0;
     right: 0;
     left: 0;
-    height: 4px;
-    background-color: rgba(0,0,0,0.05);
+    height: 6px;
+    background: linear-gradient(90deg, var(--gray-100) 0%, var(--gray-200) 100%);
     z-index: 10;
+    overflow: hidden;
   }
   
   #quickAddModal .progress-bar {
     height: 100%;
     width: 20%; /* # 1/5 of total width */
-    background-color: var(--primary-color);
-    transition: width 0.3s ease;
+    background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+    transition: width var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
   }
   
-  /* # === Card stack styles === */
+  #quickAddModal .progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+    animation: shimmer 2s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  
+  /* # === Modern Card Stack === */
   #quickAddModal .card-stack {
     position: relative;
     width: 100%;
     height: 100%;
   }
   
+  /* # Modern Card Design */
   #quickAddModal .card {
     position: absolute;
     top: 0;
     right: 0;
     width: 100%;
     height: 100%;
-    background-color: white;
-    transition: transform 0.4s ease-in-out;
+    background: var(--bg-primary);
+    transition: all var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
-    padding: 20px;
-    transform: translateX(100%);
+    padding: var(--space-6);
+    transform: translateX(100%) scale(0.95);
     opacity: 0;
     pointer-events: none;
+    border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
   
+  /* # Card States */
   #quickAddModal .card[data-step="1"] {
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
     opacity: 1;
     pointer-events: auto;
   }
   
   #quickAddModal .card.moving-left {
-    transform: translateX(-100%);
+    transform: translateX(-100%) scale(0.95);
     opacity: 0;
   }
   
   #quickAddModal .card.moving-right {
-    transform: translateX(100%);
+    transform: translateX(100%) scale(0.95);
     opacity: 0;
   }
   
   #quickAddModal .card.active {
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
     opacity: 1;
     pointer-events: auto;
   }
   
+  /* # Modern Card Content */
   #quickAddModal .card-content {
     flex: 1;
     overflow-y: auto;
-    padding-bottom: 70px; /* # Prevent content from being hidden by buttons */
+    padding-bottom: 80px; /* # Space for action buttons */
+    padding-top: var(--space-2);
   }
   
+  /* # Modern Card Titles */
   #quickAddModal .card-content h4 {
-    margin-bottom: 15px;
-    color: var(--primary-color);
-    font-size: 1.2em;
+    margin-bottom: var(--space-6);
+    color: var(--text-primary);
+    font-size: var(--text-xl);
+    font-weight: 700;
     text-align: center;
+    position: relative;
+    padding-bottom: var(--space-3);
+  }
+  
+  #quickAddModal .card-content h4::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+    border-radius: var(--radius-xl);
   }
   
   /* # Button positioning */
@@ -540,32 +674,46 @@
     z-index: 50;
   }
   
-  /* # === Form element styles === */
+  /* # === Modern Form Elements === */
   #quickAddModal .form-group {
-    margin-bottom: 15px;
+    margin-bottom: var(--space-5);
   }
   
+  /* # Modern Labels */
   #quickAddModal label {
     display: block;
-    margin-bottom: 6px;
-    font-weight: 500;
-    color: var(--text-color);
+    margin-bottom: var(--space-2);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    letter-spacing: 0.025em;
   }
   
+  /* # Modern Input Fields */
   #quickAddModal .input-field {
     width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px; /* # Slightly reduced from 8px */
-    font-size: 1em;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    background-color: var(--light-bg);
+    padding: var(--space-3) var(--space-4);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
+    transition: all var(--transition-fast);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: inherit;
+    box-shadow: var(--shadow-sm);
   }
   
   #quickAddModal .input-field:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
     outline: none;
+    background: #ffffff;
+    transform: translateY(-1px);
+  }
+  
+  #quickAddModal .input-field:hover:not(:focus) {
+    border-color: var(--border-medium);
+    box-shadow: var(--shadow-md);
   }
   
   #quickAddModal .input-large {
@@ -649,43 +797,80 @@
     margin-right: 8px;
   }
   
-  /* # === Button styles === */
+  /* # === Modern Button System === */
   #quickAddModal .swipe-button {
-    padding: 8px 16px; /* # Slightly reduced padding */
-    border: none;
-    border-radius: 6px;
-    font-size: 0.95em; /* # Slightly reduced from 1em */
-    font-weight: 500;
+    padding: var(--space-3) var(--space-6);
+    border: 2px solid transparent;
+    border-radius: var(--radius-xl);
+    font-size: var(--text-base);
+    font-weight: 600;
     cursor: pointer;
-    transition: var(--transition);
+    transition: all var(--transition-fast);
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 100px;
+    min-width: 120px;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.025em;
+    box-shadow: var(--shadow-sm);
   }
   
+  /* # Previous Button - Ghost Style */
   #quickAddModal .prev-button {
-    background-color: var(--light-bg);
-    color: var(--text-color);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-color: var(--border-light);
   }
   
   #quickAddModal .prev-button:hover {
-    background-color: #e9ecef;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-medium);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
   }
   
+  /* # Next Button - Primary Style */
   #quickAddModal .next-button {
-    background-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
     color: white;
+    border-color: var(--primary-color);
+    position: relative;
+  }
+  
+  #quickAddModal .next-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left var(--transition-slow);
+  }
+  
+  #quickAddModal .next-button:hover::before {
+    left: 100%;
   }
   
   #quickAddModal .next-button:hover {
-    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
   }
   
   #quickAddModal .next-button:disabled {
-    background-color: #ccc;
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+    border-color: var(--border-light);
     cursor: not-allowed;
+    transform: none;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  #quickAddModal .next-button:disabled::before {
+    display: none;
   }
   
   #quickAddModal .next-button i {
@@ -725,31 +910,53 @@
     margin-right: 8px;
   }
   
-  /* # === Navigation dots === */
+  /* # === Modern Navigation Dots === */
   #quickAddModal .swipe-dots {
     position: absolute;
-    bottom: 5px;
+    bottom: var(--space-3);
     right: 0;
     left: 0;
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: var(--space-2);
     z-index: 49;
-    padding: 10px 0;
+    padding: var(--space-2) 0;
   }
   
   #quickAddModal .dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background-color: #ccc;
+    background: var(--border-medium);
     cursor: pointer;
-    transition: var(--transition);
+    transition: all var(--transition-fast);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  #quickAddModal .dot:hover {
+    background: var(--border-dark);
+    transform: scale(1.1);
   }
   
   #quickAddModal .dot.active {
-    background-color: var(--primary-color);
-    transform: scale(1.2);
+    background: var(--primary-color);
+    transform: scale(1.3);
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  }
+  
+  #quickAddModal .dot.active::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    background: white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
   }
   
   /* # === Summary styles === */
@@ -821,17 +1028,19 @@
     margin-bottom: 10px;
   }
   
-  /* # === Automatic coupon detection section === */
+  /* # === Modern Auto-Detect Section === */
   #quickAddModal .auto-detect-section {
-    margin: 15px 0;
-    padding: 15px; /* # Reduced from 20px */
-    background: linear-gradient(to bottom, #f9f9ff, #eef1f7);
-    border-radius: 8px; /* # Reduced from 12px */
-    border: 1px solid #e0e7ff;
-    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.1); /* # Reduced shadow */
+    margin: var(--space-6) 0;
+    padding: var(--space-6);
+    background: linear-gradient(135deg, var(--primary-light) 0%, rgba(99, 102, 241, 0.05) 100%);
+    border-radius: var(--radius-xl);
+    border: 2px solid rgba(99, 102, 241, 0.1);
+    box-shadow: var(--shadow-md);
     text-align: center;
     position: relative;
     overflow: hidden;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
   
   #quickAddModal .auto-detect-section::before {
@@ -916,76 +1125,101 @@
     flex-wrap: wrap;
   }
   
+  /* # Modern Auto-Detect Buttons */
   #quickAddModal .auto-detect-button {
-    background-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
     color: white;
-    border: none;
-    border-radius: 30px; /* # Reduced from 50px */
-    padding: 8px 20px; /* # Reduced from 10px 25px */
-    font-size: 0.95em; /* # Reduced from 1em */
-    font-weight: bold;
+    border: 2px solid transparent;
+    border-radius: var(--radius-xl);
+    padding: var(--space-3) var(--space-5);
+    font-size: var(--text-sm);
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
+    transition: all var(--transition-fast);
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3); /* # Reduced shadow */
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    letter-spacing: 0.025em;
+  }
+  
+  #quickAddModal .auto-detect-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left var(--transition-slow);
+  }
+  
+  #quickAddModal .auto-detect-button:hover::before {
+    left: 100%;
   }
   
   #quickAddModal .auto-detect-button:hover {
-    background-color: var(--primary-hover);
-    box-shadow: 0 4px 10px rgba(155, 89, 182, 0.4); /* # Reduced shadow */
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-lg);
   }
   
   #quickAddModal .auto-detect-button:active {
-    transform: translateY(1px);
-    box-shadow: 0 2px 5px rgba(155, 89, 182, 0.4);
+    transform: translateY(0) scale(0.98);
+    box-shadow: var(--shadow-sm);
   }
   
-  /* # Add icon to auto-detect button */
-  #quickAddModal .auto-detect-button::before {
-    content: '\f002';  /* # Magnifying glass icon */
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
-    margin-right: 8px;
-    font-size: 0.9em;
-  }
-  
-  /* # Strauss button styling */
+  /* # Strauss Button Styling */
   #quickAddModal .strauss-button {
-    background-color: #e67e22;
-    margin-right: 5px;
+    background: linear-gradient(135deg, var(--warning-color), #ea580c);
   }
   
   #quickAddModal .strauss-button:hover {
-    background-color: #d35400;
-    box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-lg);
   }
   
-  #quickAddModal .strauss-button::before {
-    content: '\f1c0';  /* # Database icon for Strauss */
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
-    margin-right: 8px;
-    font-size: 0.9em;
-  }
-  
-  /* # === Responsive styles === */
+  /* # === Modern Mobile Responsive Design === */
   @media (max-width: 768px) {
-    /* # Modal styling for mobile */
+    #quickAddModal.modal {
+      padding: var(--space-2);
+      align-items: flex-end;
+    }
+    
     #quickAddModal .modal-content {
-      width: 95%;
-      max-width: 550px;
-      margin: auto;
+      width: 100%;
+      max-width: none;
+      max-height: 85vh;
+      border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+      margin: 0;
+    }
+    
+    #quickAddModal .modal-header {
+      padding: var(--space-4) var(--space-4) var(--space-3);
     }
     
     #quickAddModal .modal-header h3 {
-      font-size: 1.2em; /* # Smaller title on mobile */
+      font-size: var(--text-lg);
+    }
+    
+    #quickAddModal .close-modal {
+      width: 36px;
+      height: 36px;
+      right: var(--space-4);
+    }
+    
+    #quickAddModal .card {
+      padding: var(--space-4);
     }
     
     #quickAddModal .card-content h4 {
-      font-size: 1rem; /* # Smaller heading on mobile */
+      font-size: var(--text-lg);
+      margin-bottom: var(--space-4);
+    }
+    
+    #quickAddModal .swipe-container {
+      height: 460px;
     }
     
     /* # Tooltip handling for mobile */
