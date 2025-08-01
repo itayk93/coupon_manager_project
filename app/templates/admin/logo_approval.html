@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+
+{% block title %}אישור לוגו - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="logo-approval-container">
+    <div class="approval-header">
+        <h2>אישור לוגו לחברה</h2>
+        <nav class="breadcrumb">
+            <a href="{{ url_for('admin_companies_bp.manage_companies') }}" class="breadcrumb-link">
+                <i class="fas fa-arrow-right"></i> חזרה לניהול חברות
+            </a>
+        </nav>
+    </div>
+
+    <div class="approval-card">
+        <div class="approval-header-section">
+            <div class="company-info">
+                <h3>{{ company.name }}</h3>
+                <p class="company-id">מזהה חברה: #{{ company.id }}</p>
+            </div>
+            
+            <div class="search-info">
+                <p><strong>מקור:</strong> {{ logo_info.source }}</p>
+                <p><strong>דומיין שנמצא:</strong> {{ logo_info.found_domain }}</p>
+                <p><strong>גודל תמונה:</strong> {{ "%.1f"|format(logo_info.image_size / 1024) }} KB</p>
+            </div>
+        </div>
+
+        <div class="logo-preview-section">
+            <div class="preview-container">
+                <h4>תצוגה מקדימה של הלוגו:</h4>
+                <div class="logo-display">
+                    <img src="{{ url_for('static', filename=logo_info.logo_path) }}" 
+                         alt="לוגו {{ company.name }}" 
+                         class="logo-preview">
+                </div>
+                <p class="logo-path">נתיב קובץ: {{ logo_info.logo_path }}</p>
+            </div>
+
+            <div class="current-logo-container">
+                <h4>לוגו נוכחי:</h4>
+                <div class="logo-display">
+                    {% if company.image_path and company.image_path != 'default_logo.png' and company.image_path != 'images/default_logo.png' %}
+                        <img src="{{ url_for('static', filename=company.image_path) }}" 
+                             alt="לוגו נוכחי של {{ company.name }}" 
+                             class="current-logo">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/default_logo.png') }}" 
+                             alt="לוגו ברירת מחדל" 
+                             class="current-logo default">
+                        <p class="default-note">לוגו ברירת מחדל</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="approval-actions">
+            <div class="action-buttons">
+                <form method="POST" action="{{ url_for('admin_companies_bp.approve_logo', company_id=company.id) }}" 
+                      style="display: inline;">
+                    <button type="submit" class="btn btn-approve">
+                        <i class="fas fa-check"></i> אשר לוגו זה
+                    </button>
+                </form>
+
+                <form method="POST" action="{{ url_for('admin_companies_bp.reject_logo', company_id=company.id) }}" 
+                      style="display: inline;">
+                    <button type="submit" class="btn btn-reject" 
+                            onclick="return confirm('האם אתה בטוח שברצונך לדחות לוגו זה ולהשתמש בלוגो ברירת המחדל?');">
+                        <i class="fas fa-times"></i> דחה לוגו זה
+                    </button>
+                </form>
+            </div>
+
+            <div class="additional-actions">
+                <a href="{{ url_for('admin_companies_bp.manage_companies') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-right"></i> חזרה ללא שינויים
+                </a>
+            </div>
+        </div>
+
+        <div class="approval-notes">
+            <h4>הערות לאישור:</h4>
+            <ul class="notes-list">
+                <li><strong>בדקו</strong> שהלוגו מתאים לחברה המבוקשת</li>
+                <li><strong>ודאו</strong> שהלוגו באיכות מספקת ולא מטושטש</li>
+                <li><strong>שימו לב</strong> שהלוגו לא מכיל תוכן לא הולם</li>
+                <li><strong>במקרה של ספק</strong> - עדיף לדחות ולהשתמש בלוגו ברירת מחדל</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .logo-approval-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        direction: rtl;
+        font-family: 'Rubik', 'Heebo', Arial, sans-serif;
+    }
+
+    .approval-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .approval-header h2 {
+        color: #495057;
+        margin: 0;
+        font-size: 2em;
+    }
+
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+    }
+
+    .breadcrumb-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 15px;
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        transition: background-color 0.3s;
+    }
+
+    .breadcrumb-link:hover {
+        background-color: #5a6268;
+        color: white;
+        text-decoration: none;
+    }
+
+    .approval-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+
+    .approval-header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .company-info h3 {
+        color: #495057;
+        margin: 0 0 8px 0;
+        font-size: 1.8em;
+        font-weight: 600;
+    }
+
+    .company-id {
+        color: #6c757d;
+        margin: 0;
+        font-size: 0.95em;
+    }
+
+    .search-info {
+        text-align: left;
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+    }
+
+    .search-info p {
+        margin: 5px 0;
+        font-size: 0.9em;
+        color: #495057;
+    }
+
+    .logo-preview-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+
+    .preview-container h4,
+    .current-logo-container h4 {
+        color: #495057;
+        margin-bottom: 20px;
+        font-size: 1.3em;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .logo-display {
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .logo-preview,
+    .current-logo {
+        max-width: 128px;
+        max-height: 128px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s;
+    }
+
+    .logo-preview:hover,
+    .current-logo:hover {
+        transform: scale(1.1);
+    }
+
+    .current-logo.default {
+        opacity: 0.7;
+    }
+
+    .logo-path {
+        margin-top: 15px;
+        color: #6c757d;
+        font-size: 0.85em;
+        word-break: break-all;
+    }
+
+    .default-note {
+        margin-top: 10px;
+        color: #6c757d;
+        font-style: italic;
+        font-size: 0.9em;
+    }
+
+    .approval-actions {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .action-buttons {
+        margin-bottom: 20px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 15px 25px;
+        font-size: 1.1em;
+        font-weight: bold;
+        text-decoration: none;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin: 0 10px;
+    }
+
+    .btn-approve {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-approve:hover {
+        background-color: #218838;
+        transform: translateY(-2px);
+    }
+
+    .btn-reject {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn-reject:hover {
+        background-color: #c82333;
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        font-size: 1em;
+        padding: 12px 20px;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        color: white;
+        text-decoration: none;
+    }
+
+    .approval-notes {
+        background-color: #e8f4f8;
+        border: 1px solid #b8daff;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+    .approval-notes h4 {
+        color: #0c5460;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 1.2em;
+    }
+
+    .notes-list {
+        list-style-type: disc;
+        padding-right: 20px;
+        margin: 0;
+    }
+
+    .notes-list li {
+        color: #0c5460;
+        margin-bottom: 8px;
+        line-height: 1.5;
+    }
+
+    @media (max-width: 768px) {
+        .approval-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .approval-header-section {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .search-info {
+            text-align: right;
+        }
+
+        .logo-preview-section {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            width: 100%;
+            margin: 10px 0;
+            justify-content: center;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add hover effect to logo images
+        const logoImages = document.querySelectorAll('.logo-preview, .current-logo');
+        logoImages.forEach(img => {
+            img.addEventListener('click', function() {
+                // Create a modal to show larger image
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.8);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 9999;
+                    cursor: pointer;
+                `;
+                
+                const modalImg = document.createElement('img');
+                modalImg.src = this.src;
+                modalImg.alt = this.alt;
+                modalImg.style.cssText = `
+                    max-width: 90%;
+                    max-height: 90%;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                `;
+                
+                modal.appendChild(modalImg);
+                document.body.appendChild(modal);
+                
+                modal.addEventListener('click', function() {
+                    document.body.removeChild(modal);
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

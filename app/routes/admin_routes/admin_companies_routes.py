@@ -4,7 +4,8 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import Company, AdminSettings
 from app.forms import CompanyManagementForm, DeleteCompanyForm
-from app.utils.logo_fetcher import fetch_company_logo_auto_approve
+from app.utils.logo_fetcher import fetch_company_logo_auto_approve, fetch_company_logo
+from app.utils.logo_fetcher import LogoFetcher
 
 admin_companies_bp = Blueprint(
     "admin_companies_bp", __name__, url_prefix="/admin/companies"
@@ -145,5 +146,108 @@ def fetch_missing_logos():
             
     except Exception as e:
         flash(f"שגיאה בחיפוש לוגואים: {str(e)}", "danger")
+    
+    return redirect(url_for("admin_companies_bp.manage_companies"))
+
+
+@admin_companies_bp.route("/find_logo/<int:company_id>", methods=["GET"])
+@login_required
+def find_logo_for_approval(company_id):
+    """Find logo for a specific company and show approval screen"""
+    if not current_user.is_admin:
+        flash("אין לך הרשאה לביצוע פעולה זו.", "danger")
+        return redirect(url_for("index"))
+
+    company = Company.query.get_or_404(company_id)
+    
+    try:
+        # Fetch logo info (without saving to database yet)
+        logo_info = fetch_company_logo(company.name, company.id)
+        
+        if logo_info and logo_info.get('success'):
+            # Store logo info in session for approval
+            from flask import session
+            session[f'pending_logo_{company_id}'] = logo_info
+            
+            return render_template(
+                "admin/logo_approval.html",
+                company=company,
+                logo_info=logo_info
+            )
+        else:
+            flash(f"לא נמצא לוגו עבור החברה '{company.name}'", "warning")
+            return redirect(url_for("admin_companies_bp.manage_companies"))
+            
+    except Exception as e:
+        flash(f"שגיאה בחיפוש לוגו: {str(e)}", "danger")
+        return redirect(url_for("admin_companies_bp.manage_companies"))
+
+
+@admin_companies_bp.route("/approve_logo/<int:company_id>", methods=["POST"])
+@login_required
+def approve_logo(company_id):
+    """Approve and save the found logo"""
+    if not current_user.is_admin:
+        flash("אין לך הרשאה לביצוע פעולה זו.", "danger")
+        return redirect(url_for("index"))
+
+    from flask import session
+    logo_info = session.get(f'pending_logo_{company_id}')
+    
+    if not logo_info:
+        flash("לא נמצא לוגו ממתין לאישור", "warning")
+        return redirect(url_for("admin_companies_bp.manage_companies"))
+
+    try:
+        # Approve and save the logo
+        fetcher = LogoFetcher()
+        success = fetcher.approve_and_save_logo(logo_info)
+        
+        if success:
+            flash(f"הלוגו עבור '{logo_info['company_name']}' אושר ונשמר בהצלחה!", "success")
+            # Clean up session
+            session.pop(f'pending_logo_{company_id}', None)
+        else:
+            flash("שגיאה בשמירת הלוגו", "danger")
+            
+    except Exception as e:
+        flash(f"שגיאה באישור הלוגו: {str(e)}", "danger")
+    
+    return redirect(url_for("admin_companies_bp.manage_companies"))
+
+
+@admin_companies_bp.route("/reject_logo/<int:company_id>", methods=["POST"])
+@login_required
+def reject_logo(company_id):
+    """Reject the found logo and set default"""
+    if not current_user.is_admin:
+        flash("אין לך הרשאה לביצוע פעולה זו.", "danger")
+        return redirect(url_for("index"))
+
+    from flask import session
+    logo_info = session.get(f'pending_logo_{company_id}')
+    
+    if not logo_info:
+        flash("לא נמצא לוגו ממתין לאישור", "warning")
+        return redirect(url_for("admin_companies_bp.manage_companies"))
+
+    try:
+        # Set default logo
+        fetcher = LogoFetcher()
+        fetcher.update_company_logo_path(company_id, "images/default_logo.png")
+        
+        # Remove the downloaded logo file
+        import os
+        logo_file_path = os.path.join(fetcher.static_images_path, logo_info['logo_path'].replace('images/', ''))
+        if os.path.exists(logo_file_path):
+            os.remove(logo_file_path)
+        
+        flash(f"הלוגו עבור '{logo_info['company_name']}' נדחה ונקבע לוגו ברירת מחדל", "info")
+        
+        # Clean up session
+        session.pop(f'pending_logo_{company_id}', None)
+        
+    except Exception as e:
+        flash(f"שגיאה בדחיית הלוגו: {str(e)}", "danger")
     
     return redirect(url_for("admin_companies_bp.manage_companies"))

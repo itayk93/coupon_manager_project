@@ -112,6 +112,54 @@
     background-color: #2980b9;
   }
 
+  .btn-logo {
+    background-color: #17a2b8;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+  }
+
+  .btn-logo:hover {
+    background-color: #138496;
+    color: white;
+    text-decoration: none;
+  }
+
+  .logo-cell {
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .company-logo-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    object-fit: cover;
+    margin-bottom: 4px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .company-logo-small.default {
+    opacity: 0.6;
+  }
+
+  .logo-status {
+    display: block;
+    font-size: 0.7em;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  .logo-status.has-logo {
+    color: #28a745;
+  }
+
+  .logo-status.no-logo {
+    color: #6c757d;
+  }
+
   /* Admin Actions */
   .admin-actions {
     display: flex;
@@ -421,6 +469,7 @@
                 <tr>
                   <th>מזהה</th>
                   <th>שם חברה</th>
+                  <th>לוגו נוכחי</th>
                   <th>פעולות</th>
                 </tr>
               </thead>
@@ -429,10 +478,28 @@
                 <tr>
                   <td>{{ company.id }}</td>
                   <td>{{ company.name }}</td>
+                  <td class="logo-cell">
+                    {% if company.image_path and company.image_path != 'default_logo.png' and company.image_path != 'images/default_logo.png' %}
+                      <img src="{{ url_for('static', filename=company.image_path) }}" 
+                           alt="לוגו {{ company.name }}" 
+                           class="company-logo-small">
+                      <span class="logo-status has-logo">יש לוגו</span>
+                    {% else %}
+                      <img src="{{ url_for('static', filename='images/default_logo.png') }}" 
+                           alt="לוגו ברירת מחדל" 
+                           class="company-logo-small default">
+                      <span class="logo-status no-logo">ברירת מחדל</span>
+                    {% endif %}
+                  </td>
                   <td class="actions-cell">
                     <button class="btn btn-edit" onclick="editCompany({{ company.id }}, '{{ company.name }}')">
                       <i class="fas fa-edit"></i>
                     </button>
+                    <a href="{{ url_for('admin_companies_bp.find_logo_for_approval', company_id=company.id) }}" 
+                       class="btn btn-logo" 
+                       title="חיפוש לוגו">
+                      <i class="fas fa-search"></i>
+                    </a>
                     <form method="POST" action="{{ url_for('admin_companies_bp.delete_company', company_id=company.id) }}" class="inline-form delete-form">
                       {{ delete_form.hidden_tag() }}
                       <input type="hidden" name="company_id" value="{{ company.id }}">
