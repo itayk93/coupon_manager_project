@@ -2173,7 +2173,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (straussUrlGroup.style.display === 'none' || straussUrlGroup.style.display === '') {
           straussUrlGroup.style.display = 'block';
           straussUrlInput.focus();
-          submitStraussButton.textContent = 'בטל';
+          submitStraussButton.innerHTML = '<i class="fas fa-times"></i> בטל';
           return;
         } else {
           // Process the URL if it's already visible and has content
@@ -2238,7 +2238,7 @@ document.addEventListener('DOMContentLoaded', function() {
           .then(data => {
             // Reset button state
             submitStraussButton.disabled = false;
-            submitStraussButton.textContent = 'זהה קופון שטראוס';
+            submitStraussButton.innerHTML = 'זהה קופון שטראוס';
             console.log('DEBUG: Strauss response data:', data);
             
             if (data.success) {
@@ -2267,7 +2267,7 @@ document.addEventListener('DOMContentLoaded', function() {
           .catch(error => {
             // Reset button state
             submitStraussButton.disabled = false;
-            submitStraussButton.textContent = 'זהה קופון שטראוס';
+            submitStraussButton.innerHTML = 'זהה קופון שטראוס';
             
             debug(`AJAX error: ${error}`);
             console.error('DEBUG: Error during Strauss fetch:', error);
@@ -2293,7 +2293,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (event.key === 'Escape') {
         straussUrlGroup.style.display = 'none';
         straussUrlInput.value = '';
-        submitStraussButton.textContent = 'זהה קופון שטראוס';
+        submitStraussButton.innerHTML = 'זהה קופון שטראוס';
       }
     });
   }

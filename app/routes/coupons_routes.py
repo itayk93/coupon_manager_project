@@ -79,6 +79,105 @@ logger = logging.getLogger(__name__)
 coupons_bp = Blueprint("coupons", __name__)
 
 
+def find_matching_company(company_name_raw):
+    """
+    Advanced company matching using fuzzy matching and GPT fallback
+    1. Try fuzzy matching with 90%+ similarity
+    2. If no match, use GPT-4 mini for intelligent matching
+    3. If still no match, create new company
+    """
+    debug_print(f"Starting company matching for: {company_name_raw}")
+    
+    # Get all companies from database
+    companies = Company.query.all()
+    company_names = [c.name for c in companies]
+    
+    if not company_names:
+        debug_print("No companies found in database, returning original name")
+        return company_name_raw
+    
+    # Step 1: Fuzzy matching with 90%+ similarity
+    debug_print("Attempting fuzzy matching...")
+    best_match = None
+    best_score = 0
+    
+    for company_name in company_names:
+        # Use different fuzzy matching algorithms
+        ratio = fuzz.ratio(company_name_raw.lower(), company_name.lower())
+        partial_ratio = fuzz.partial_ratio(company_name_raw.lower(), company_name.lower())
+        token_sort_ratio = fuzz.token_sort_ratio(company_name_raw.lower(), company_name.lower())
+        token_set_ratio = fuzz.token_set_ratio(company_name_raw.lower(), company_name.lower())
+        
+        # Take the maximum score from all algorithms
+        max_score = max(ratio, partial_ratio, token_sort_ratio, token_set_ratio)
+        
+        if max_score > best_score:
+            best_score = max_score
+            best_match = company_name
+    
+    debug_print(f"Best fuzzy match: {best_match} with score: {best_score}")
+    
+    # If fuzzy matching score is 90% or higher, use it
+    if best_score >= 90:
+        debug_print(f"Fuzzy match successful! Using: {best_match}")
+        return best_match
+    
+    # Step 2: Try GPT-4 mini for intelligent matching
+    debug_print("Fuzzy matching failed, trying GPT-4 mini...")
+    try:
+        import openai
+        import os
+        
+        # Get OpenAI API key from environment
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            debug_print("No OpenAI API key found, skipping GPT matching")
+            return company_name_raw
+        
+        # Set up OpenAI client
+        openai.api_key = api_key
+        
+        # Prepare prompt for GPT
+        companies_list_str = "\n".join([f"- {name}" for name in company_names])
+        
+        prompt = f"""אתה מומחה בזיהוי שמות חברות בעברית. יש לי רשימה של חברות קיימות ואני רוצה למצוא את החברה המתאימה ביותר לשם שקיבלתי.
+
+שם החברה שקיבלתי: "{company_name_raw}"
+
+רשימת החברות הקיימות:
+{companies_list_str}
+
+אנא החזר רק את השם המדויק של החברה מהרשימה שמתאים ביותר לשם שקיבלתי. אם אין התאמה טובה, החזר "NO_MATCH".
+
+תשובה:"""
+
+        # Call GPT-4 mini
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "אתה מומחה בזיהוי שמות חברות בעברית. תחזיר רק את השם המדויק מהרשימה או NO_MATCH."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=100,
+            temperature=0
+        )
+        
+        gpt_result = response.choices[0].message.content.strip()
+        debug_print(f"GPT-4 mini result: {gpt_result}")
+        
+        # Check if GPT found a match
+        if gpt_result != "NO_MATCH" and gpt_result in company_names:
+            debug_print(f"GPT match successful! Using: {gpt_result}")
+            return gpt_result
+            
+    except Exception as e:
+        debug_print(f"GPT matching failed: {e}")
+    
+    # Step 3: If no match found, return original name (will be created as new company)
+    debug_print(f"No match found, returning original name: {company_name_raw}")
+    return company_name_raw
+
+
 def to_israel_time_filter(dt):
     """Converts UTC datetime to Israel time and formats as string."""
     if not dt:
@@ -1413,11 +1512,15 @@ def add_coupon():
                         # Extract description
                         description = soup.find('div', class_='description-warp').find('strong').get_text(strip=True)
                         
-                        # Prepare extracted data
+                        # Advanced company matching for Strauss coupons
+                        matched_company = find_matching_company(coupon_name_raw)
+                        
+                        # Prepare extracted data with matched company
                         extracted_data = {
                             "קוד קופון": coupon_code,
                             "ערך מקורי": coupon_value,
-                            "חברה": coupon_name_raw,
+                            "עלות": 0,  # Always set cost to 0 for Strauss coupons
+                            "חברה": matched_company,
                             "תיאור": description,
                             "תאריך תפוגה": formatted_date,
                             "מאיפה קיבלת את הקופון": "שטראוס"
