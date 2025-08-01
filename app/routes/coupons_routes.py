@@ -1664,28 +1664,33 @@ def add_coupon():
 
                 # Log GPT usage if available
                 if not pricing_df.empty:
-                    debug_print("Logging GPT usage")
-                    pricing_row = pricing_df.iloc[0]
-                    new_usage = GptUsage(
-                        user_id=current_user.id,
-                        created=datetime.strptime(
-                            pricing_row["created"], "%Y-%m-%d %H:%M:%S"
-                        ),
-                        id=pricing_row["id"],
-                        object=pricing_row["object"],
-                        model=pricing_row["model"],
-                        prompt_tokens=int(pricing_row["prompt_tokens"]),
-                        completion_tokens=int(pricing_row["completion_tokens"]),
-                        total_tokens=int(pricing_row["total_tokens"]),
-                        cost_usd=float(pricing_row["cost_usd"]),
-                        cost_ils=float(pricing_row["cost_ils"]),
-                        exchange_rate=float(pricing_row["exchange_rate"]),
-                        prompt_text=np.nan,
-                        response_text=np.nan,
-                    )
-                    db.session.add(new_usage)
-                    db.session.commit()
-                    debug_print("GPT usage logged successfully")
+                    try:
+                        debug_print("Logging GPT usage")
+                        pricing_row = pricing_df.iloc[0]
+                        from datetime import datetime as dt_parser
+                        new_usage = GptUsage(
+                            user_id=current_user.id,
+                            created=dt_parser.strptime(
+                                pricing_row["created"], "%Y-%m-%d %H:%M:%S"
+                            ),
+                            id=pricing_row["id"],
+                            object=pricing_row["object"],
+                            model=pricing_row["model"],
+                            prompt_tokens=int(pricing_row["prompt_tokens"]),
+                            completion_tokens=int(pricing_row["completion_tokens"]),
+                            total_tokens=int(pricing_row["total_tokens"]),
+                            cost_usd=float(pricing_row["cost_usd"]),
+                            cost_ils=float(pricing_row["cost_ils"]),
+                            exchange_rate=float(pricing_row["exchange_rate"]),
+                            prompt_text=np.nan,
+                            response_text=np.nan,
+                        )
+                        db.session.add(new_usage)
+                        db.session.commit()
+                        debug_print("GPT usage logged successfully")
+                    except Exception as e:
+                        debug_print(f"Failed to log GPT usage: {e}", "ERROR")
+                        # Continue execution even if logging fails
 
                 # Return extracted data if available
                 if not extracted_data_df.empty:
@@ -1883,28 +1888,33 @@ def add_coupon():
             )
 
             if not pricing_df.empty:
-                debug_print("Logging GPT usage")
-                pricing_row = pricing_df.iloc[0]
-                new_usage = GptUsage(
-                    user_id=current_user.id,
-                    created=datetime.strptime(
-                        pricing_row["created"], "%Y-%m-%d %H:%M:%S"
-                    ),
-                    id=pricing_row["id"],
-                    object=pricing_row["object"],
-                    model=pricing_row["model"],
-                    prompt_tokens=int(pricing_row["prompt_tokens"]),
-                    completion_tokens=int(pricing_row["completion_tokens"]),
-                    total_tokens=int(pricing_row["total_tokens"]),
-                    cost_usd=float(pricing_row["cost_usd"]),
-                    cost_ils=float(pricing_row["cost_ils"]),
-                    exchange_rate=float(pricing_row["exchange_rate"]),
-                    prompt_text=np.nan,
-                    response_text=np.nan,
-                )
-                db.session.add(new_usage)
-                db.session.commit()
-                debug_print("GPT usage logged successfully")
+                try:
+                    debug_print("Logging GPT usage")
+                    pricing_row = pricing_df.iloc[0]
+                    from datetime import datetime as dt_parser
+                    new_usage = GptUsage(
+                        user_id=current_user.id,
+                        created=dt_parser.strptime(
+                            pricing_row["created"], "%Y-%m-%d %H:%M:%S"
+                        ),
+                        id=pricing_row["id"],
+                        object=pricing_row["object"],
+                        model=pricing_row["model"],
+                        prompt_tokens=int(pricing_row["prompt_tokens"]),
+                        completion_tokens=int(pricing_row["completion_tokens"]),
+                        total_tokens=int(pricing_row["total_tokens"]),
+                        cost_usd=float(pricing_row["cost_usd"]),
+                        cost_ils=float(pricing_row["cost_ils"]),
+                        exchange_rate=float(pricing_row["exchange_rate"]),
+                        prompt_text=np.nan,
+                        response_text=np.nan,
+                    )
+                    db.session.add(new_usage)
+                    db.session.commit()
+                    debug_print("GPT usage logged successfully")
+                except Exception as e:
+                    debug_print(f"Failed to log GPT usage: {e}", "ERROR")
+                    # Continue execution even if logging fails
 
             if not extracted_data_df.empty:
                 debug_print("Processing extracted data")
@@ -4097,26 +4107,31 @@ def parse_usage_text():
 
             # נשמור את שורת ה-GPT בטבלת GptUsage אם יש
             if not gpt_usage_df.empty:
-                from app.models import GptUsage
+                try:
+                    from app.models import GptUsage
 
-                row = gpt_usage_df.iloc[0]
-                new_gpt = GptUsage(
-                    user_id=current_user.id,
-                    created=datetime.strptime(row["created"], "%Y-%m-%d %H:%M:%S"),
-                    id=row["id"],
-                    object=row["object"],
-                    model=row["model"],
-                    prompt_tokens=int(row["prompt_tokens"]),
-                    completion_tokens=int(row["completion_tokens"]),
-                    total_tokens=int(row["total_tokens"]),
-                    cost_usd=float(row["cost_usd"]),
-                    cost_ils=float(row["cost_ils"]),
-                    exchange_rate=float(row["exchange_rate"]),
-                    prompt_text=np.nan,
-                    response_text=np.nan,
-                )
-                db.session.add(new_gpt)
-                db.session.commit()
+                    row = gpt_usage_df.iloc[0]
+                    from datetime import datetime as dt_parser
+                    new_gpt = GptUsage(
+                        user_id=current_user.id,
+                        created=dt_parser.strptime(row["created"], "%Y-%m-%d %H:%M:%S"),
+                        id=row["id"],
+                        object=row["object"],
+                        model=row["model"],
+                        prompt_tokens=int(row["prompt_tokens"]),
+                        completion_tokens=int(row["completion_tokens"]),
+                        total_tokens=int(row["total_tokens"]),
+                        cost_usd=float(row["cost_usd"]),
+                        cost_ils=float(row["cost_ils"]),
+                        exchange_rate=float(row["exchange_rate"]),
+                        prompt_text=np.nan,
+                        response_text=np.nan,
+                    )
+                    db.session.add(new_gpt)
+                    db.session.commit()
+                except Exception as e:
+                    debug_print(f"Failed to log GPT usage: {e}", "ERROR")
+                    # Continue execution even if logging fails
 
             if usage_df.empty:
                 # לא נמצאו שימושים

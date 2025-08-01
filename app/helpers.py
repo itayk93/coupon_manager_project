@@ -1369,7 +1369,7 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
     import json
     import pandas as pd
     import requests
-    from datetime import datetime
+    from datetime import datetime as dt
 
     """
     Function to extract coupon details using GPT-4o.
@@ -1482,7 +1482,7 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
             "total_tokens": response["usage"]["total_tokens"],
             "id": response["id"],
             "object": response["object"],
-            "created": datetime.utcfromtimestamp(response["created"]).strftime(
+            "created": dt.utcfromtimestamp(response["created"]).strftime(
                 "%Y-%m-%d %H:%M:%S"
             ),
             "model": response["model"],
@@ -2404,7 +2404,7 @@ def parse_user_usage_text(usage_text, user):
         usage_record = {
             "id": response["id"],
             "object": response["object"],
-            "created": datetime.utcfromtimestamp(response["created"]).strftime(
+            "created": dt.utcfromtimestamp(response["created"]).strftime(
                 "%Y-%m-%d %H:%M:%S"
             ),
             "model": response["model"],

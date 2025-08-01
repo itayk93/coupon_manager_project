@@ -88,7 +88,7 @@
                     
                     <div class="auto-detect-button-container">
                       <button type="button" class="submit-button auto-detect-button" id="submit_sms" name="submit_sms">זהה קופון</button>
-                      <button type="button" class="submit-button auto-detect-button strauss-button" id="submit_strauss_url" name="submit_strauss_url">זהה קופון שטראוס</button>
+                      <button type="button" class="submit-button auto-detect-button strauss-button" id="submit_strauss_url" name="submit_strauss_url">זהה קופון שטראוס פלוס</button>
                     </div>
                     
                     <!-- Strauss URL Input Field (Hidden by default) -->
@@ -420,8 +420,8 @@
     -webkit-backdrop-filter: blur(8px);
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding: 0;
+    align-items: flex-start; /* # Changed from center to flex-start */
+    padding: 10px 0 0 0; /* # Reduced top padding from 20px to 10px */
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-normal);
@@ -436,10 +436,10 @@
   #quickAddModal .modal-content {
     direction: rtl;
     background: var(--bg-primary);
-    width: 95%;
-    max-width: 520px;
-    height: 85vh;
-    max-height: 700px;
+    width: 98%; /* # Increased width for more space */
+    max-width: 560px; /* # Increased max-width */
+    height: calc(100vh - 20px); /* # Use even more viewport height */
+    max-height: none; /* # Remove max-height restriction */
     border-radius: var(--radius-2xl);
     box-shadow: var(--shadow-xl);
     position: relative;
@@ -522,6 +522,7 @@
     position: relative;
     width: 100%;
     height: calc(100% - 80px); /* Full height minus header */
+    min-height: calc(100vh - 100px); /* # Reduced overhead for more space */
     overflow: hidden;
     background: var(--bg-primary);
   }
@@ -633,8 +634,9 @@
   #quickAddModal .card-content {
     flex: 1;
     overflow-y: auto;
-    padding-bottom: 80px; /* # Space for action buttons */
+    padding-bottom: 140px; /* # Further increased space for action buttons */
     padding-top: var(--space-2);
+    min-height: calc(100vh - 160px); /* # Maximized content height */
   }
   
   /* # Modern Card Titles */
@@ -663,21 +665,22 @@
   /* # Button positioning */
   #quickAddModal .card-actions {
     position: absolute;
-    bottom: 20px;
+    bottom: 60px; /* # Moved buttons higher to reduce white space below dots */
     left: 0;
     right: 0;
     width: calc(100% - 40px);
     margin: 0 auto;
-    padding: 15px 0;
+    padding: 25px 0; /* # Increased padding for better spacing */
     display: flex;
     justify-content: space-between;
     background-color: white;
     z-index: 50;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
   }
   
   /* # === Modern Form Elements === */
   #quickAddModal .form-group {
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-8); /* # Further increased spacing for better space utilization */
   }
   
   /* # Modern Labels */
@@ -693,7 +696,7 @@
   /* # Modern Input Fields */
   #quickAddModal .input-field {
     width: 100%;
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-4) var(--space-5); /* # Increased padding for better space usage */
     border: 2px solid var(--border-light);
     border-radius: var(--radius-lg);
     font-size: var(--text-base);
@@ -914,14 +917,14 @@
   /* # === Modern Navigation Dots === */
   #quickAddModal .swipe-dots {
     position: absolute;
-    bottom: var(--space-3);
+    bottom: var(--space-6); /* # Moved dots higher to reduce white space */
     right: 0;
     left: 0;
     display: flex;
     justify-content: center;
     gap: var(--space-2);
     z-index: 49;
-    padding: var(--space-2) 0;
+    padding: var(--space-4) 0; /* # Increased padding around dots */
   }
   
   #quickAddModal .dot {
@@ -1185,15 +1188,15 @@
   @media (max-width: 768px) {
     #quickAddModal.modal {
       padding: 0;
-      align-items: flex-end;
+      align-items: flex-start; /* # Changed to flex-start for full height */
     }
     
     #quickAddModal .modal-content {
       width: 100%;
       max-width: none;
-      height: 90vh;
+      height: 100vh; /* # Use full viewport height on mobile */
       max-height: none;
-      border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+      border-radius: 0; /* # Remove border radius for full screen effect */
       margin: 0;
     }
     
@@ -1222,6 +1225,7 @@
     
     #quickAddModal .swipe-container {
       height: calc(100% - 70px); /* Full height minus smaller mobile header */
+      min-height: calc(100vh - 70px); /* # Use full viewport height minus header */
     }
     
     /* # Tooltip handling for mobile */
@@ -1258,18 +1262,19 @@
     
     /* # Navigation elements on mobile */
     #quickAddModal .swipe-dots {
-      bottom: 12px; /* # Move up slightly */
+      bottom: 20px; /* # Move up further on mobile */
     }
     
     /* # Card actions for mobile */
     #quickAddModal .card-actions {
-      bottom: 40px; /* # Move up to make room for dots */
+      bottom: 70px; /* # Move up further to eliminate white space */
       width: calc(100% - 30px); /* # Slightly wider */
     }
     
     /* # Add extra space for content on mobile so buttons don't cover it */
     #quickAddModal .card-content {
-      padding-bottom: 100px;
+      padding-bottom: 160px; /* # Further increased to accommodate higher button positioning */
+      min-height: calc(100vh - 150px); /* # Use full viewport height for mobile content */
     }
     
     /* # Form elements on mobile */
@@ -2367,6 +2372,12 @@ document.addEventListener('DOMContentLoaded', function() {
           if (data.data) {
             fillFormWithData(data.data);
             
+            // Clear card info fields for Strauss coupons since they don't require it
+            if (data.data['מאיפה קיבלת את הקופון'] === 'שטראוס' && includeCardInfoCheckbox) {
+              includeCardInfoCheckbox.checked = false;
+              toggleCardFields(); // This will hide the fields and clear localStorage
+            }
+            
             // Move to step 2 after a short delay to allow UI to update
             setTimeout(() => {
               debug('Moving to step 2');
@@ -2409,7 +2420,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (straussUrlGroup.style.display === 'none' || straussUrlGroup.style.display === '') {
           straussUrlGroup.style.display = 'block';
           straussUrlInput.focus();
-          submitStraussButton.innerHTML = '<i class="fas fa-times"></i> בטל';
+          submitStraussButton.innerHTML = 'זהה קופון שטראוס פלוס <i class="fas fa-search"></i>';
           return;
         } else {
           // Process the URL if it's already visible and has content
@@ -2474,7 +2485,7 @@ document.addEventListener('DOMContentLoaded', function() {
           .then(data => {
             // Reset button state
             submitStraussButton.disabled = false;
-            submitStraussButton.innerHTML = 'זהה קופון שטראוס';
+            submitStraussButton.innerHTML = 'זהה קופון שטראוס פלוס';
             console.log('DEBUG: Strauss response data:', data);
             
             if (data.success) {
@@ -2488,6 +2499,12 @@ document.addEventListener('DOMContentLoaded', function() {
               // Populate form fields with the detected data
               if (data.data) {
                 fillFormWithData(data.data);
+                
+                // Clear card info fields for Strauss coupons since they don't require it
+                if (includeCardInfoCheckbox) {
+                  includeCardInfoCheckbox.checked = false;
+                  toggleCardFields(); // This will hide the fields and clear localStorage
+                }
                 
                 // Move to step 2 after a short delay to allow UI to update
                 setTimeout(() => {
@@ -2503,7 +2520,7 @@ document.addEventListener('DOMContentLoaded', function() {
           .catch(error => {
             // Reset button state
             submitStraussButton.disabled = false;
-            submitStraussButton.innerHTML = 'זהה קופון שטראוס';
+            submitStraussButton.innerHTML = 'זהה קופון שטראוס פלוס';
             
             debug(`AJAX error: ${error}`);
             console.error('DEBUG: Error during Strauss fetch:', error);
@@ -2529,7 +2546,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (event.key === 'Escape') {
         straussUrlGroup.style.display = 'none';
         straussUrlInput.value = '';
-        submitStraussButton.innerHTML = 'זהה קופון שטראוס';
+        submitStraussButton.innerHTML = 'זהה קופון שטראוס פלוס';
       }
     });
   }
