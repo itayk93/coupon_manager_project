@@ -115,14 +115,21 @@
   .btn-logo {
     background-color: #17a2b8;
     color: white;
-    padding: 6px 12px;
+    padding: 6px 10px;
     border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .btn-logo:hover {
     background-color: #138496;
     color: white;
     text-decoration: none;
+    transform: translateY(-1px);
   }
 
   .btn-upload {
@@ -390,11 +397,19 @@
 
   .data-table td.actions-cell {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
   }
 
   .inline-form {
-    display: inline;
+    display: inline-block;
+    margin: 0;
+  }
+
+  .actions-cell .btn {
+    flex-shrink: 0;
   }
 
   /* Modal */
@@ -608,20 +623,30 @@
                     {% endif %}
                   </td>
                   <td class="actions-cell">
-                    <button class="btn btn-edit" onclick="editCompany({{ company.id }}, '{{ company.name }}')">
+                    <!-- Edit Button -->
+                    <button class="btn btn-edit" 
+                            onclick="editCompany({{ company.id }}, '{{ company.name }}')">
                       <i class="fas fa-edit"></i>
                     </button>
+                    
+                    <!-- Auto Search Button -->
                     <a href="{{ url_for('admin_companies_bp.find_logo_for_approval', company_id=company.id) }}" 
                        class="btn btn-logo" 
                        title="חיפוש לוגו אוטומטי">
                       <i class="fas fa-search"></i>
                     </a>
+                    
+                    <!-- Manual Upload Button -->
                     <button class="btn btn-upload" 
                             onclick="openUploadModal({{ company.id }}, '{{ company.name }}')"
                             title="העלאת לוגו ידנית">
                       <i class="fas fa-upload"></i>
                     </button>
-                    <form method="POST" action="{{ url_for('admin_companies_bp.delete_company', company_id=company.id) }}" class="inline-form delete-form">
+                    
+                    <!-- Delete Button -->
+                    <form method="POST" 
+                          action="{{ url_for('admin_companies_bp.delete_company', company_id=company.id) }}" 
+                          class="inline-form delete-form">
                       {{ delete_form.hidden_tag() }}
                       <input type="hidden" name="company_id" value="{{ company.id }}">
                       <button type="submit" class="btn btn-delete">
