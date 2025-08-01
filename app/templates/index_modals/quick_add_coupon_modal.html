@@ -88,6 +88,13 @@
                     
                     <div class="auto-detect-button-container">
                       <button type="button" class="submit-button auto-detect-button" id="submit_sms" name="submit_sms">זהה קופון</button>
+                      <button type="button" class="submit-button auto-detect-button strauss-button" id="submit_strauss_url" name="submit_strauss_url">זהה קופון שטראוס</button>
+                    </div>
+                    
+                    <!-- Strauss URL Input Field (Hidden by default) -->
+                    <div class="form-group" id="strauss_url_group" style="display: none;">
+                      <label for="strauss_url">הדבק כאן קישור לקופון שטראוס</label>
+                      <input type="text" id="strauss_url" name="strauss_url" class="input-field" placeholder="https://cc.strauss-group.com/Vouchers/VoucherInfo/?o_id=...">
                     </div>
                   </div>
                 </div>
@@ -905,6 +912,8 @@
     margin-top: 15px;
     display: flex;
     justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
   }
   
   #quickAddModal .auto-detect-button {
@@ -937,6 +946,25 @@
   /* # Add icon to auto-detect button */
   #quickAddModal .auto-detect-button::before {
     content: '\f002';  /* # Magnifying glass icon */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    margin-right: 8px;
+    font-size: 0.9em;
+  }
+  
+  /* # Strauss button styling */
+  #quickAddModal .strauss-button {
+    background-color: #e67e22;
+    margin-right: 5px;
+  }
+  
+  #quickAddModal .strauss-button:hover {
+    background-color: #d35400;
+    box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4);
+  }
+  
+  #quickAddModal .strauss-button::before {
+    content: '\f1c0';  /* # Database icon for Strauss */
     font-family: 'Font Awesome 5 Free';
     font-weight: 900;
     margin-right: 8px;
@@ -1031,6 +1059,12 @@
     #quickAddModal .auto-detect-button {
       width: 80%;
       padding: 10px 18px;
+      margin-bottom: 5px;
+    }
+    
+    #quickAddModal .auto-detect-button-container {
+      flex-direction: column;
+      align-items: center;
     }
     
     /* # Adjust swipe container height for mobile */
@@ -1067,6 +1101,7 @@
     #quickAddModal .auto-detect-button {
       width: 100%;
       font-size: 0.85em;
+      margin-bottom: 5px;
     }
     
     /* # Adjust form elements for very small screens */
@@ -1212,6 +1247,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const validationMessage = document.getElementById('quick_validation_message');
   const smsTextArea = document.getElementById('sms_text');
   const submitSmsButton = document.getElementById('submit_sms');
+  const straussUrlInput = document.getElementById('strauss_url');
+  const submitStraussButton = document.getElementById('submit_strauss_url');
+  const straussUrlGroup = document.getElementById('strauss_url_group');
   
   // # Navigation buttons
   const prevButtons = document.querySelectorAll('#quickAddModal .prev-button');
@@ -2119,6 +2157,145 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DEBUG: SMS button event listener attached');
   } else {
     console.error('DEBUG: submit_sms button not found');
+  }
+  
+  // # Strauss URL detection functionality
+  if (submitStraussButton) {
+    console.log('DEBUG: Found submit_strauss_url button');
+    
+    // Show/hide URL input field when button is clicked
+    submitStraussButton.addEventListener('click', function() {
+      debug('Strauss detect button clicked');
+      console.log('DEBUG: submit_strauss_url button clicked');
+      
+      // Toggle URL input field visibility
+      if (straussUrlGroup && straussUrlInput) {
+        if (straussUrlGroup.style.display === 'none' || straussUrlGroup.style.display === '') {
+          straussUrlGroup.style.display = 'block';
+          straussUrlInput.focus();
+          submitStraussButton.textContent = 'בטל';
+          return;
+        } else {
+          // Process the URL if it's already visible and has content
+          const straussUrl = straussUrlInput.value.trim();
+          
+          if (!straussUrl) {
+            alert('יש להזין קישור לקופון שטראוס');
+            straussUrlInput.focus();
+            return;
+          }
+          
+          // Validate URL format
+          if (!straussUrl.startsWith('https://cc.strauss-group.com/Vouchers/VoucherInfo/')) {
+            alert('קישור לא תקין. יש להזין קישור של קופון שטראוס');
+            straussUrlInput.focus();
+            return;
+          }
+          
+          // Show loading indicator
+          submitStraussButton.disabled = true;
+          submitStraussButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> מזהה...';
+          
+          // Create FormData object
+          const formData = new FormData();
+          formData.append('strauss_url', straussUrl);
+          formData.append('submit_strauss_url', 'true');
+          formData.append('is_ajax', 'true');
+          
+          // Add CSRF token if available
+          const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+          if (csrfToken) {
+            formData.append('csrf_token', csrfToken);
+            console.log('DEBUG: Added CSRF token for Strauss request');
+          } else {
+            console.warn('DEBUG: No CSRF token found for Strauss request');
+          }
+          
+          // Get the submit URL
+          const currentPath = window.location.pathname;
+          const submitUrl = currentPath.includes('/add_coupon') ? currentPath : '/add_coupon';
+          
+          debug(`Submitting Strauss URL to: ${submitUrl}`);
+          debug(`Strauss URL: ${straussUrl}`);
+          console.log('DEBUG: Submitting Strauss URL to:', submitUrl);
+          
+          // Send request to server
+          fetch(submitUrl, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+          })
+          .then(response => {
+            console.log('DEBUG: Strauss response status:', response.status);
+            if (!response.ok) {
+              debug(`Server response not OK: ${response.status} ${response.statusText}`);
+              throw new Error('Server responded with status: ' + response.status);
+            }
+            return response.json();
+          })
+          .then(data => {
+            // Reset button state
+            submitStraussButton.disabled = false;
+            submitStraussButton.textContent = 'זהה קופון שטראוס';
+            console.log('DEBUG: Strauss response data:', data);
+            
+            if (data.success) {
+              debug(`Strauss coupon detected successfully: ${data.message}`);
+              alert('קופון שטראוס זוהה בהצלחה!');
+              
+              // Hide URL input field
+              straussUrlGroup.style.display = 'none';
+              straussUrlInput.value = '';
+              
+              // Populate form fields with the detected data
+              if (data.data) {
+                fillFormWithData(data.data);
+                
+                // Move to step 2 after a short delay to allow UI to update
+                setTimeout(() => {
+                  debug('Moving to step 2 after Strauss detection');
+                  goToStep(2);
+                }, 500);
+              }
+            } else {
+              debug(`Error from server: ${data.message || 'Unknown error'}`);
+              alert(data.message || 'שגיאה בזיהוי קופון שטראוס. אנא נסה שנית.');
+            }
+          })
+          .catch(error => {
+            // Reset button state
+            submitStraussButton.disabled = false;
+            submitStraussButton.textContent = 'זהה קופון שטראוס';
+            
+            debug(`AJAX error: ${error}`);
+            console.error('DEBUG: Error during Strauss fetch:', error);
+            alert('שגיאה בתקשורת עם השרת. אנא ודא שהשרת פעיל ונסה שנית.');
+            
+            // Hide URL input field on error
+            straussUrlGroup.style.display = 'none';
+            straussUrlInput.value = '';
+          });
+        }
+      }
+    });
+    
+    debug('Strauss detection button handler attached');
+    console.log('DEBUG: Strauss button event listener attached');
+  } else {
+    console.error('DEBUG: submit_strauss_url button not found');
+  }
+  
+  // Handle escape key for Strauss URL input
+  if (straussUrlInput) {
+    straussUrlInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        straussUrlGroup.style.display = 'none';
+        straussUrlInput.value = '';
+        submitStraussButton.textContent = 'זהה קופון שטראוס';
+      }
+    });
   }
   
   // AJAX form submission handler

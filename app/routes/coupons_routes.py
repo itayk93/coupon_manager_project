@@ -1352,8 +1352,93 @@ def add_coupon():
         # Check for AJAX requests first - this is important for SMS detection
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             debug_print("Processing AJAX request")
+            # Check if this is a Strauss URL detection request
+            if request.form.get("submit_strauss_url") == "true":
+                debug_print("Processing Strauss URL detection request")
+                strauss_url = request.form.get("strauss_url", "").strip()
+                debug_print(f"Strauss URL received: {strauss_url}")
+                
+                if not strauss_url:
+                    debug_print("No Strauss URL provided", "WARNING")
+                    return jsonify(success=False, message="לא הוזן קישור לקופון שטראוס")
+                
+                # Validate URL format
+                if not strauss_url.startswith("https://cc.strauss-group.com/Vouchers/VoucherInfo/"):
+                    debug_print("Invalid Strauss URL format", "WARNING")
+                    return jsonify(success=False, message="קישור לא תקין. יש להזין קישור של קופון שטראוס")
+                
+                try:
+                    # Import required libraries for Strauss scraping
+                    import requests
+                    from bs4 import BeautifulSoup
+                    from datetime import datetime
+                    
+                    debug_print("Attempting to scrape Strauss coupon data")
+                    
+                    # Set headers to mimic a browser
+                    headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                    }
+                    
+                    # Fetch the page content
+                    response = requests.get(strauss_url, headers=headers, timeout=10)
+                    
+                    if response.status_code != 200:
+                        debug_print(f"Failed to fetch Strauss page. Status: {response.status_code}", "ERROR")
+                        return jsonify(success=False, message=f"שגיאה בגישה לעמוד. קוד שגיאה: {response.status_code}")
+                    
+                    # Parse HTML content
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    
+                    # Extract coupon data
+                    try:
+                        # Extract coupon name
+                        coupon_name_raw = soup.find('h1').get_text(strip=True)
+                        
+                        # Extract value from coupon name
+                        import re
+                        coupon_value_match = re.search(r'(\d+)', coupon_name_raw)
+                        coupon_value = int(coupon_value_match.group(1)) if coupon_value_match else None
+                        
+                        # Extract coupon code
+                        coupon_code = soup.find('span', class_='value').get_text(strip=True)
+                        
+                        # Extract expiration date
+                        expiration_date_html = soup.find('span', class_='expiration').find('span').get_text(strip=True)
+                        
+                        # Convert date format from DD.MM.YYYY to YYYY-MM-DD
+                        date_object = datetime.strptime(expiration_date_html, "%d.%m.%Y")
+                        formatted_date = date_object.strftime("%Y-%m-%d")
+                        
+                        # Extract description
+                        description = soup.find('div', class_='description-warp').find('strong').get_text(strip=True)
+                        
+                        # Prepare extracted data
+                        extracted_data = {
+                            "קוד קופון": coupon_code,
+                            "ערך מקורי": coupon_value,
+                            "חברה": coupon_name_raw,
+                            "תיאור": description,
+                            "תאריך תפוגה": formatted_date,
+                            "מאיפה קיבלת את הקופון": "שטראוס"
+                        }
+                        
+                        debug_print(f"Successfully extracted Strauss coupon data: {extracted_data}")
+                        return jsonify(success=True, message="קופון שטראוס זוהה בהצלחה!", data=extracted_data)
+                        
+                    except AttributeError as e:
+                        debug_print(f"Failed to parse Strauss page content: {e}", "ERROR")
+                        return jsonify(success=False, message="שגיאה בפענוח נתוני הקופון. ייתכן שמבנה הדף השתנה")
+                        
+                except requests.exceptions.RequestException as e:
+                    debug_print(f"Network error while fetching Strauss page: {e}", "ERROR")
+                    return jsonify(success=False, message="שגיאת רשת. נא לבדוק את החיבור לאינטרנט ולנסות שוב")
+                except Exception as e:
+                    debug_print(f"Unexpected error in Strauss scraping: {e}", "ERROR")
+                    return jsonify(success=False, message="שגיאה לא צפויה. נא לנסות שוב")
+
             # Check if this is an SMS detection request
-            if request.form.get("submit_sms") == "true":
+            elif request.form.get("submit_sms") == "true":
                 debug_print("Processing SMS detection request")
                 # Get the SMS text from the form
                 sms_text = request.form.get("sms_text", "")
