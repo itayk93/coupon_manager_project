@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import Company, AdminSettings
 from app.forms import CompanyManagementForm, DeleteCompanyForm
-from app.utils.logo_fetcher import fetch_company_logo
+from app.utils.logo_fetcher import fetch_company_logo_auto_approve
 
 admin_companies_bp = Blueprint(
     "admin_companies_bp", __name__, url_prefix="/admin/companies"
@@ -35,7 +35,7 @@ def manage_companies():
         
         # ניסיון לחיפוש לוגו אוטומטי
         try:
-            logo_success = fetch_company_logo(company_name, new_company.id)
+            logo_success = fetch_company_logo_auto_approve(company_name, new_company.id)
             if logo_success:
                 flash(f"חברה חדשה נוספה בהצלחה עם לוגו: {company_name}!", "success")
             else:
@@ -132,7 +132,7 @@ def fetch_missing_logos():
         
         for company in companies_without_logos:
             try:
-                if fetch_company_logo(company.name, company.id):
+                if fetch_company_logo_auto_approve(company.name, company.id):
                     success_count += 1
             except Exception as e:
                 print(f"Failed to fetch logo for {company.name}: {e}")

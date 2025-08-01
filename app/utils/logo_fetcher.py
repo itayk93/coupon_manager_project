@@ -40,13 +40,22 @@ class LogoFetcher:
         from app.models import AdminSettings
         return AdminSettings.get_setting('auto_fetch_company_logos', default=True)
     
-    def clean_company_name_for_domain(self, company_name):
+    def get_domain_suggestions(self, company_name):
         """
-        Convert company name to a potential domain name
-        מחסני חשמל -> machsaney-chashmal
-        מקדונלדס -> mcdonalds
+        Get domain suggestions using AI translation and fallback methods
         """
-        # Basic cleaning - remove Hebrew characters, special chars
+        try:
+            from app.utils.company_translator import CompanyTranslator
+            translator = CompanyTranslator()
+            return translator.get_company_domain_suggestions(company_name)
+        except Exception as e:
+            logger.warning(f"AI translation failed for {company_name}, using fallback: {str(e)}")
+            return self.clean_company_name_for_domain_fallback(company_name)
+    
+    def clean_company_name_for_domain_fallback(self, company_name):
+        """
+        Fallback method - Convert company name to potential domain names without AI
+        """
         import re
         
         # Common Hebrew to English mappings for major companies
@@ -73,69 +82,59 @@ class LogoFetcher:
         
         # Check if we have a direct mapping
         if company_lower in hebrew_to_english:
-            return hebrew_to_english[company_lower]
+            base_name = hebrew_to_english[company_lower]
+        else:
+            # Generic cleaning for other names
+            cleaned = re.sub(r'[^\w\s-]', '', company_name)
+            cleaned = re.sub(r'\s+', '-', cleaned.strip())
+            base_name = cleaned.lower() if cleaned else company_name.lower()
         
-        # Generic cleaning for other names
-        # Remove Hebrew characters and keep only English letters, numbers, and hyphens
-        cleaned = re.sub(r'[^\w\s-]', '', company_name)
-        cleaned = re.sub(r'\s+', '-', cleaned.strip())
-        cleaned = cleaned.lower()
-        
-        return cleaned if cleaned else company_name.lower()
+        # Return domain variations
+        return [
+            f"{base_name}.com",
+            f"{base_name}.co.il", 
+            f"{base_name}.co.uk",
+            f"{base_name}.org",
+            base_name
+        ]
     
     def fetch_logo_from_clearbit(self, company_name):
-        """Fetch logo from Clearbit API"""
+        """Fetch logo from Clearbit API using AI-enhanced domain suggestions"""
         try:
-            domain = self.clean_company_name_for_domain(company_name)
+            domain_suggestions = self.get_domain_suggestions(company_name)
             
-            # Try different domain variations
-            domain_variations = [
-                f"{domain}.com",
-                f"{domain}.co.il", 
-                f"{domain}.co.uk",
-                f"{domain}.org",
-                domain
-            ]
-            
-            for domain_var in domain_variations:
+            for domain_var in domain_suggestions:
                 url = self.CLEARBIT_API.format(domain=domain_var)
                 logger.info(f"Trying Clearbit API for {company_name} with domain: {domain_var}")
                 
                 response = requests.get(url, timeout=self.TIMEOUT)
                 if response.status_code == 200 and len(response.content) > 1000:  # Ensure it's not just an error image
                     logger.info(f"Successfully fetched logo from Clearbit for {company_name}")
-                    return response.content
+                    return response.content, domain_var  # Return both content and successful domain
                     
         except Exception as e:
             logger.warning(f"Clearbit API failed for {company_name}: {str(e)}")
         
-        return None
+        return None, None
     
     def fetch_logo_from_google_favicon(self, company_name):
-        """Fetch logo from Google Favicon API"""
+        """Fetch logo from Google Favicon API using AI-enhanced domain suggestions"""
         try:
-            domain = self.clean_company_name_for_domain(company_name)
+            domain_suggestions = self.get_domain_suggestions(company_name)
             
-            # Try different domain variations
-            domain_variations = [
-                f"{domain}.com",
-                f"{domain}.co.il",
-                f"www.{domain}.com"
-            ]
-            
-            for domain_var in domain_variations:
+            for domain_var in domain_suggestions[:3]:  # Try only first 3 for favicon
                 url = self.GOOGLE_FAVICON_API.format(domain=domain_var)
                 logger.info(f"Trying Google Favicon API for {company_name} with domain: {domain_var}")
                 
                 response = requests.get(url, timeout=self.TIMEOUT)
                 if response.status_code == 200 and len(response.content) > 500:
                     logger.info(f"Successfully fetched favicon from Google for {company_name}")
-                    return response.content
+                    return response.content, domain_var  # Return both content and successful domain
                     
         except Exception as e:
             logger.warning(f"Google Favicon API failed for {company_name}: {str(e)}")
         
-        return None
+        return None, None
     
     def process_and_save_image(self, image_data, company_name, company_id):
         """Process the downloaded image and save it"""
@@ -187,7 +186,7 @@ class LogoFetcher:
     def fetch_company_logo(self, company_name, company_id):
         """
         Main method to fetch and process company logo
-        Returns the relative path to the saved logo or None if failed
+        Returns dict with logo info for approval or None if failed
         """
         
         # Check if auto-fetch is enabled
@@ -198,15 +197,27 @@ class LogoFetcher:
         logger.info(f"Starting logo fetch for company: {company_name} (ID: {company_id})")
         
         # Try Clearbit first (higher quality)
-        image_data = self.fetch_logo_from_clearbit(company_name)
+        image_data, found_domain = self.fetch_logo_from_clearbit(company_name)
+        source = "Clearbit API"
         
         # Fallback to Google Favicon
         if not image_data:
-            image_data = self.fetch_logo_from_google_favicon(company_name)
+            image_data, found_domain = self.fetch_logo_from_google_favicon(company_name)
+            source = "Google Favicon API"
         
         # Process and save the image
         if image_data:
-            return self.process_and_save_image(image_data, company_name, company_id)
+            relative_path = self.process_and_save_image(image_data, company_name, company_id)
+            if relative_path:
+                return {
+                    'success': True,
+                    'company_name': company_name,
+                    'company_id': company_id,
+                    'logo_path': relative_path,
+                    'found_domain': found_domain,
+                    'source': source,
+                    'image_size': len(image_data)
+                }
         
         logger.warning(f"No logo found for company: {company_name}")
         return None
@@ -235,33 +246,63 @@ class LogoFetcher:
     def fetch_and_update_company_logo(self, company_name, company_id):
         """
         Complete workflow: fetch logo and update database
-        Returns True if successful, False otherwise
+        Returns logo info dict for approval or None if failed
         """
         try:
-            logo_path = self.fetch_company_logo(company_name, company_id)
+            logo_info = self.fetch_company_logo(company_name, company_id)
             
-            if logo_path:
-                success = self.update_company_logo_path(company_id, logo_path)
-                if success:
-                    logger.info(f"Successfully fetched and updated logo for {company_name}")
-                    return True
+            if logo_info and logo_info.get('success'):
+                # Don't automatically update database - return info for approval
+                logger.info(f"Successfully fetched logo for {company_name}, awaiting approval")
+                return logo_info
             
             # If we reach here, logo fetch failed - set default logo
             self.update_company_logo_path(company_id, "images/default_logo.png")
             logger.info(f"Set default logo for {company_name}")
-            return False
+            return None
             
         except Exception as e:
             logger.error(f"Complete logo fetch workflow failed for {company_name}: {str(e)}")
             # Ensure company has some logo path
             self.update_company_logo_path(company_id, "images/default_logo.png")
+            return None
+
+    def approve_and_save_logo(self, logo_info):
+        """
+        Approve and save the logo to the database
+        """
+        try:
+            if not logo_info or not logo_info.get('success'):
+                return False
+                
+            company_id = logo_info['company_id']
+            logo_path = logo_info['logo_path']
+            
+            success = self.update_company_logo_path(company_id, logo_path)
+            if success:
+                logger.info(f"Approved and saved logo for {logo_info['company_name']}")
+                return True
+            return False
+            
+        except Exception as e:
+            logger.error(f"Failed to approve and save logo: {str(e)}")
             return False
 
 
-# Convenience function for easy import
+# Convenience functions for easy import
 def fetch_company_logo(company_name, company_id):
     """
-    Convenience function to fetch logo for a company
+    Convenience function to fetch logo for a company (returns info for approval)
     """
     fetcher = LogoFetcher()
     return fetcher.fetch_and_update_company_logo(company_name, company_id)
+
+def fetch_company_logo_auto_approve(company_name, company_id):
+    """
+    Convenience function to fetch and auto-approve logo (backward compatibility)
+    """
+    fetcher = LogoFetcher()
+    logo_info = fetcher.fetch_and_update_company_logo(company_name, company_id)
+    if logo_info:
+        return fetcher.approve_and_save_logo(logo_info)
+    return False
