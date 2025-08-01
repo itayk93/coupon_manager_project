@@ -81,6 +81,15 @@
     background-color: #e2e6ea;
   }
 
+  .btn-info {
+    background-color: #17a2b8;
+    color: white;
+  }
+
+  .btn-info:hover {
+    background-color: #138496;
+  }
+
   .btn-delete {
     background-color: var(--danger-color);
     color: white;
@@ -101,6 +110,29 @@
 
   .btn-edit:hover {
     background-color: #2980b9;
+  }
+
+  /* Admin Actions */
+  .admin-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .admin-actions .btn {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 768px) {
+    .admin-actions {
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .admin-actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
   }
 
   /* Card/Panel Styles */
@@ -360,6 +392,14 @@
         <button id="addCompanyBtn" class="btn btn-primary">
           <i class="fas fa-plus"></i> הוספת חברה חדשה
         </button>
+        <a href="{{ url_for('admin_companies_bp.company_settings') }}" class="btn btn-secondary">
+          <i class="fas fa-cog"></i> הגדרות לוגואים
+        </a>
+        <form method="POST" action="{{ url_for('admin_companies_bp.fetch_missing_logos') }}" style="display: inline;">
+          <button type="submit" class="btn btn-info" onclick="return confirm('האם אתה בטוח שברצונך לחפש לוגואים עבור כל החברות ללא לוגו? זה עלול לקחת זמן.');">
+            <i class="fas fa-download"></i> חיפוש לוגואים חסרים
+          </button>
+        </form>
       </div>
     </header>
 

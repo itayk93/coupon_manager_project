@@ -192,8 +192,9 @@ The application uses Flask Blueprints organized in `app/routes/`:
 ### Auto-Commit Process:
 1. Run `git status` to check for changes
 2. Add all changes with `git add .`
-3. Commit with descriptive message following this format: `git commit -m "Brief description of changes made"`
-4. **Update git_commits_log.xlsx with commit details**
-5. **DO NOT ask for permission** - this should be done automatically
+3. **Commit with descriptive message in ENGLISH following this format**: `git commit -m "Brief description of changes made in English"`
+4. **ALL COMMIT MESSAGES MUST BE WRITTEN IN ENGLISH** - never use Hebrew or other languages
+5. **Update git_commits_log.xlsx with commit details**
+6. **DO NOT ask for permission** - this should be done automatically
 
 Remember: Always keep `PROJECT_DOCUMENTATION.md` synchronized with code changes to maintain accurate route documentation!
