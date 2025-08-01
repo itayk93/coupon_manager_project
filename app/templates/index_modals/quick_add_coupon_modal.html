@@ -328,10 +328,10 @@
   
   /* # === Modern Color Variables & Design System === */
   :root {
-    /* # Primary brand colors */
-    --primary-color: #6366f1;       /* # Modern indigo */
-    --primary-hover: #4f46e5;       /* # Darker indigo */
-    --primary-light: #e0e7ff;       /* # Light indigo background */
+    /* # Primary brand colors - Site matching */
+    --primary-color: #A9CCE3;       /* # Site blue color */
+    --primary-hover: #85B2DF;       /* # Darker site blue */
+    --primary-light: #E6F3FF;       /* # Light site blue background */
     
     /* # Semantic colors */
     --success-color: #10b981;       /* # Modern green */
@@ -421,7 +421,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: var(--space-4);
+    padding: 0;
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-normal);
@@ -436,9 +436,10 @@
   #quickAddModal .modal-content {
     direction: rtl;
     background: var(--bg-primary);
-    width: 100%;
-    max-width: 480px;
-    max-height: 90vh;
+    width: 95%;
+    max-width: 520px;
+    height: 85vh;
+    max-height: 700px;
     border-radius: var(--radius-2xl);
     box-shadow: var(--shadow-xl);
     position: relative;
@@ -520,7 +521,7 @@
   #quickAddModal .swipe-container {
     position: relative;
     width: 100%;
-    height: 520px;
+    height: calc(100% - 80px); /* Full height minus header */
     overflow: hidden;
     background: var(--bg-primary);
   }
@@ -705,7 +706,7 @@
   
   #quickAddModal .input-field:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 4px rgba(169, 204, 227, 0.2);
     outline: none;
     background: #ffffff;
     transform: translateY(-1px);
@@ -944,7 +945,7 @@
     background: var(--primary-color);
     transform: scale(1.3);
     border-color: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 0 0 3px rgba(169, 204, 227, 0.3);
   }
   
   #quickAddModal .dot.active::after {
@@ -1032,9 +1033,9 @@
   #quickAddModal .auto-detect-section {
     margin: var(--space-6) 0;
     padding: var(--space-6);
-    background: linear-gradient(135deg, var(--primary-light) 0%, rgba(99, 102, 241, 0.05) 100%);
+    background: linear-gradient(135deg, var(--primary-light) 0%, rgba(169, 204, 227, 0.1) 100%);
     border-radius: var(--radius-xl);
-    border: 2px solid rgba(99, 102, 241, 0.1);
+    border: 2px solid rgba(169, 204, 227, 0.2);
     box-shadow: var(--shadow-md);
     text-align: center;
     position: relative;
@@ -1183,14 +1184,15 @@
   /* # === Modern Mobile Responsive Design === */
   @media (max-width: 768px) {
     #quickAddModal.modal {
-      padding: var(--space-2);
+      padding: 0;
       align-items: flex-end;
     }
     
     #quickAddModal .modal-content {
       width: 100%;
       max-width: none;
-      max-height: 85vh;
+      height: 90vh;
+      max-height: none;
       border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
       margin: 0;
     }
@@ -1219,7 +1221,7 @@
     }
     
     #quickAddModal .swipe-container {
-      height: 460px;
+      height: calc(100% - 70px); /* Full height minus smaller mobile header */
     }
     
     /* # Tooltip handling for mobile */
