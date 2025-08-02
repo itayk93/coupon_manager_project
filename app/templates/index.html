@@ -237,6 +237,263 @@
 <!-- Quick Add Coupon Modal Container -->
 <div id="quickAddCouponModal" class="modal"></div>
 
+<!-- Multipass Coupon Selection Modal -->
+<div class="custom-modal-overlay" id="multipassCouponSelectionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 9999;">
+    <div class="custom-modal-content" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 16px; width: 90%; max-width: 900px; max-height: 85vh; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); overflow: hidden; direction: rtl; z-index: 10000;">
+        <div class="modal-header" style="background: #6B7280; color: white; padding: 16px 20px; position: relative;">
+            <div style="display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: center; width: 100%;">
+                <button type="button" class="close-modal" onclick="closeMultipassModal()" style="color: white; font-size: 24px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; padding: 4px; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.2); border: none; outline: none; margin-left: 8px;">&times;</button>
+                <h3 style="font-size: 18px; font-weight: 700; margin: 0; flex: 1; color: white;">
+                    <i class="fas fa-clipboard-check" style="font-size: 20px; margin-left: 8px;"></i>
+                    בחירת קופונים לעדכון מ-Multipass
+                </h3>
+            </div>
+        </div>
+        <div class="modal-body" style="padding: 20px; background: white; overflow-y: auto; max-height: calc(85vh - 120px);">
+            <!-- Loading Spinner -->
+            <div id="couponsLoadingSpinner" style="text-align: center; padding: 40px;">
+                <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p style="margin-top: 16px; color: #6B7280; font-size: 16px;">טוען קופונים...</p>
+            </div>
+            
+            <!-- Coupon Selection Container -->
+            <div id="multipassCouponsContainer" style="display: none;">
+                <!-- Select All/Deselect All Controls -->
+                <div id="selectionActions" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <button type="button" id="selectAllCoupons" class="btn btn-sm btn-outline-primary" style="padding: 6px 12px; font-size: 14px; border-radius: 6px; border: 1px solid #007bff; background: white; color: #007bff; transition: all 0.3s ease;">
+                                <i class="fas fa-check-square" style="margin-left: 5px;"></i>
+                                בחר הכל
+                            </button>
+                            <button type="button" id="deselectAllCoupons" class="btn btn-sm btn-outline-secondary" style="padding: 6px 12px; font-size: 14px; border-radius: 6px; border: 1px solid #6c757d; background: white; color: #6c757d; transition: all 0.3s ease;">
+                                <i class="fas fa-square" style="margin-left: 5px;"></i>
+                                בטל בחירת הכל
+                            </button>
+                        </div>
+                        <div id="selectedCount" style="color: #495057; font-weight: 600;">
+                            נבחרו: <span id="selectionCounter">0</span> קופונים
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Update Progress (hidden by default) -->
+                <div id="updateProgress" style="display: none; margin-bottom: 20px; padding: 15px; background: #e7f3ff; border-radius: 8px; border: 1px solid #b3d9ff;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <span style="color: #0056b3; font-weight: 600;">מעדכן קופונים נבחרים...</span>
+                    </div>
+                </div>
+
+                <!-- Coupons List -->
+                <div id="updatableCouponsList" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Coupons will be loaded here dynamically -->
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="background: #f8f9fa; padding: 16px 20px; border-top: 1px solid #e9ecef; display: flex; justify-content: space-between; gap: 12px;">
+            <button type="button" class="btn btn-secondary" onclick="closeMultipassModal()" style="padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: 8px; border: 1px solid #6c757d; background: #6c757d; color: white; transition: all 0.3s ease;">
+                <i class="fas fa-times" style="margin-left: 5px;"></i>
+                ביטול
+            </button>
+            <button type="button" id="updateSelectedBtn" class="btn btn-primary" style="padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: 8px; border: 1px solid #007bff; background: #007bff; color: white; transition: all 0.3s ease;" disabled>
+                <i class="fas fa-sync-alt" style="margin-left: 5px;"></i>
+                עדכן קופונים נבחרים
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .multipass-coupon-item {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 16px;
+        background: white;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .multipass-coupon-item:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-color: #007bff;
+    }
+    
+    .multipass-coupon-item.selected {
+        border-color: #007bff;
+        background: #f8f9ff;
+    }
+    
+    .multipass-coupon-checkbox {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 18px;
+        height: 18px;
+        accent-color: #007bff;
+    }
+    
+    .multipass-coupon-content {
+        padding-right: 40px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+        align-items: center;
+    }
+    
+    .multipass-coupon-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .multipass-coupon-code {
+        font-weight: 700;
+        font-size: 16px;
+        color: #212529;
+        direction: ltr;
+        text-align: right;
+    }
+    
+    .multipass-coupon-company {
+        color: #6c757d;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    .multipass-coupon-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+    }
+    
+    .multipass-coupon-value {
+        font-weight: 600;
+        color: #28a745;
+        font-size: 15px;
+    }
+    
+    .multipass-coupon-remaining {
+        color: #ffc107;
+        font-size: 13px;
+    }
+    
+    .multipass-coupon-auto-download {
+        color: #17a2b8;
+        font-size: 12px;
+        font-style: italic;
+    }
+    
+    .multipass-coupon-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        text-align: left;
+        font-size: 13px;
+    }
+    
+    .multipass-coupon-expiry {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    .multipass-coupon-last-used {
+        color: #6c757d;
+    }
+    
+    .multipass-coupon-owner {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    #selectAllCoupons:hover {
+        background: #007bff !important;
+        color: white !important;
+    }
+    
+    #deselectAllCoupons:hover {
+        background: #6c757d !important;
+        color: white !important;
+    }
+    
+    .close-modal:hover {
+        background: rgba(255, 255, 255, 0.3) !important;
+        transform: scale(1.1);
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .custom-modal-content {
+            width: 95% !important;
+            max-width: none !important;
+            max-height: 90vh !important;
+        }
+        
+        .multipass-coupon-content {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+            text-align: right !important;
+        }
+        
+        .multipass-coupon-details,
+        .multipass-coupon-meta {
+            text-align: right !important;
+        }
+        
+        .modal-header {
+            padding: 14px 16px !important;
+        }
+        
+        .modal-header h3 {
+            font-size: 16px !important;
+        }
+        
+        .modal-body {
+            padding: 16px !important;
+        }
+        
+        .modal-footer {
+            padding: 12px 16px !important;
+            flex-direction: column !important;
+        }
+        
+        .modal-footer button {
+            width: 100% !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .custom-modal-content {
+            width: 98% !important;
+            max-height: 95vh !important;
+        }
+        
+        .multipass-coupon-checkbox {
+            top: 12px !important;
+            right: 12px !important;
+        }
+        
+        .multipass-coupon-content {
+            padding-right: 35px !important;
+        }
+        
+        .multipass-coupon-item {
+            padding: 12px !important;
+        }
+    }
+</style>
+
 <div class="export-buttons">
     <a href="{{ url_for('export.export_excel') }}" class="export-button">
         <i class="fas fa-file-excel" aria-hidden="true"></i> ייצא ל-Excel
@@ -247,13 +504,11 @@
 </div>
 
 {% if current_user.is_admin %}
-<form action="{{ url_for('coupons.update_all_active_coupons') }}" method="post"
-      style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
-    {{ usage_form.hidden_tag() }}
-    <button type="submit" class="action-button small-button multipass-update-button">
+<div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+    <button type="button" class="action-button small-button multipass-update-button" onclick="openMultipassModal()">
       <i class="fa fa-refresh"></i> עדכן את כל הקופונים הפעילים מ-Multipass
-  </button>
-</form>
+    </button>
+</div>
 {% endif %}
 
 <!-- Hidden data for statistics -->
@@ -2592,6 +2847,395 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 });
+
+// Multipass Modal Functions
+function openMultipassModal() {
+    const modal = document.getElementById('multipassCouponSelectionModal');
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        
+        // Load updatable coupons when modal opens
+        loadUpdatableCoupons();
+    }
+}
+
+function closeMultipassModal() {
+    const modal = document.getElementById('multipassCouponSelectionModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('multipassCouponSelectionModal');
+    if (event.target === modal) {
+        closeMultipassModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modal = document.getElementById('multipassCouponSelectionModal');
+        if (modal && modal.style.display === 'block') {
+            closeMultipassModal();
+        }
+    }
+});
+
+// Comprehensive JavaScript functions for updatable coupons functionality
+
+/**
+ * Loads updatable coupons from the server and populates the modal
+ */
+async function loadUpdatableCoupons() {
+    const couponsList = document.getElementById('updatableCouponsList');
+    const loadingSpinner = document.getElementById('couponsLoadingSpinner');
+    const selectionActions = document.getElementById('selectionActions');
+    
+    if (!couponsList) return;
+    
+    // Show loading spinner
+    if (loadingSpinner) {
+        loadingSpinner.style.display = 'block';
+    }
+    
+    // Hide selection actions during loading
+    if (selectionActions) {
+        selectionActions.style.display = 'none';
+    }
+    
+    // Clear existing content
+    couponsList.innerHTML = '';
+    
+    try {
+        const response = await fetch('/get_updatable_coupons', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.coupons && data.coupons.length > 0) {
+                displayCouponsInModal(data.coupons);
+                
+                // Show selection actions
+                if (selectionActions) {
+                    selectionActions.style.display = 'block';
+                }
+            } else {
+                couponsList.innerHTML = '<div class="text-center py-4"><p class="text-muted">אין קופונים זמינים לעדכון</p></div>';
+            }
+        } else {
+            throw new Error(data.message || 'Failed to load coupons');
+        }
+        
+    } catch (error) {
+        console.error('Error loading updatable coupons:', error);
+        couponsList.innerHTML = '<div class="text-center py-4"><p class="text-danger">שגיאה בטעינת הקופונים. אנא נסה שוב.</p></div>';
+        
+        // Show error flash message
+        showFlashMessage('שגיאה בטעינת הקופונים: ' + error.message, 'danger');
+    } finally {
+        // Hide loading spinner
+        if (loadingSpinner) {
+            loadingSpinner.style.display = 'none';
+        }
+    }
+}
+
+/**
+ * Displays coupons in the modal with proper formatting
+ */
+function displayCouponsInModal(coupons) {
+    const couponsList = document.getElementById('updatableCouponsList');
+    if (!couponsList) return;
+    
+    let html = '';
+    
+    coupons.forEach(coupon => {
+        const imageUrl = coupon.image_url || '/static/images/default_coupon.png';
+        const expiryDate = coupon.expiry_date ? new Date(coupon.expiry_date).toLocaleDateString('he-IL') : 'לא מוגדר';
+        const companyName = coupon.company_name || 'לא מוגדר';
+        const description = coupon.description || '';
+        const truncatedDescription = description.length > 100 ? description.substring(0, 100) + '...' : description;
+        
+        html += `
+            <div class="coupon-item border rounded p-3 mb-3" data-coupon-id="${coupon.id}">
+                <div class="form-check d-flex align-items-start">
+                    <input class="form-check-input me-3 mt-1 coupon-checkbox" 
+                           type="checkbox" 
+                           value="${coupon.id}" 
+                           id="coupon_${coupon.id}"
+                           onchange="updateSelectionCount()">
+                    
+                    <div class="flex-grow-1">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <img src="${imageUrl}" 
+                                     alt="תמונת קופון" 
+                                     class="img-fluid rounded" 
+                                     style="max-height: 80px; object-fit: cover;"
+                                     onerror="this.src='/static/images/default_coupon.png'">
+                            </div>
+                            <div class="col-md-9">
+                                <label for="coupon_${coupon.id}" class="form-check-label w-100">
+                                    <h6 class="mb-2 fw-bold">${companyName}</h6>
+                                    <p class="mb-1 text-muted small">${truncatedDescription}</p>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar-alt me-1"></i>
+                                                תאריך תפוגה: ${expiryDate}
+                                            </small>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <small class="text-muted">
+                                                <i class="fas fa-tag me-1"></i>
+                                                מזהה: #${coupon.id}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    couponsList.innerHTML = html;
+    
+    // Update selection count
+    updateSelectionCount();
+}
+
+/**
+ * Selects all coupons in the modal
+ */
+function selectAllCoupons() {
+    const checkboxes = document.querySelectorAll('.coupon-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateSelectionCount();
+}
+
+/**
+ * Deselects all coupons in the modal
+ */
+function deselectAllCoupons() {
+    const checkboxes = document.querySelectorAll('.coupon-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelectionCount();
+}
+
+/**
+ * Updates the selection counter display
+ */
+function updateSelectionCount() {
+    const checkboxes = document.querySelectorAll('.coupon-checkbox:checked');
+    const counter = document.getElementById('selectionCounter');
+    const updateButton = document.getElementById('updateSelectedBtn');
+    
+    const selectedCount = checkboxes.length;
+    
+    if (counter) {
+        counter.textContent = `נבחרו ${selectedCount} קופונים`;
+    }
+    
+    // Enable/disable update button based on selection
+    if (updateButton) {
+        updateButton.disabled = selectedCount === 0;
+        if (selectedCount === 0) {
+            updateButton.classList.add('disabled');
+        } else {
+            updateButton.classList.remove('disabled');
+        }
+    }
+}
+
+/**
+ * Updates selected coupons by sending their IDs to the server
+ */
+async function updateSelectedCoupons() {
+    const checkboxes = document.querySelectorAll('.coupon-checkbox:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    
+    if (selectedIds.length === 0) {
+        showFlashMessage('אנא בחר לפחות קופון אחד לעדכון', 'warning');
+        return;
+    }
+    
+    // Show progress modal
+    updateModalProgress('preparing', selectedIds.length);
+    
+    try {
+        const response = await fetch('/update_selected_coupons', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                coupon_ids: selectedIds
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            updateModalProgress('completed', selectedIds.length, data);
+            
+            // Show success message
+            const successMessage = `עודכנו בהצלחה ${data.updated_count || selectedIds.length} קופונים`;
+            showFlashMessage(successMessage, 'success');
+            
+            // Close modal after a short delay
+            setTimeout(() => {
+                closeMultipassModal();
+                // Optionally reload the page to show updated coupons
+                window.location.reload();
+            }, 2000);
+            
+        } else {
+            throw new Error(data.message || 'עדכון הקופונים נכשל');
+        }
+        
+    } catch (error) {
+        console.error('Error updating coupons:', error);
+        updateModalProgress('error', selectedIds.length, { error: error.message });
+        showFlashMessage('שגיאה בעדכון הקופונים: ' + error.message, 'danger');
+    }
+}
+
+/**
+ * Shows progress during the update process
+ */
+function updateModalProgress(stage, totalCount, data = {}) {
+    const progressContainer = document.getElementById('updateProgress');
+    const couponsList = document.getElementById('updatableCouponsList');
+    const selectionActions = document.getElementById('selectionActions');
+    
+    if (!progressContainer) return;
+    
+    let html = '';
+    
+    switch (stage) {
+        case 'preparing':
+            html = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">טוען...</span>
+                    </div>
+                    <h5>מכין עדכון עבור ${totalCount} קופונים...</h5>
+                    <p class="text-muted">אנא המתן, התהליך עשוי לקחת כמה רגעים</p>
+                </div>
+            `;
+            break;
+            
+        case 'completed':
+            const updatedCount = data.updated_count || totalCount;
+            const failedCount = totalCount - updatedCount;
+            
+            html = `
+                <div class="text-center py-4">
+                    <div class="text-success mb-3">
+                        <i class="fas fa-check-circle fa-3x"></i>
+                    </div>
+                    <h5 class="text-success">העדכון הושלם בהצלחה!</h5>
+                    <div class="mt-3">
+                        <p><strong>עודכנו בהצלחה:</strong> ${updatedCount} קופונים</p>
+                        ${failedCount > 0 ? `<p class="text-warning"><strong>נכשלו:</strong> ${failedCount} קופונים</p>` : ''}
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">הדף יתרענן אוטומטית בעוד כמה שניות...</small>
+                    </div>
+                </div>
+            `;
+            break;
+            
+        case 'error':
+            html = `
+                <div class="text-center py-4">
+                    <div class="text-danger mb-3">
+                        <i class="fas fa-exclamation-triangle fa-3x"></i>
+                    </div>
+                    <h5 class="text-danger">שגיאה בעדכון הקופונים</h5>
+                    <p class="text-muted mt-3">${data.error || 'אירעה שגיאה לא צפויה'}</p>
+                    <button type="button" class="btn btn-primary mt-3" onclick="loadUpdatableCoupons()">
+                        נסה שוב
+                    </button>
+                </div>
+            `;
+            break;
+    }
+    
+    progressContainer.innerHTML = html;
+    progressContainer.style.display = 'block';
+    
+    // Hide other sections during progress
+    if (couponsList) {
+        couponsList.style.display = stage === 'preparing' || stage === 'completed' || stage === 'error' ? 'none' : 'block';
+    }
+    if (selectionActions) {
+        selectionActions.style.display = stage === 'preparing' || stage === 'completed' || stage === 'error' ? 'none' : 'block';
+    }
+}
+
+/**
+ * Shows flash messages (utility function)
+ */
+function showFlashMessage(message, category = 'info') {
+    // Check if flash message container exists
+    let flashContainer = document.getElementById('flash-messages');
+    
+    if (!flashContainer) {
+        // Create flash messages container if it doesn't exist
+        flashContainer = document.createElement('div');
+        flashContainer.id = 'flash-messages';
+        flashContainer.className = 'position-fixed top-0 start-50 translate-middle-x';
+        flashContainer.style.zIndex = '9999';
+        flashContainer.style.marginTop = '20px';
+        document.body.appendChild(flashContainer);
+    }
+    
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
+    alertDiv.setAttribute('role', 'alert');
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Add to container
+    flashContainer.appendChild(alertDiv);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
 </script>
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
 

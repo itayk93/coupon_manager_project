@@ -3977,6 +3977,39 @@ def update_coupon_usage_route(id):
     )
 
 
+@coupons_bp.route("/get_updatable_coupons", methods=["GET"])
+@login_required
+def get_updatable_coupons():
+    """
+    קבלת רשימת הקופונים הניתנים לעדכון עבור modal הבחירה
+    """
+    if not current_user.is_admin:
+        return jsonify({"error": "אין הרשאה"}), 403
+
+    updatable_coupons = Coupon.query.filter(
+        Coupon.status == "פעיל",
+        Coupon.is_one_time == False,
+        Coupon.auto_download_details.isnot(None),
+    ).all()
+
+    coupons_data = []
+    for coupon in updatable_coupons:
+        coupons_data.append({
+            'id': coupon.id,
+            'code': coupon.code,
+            'company': coupon.company,
+            'value': coupon.value,
+            'used_value': coupon.used_value or 0,
+            'remaining_value': (coupon.value - (coupon.used_value or 0)),
+            'auto_download_details': coupon.auto_download_details,
+            'expiry_date': coupon.expiry_date.strftime('%d/%m/%Y') if coupon.expiry_date else 'ללא תאריך',
+            'last_used': coupon.last_used.strftime('%d/%m/%Y %H:%M') if coupon.last_used else 'מעולם לא נוצל',
+            'owner_name': coupon.owner.name if coupon.owner else 'ללא בעלים'
+        })
+
+    return jsonify({'coupons': coupons_data})
+
+
 @coupons_bp.route("/update_all_active_coupons", methods=["POST"])
 @login_required
 def update_all_active_coupons():
@@ -4041,6 +4074,79 @@ def update_all_active_coupons():
         flash(f'הקופונים הבאים לא עודכנו: {", ".join(failed_coupons)}', "danger")
 
     return redirect(url_for("profile.index"))
+
+
+@coupons_bp.route("/update_selected_coupons", methods=["POST"])
+@login_required
+def update_selected_coupons():
+    """
+    עדכון קופונים נבחרים ממודל הבחירה
+    """
+    if not current_user.is_admin:
+        return jsonify({"error": "אין הרשאה"}), 403
+
+    coupon_ids = request.json.get('coupon_ids', [])
+    if not coupon_ids:
+        return jsonify({"error": "לא נבחרו קופונים"}), 400
+
+    selected_coupons = Coupon.query.filter(
+        Coupon.id.in_(coupon_ids),
+        Coupon.status == "פעיל",
+        Coupon.is_one_time == False,
+        Coupon.auto_download_details.isnot(None),
+    ).all()
+
+    updated_coupons = []
+    failed_coupons = []
+
+    for cpn in selected_coupons:
+        try:
+            df = get_coupon_data(cpn)  
+            if df is not None:
+                total_usage = float(df["usage_amount"].sum())
+                cpn.used_value = total_usage
+                update_coupon_status(cpn)
+
+                usage = CouponUsage(
+                    coupon_id=cpn.id,
+                    used_amount=total_usage,
+                    timestamp=datetime.now(timezone.utc),
+                    action="עדכון נבחר",
+                    details="עדכון מתוך Multipass - קופון נבחר",
+                )
+                db.session.add(usage)
+
+                updated_coupons.append({
+                    'code': cpn.code,
+                    'company': cpn.company,
+                    'usage': total_usage
+                })
+            else:
+                failed_coupons.append({
+                    'code': cpn.code,
+                    'company': cpn.company,
+                    'error': 'לא ניתן לקבל נתונים'
+                })
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating coupon {cpn.code}: {e}")
+            failed_coupons.append({
+                'code': cpn.code,
+                'company': cpn.company,
+                'error': str(e)
+            })
+
+    try:
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'updated_coupons': updated_coupons,
+            'failed_coupons': failed_coupons,
+            'message': f'עודכנו {len(updated_coupons)} קופונים בהצלחה'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
 
 
 @coupons_bp.route("/update_coupon_transactions", methods=["POST"])
