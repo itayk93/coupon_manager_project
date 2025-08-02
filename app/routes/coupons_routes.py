@@ -4002,7 +4002,7 @@ def get_updatable_coupons():
             'used_value': coupon.used_value or 0,
             'remaining_value': (coupon.value - (coupon.used_value or 0)),
             'auto_download_details': coupon.auto_download_details,
-            'expiry_date': coupon.expiration.strftime('%d/%m/%Y') if coupon.expiration else 'ללא תאריך',
+            'expiry_date': datetime.strptime(coupon.expiration, '%Y-%m-%d').strftime('%d/%m/%Y') if coupon.expiration else 'ללא תאריך',
             'last_used': 'מעולם לא נוצל',  # TODO: לחשב מתוך CouponUsage
             'owner_name': f"{coupon.user.first_name} {coupon.user.last_name}" if coupon.user else 'ללא בעלים'
         })
