@@ -2919,11 +2919,43 @@ async function loadUpdatableCoupons() {
             }
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        // Check if response is a redirect (likely to login page)
+        if (response.redirected) {
+            console.log('Request was redirected to:', response.url);
+            throw new Error('REDIRECT_TO_LOGIN');
         }
         
-        const data = await response.json();
+        // Handle specific status codes
+        if (response.status === 403) {
+            throw new Error('ACCESS_DENIED');
+        }
+        
+        if (!response.ok) {
+            console.error('HTTP error details:', {
+                status: response.status,
+                statusText: response.statusText,
+                url: response.url,
+                headers: [...response.headers.entries()]
+            });
+            throw new Error(`HTTP_ERROR_${response.status}`);
+        }
+        
+        // Try to parse response as JSON
+        let data;
+        try {
+            data = await response.json();
+        } catch (parseError) {
+            console.error('Failed to parse JSON response:', parseError);
+            // If JSON parsing fails, it might be HTML (login page)
+            const responseText = await response.text();
+            console.log('Response text preview:', responseText.substring(0, 500));
+            
+            // Check if response contains login form or login page indicators
+            if (responseText.includes('login') || responseText.includes('התחברות') || responseText.includes('form')) {
+                throw new Error('REDIRECT_TO_LOGIN');
+            }
+            throw new Error('INVALID_RESPONSE');
+        }
         
         if (data.success) {
             if (data.coupons && data.coupons.length > 0) {
@@ -2937,15 +2969,58 @@ async function loadUpdatableCoupons() {
                 couponsList.innerHTML = '<div class="text-center py-4"><p class="text-muted">אין קופונים זמינים לעדכון</p></div>';
             }
         } else {
-            throw new Error(data.message || 'Failed to load coupons');
+            throw new Error(data.message || 'SERVER_ERROR');
         }
         
     } catch (error) {
         console.error('Error loading updatable coupons:', error);
-        couponsList.innerHTML = '<div class="text-center py-4"><p class="text-danger">שגיאה בטעינת הקופונים. אנא נסה שוב.</p></div>';
+        
+        let errorMessage = '';
+        let errorClass = 'danger';
+        
+        // Handle specific error types with Hebrew messages
+        switch (error.message) {
+            case 'REDIRECT_TO_LOGIN':
+                errorMessage = 'נדרשת התחברות למערכת. אנא התחבר ונסה שוב.';
+                errorClass = 'warning';
+                break;
+            case 'ACCESS_DENIED':
+                errorMessage = 'אין לך הרשאת מנהל לביצוע פעולה זו.';
+                errorClass = 'warning';
+                break;
+            case 'INVALID_RESPONSE':
+                errorMessage = 'התקבלה תגובה לא תקינה מהשרת. ייתכן שאתה לא מחובר למערכת.';
+                errorClass = 'warning';
+                break;
+            case 'HTTP_ERROR_401':
+                errorMessage = 'נדרשת התחברות למערכת. אנא התחבר ונסה שוב.';
+                errorClass = 'warning';
+                break;
+            case 'HTTP_ERROR_403':
+                errorMessage = 'אין לך הרשאה לגשת לנתונים אלה. נדרשות הרשאות מנהל.';
+                errorClass = 'warning';
+                break;
+            case 'HTTP_ERROR_404':
+                errorMessage = 'השירות המבוקש לא נמצא.';
+                break;
+            case 'HTTP_ERROR_500':
+                errorMessage = 'שגיאה פנימית בשרת. אנא נסה שוב מאוחר יותר.';
+                break;
+            default:
+                if (error.message.startsWith('HTTP_ERROR_')) {
+                    errorMessage = `שגיאת שרת (${error.message.replace('HTTP_ERROR_', '')}). אנא נסה שוב.`;
+                } else if (error.message === 'SERVER_ERROR') {
+                    errorMessage = 'שגיאה בשרת. אנא נסה שוב.';
+                } else {
+                    errorMessage = `שגיאה בטעינת הקופונים: ${error.message}`;
+                }
+                break;
+        }
+        
+        couponsList.innerHTML = `<div class="text-center py-4"><p class="text-${errorClass}">${errorMessage}</p></div>`;
         
         // Show error flash message
-        showFlashMessage('שגיאה בטעינת הקופונים: ' + error.message, 'danger');
+        showFlashMessage(errorMessage, errorClass);
     } finally {
         // Hide loading spinner
         if (loadingSpinner) {
@@ -3094,11 +3169,43 @@ async function updateSelectedCoupons() {
             })
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        // Check if response is a redirect (likely to login page)
+        if (response.redirected) {
+            console.log('Request was redirected to:', response.url);
+            throw new Error('REDIRECT_TO_LOGIN');
         }
         
-        const data = await response.json();
+        // Handle specific status codes
+        if (response.status === 403) {
+            throw new Error('ACCESS_DENIED');
+        }
+        
+        if (!response.ok) {
+            console.error('HTTP error details:', {
+                status: response.status,
+                statusText: response.statusText,
+                url: response.url,
+                headers: [...response.headers.entries()]
+            });
+            throw new Error(`HTTP_ERROR_${response.status}`);
+        }
+        
+        // Try to parse response as JSON
+        let data;
+        try {
+            data = await response.json();
+        } catch (parseError) {
+            console.error('Failed to parse JSON response:', parseError);
+            // If JSON parsing fails, it might be HTML (login page)
+            const responseText = await response.text();
+            console.log('Response text preview:', responseText.substring(0, 500));
+            
+            // Check if response contains login form or login page indicators
+            if (responseText.includes('login') || responseText.includes('התחברות') || responseText.includes('form')) {
+                throw new Error('REDIRECT_TO_LOGIN');
+            }
+            throw new Error('INVALID_RESPONSE');
+        }
         
         if (data.success) {
             updateModalProgress('completed', selectedIds.length, data);
@@ -3115,13 +3222,50 @@ async function updateSelectedCoupons() {
             }, 2000);
             
         } else {
-            throw new Error(data.message || 'עדכון הקופונים נכשל');
+            throw new Error(data.message || 'SERVER_ERROR');
         }
         
     } catch (error) {
         console.error('Error updating coupons:', error);
-        updateModalProgress('error', selectedIds.length, { error: error.message });
-        showFlashMessage('שגיאה בעדכון הקופונים: ' + error.message, 'danger');
+        
+        let errorMessage = '';
+        
+        // Handle specific error types with Hebrew messages
+        switch (error.message) {
+            case 'REDIRECT_TO_LOGIN':
+                errorMessage = 'נדרשת התחברות למערכת. אנא התחבר ונסה שוב.';
+                break;
+            case 'ACCESS_DENIED':
+                errorMessage = 'אין לך הרשאת מנהל לביצוע פעולה זו.';
+                break;
+            case 'INVALID_RESPONSE':
+                errorMessage = 'התקבלה תגובה לא תקינה מהשרת. ייתכן שאתה לא מחובר למערכת.';
+                break;
+            case 'HTTP_ERROR_401':
+                errorMessage = 'נדרשת התחברות למערכת. אנא התחבר ונסה שוב.';
+                break;
+            case 'HTTP_ERROR_403':
+                errorMessage = 'אין לך הרשאה לבצע עדכון זה. נדרשות הרשאות מנהל.';
+                break;
+            case 'HTTP_ERROR_404':
+                errorMessage = 'השירות המבוקש לא נמצא.';
+                break;
+            case 'HTTP_ERROR_500':
+                errorMessage = 'שגיאה פנימית בשרת. אנא נסה שוב מאוחר יותר.';
+                break;
+            default:
+                if (error.message.startsWith('HTTP_ERROR_')) {
+                    errorMessage = `שגיאת שרת (${error.message.replace('HTTP_ERROR_', '')}). אנא נסה שוב.`;
+                } else if (error.message === 'SERVER_ERROR') {
+                    errorMessage = 'שגיאה בשרת. אנא נסה שוב.';
+                } else {
+                    errorMessage = `שגיאה בעדכון הקופונים: ${error.message}`;
+                }
+                break;
+        }
+        
+        updateModalProgress('error', selectedIds.length, { error: errorMessage });
+        showFlashMessage(errorMessage, 'danger');
     }
 }
 
