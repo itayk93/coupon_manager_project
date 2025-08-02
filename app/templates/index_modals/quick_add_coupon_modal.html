@@ -70,6 +70,9 @@
                   <label for="quick_buyme_coupon_link">כתובת URL של הקופון ל-BuyMe</label>
                   <input type="text" name="buyme_coupon_url" id="quick_buyme_coupon_link" class="input-field">
                 </div>
+                
+                <!-- Strauss Plus Coupon Link Field (Hidden by default) -->
+                <input type="hidden" name="strauss_coupon_url" id="quick_strauss_coupon_url" class="input-field">
 
                 <!-- # Automatic Coupon Detection Section -->
                 <div class="auto-detect-wrapper">
@@ -1466,6 +1469,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const otherCompanyInput = document.getElementById('quick_other_company');
   const buymeCouponLinkGroup = document.getElementById('quick_buyme_coupon_link_group');
   const buymeCouponLinkInput = document.getElementById('quick_buyme_coupon_link');
+  const straussCouponUrlInput = document.getElementById('quick_strauss_coupon_url');
   const companyLogoContainer = document.getElementById('quick_company_logo_container');
   const companyLogo = document.getElementById('quick_company_logo');
   const codeInput = document.getElementById('quick_code');
@@ -2268,6 +2272,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (data['מאיפה קיבלת את הקופון'] && sourceInput) {
       sourceInput.value = data['מאיפה קיבלת את הקופון'];
       debug(`Set source: ${data['מאיפה קיבלת את הקופון']}`);
+    }
+    
+    // Fill in Strauss coupon URL if available
+    if (data['strauss_coupon_url'] && straussCouponUrlInput) {
+      straussCouponUrlInput.value = data['strauss_coupon_url'];
+      debug(`Set Strauss coupon URL: ${data['strauss_coupon_url']}`);
     }
     
     // Calculate discount percentage if not provided but we have cost and value

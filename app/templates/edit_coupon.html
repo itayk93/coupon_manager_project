@@ -62,6 +62,12 @@
             {{ form.buyme_coupon_url(class="input-field", id="edit_coupon_buyme_link") }}
         </div>
 
+        <!-- Strauss Plus Coupon Link Field (hidden by default) -->
+        <div class="form-group" id="edit_coupon_strauss_link_group" style="display: none;">
+            <label for="edit_coupon_strauss_link" class="form-label">כתובת URL של הקופון שטראוס פלוס</label>
+            {{ form.strauss_coupon_url(class="input-field", id="edit_coupon_strauss_link") }}
+        </div>
+
         <!-- Code Field -->
         <div class="form-group">
             {{ form.code.label(class="form-label") }}
@@ -559,6 +565,10 @@ textarea.input-field {
         const buymeLinkInput = document.getElementById('edit_coupon_buyme_link');
         let originalBuyMeValue = '';
         
+        const straussLinkGroup = document.getElementById('edit_coupon_strauss_link_group');
+        const straussLinkInput = document.getElementById('edit_coupon_strauss_link');
+        let originalStraussValue = '';
+        
         // Coupon price elements
         const couponCodeInput = document.getElementById('edit_coupon_code');
         const couponCostInput = document.getElementById('edit_coupon_cost');
@@ -649,11 +659,37 @@ textarea.input-field {
             }
         }
         
+        // Toggle the Strauss Plus link field based on company selection
+        function toggleStraussLinkField() {
+            if (!companySelect || !straussLinkGroup) return;
+            
+            // Check if a Strauss company is selected by name
+            const selectedOption = companySelect.options[companySelect.selectedIndex];
+            const companyName = selectedOption ? selectedOption.text : '';
+            
+            if (companyName && companyName.toLowerCase().includes('שטראוס')) {
+                straussLinkGroup.style.display = 'block';
+                if (straussLinkInput && originalStraussValue) {
+                    straussLinkInput.value = originalStraussValue;
+                }
+            } else {
+                if (straussLinkInput && straussLinkInput.value) {
+                    originalStraussValue = straussLinkInput.value;
+                }
+                straussLinkGroup.style.display = 'none';
+            }
+        }
+        
         // Add event listeners to company select
         if (companySelect) {
             // Store the BuyMe link value when page loads
             if (buymeLinkInput && buymeLinkInput.value) {
                 originalBuyMeValue = buymeLinkInput.value;
+            }
+            
+            // Store the Strauss link value when page loads
+            if (straussLinkInput && straussLinkInput.value) {
+                originalStraussValue = straussLinkInput.value;
             }
             
             companySelect.addEventListener('change', function() {
@@ -664,6 +700,7 @@ textarea.input-field {
                 
                 toggleOtherCompanyField();
                 toggleBuymeLinkField();
+                toggleStraussLinkField();
             });
         }
 
@@ -938,6 +975,7 @@ textarea.input-field {
             setTimeout(function() {
                 toggleOtherCompanyField();
                 toggleBuymeLinkField();
+                toggleStraussLinkField();
                 togglePurposeField();
                 toggleCardFields();
                 updatePriceFields(null);

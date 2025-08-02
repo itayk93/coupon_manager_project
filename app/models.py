@@ -248,6 +248,9 @@ class Coupon(db.Model):
     buyme_coupon_url = db.Column(
         EncryptedString(255), nullable=True
     )  # >>> NEW FIELD: BuyMe Coupon URL <<<
+    strauss_coupon_url = db.Column(
+        EncryptedString(255), nullable=True
+    )  # >>> NEW FIELD: Strauss Plus Coupon URL <<<
     date_added = db.Column(
         db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

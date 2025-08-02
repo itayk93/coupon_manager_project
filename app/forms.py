@@ -62,6 +62,11 @@ class CouponForm(FlaskForm):
         "הכתובת של הקופון מBuyMe",
         validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
     )
+    # NEW: Strauss Plus Coupon URL field
+    strauss_coupon_url = StringField(
+        "כתובת URL של הקופון שטראוס פלוס",
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
+    )
     tag_id = SelectField(
         "תגית", choices=[], validators=[Optional()]  # הבחירות ימולאו בנתיב
     )
@@ -177,6 +182,10 @@ class BulkCouponForm(FlaskForm):
     )
     buyme_coupon_url = StringField(
         "הכתובת של הקופון מBuyMe",
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
+    )
+    strauss_coupon_url = StringField(
+        "כתובת URL של הקופון שטראוס פלוס",
         validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
     )
 
@@ -350,6 +359,11 @@ class EditCouponForm(FlaskForm):
     # שדה חדש להוספה - קישור לקופון BuyMe
     buyme_coupon_url = StringField(
         "הכתובת של הקופון מBuyMe",
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
+    )
+    # שדה חדש להוספה - קישור לקופון שטראוס פלוס
+    strauss_coupon_url = StringField(
+        "כתובת URL של הקופון שטראוס פלוס",
         validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
     )
     expiration = DateField("תאריך תפוגה:", format="%Y-%m-%d", validators=[Optional()])

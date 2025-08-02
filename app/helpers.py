@@ -1936,6 +1936,7 @@ def process_coupons_excel(file_path, user):
                 # *** New fields (replaced with keys from the Excel columns) ***
                 source_val = row.get("מאיפה קיבלת את הקופון", "") or ""
                 buyme_url_val = row.get("כתובת URL של הקופון ל-BuyMe", "") or ""
+                strauss_url_val = row.get("כתובת URL של הקופון שטראוס פלוס", "") or ""
 
                 # Check for missing fields
                 missing_fields = []
@@ -2048,6 +2049,7 @@ def process_coupons_excel(file_path, user):
                     purpose=purpose,
                     source=source_val,  # The new value
                     buyme_coupon_url=buyme_url_val,  # The new value
+                    strauss_coupon_url=strauss_url_val,  # The new value
                 )
                 new_coupon.tags.append(most_common_tag)
                 db.session.add(new_coupon)

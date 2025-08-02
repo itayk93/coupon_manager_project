@@ -1025,6 +1025,15 @@ def add_coupons_bulk():
                 if DEBUG_PRINT:
                     print(f"BuyMe URL for coupon #{idx + 1}: {buyme_coupon_url}")
 
+                # === 6.1. עיבוד שדה "כתובת URL של הקופון שטראוס פלוס" ===
+                strauss_coupon_url = (
+                    (coupon_form.strauss_coupon_url.data or "").strip()
+                    if coupon_form.strauss_coupon_url.data
+                    else None
+                )
+                if DEBUG_PRINT:
+                    print(f"Strauss URL for coupon #{idx + 1}: {strauss_coupon_url}")
+
                 # === 7. בניית "שורת דאטה" שתלך אחר כך ל-process_coupons_excel ===
                 coupon_data = {
                     "קוד קופון": code,
@@ -1040,6 +1049,7 @@ def add_coupons_bulk():
                     "תוקף כרטיס": card_exp,
                     "מאיפה קיבלת את הקופון": source,
                     "כתובת URL של הקופון ל-BuyMe": buyme_coupon_url,
+                    "כתובת URL של הקופון שטראוס פלוס": strauss_coupon_url,
                 }
                 if DEBUG_PRINT:
                     print(f"Coupon data for coupon #{idx + 1}: {coupon_data}")
@@ -1562,7 +1572,6 @@ def add_coupon():
                     # Import required libraries for Strauss scraping
                     import requests
                     from bs4 import BeautifulSoup
-                    from datetime import datetime
                     
                     debug_print("Attempting to scrape Strauss coupon data")
                     
@@ -1615,7 +1624,8 @@ def add_coupon():
                             "חברה": matched_company,
                             "תיאור": description,
                             "תאריך תפוגה": formatted_date,
-                            "מאיפה קיבלת את הקופון": "שטראוס"
+                            "מאיפה קיבלת את הקופון": "שטראוס",
+                            "strauss_coupon_url": strauss_url  # Add the original Strauss URL
                         }
                         
                         debug_print(f"Successfully extracted Strauss coupon data: {extracted_data}")
@@ -2365,6 +2375,13 @@ def add_coupon():
                     )
                     debug_print(f"BuyMe URL: {new_coupon.buyme_coupon_url}")
 
+                    new_coupon.strauss_coupon_url = (
+                        coupon_form.strauss_coupon_url.data.strip()
+                        if coupon_form.strauss_coupon_url.data
+                        else None
+                    )
+                    debug_print(f"Strauss URL: {new_coupon.strauss_coupon_url}")
+
                     chosen_company_name = company.name
                     debug_print(f"Finding tag for company: {chosen_company_name}")
                     found_tag = get_most_common_tag_for_company(chosen_company_name)
@@ -2856,6 +2873,18 @@ def edit_coupon(id):
             coupon.expiration = form.expiration.data if form.expiration.data else None
             coupon.cvv = form.cvv.data.strip() if form.cvv.data else None
             coupon.card_exp = form.card_exp.data.strip() if form.card_exp.data else None
+            
+            # Handle BuyMe and Strauss URLs
+            coupon.buyme_coupon_url = (
+                form.buyme_coupon_url.data.strip()
+                if form.buyme_coupon_url.data
+                else None
+            )
+            coupon.strauss_coupon_url = (
+                form.strauss_coupon_url.data.strip()
+                if form.strauss_coupon_url.data
+                else None
+            )
 
             if form.tags.data:
                 if isinstance(form.tags.data, str) and form.tags.data:

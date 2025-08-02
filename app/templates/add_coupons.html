@@ -142,6 +142,14 @@
                            class="input-field" value="{{ coupon_data.url if coupon_data else '' }}">
                 </div>
 
+                <!-- Strauss Plus URL field - shown only for Strauss Plus company -->
+                <div class="form-group" id="strauss_coupon_link_group_{{ loop.index0 }}" style="display: none;">
+                    <label for="coupons-{{ loop.index0 }}-strauss_coupon_url" class="form-label">כתובת URL של הקופון שטראוס פלוס</label>
+                    <input type="url" id="coupons-{{ loop.index0 }}-strauss_coupon_url" 
+                           name="coupons-{{ loop.index0 }}-strauss_coupon_url" 
+                           class="input-field" value="">
+                </div>
+
                 <!-- Other company field - shown only when 'other' is selected -->
                 <div class="form-group other-company-group"
                      id="other_company_group_{{ loop.index0 }}"
@@ -402,6 +410,14 @@
             <label for="coupons-__INDEX__-buyme_coupon_url" class="form-label">כתובת URL של הקופון ל-BuyMe</label>
             <input type="url" id="coupons-__INDEX__-buyme_coupon_url" 
                    name="coupons-__INDEX__-buyme_coupon_url" 
+                   class="input-field">
+        </div>
+
+        <!-- Strauss Plus URL field -->
+        <div class="form-group" id="strauss_coupon_link_group___INDEX__" style="display: none;">
+            <label for="coupons-__INDEX__-strauss_coupon_url" class="form-label">כתובת URL של הקופון שטראוס פלוס</label>
+            <input type="url" id="coupons-__INDEX__-strauss_coupon_url" 
+                   name="coupons-__INDEX__-strauss_coupon_url" 
                    class="input-field">
         </div>
 
@@ -802,6 +818,30 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleBuymeCouponLinkField();
         }
 
+        // Setup Strauss Plus URL field toggle
+        const straussCouponLinkGroup = fieldset.querySelector('#strauss_coupon_link_group_' + idx);
+
+        function toggleStraussCouponLinkField() {
+            if (!companySelect || !straussCouponLinkGroup) return;
+            
+            // You'll need to determine the correct company ID for Strauss Plus
+            // For now using a placeholder value - update this with the actual ID
+            const companyName = companySelect.options[companySelect.selectedIndex].text;
+            if (companyName && companyName.toLowerCase().includes('שטראוס')) {
+                straussCouponLinkGroup.style.display = 'block';
+            } else {
+                straussCouponLinkGroup.style.display = 'none';
+                const straussCouponLinkInput = straussCouponLinkGroup.querySelector('input');
+                if (straussCouponLinkInput) {
+                    straussCouponLinkInput.value = '';
+                }
+            }
+        }
+        if (companySelect && straussCouponLinkGroup) {
+            companySelect.addEventListener('change', toggleStraussCouponLinkField);
+            toggleStraussCouponLinkField();
+        }
+
         // Setup one-time purpose field toggle
         const isOneTimeCheckbox = fieldset.querySelector('input[type="checkbox"][name$="-is_one_time"]');
         const purposeGroup = fieldset.querySelector('.purpose-field');
@@ -1008,6 +1048,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         fieldset.querySelectorAll('[id^="buyme_coupon_link_group_"]').forEach(element => {
+            element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
+            element.id = element.id.replace('__INDEX__', newIndex);
+            element.id = element.id.replace('___INDEX__', newIndex);
+        });
+
+        fieldset.querySelectorAll('[id^="strauss_coupon_link_group_"]').forEach(element => {
             element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
             element.id = element.id.replace('__INDEX__', newIndex);
             element.id = element.id.replace('___INDEX__', newIndex);
@@ -1362,7 +1408,7 @@ if (submitUrlsButton) {
                         });
                         
                         // Update other specific elements that have indices
-                        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
+                        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="strauss_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
                             const baseId = el.id.split('_')[0] + '_' + el.id.split('_')[1] + '_';
                             el.id = `${baseId}${idx}`;
                         });
@@ -1479,7 +1525,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Update special IDs (containers, etc.)
-                fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
+                fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="strauss_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
                     const parts = el.id.split('_');
                     if (parts.length >= 3) {
                         // Rebuild ID with new index
