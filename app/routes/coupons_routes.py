@@ -1746,6 +1746,14 @@ def add_coupon():
                 other_company_name = (
                     request.form.get("other_company", "") or ""
                 ).strip()
+                
+                # Extract BuyMe and Strauss coupon URLs
+                buyme_coupon_url = (
+                    request.form.get("buyme_coupon_url", "").strip() or None
+                )
+                strauss_coupon_url = (
+                    request.form.get("strauss_coupon_url", "").strip() or None
+                )
 
                 debug_print(
                     f"AJAX Coupon details: code={code}, value={value}, cost={cost}"
@@ -1820,6 +1828,12 @@ def add_coupon():
                         purpose=purpose,
                         source=source,
                     )
+                    
+                    # Set URL fields
+                    new_coupon.buyme_coupon_url = buyme_coupon_url
+                    new_coupon.strauss_coupon_url = strauss_coupon_url
+                    debug_print(f"BuyMe URL: {buyme_coupon_url}")
+                    debug_print(f"Strauss URL: {strauss_coupon_url}")
 
                     # Optional: Add tag
                     chosen_company_name = company.name
