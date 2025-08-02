@@ -2892,11 +2892,22 @@ document.addEventListener('keydown', function(event) {
  * Loads updatable coupons from the server and populates the modal
  */
 async function loadUpdatableCoupons() {
+    console.log('🚀 loadUpdatableCoupons() called at:', new Date().toISOString());
+    
     const couponsList = document.getElementById('updatableCouponsList');
     const loadingSpinner = document.getElementById('couponsLoadingSpinner');
     const selectionActions = document.getElementById('selectionActions');
     
-    if (!couponsList) return;
+    console.log('📋 DOM elements found:', {
+        couponsList: !!couponsList,
+        loadingSpinner: !!loadingSpinner,
+        selectionActions: !!selectionActions
+    });
+    
+    if (!couponsList) {
+        console.log('❌ couponsListModal element not found, returning early');
+        return;
+    }
     
     // Show loading spinner
     if (loadingSpinner) {
@@ -2911,6 +2922,10 @@ async function loadUpdatableCoupons() {
     // Clear existing content
     couponsList.innerHTML = '';
     
+    console.log('🌐 About to fetch /get_updatable_coupons');
+    console.log('Current URL:', window.location.href);
+    console.log('User agent:', navigator.userAgent);
+    
     try {
         const response = await fetch('/get_updatable_coupons', {
             method: 'GET',
@@ -2919,24 +2934,62 @@ async function loadUpdatableCoupons() {
             }
         });
         
+        console.log('📥 Fetch completed, processing response...');
+        
+        // Enhanced logging for debugging
+        console.log('=== RESPONSE DEBUG INFO ===');
+        console.log('Response object:', response);
+        console.log('Response status:', response.status);
+        console.log('Response statusText:', response.statusText);
+        console.log('Response URL:', response.url);
+        console.log('Response type:', response.type);
+        console.log('Response redirected:', response.redirected);
+        console.log('Response ok:', response.ok);
+        console.log('Response headers:');
+        for (let [key, value] of response.headers.entries()) {
+            console.log(`  ${key}: ${value}`);
+        }
+        
         // Check if response is a redirect (likely to login page)
         if (response.redirected) {
-            console.log('Request was redirected to:', response.url);
+            console.log('🔄 Request was redirected to:', response.url);
+            console.log('Original request URL: /get_updatable_coupons');
             throw new Error('REDIRECT_TO_LOGIN');
         }
         
-        // Handle specific status codes
+        // Handle specific status codes with enhanced logging
+        if (response.status === 302) {
+            console.log('🔄 302 Redirect detected - likely authentication issue');
+            console.log('Location header:', response.headers.get('Location'));
+            throw new Error('REDIRECT_TO_LOGIN');
+        }
+        
         if (response.status === 403) {
+            console.log('🚫 403 Access Denied');
             throw new Error('ACCESS_DENIED');
         }
         
         if (!response.ok) {
-            console.error('HTTP error details:', {
+            console.error('❌ HTTP error details:', {
                 status: response.status,
                 statusText: response.statusText,
                 url: response.url,
+                type: response.type,
+                redirected: response.redirected,
                 headers: [...response.headers.entries()]
             });
+            
+            // Try to get response text for additional debugging
+            try {
+                const errorText = await response.clone().text();
+                console.log('❌ Response body preview (first 1000 chars):', errorText.substring(0, 1000));
+                if (errorText.includes('login') || errorText.includes('התחברות')) {
+                    console.log('🔍 Response contains login form - authentication required');
+                }
+            } catch (textError) {
+                console.log('❌ Could not read response text:', textError);
+            }
+            
             throw new Error(`HTTP_ERROR_${response.status}`);
         }
         
@@ -2944,36 +2997,78 @@ async function loadUpdatableCoupons() {
         let data;
         try {
             data = await response.json();
+            console.log('✅ Successfully parsed JSON response');
+            console.log('Response data:', data);
         } catch (parseError) {
-            console.error('Failed to parse JSON response:', parseError);
-            // If JSON parsing fails, it might be HTML (login page)
-            const responseText = await response.text();
-            console.log('Response text preview:', responseText.substring(0, 500));
+            console.error('❌ Failed to parse JSON response:', parseError);
+            console.log('Parse error name:', parseError.name);
+            console.log('Parse error message:', parseError.message);
             
-            // Check if response contains login form or login page indicators
-            if (responseText.includes('login') || responseText.includes('התחברות') || responseText.includes('form')) {
-                throw new Error('REDIRECT_TO_LOGIN');
+            // Try to get the response text for detailed debugging
+            try {
+                const responseText = await response.clone().text();
+                console.log('📄 Complete response text length:', responseText.length);
+                console.log('📄 Response text preview (first 1000 chars):', responseText.substring(0, 1000));
+                console.log('📄 Response text ending (last 500 chars):', responseText.substring(Math.max(0, responseText.length - 500)));
+                
+                // Enhanced detection of different response types
+                if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html')) {
+                    console.log('🔍 Response is HTML document');
+                }
+                if (responseText.includes('login') || responseText.includes('התחברות')) {
+                    console.log('🔍 Response contains login-related content');
+                }
+                if (responseText.includes('<form')) {
+                    console.log('🔍 Response contains form elements');
+                }
+                if (responseText.includes('error') || responseText.includes('Error')) {
+                    console.log('🔍 Response contains error-related content');
+                }
+                
+                // Check if response contains login form or login page indicators
+                if (responseText.includes('login') || responseText.includes('התחברות') || responseText.includes('form')) {
+                    throw new Error('REDIRECT_TO_LOGIN');
+                }
+            } catch (textError) {
+                console.error('❌ Could not read response text for debugging:', textError);
             }
+            
             throw new Error('INVALID_RESPONSE');
         }
         
         if (data.success) {
+            console.log('✅ Server response indicates success');
+            console.log('Coupons data:', data.coupons);
+            console.log('Coupons count:', data.coupons ? data.coupons.length : 'undefined');
+            
             if (data.coupons && data.coupons.length > 0) {
+                console.log(`📋 Displaying ${data.coupons.length} coupons in modal`);
                 displayCouponsInModal(data.coupons);
                 
                 // Show selection actions
                 if (selectionActions) {
                     selectionActions.style.display = 'block';
+                    console.log('👆 Selection actions shown');
                 }
             } else {
+                console.log('📭 No coupons available for update');
                 couponsList.innerHTML = '<div class="text-center py-4"><p class="text-muted">אין קופונים זמינים לעדכון</p></div>';
             }
         } else {
+            console.log('❌ Server response indicates failure');
+            console.log('Server error message:', data.message);
             throw new Error(data.message || 'SERVER_ERROR');
         }
         
     } catch (error) {
-        console.error('Error loading updatable coupons:', error);
+        console.error('❌ Error loading updatable coupons:', error);
+        console.log('=== ERROR DEBUG INFO ===');
+        console.log('Error object:', error);
+        console.log('Error name:', error.name);
+        console.log('Error message:', error.message);
+        console.log('Error stack:', error.stack);
+        console.log('Error cause:', error.cause);
+        console.log('Error toString():', error.toString());
         
         let errorMessage = '';
         let errorClass = 'danger';
