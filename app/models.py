@@ -426,6 +426,55 @@ class Transaction(db.Model):
     )
 
 
+class BankTransaction(db.Model):
+    """
+    Bank transactions table for financial tracking and comparison with BudgetLens.
+    """
+
+    __tablename__ = "bank_transactions"
+    
+    id = db.Column(db.String(36), primary_key=True)  # UUID from external system
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    business_name = db.Column(db.String(255), nullable=False)
+    payment_date = db.Column(db.Date, nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), nullable=False, default="ILS")
+    payment_method = db.Column(db.String(50), nullable=True)
+    payment_identifier = db.Column(db.String(50), nullable=True)
+    category_id = db.Column(db.String(36), nullable=True)
+    payment_month = db.Column(db.Integer, nullable=True)
+    payment_year = db.Column(db.Integer, nullable=True)
+    flow_month = db.Column(db.String(7), nullable=True)  # Format: YYYY-MM
+    charge_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    excluded_from_flow = db.Column(db.Boolean, default=False)
+    source_type = db.Column(db.String(50), nullable=True)
+    original_amount = db.Column(db.Float, nullable=True)
+    transaction_hash = db.Column(db.String(64), nullable=True, unique=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    cash_flow_id = db.Column(db.String(36), nullable=True)
+    is_transfer = db.Column(db.Boolean, default=False)
+    linked_transaction_id = db.Column(db.String(36), nullable=True)
+    category_name = db.Column(db.String(100), nullable=True)
+    payment_number = db.Column(db.Integer, default=1)
+    total_payments = db.Column(db.Integer, default=1)
+    original_currency = db.Column(db.String(3), nullable=True)
+    exchange_rate = db.Column(db.Float, nullable=True)
+    exchange_date = db.Column(db.Date, nullable=True)
+    business_country = db.Column(db.String(50), nullable=True)
+    quantity = db.Column(db.Float, nullable=True)
+    source_category = db.Column(db.String(100), nullable=True)
+    transaction_type = db.Column(db.String(50), nullable=True)
+    execution_method = db.Column(db.String(50), nullable=True)
+
+    # Relationship
+    user = db.relationship("User", backref="bank_transactions")
+
+    def __repr__(self):
+        return f"<BankTransaction {self.business_name}: {self.amount} {self.currency}>"
+
+
 class CouponRequest(db.Model):
     """
     Coupon requests table (users requesting specific coupons).

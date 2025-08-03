@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}השוואת BudgetLens - Coupon Master{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 20px;">
+    <div class="hero">
+        <h1><i class="fa fa-chart-line"></i> השוואת נתוני BudgetLens</h1>
+        <p>העלה קובץ CSV מ-BudgetLens כדי לזהות עסקאות חסרות במסד הנתונים</p>
+    </div>
+
+    <div class="card">
+        <h2>העלאת קובץ BudgetLens</h2>
+        <form method="POST" action="{{ url_for('budgetlens.upload_budgetlens_file') }}" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="budgetlens_file">קובץ CSV מ-BudgetLens:</label>
+                <input type="file" id="budgetlens_file" name="budgetlens_file" accept=".csv" required>
+                <small>יש להעלות קובץ CSV שהורד מ-BudgetLens</small>
+            </div>
+
+            <div class="form-group">
+                <label for="start_date">תאריך התחלה:</label>
+                <input type="date" id="start_date" name="start_date" required>
+            </div>
+
+            <div class="form-group">
+                <label for="end_date">תאריך סיום:</label>
+                <input type="date" id="end_date" name="end_date" required>
+            </div>
+
+            <button type="submit" class="submit-button">
+                <i class="fa fa-upload"></i> העלה והשווה
+            </button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>איך זה עובד?</h2>
+        <ul>
+            <li>העלה קובץ CSV שהורד מ-BudgetLens</li>
+            <li>בחר טווח תאריכים לבדיקה</li>
+            <li>המערכת תשווה בין העסקאות בקובץ לעסקאות במסד הנתונים</li>
+            <li>תקבל רשימה של עסקאות שייתכן שלא הועלו למערכת</li>
+            <li>ההשוואה מתבססת על שם העסק, תאריך ו״כום</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.hero {
+    text-align: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+.hero h1 {
+    margin: 0 0 10px 0;
+    font-size: 2.5em;
+}
+
+.hero p {
+    margin: 0;
+    font-size: 1.2em;
+    opacity: 0.9;
+}
+
+.card {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card h2 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.form-group input[type="file"],
+.form-group input[type="date"] {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.form-group input[type="file"]:focus,
+.form-group input[type="date"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.form-group small {
+    display: block;
+    color: #666;
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+.submit-button {
+    background: var(--primary-color);
+    color: white;
+    padding: 15px 30px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 100%;
+}
+
+.submit-button:hover {
+    background: #1A5A8D;
+}
+
+.submit-button i {
+    margin-left: 8px;
+}
+
+ul {
+    padding-right: 20px;
+}
+
+ul li {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+</style>
+{% endblock %}
