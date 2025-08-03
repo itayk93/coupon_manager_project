@@ -95,7 +95,6 @@ def create_app():
     from app.routes.statistics_routes import statistics_bp
     from app.routes.sharing_routes import sharing_bp
     from app.routes.cron_routes import cron_bp
-    from app.routes.budgetlens_routes import budgetlens_bp
 
     # from app.routes.profile_routes import profile_bp
 
@@ -120,7 +119,6 @@ def create_app():
     app.register_blueprint(statistics_bp)
     app.register_blueprint(sharing_bp)
     app.register_blueprint(cron_bp)
-    app.register_blueprint(budgetlens_bp)
 
     # If needed - create instance folder
     if not os.path.exists("instance"):
