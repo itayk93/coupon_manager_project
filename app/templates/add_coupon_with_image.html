@@ -3,38 +3,163 @@
 {% extends 'base.html' %}
 
 {% block title %}
-הוסף קופון מתמונה
+הוסף קופון מתמונה - Coupon Master
+{% endblock %}
+
+{% block head %}
+<!-- HowTo Schema Markup -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "איך להוסיף קופון דיגיטלי מתמונה לאפליקציית ניהול הקופונים",
+  "description": "מדריך צעד אחר צעד להוספת קופון דיגיטלי מתמונה באפליקציית Coupon Master",
+  "image": "{{ url_for('static', filename='images/logo.png', _external=True) }}",
+  "totalTime": "PT1M",
+  "estimatedCost": {
+    "@type": "MonetaryAmount",
+    "currency": "ILS",
+    "value": "0"
+  },
+  "supply": [
+    {
+      "@type": "HowToSupply",
+      "name": "תמונה של הקופון הדיגיטלי"
+    }
+  ],
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "העלאת תמונת קופון",
+      "text": "העלו תמונה של הקופון הדיגיטלי למערכת לניתוח אוטומטי",
+      "image": "{{ url_for('static', filename='images/logo.png', _external=True) }}"
+    },
+    {
+      "@type": "HowToStep", 
+      "name": "אישור פרטי הקופון",
+      "text": "בדקו ואשרו את הפרטים שהמערכת זיהתה מהתמונה"
+    },
+    {
+      "@type": "HowToStep",
+      "name": "שמירת הקופון",
+      "text": "לחצו על 'שמירה' להוספת הקופון לארנק הדיגיטלי שלכם"
+    }
+  ]
+}
+</script>
 {% endblock %}
 
 {% block content %}
 <section class="add-coupon">
-    <h2>העלה תמונה להוספת קופון</h2>
+    <h2 class="section-title">הוספת קופון מתמונה</h2>
+    
+    <!-- Action buttons in a single row -->
+    <div class="action-buttons-row">
+        <a href="{{ url_for('coupons.add_coupon') }}" class="action-button">
+            <span class="button-content">
+                <span class="button-text">הוספת קופון ידני</span>
+                <i class="fa fa-edit button-icon" aria-hidden="true"></i>
+            </span>
+        </a>
+        <a href="{{ url_for('coupons.add_coupons_bulk') }}" class="action-button">
+            <span class="button-content">
+                <span class="button-text">הוספת קופונים מרובים</span>
+                <i class="fa fa-plus-circle button-icon" aria-hidden="true"></i>
+            </span>
+        </a>
+        <a href="{{ url_for('coupons.upload_coupons') }}" class="action-button">
+            <span class="button-content">
+                <span class="button-text">העלאת קובץ קופונים</span>
+                <i class="fa fa-upload button-icon" aria-hidden="true"></i>
+            </span>
+        </a>
+    </div>
 
-    <!-- טופס להעלאת תמונה -->
+    <!-- Help button that toggles instructions -->
+    <div class="help-button-container">
+        <button type="button" id="toggle-instructions" class="help-button" aria-label="הצג/הסתר הסברים">
+            <i class="fa fa-question-circle" aria-hidden="true"></i>
+            <span class="help-button-text">הסבר</span>
+        </button>
+    </div>
+
+    <!-- Instructions panel with gender sensitivity - hidden by default -->
+    <div class="instructions-panel" id="instructions-panel" style="display: block;">
+        <h3 class="instructions-title" data-asw-org-font-size="19" style="font-size: 19px;">
+            <i class="fa fa-question-circle" aria-hidden="true"></i>
+            איך להוסיף קופון מתמונה?
+        </h3>
+        <ol class="instructions-list" data-asw-org-font-size="16" style="font-size: 16px;">
+            {% if current_user.gender == "female" %}
+            <li data-asw-org-font-size="16" style="font-size: 16px;">העלי תמונה של הקופון באמצעות הכפתור למטה.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">המערכת תנתח את התמונה באופן אוטומטי ותמלא את הפרטים.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">בדקי את הפרטים שהמערכת זיהתה ותקני במידת הצורך.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">לחצי על "הוספת הקופון לארנק" כשסיימת.</li>
+            {% else %}
+            <li data-asw-org-font-size="16" style="font-size: 16px;">העלה תמונה של הקופון באמצעות הכפתור למטה.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">המערכת תנתח את התמונה באופן אוטומטי ותמלא את הפרטים.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">בדוק את הפרטים שהמערכת זיהתה ותקן במידת הצורך.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">לחץ על "הוספת הקופון לארנק" כשסיימת.</li>
+            {% endif %}
+        </ol>
+        <div class="important-note">
+            <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+            {% if current_user.gender == "female" %}
+            <span data-asw-org-font-size="16" style="font-size: 16px;">שימי לב: המערכת משתמשת בבינה מלאכותית לניתוח התמונה. תמיד בדקי את הפרטים לפני השמירה.</span>
+            {% else %}
+            <span data-asw-org-font-size="16" style="font-size: 16px;">שים לב: המערכת משתמשת בבינה מלאכותית לניתוח התמונה. תמיד בדוק את הפרטים לפני השמירה.</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Display flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">
+                <span class="message-text">{{ message }}</span>
+                <button class="close-flash" aria-label="Close">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Image upload form -->
     {% if not show_coupon_form %}
-    <form method="POST" enctype="multipart/form-data">
+    <form method="POST" enctype="multipart/form-data" class="manual-coupon-form">
         {{ upload_image_form.hidden_tag() }}
         <div class="form-group">
-            <label for="coupon_image">העלה תמונה של הקופון</label>
-            {{ upload_image_form.coupon_image(class="input-field", id="coupon_image") }}
+            <label for="coupon_image" class="form-label">
+                <i class="fa fa-image" aria-hidden="true"></i>
+                העלה תמונה של הקופון
+            </label>
+            {{ upload_image_form.coupon_image(class="input-field", id="coupon_image", accept="image/*") }}
             {% for error in upload_image_form.coupon_image.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
-        {{ upload_image_form.submit_upload_image(class="submit-button") }}
+        <div class="form-group submit-group">
+            {{ upload_image_form.submit_upload_image(class="submit-button") }}
+        </div>
     </form>
     {% endif %}
 
     {% if show_coupon_form %}
-    <h3>פרטי הקופון</h3>
-    <!-- טופס למילוי קופון -->
-    <form method="POST">
+    <!-- Section divider -->
+    <div class="section-divider">
+        <span>פרטי הקופון שזוהו</span>
+    </div>
+    
+    <!-- Manual coupon entry form -->
+    <form method="POST" class="manual-coupon-form">
         {{ coupon_form.hidden_tag() }}
 
         <!-- Company Name -->
         <div class="form-group">
             {{ coupon_form.company_id.label(class="form-label") }}
-            {{ coupon_form.company_id(class="input-field", id="company_select") }}
+            {{ coupon_form.company_id(class="input-field", id="company_select", required=True) }}
             {% for error in coupon_form.company_id.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
@@ -47,11 +172,10 @@
             {% endfor %}
         </div>
 
-
         <!-- Code Field -->
         <div class="form-group">
             {{ coupon_form.code.label(class="form-label") }}
-            {{ coupon_form.code(class="input-field", id="code") }}
+            {{ coupon_form.code(class="input-field", id="code", required=True) }}
             {% for error in coupon_form.code.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
@@ -60,25 +184,8 @@
         <!-- Coupon Cost Field -->
         <div class="form-group">
             {{ coupon_form.cost.label(class="form-label") }}
-            {{ coupon_form.cost(class="input-field", id="coupon_cost",
-                type="number",
-                inputmode="numeric",
-                pattern="[0-9]*",
-                step="0.01") }}
+            {{ coupon_form.cost(class="input-field", id="coupon_cost", required=True, type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
             {% for error in coupon_form.cost.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <!-- Desired Value Field -->
-        <div class="form-group">
-            {{ coupon_form.value.label(class="form-label") }}
-            {{ coupon_form.value(class="input-field", id="desired_value",
-                type="number",
-                inputmode="numeric",
-                pattern="[0-9]*",
-                step="0.01") }}
-            {% for error in coupon_form.value.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
@@ -86,14 +193,24 @@
         <!-- Discount Percentage Field -->
         <div class="form-group">
             {{ coupon_form.discount_percentage.label(class="form-label") }}
-            {{ coupon_form.discount_percentage(class="input-field", id="discount_percentage_input",
-                type="number",
-                inputmode="numeric",
-                pattern="[0-9]*",
-                min="0",
-                max="100",
-                step="0.01") }}
+            {{ coupon_form.discount_percentage(class="input-field", id="discount_percentage_input", type="number", inputmode="numeric", pattern="[0-9]*", min="0", max="100", step="0.01") }}
             {% for error in coupon_form.discount_percentage.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+            
+            <!-- Visual discount display -->
+            <div class="discount-display-container">
+                <div class="discount-display">
+                    <span class="discount-value">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desired Value Field -->
+        <div class="form-group">
+            {{ coupon_form.value.label(class="form-label") }}
+            {{ coupon_form.value(class="input-field", id="desired_value", required=True, type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
+            {% for error in coupon_form.value.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
@@ -101,7 +218,7 @@
         <!-- Expiration Field -->
         <div class="form-group">
             {{ coupon_form.expiration.label(class="form-label") }}
-            {{ coupon_form.expiration(class="input-field", id="expiration") }}
+            {{ coupon_form.expiration(class="input-field date-input", id="expiration") }}
             {% for error in coupon_form.expiration.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
@@ -117,15 +234,13 @@
         </div>
 
         <!-- Checkbox: האם להכניס תוקף כרטיס ו-CVV -->
-        <div class="form-group checkbox-inline">
-            <label for="include_card_info">
-                <input type="checkbox" id="include_card_info" name="include_card_info">
-                האם להכניס תוקף כרטיס ו-CVV?
-            </label>
+        <div class="form-group checkbox-container">
+            <input type="checkbox" id="include_card_info" name="include_card_info" class="checkbox-input">
+            <label for="include_card_info" class="checkbox-label">האם להכניס תוקף כרטיס ו-CVV?</label>
         </div>
 
-        <!-- עוטפים את שני השדות במכלול אחד ונגדיר display:none כברירת מחדל -->
-        <div id="card_fields_container" style="display: none;">
+        <!-- Card fields, hidden by default -->
+        <div id="card_fields_container" class="card-fields" style="display: none;">
             <!-- CVV Field -->
             <div class="form-group">
                 {{ coupon_form.cvv.label(class="form-label") }}
@@ -137,23 +252,29 @@
 
             <!-- Card Exp Field -->
             <div class="form-group">
-                {{ coupon_form.card_exp.label(class="form-label") }}
-                {{ coupon_form.card_exp(class="input-field", id="card_exp") }}
+                <label for="card_exp" class="form-label">תוקף כרטיס</label>
+                <input type="text" id="card_exp" name="card_exp" class="input-field" maxlength="5" placeholder="MM/YY"
+                    value="{{ coupon_form.card_exp.data if coupon_form.card_exp.data else '' }}">
                 {% for error in coupon_form.card_exp.errors %}
                     <div class="error">{{ error }}</div>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- One-Time Use Checkbox -->
-        <div class="form-group">
-            <label for="is_one_time">
-                {{ coupon_form.is_one_time() }}
-                {{ coupon_form.is_one_time.label }}
+        <!-- One-Time Use Checkbox (with tooltip) -->
+        <div class="form-group checkbox-container tooltip-container">
+            <input type="checkbox" id="is_one_time" name="is_one_time" class="checkbox-input" {{ coupon_form.is_one_time.data and 'checked' }}>
+            <label for="is_one_time" class="checkbox-label">
+                <span class="checkbox-text">{{ coupon_form.is_one_time.label }}</span>
             </label>
-            {% for error in coupon_form.is_one_time.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
+            <button type="button" class="tooltip-button" id="tooltipOneTimeButton" aria-label="מידע נוסף">❔</button>
+            <div class="mobile-tooltip" id="TooltipOneTimeUse">
+                קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                <span class="close-tooltip" id="closeTooltipOneTime">×</span>
+            </div>
+            <div class="tooltip" id="TooltipOneTimeUseDesktop">
+                קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+            </div>
         </div>
 
         <!-- Purpose Field (Hidden by default) -->
@@ -166,8 +287,11 @@
         </div>
 
         <!-- Submit Button -->
-        <div class="form-group">
-            {{ coupon_form.submit_coupon(class="submit-button") }}
+        <div class="form-group submit-group">
+            {{ coupon_form.submit_coupon(class="submit-button", id="submit_coupon_button", disabled=true) }}
+            <div id="validation_message" class="validation-message" style="display:none;">
+                יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה, בערך גדול מ-0.
+            </div>
         </div>
     </form>
     {% endif %}
@@ -175,99 +299,44 @@
 {% endblock %}
 
 {% block scripts %}
-<style>
-.center-text {
-    text-align: center;
-}
-
-.slots-info-mobile {
-    display: none;
-    font-size: 12px;
-    color: #333;
-    margin-bottom: 5px;
-}
-
-/* סגנון ל-tooltip בדסקטופ: */
-#slotsTooltip {
-    display: none;
-    position: absolute;
-    top: -5px;
-    left: 105%;
-    background-color: #333;
-    color: #fff;
-    padding: 10px;
-    border-radius: 5px;
-    width: 250px;
-    font-size: 14px;
-    text-align: center;
-    z-index: 1000;
-    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
-    padding-right: 20px;
-}
-
-/* החץ הקטן של tooltip בדסקטופ: */
-#slotsTooltip:after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    right: 100%;
-    margin-top: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: transparent #333 transparent transparent;
-}
-
-/* במכשיר נייד: במקום tooltip, נציג טקסט קבוע מעל הכפתור */
-@media (max-width: 768px) {
-    #slotsTooltip {
-        display: none !important; /* לא מציגים tooltip במסך קטן */
-    }
-    .slots-info-mobile {
-        display: block; /* מציגים טקסט קטן מעל הכפתור */
-    }
-    .no-slots-message {
-        text-align: center; /* מרכז את הטקסט במסרים שאין מספיק סלוטים */
-    }
-    .manual-entry p {
-        text-align: center; /* מרכז את הטקסט במסמך הכניסה הידנית */
-    }
-}
-
-/* כפתור הסגירה (X) ל-tooltip (משמש רק בדסקטופ) */
-.close-tooltip {
-    position: absolute;
-    top: 5px;
-    right: 10px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 16px;
-    background-color: transparent;
-    border: none;
-    color: #fff;
-}
-
-.close-tooltip:hover {
-    color: #ccc;
-}
-
-/* עיצוב עבור הכפתור בעת מעבר עכבר - בדסקטופ */
-@media (min-width: 769px) {
-    .form-group:hover #slotsTooltip {
-        display: block;
-    }
-}
-
-/* עיצוב נוסף למרכז טקסט בלייבלים במידת הצורך */
-.form-group.center-text .form-label {
-    display: block;
-    text-align: center;
-}
-</style>
-
+{{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Toggle instructions panel
+    const helpButton = document.getElementById('toggle-instructions');
+    const instructionsPanel = document.getElementById('instructions-panel');
+    
+    if (helpButton && instructionsPanel) {
+        helpButton.addEventListener('click', function() {
+            // Toggle display of instructions panel
+            if (instructionsPanel.style.display === 'none') {
+                instructionsPanel.style.display = 'block';
+                helpButton.classList.add('active');
+                // Scroll to the instructions panel
+                instructionsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                instructionsPanel.style.display = 'none';
+                helpButton.classList.remove('active');
+            }
+        });
+    }
 
-    // Handle Company
+    // Handle flash message close buttons
+    document.querySelectorAll('.close-flash').forEach(button => {
+        button.addEventListener('click', function() {
+            this.closest('.flash').remove();
+        });
+    });
+
+    // Auto-dismiss flash messages after 5 seconds
+    setTimeout(() => {
+        document.querySelectorAll('.flash').forEach(message => {
+            message.classList.add('fade-out');
+            setTimeout(() => message.remove(), 500);
+        });
+    }, 5000);
+
+    // === Handle Additional Company Field if "other" is selected ===
     const companySelect = document.getElementById('company_select');
     const otherCompanyGroup = document.getElementById('other_company_group');
     const otherCompanyInput = document.getElementById('other_company');
@@ -285,7 +354,7 @@ document.addEventListener('DOMContentLoaded', function() {
         companySelect.addEventListener('change', toggleOtherCompanyField);
     }
 
-    // Handle One-Time Use
+    // === Handle Coupon Purpose Field if One-Time is checked ===
     const checkbox = document.getElementById('is_one_time');
     const purposeGroup = document.getElementById('purpose_group');
     const purposeInput = document.getElementById('purpose');
@@ -305,17 +374,19 @@ document.addEventListener('DOMContentLoaded', function() {
         checkbox.addEventListener('change', togglePurposeField);
     }
 
-        // === ניהול תצוגת שדות הכרטיס (CVV + תוקף) ושמירת המצב ===
-        const includeCardInfoCheckbox = document.getElementById('include_card_info');
+    // === Handle Card Fields Display and Local Storage ===
+    const includeCardInfoCheckbox = document.getElementById('include_card_info');
     const cardFieldsContainer = document.getElementById('card_fields_container');
 
     function toggleCardFields() {
         if (includeCardInfoCheckbox.checked) {
             cardFieldsContainer.style.display = 'block';
+            localStorage.setItem('include_card_info_checked', 'true'); // Save state in localStorage
         } else {
             cardFieldsContainer.style.display = 'none';
+            localStorage.removeItem('include_card_info_checked'); // Remove from localStorage
 
-            // אופציונלי: ניקוי השדות בעת ביטול הסימון
+            // Optionally: clear the fields when unchecked
             const cardExpInput = document.getElementById('card_exp');
             const cvvInput = document.getElementById('cvv');
             if (cardExpInput) cardExpInput.value = '';
@@ -324,141 +395,716 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (includeCardInfoCheckbox && cardFieldsContainer) {
+        // Check if state is saved in localStorage
+        if (localStorage.getItem('include_card_info_checked')) {
+            includeCardInfoCheckbox.checked = true;
+        }
+
         includeCardInfoCheckbox.addEventListener('change', toggleCardFields);
-        toggleCardFields(); // הפעלה ראשונית
+        toggleCardFields(); // Initial trigger
     }
 
-    // === ניהול חישובי מחיר והנחה ===
+    // === Automatic formatting for MM/YY field ===
+    const cardExpInput = document.getElementById('card_exp');
+    if (cardExpInput) {
+        cardExpInput.addEventListener('input', function(event) {
+            let value = event.target.value.replace(/\D/g, ''); // Only digits
+            if (value.length > 2) {
+                value = value.substring(0, 2) + '/' + value.substring(2, 4);
+            }
+            event.target.value = value;
+        });
+    }
+    
+    // === Setup tooltips ===
+    const tooltipButtons = document.querySelectorAll('.tooltip-button, .tooltip-button-mobile');
+    const tooltipCloseButtons = document.querySelectorAll('.close-tooltip');
+    
+    tooltipButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Find the associated tooltip
+            const tooltip = this.nextElementSibling || 
+                           this.parentElement.querySelector('.mobile-tooltip');
+            
+            if (tooltip) {
+                // Close all other tooltips first
+                document.querySelectorAll('.mobile-tooltip').forEach(t => {
+                    if (t !== tooltip) t.style.display = 'none';
+                });
+                
+                // Toggle this tooltip
+                tooltip.style.display = tooltip.style.display === 'block' ? 'none' : 'block';
+            }
+        });
+    });
+    
+    tooltipCloseButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            this.closest('.mobile-tooltip').style.display = 'none';
+        });
+    });
+    
+    // Close tooltips when clicking outside
+    document.addEventListener('click', function(e) {
+        const target = e.target;
+        if (!target.closest('.tooltip-button') && 
+            !target.closest('.tooltip-button-mobile') && 
+            !target.closest('.mobile-tooltip')) {
+            
+            document.querySelectorAll('.mobile-tooltip').forEach(tooltip => {
+                tooltip.style.display = 'none';
+            });
+        }
+    });
+
+    // === Handle Price and Discount Calculations ===
     const desiredValueInput = document.getElementById('desired_value');
     const couponCostInput = document.getElementById('coupon_cost');
     const discountPercentageInput = document.getElementById('discount_percentage_input');
-    let isUpdating = false;
+    const discountDisplay = document.querySelector('.discount-display');
+    const discountValue = document.querySelector('.discount-value');
+    const submitButton = document.getElementById('submit_coupon_button');
+    const validationMessage = document.getElementById('validation_message');
 
-    // פונקציית עזר: המרה ל-Float בטוח
     function toFloat(value) {
         const num = parseFloat(value);
         return isNaN(num) ? null : num;
     }
 
     function updateFields(changedField) {
-        if (isUpdating) return;
-        isUpdating = true;
-
         const cost = toFloat(couponCostInput.value);
         const value = toFloat(desiredValueInput.value);
         const discount = toFloat(discountPercentageInput.value);
-
-        // לוגיקה מתוקנת:
-        // כאשר משתמש משנה ערך בשדה אחד, אנו מחשבים רק את השדה הדרוש על פי ההיגיון הרצוי:
-        //
-        // קשר בין השדות:
-        // discount = ((cost - value) / cost) * 100  => אם cost ו value ידועים
-        // value = cost * (1 - discount/100)         => אם cost ו discount ידועים
-        // cost = value / (1 - discount/100)         => אם value ו discount ידועים (לא תמיד נשתמש)
-        //
-        // היגיון:
-        // 1. אם המשתמש שינה את ה-cost:
-        //    - במידה ויש לנו value תקין, נחשב discount בהתאם (לא ניגע ב-value).
-        // 2. אם המשתמש שינה את ה-value:
-        //    - במידה ויש לנו cost תקין, נחשב discount (לא ניגע ב-cost).
-        // 3. אם המשתמש שינה את ה-discount:
-        //    - במידה ויש לנו cost תקין, נחשב value (לא ניגע ב-cost).
-        //
-        // אין שינויים מיותרים לערכים שכבר קיימים.
-
-        if (changedField === 'cost' && cost !== null && value !== null && value > 0) {
-        // מחשבים discount בלבד
-            const newDiscount = ((value - cost) / value) * 100;
-            discountPercentageInput.value = newDiscount.toFixed(2);
+        
+        // Update discount visual display
+        if (discount !== null && discount >= 0 && discount <= 100 && discountDisplay && discountValue) {
+            discountDisplay.style.width = discount + '%';
+            discountValue.textContent = discount.toFixed(2) + '%';
         }
 
-        if (changedField === 'value' && value !== null && cost !== null && value > 0) {
-            // מחשבים discount בלבד
-            const newDiscount = ((value - cost) / value) * 100;
-            discountPercentageInput.value = newDiscount.toFixed(2);
+        // Special case: If cost is exactly 0 and value is positive, set discount to 100%
+        if (cost === 0 && value > 0) {
+            discountPercentageInput.value = "100.00";
+            submitButton.disabled = false;
+            validationMessage.style.display = 'none';
+            return;
         }
 
-        if (changedField === 'discount' && discount !== null && value !== null && value > 0) {
-            // מחשבים cost בלבד
-            const newCost = value * (1 - discount / 100);
-            couponCostInput.value = newCost.toFixed(2);
+        let filledCount = 0;
+        if (cost !== null && cost >= 0) filledCount++;
+        if (value !== null && value > 0) filledCount++;
+        if (discount !== null && discount > 0 && discount <= 100) filledCount++;
+
+        if (filledCount < 2) {
+            submitButton.disabled = true;
+            validationMessage.style.display = 'block';
+            return;
+        } else {
+            submitButton.disabled = false;
+            validationMessage.style.display = 'none';
         }
 
-        isUpdating = false;
+        if (filledCount === 2) {
+            if (cost >= 0 && discount > 0 && discount <= 100 && (value === null || value <= 0)) {
+                // When cost and discount are provided, calculate value
+                if (discount === 100) {
+                    // Handle division by zero case when discount is 100%
+                    desiredValueInput.value = cost > 0 ? (cost * 100).toFixed(2) : "0.00";
+                } else {
+                    desiredValueInput.value = (cost / (1 - discount / 100)).toFixed(2);
+                }
+            } else if (cost >= 0 && value > 0 && (discount === null || discount <= 0 || discount > 100)) {
+                // When cost and value are provided, calculate discount
+                if (cost === 0) {
+                    discountPercentageInput.value = "100.00";
+                } else {
+                    discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+                }
+            } else if (value > 0 && discount > 0 && discount <= 100 && (cost === null || cost < 0)) {
+                // When value and discount are provided, calculate cost
+                couponCostInput.value = (value * (1 - discount / 100)).toFixed(2);
+            }
+        } else if (filledCount === 3) {
+            if (changedField === 'cost' && discount > 0 && discount <= 100 && value > 0) {
+                if (cost === 0) {
+                    discountPercentageInput.value = "100.00";
+                } else {
+                    discountPercentageInput.value = ((1 - cost / value) * 100).toFixed(2);
+                }
+            } else if (changedField === 'value' && cost >= 0 && discount > 0 && discount <= 100) {
+                discountPercentageInput.value = cost === 0 ? "100.00" : ((1 - cost / value) * 100).toFixed(2);
+            } else if (changedField === 'discount' && cost >= 0 && value > 0) {
+                if (discount === 100) {
+                    couponCostInput.value = "0.00";
+                } else {
+                    couponCostInput.value = (value * (1 - discount / 100)).toFixed(2);
+                }
+            }
+        }
+        
+        // Update discount display after calculations
+        if (discountPercentageInput.value && discountDisplay && discountValue) {
+            const newDiscount = parseFloat(discountPercentageInput.value);
+            if (!isNaN(newDiscount)) {
+                discountDisplay.style.width = Math.min(100, newDiscount) + '%';
+                discountValue.textContent = newDiscount.toFixed(2) + '%';
+            }
+        }
     }
 
-    // מאזינים לכל קלט בשדות
-    if (desiredValueInput && discountPercentageInput && couponCostInput) {
+    if (desiredValueInput && discountPercentageInput && couponCostInput && submitButton) {
         desiredValueInput.addEventListener('input', function() {
             updateFields('value');
         });
-
         discountPercentageInput.addEventListener('input', function() {
             updateFields('discount');
         });
-
         couponCostInput.addEventListener('input', function() {
             updateFields('cost');
         });
+        updateFields(null);
     }
-
-    // Tooltip behavior on mobile:
-    const slotsTooltip = document.getElementById('slotsTooltip');
-    const closeTooltip = document.getElementById('closeTooltip');
-    const isMobile = window.matchMedia("(max-width: 768px)").matches;
-
-    if (isMobile && slotsTooltip && closeTooltip) {
-        const submitButton = document.querySelector('.submit-button');
-        if (submitButton) {
-            submitButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                slotsTooltip.style.display = 'block';
-            });
-        }
-
-        closeTooltip.addEventListener('click', function() {
-            slotsTooltip.style.display = 'none';
-        });
-    }
-
-    // ===========================
-    // בדיקת תאריך תפוגה לפני שליחת הטופס
-    // ===========================
-    // שים לב שבקובץ הזה קיימים שני טפסים: (1) להעלאת תמונה, (2) למילוי פרטי הקופון
-    // אנחנו רוצים להוסיף את הבדיקה לטופס שמוסיף את הקופון בפועל, כלומר:
     
-    // הטופס למילוי הפרטים (קיים רק אם show_coupon_form == True)
-    const couponForm = document.querySelector('form'); 
+    // ===========================
+    // Check expiration date before form submission
+    // ===========================
+    const form = document.querySelector('form');
     const expirationInput = document.getElementById('expiration');
 
-    if (couponForm && expirationInput) {
-        couponForm.addEventListener('submit', function(e) {
+    if (form && expirationInput) {
+        form.addEventListener('submit', function(e) {
             const expValue = expirationInput.value.trim();
             if (!expValue) {
-                return; // לא הוזן תאריך
+                // No date entered, nothing to check
+                return;
             }
 
+            // Assuming format is YYYY-MM-DD:
             const parts = expValue.split('-');
             if (parts.length === 3) {
                 const year = parseInt(parts[0]);
-                const month = parseInt(parts[1]) - 1;
+                const month = parseInt(parts[1]) - 1; // Months in JS are 0-11
                 const day = parseInt(parts[2]);
                 const selectedDate = new Date(year, month, day);
 
+                // Prepare today's date (without time)
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
 
+                // Check if the coupon is expired or expires today
                 if (selectedDate <= today) {
-                    const confirmMsg = "תאריך התפוגה של הקופון הוא היום או תאריך שחלף. להמשיך?";
+                    const confirmMsg = "תאריך התפוגה הוא היום או לפני היום. האם ברצונך להמשיך?";
                     if (!confirm(confirmMsg)) {
-                        e.preventDefault();
+                        e.preventDefault(); // User canceled, prevent submission
                     }
                 }
             }
         });
     }
-
 });
-
 </script>
+
+<style>
+/* ==============================
+   Modern styling for coupon form
+   ============================== */
+
+/* Main layout and containers */
+.add-coupon {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.section-title {
+    color: #3498db;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Help button styling */
+.help-button-container {
+    display: flex;
+    justify-content: center;
+    margin: 15px 0;
+}
+
+.help-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 8px 16px;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    gap: 8px;
+}
+
+.help-button-text {
+    font-weight: 500;
+}
+
+.help-button:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.help-button.active {
+    background-color: #2980b9;
+}
+
+.help-button.active i {
+    transform: rotate(180deg);
+}
+
+/* Instructions panel styling */
+.instructions-panel {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.instructions-title {
+    color: #3498db;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.instructions-list {
+    padding-right: 20px;
+    margin: 15px 0;
+}
+
+.instructions-list li {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.important-note {
+    margin-top: 15px;
+    padding: 10px 15px;
+    background-color: rgba(243, 156, 18, 0.1);
+    border-right: 3px solid #f39c12;
+    color: #d35400;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 4px;
+}
+
+/* Action buttons in a row */
+.action-buttons-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border: 1px solid #3498db;
+    border-radius: 50px;
+    padding: 10px 15px;
+    background-color: white;
+    color: #3498db;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    height: 50px;
+    flex: 1;
+    min-width: 0; /* Allow buttons to shrink below content size */
+}
+
+.action-button:hover {
+    background-color: #3498db;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.button-content {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+.button-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+}
+
+.button-icon {
+    margin-right: 8px;
+    font-size: 1.2rem;
+}
+
+/* Flash messages */
+.flash-messages {
+    margin-bottom: 20px;
+}
+
+.flash {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideInDown 0.3s ease;
+}
+
+.flash.success {
+    background-color: rgba(46, 204, 113, 0.2);
+    border: 1px solid #2ecc71;
+    color: #27ae60;
+}
+
+.flash.error, 
+.flash.danger {
+    background-color: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+    color: #c0392b;
+}
+
+.flash.warning {
+    background-color: rgba(243, 156, 18, 0.2);
+    border: 1px solid #f39c12;
+    color: #d35400;
+}
+
+.close-flash {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.flash.fade-out {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+/* Form styling */
+.manual-coupon-form {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.manual-coupon-form::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 30%;
+    height: 4px;
+    background: linear-gradient(to right, transparent, #3498db);
+    border-radius: 0 8px 0 0;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #333;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    background-color: white;
+}
+
+.input-field:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    outline: none;
+}
+
+textarea.input-field {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.error, .validation-message {
+    color: #e74c3c;
+    font-size: 0.85em;
+    margin-top: 5px;
+}
+
+/* Submit button */
+.submit-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.submit-button:hover:not(:disabled) {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+}
+
+.submit-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.submit-group {
+    text-align: center;
+}
+
+/* Section divider */
+.section-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 15px 0;
+}
+
+.section-divider::before,
+.section-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #d0d8e6;
+}
+
+.section-divider span {
+    padding: 0 12px;
+    font-weight: bold;
+    color: #666;
+    font-size: 1em;
+}
+
+/* Card fields */
+.card-fields {
+    background-color: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    animation: slideDown 0.3s ease;
+}
+
+/* Checkbox styling */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.checkbox-input {
+    margin-left: 10px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checkbox-label {
+    cursor: pointer;
+}
+
+/* Tooltip styling */
+.tooltip-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.tooltip-button,
+.tooltip-button-mobile {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-right: 10px;
+    font-size: 12px;
+}
+
+.tooltip-button:hover {
+    background-color: #f8f9fa;
+}
+
+.tooltip,
+.mobile-tooltip {
+    display: none;
+    position: absolute;
+    background-color: #2c3e50;
+    color: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    max-width: 250px;
+    z-index: 100;
+    text-align: right;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.tooltip {
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 8px;
+}
+
+.mobile-tooltip {
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+}
+
+.tooltip::after,
+.mobile-tooltip::after {
+    content: "";
+    position: absolute;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #2c3e50 transparent transparent transparent;
+    top: 100%;
+    right: 10px;
+}
+
+.close-tooltip {
+    float: left;
+    cursor: pointer;
+    margin-right: 8px;
+}
+
+/* Discount display */
+.discount-display-container {
+    margin-top: 8px;
+    width: 100%;
+    height: 30px;
+    position: relative;
+}
+
+.discount-display {
+    background: linear-gradient(to right, white 0%, #3498db 100%);
+    height: 100%;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.discount-value {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #333;
+    font-weight: bold;
+    font-size: 0.9em;
+    text-shadow: 0 0 2px white;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .tooltip {
+        display: none !important; /* Hide desktop tooltip on mobile */
+    }
+    
+    /* Mobile action buttons layout (max 2 rows) */
+    .action-buttons-row {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .action-button {
+        width: calc(50% - 5px);
+        flex: 0 0 auto;
+        padding: 8px 10px;
+        font-size: 0.9em;
+    }
+    
+    .button-text {
+        font-size: 0.9em;
+    }
+    
+    .button-icon {
+        margin-right: 4px;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-tooltip {
+        display: none !important; /* Hide mobile tooltip on desktop */
+    }
+    
+    .tooltip-button:hover + .tooltip,
+    .tooltip-button:focus + .tooltip,
+    .tooltip:hover {
+        display: block;
+    }
+}
+
+/* Animations */
+@keyframes slideInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        max-height: 0;
+        opacity: 0;
+    }
+    to {
+        max-height: 500px;
+        opacity: 1;
+    }
+}
+</style>
 {% endblock %}
