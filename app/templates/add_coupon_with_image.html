@@ -128,20 +128,41 @@
 
     <!-- Image upload form -->
     {% if not show_coupon_form %}
-    <form method="POST" enctype="multipart/form-data" class="manual-coupon-form">
+    <form method="POST" enctype="multipart/form-data" class="upload-form">
         {{ upload_image_form.hidden_tag() }}
-        <div class="form-group">
-            <label for="coupon_image" class="form-label">
-                <i class="fa fa-image" aria-hidden="true"></i>
-                העלה תמונה של הקופון
+        
+        <div class="form-group file-upload-group">
+            <label for="{{ upload_image_form.coupon_image.id }}" class="form-label">
+                העלה תמונה של הקופון:<span class="required">*</span>
             </label>
-            {{ upload_image_form.coupon_image(class="input-field", id="coupon_image", accept="image/*") }}
+            
+            <div class="file-upload-container">
+                {{ upload_image_form.coupon_image(class="file-input", id="image-file-input") }}
+                <label for="image-file-input" class="file-input-label">
+                    <i class="fa fa-image upload-icon" aria-hidden="true"></i>
+                    <span class="file-input-text">בחר תמונה...</span>
+                </label>
+                <div class="selected-file-name" id="selected-image-name">לא נבחרה תמונה</div>
+            </div>
+            
             {% for error in upload_image_form.coupon_image.errors %}
-                <div class="error">{{ error }}</div>
+                <span class="error">{{ error }}</span>
             {% endfor %}
+            
+            <div class="file-format-info">
+                <p class="format-note">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                    פורמטים נתמכים: JPEG, PNG, GIF, WebP
+                </p>
+            </div>
         </div>
+
+        <!-- Submit button -->
         <div class="form-group submit-group">
-            {{ upload_image_form.submit_upload_image(class="submit-button") }}
+            <button type="submit" class="submit-button">
+                <i class="fa fa-magic" aria-hidden="true"></i>
+                {{ upload_image_form.submit_upload_image.label.text }}
+            </button>
         </div>
     </form>
     {% endif %}
@@ -302,6 +323,22 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle image file input change to show selected filename
+    const imageFileInput = document.getElementById('image-file-input');
+    const imageFileNameDisplay = document.getElementById('selected-image-name');
+    
+    if (imageFileInput && imageFileNameDisplay) {
+        imageFileInput.addEventListener('change', function() {
+            if (imageFileInput.files.length > 0) {
+                imageFileNameDisplay.textContent = imageFileInput.files[0].name;
+                imageFileNameDisplay.classList.add('file-selected');
+            } else {
+                imageFileNameDisplay.textContent = 'לא נבחרה תמונה';
+                imageFileNameDisplay.classList.remove('file-selected');
+            }
+        });
+    }
+
     // Toggle instructions panel
     const helpButton = document.getElementById('toggle-instructions');
     const instructionsPanel = document.getElementById('instructions-panel');
@@ -808,7 +845,7 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 /* Form styling */
-.manual-coupon-form {
+.upload-form, .manual-coupon-form {
     background-color: white;
     border-radius: 8px;
     padding: 20px;
@@ -818,7 +855,7 @@ document.addEventListener('DOMContentLoaded', function() {
     overflow: hidden;
 }
 
-.manual-coupon-form::before {
+.upload-form::before, .manual-coupon-form::before {
     content: '';
     position: absolute;
     top: 0;
@@ -861,10 +898,91 @@ textarea.input-field {
     resize: vertical;
 }
 
+.required {
+    color: #e74c3c;
+    margin-right: 3px;
+}
+
+/* File upload styling */
+.file-upload-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.file-input {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+}
+
+.file-input-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 400px;
+    height: 120px;
+    border: 2px dashed #3498db;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+.file-input-label:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    border-color: #2980b9;
+}
+
+.upload-icon {
+    font-size: 2rem;
+    color: #3498db;
+    margin-bottom: 10px;
+}
+
+.file-input-text {
+    font-weight: 500;
+    color: #3498db;
+}
+
+.selected-file-name {
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    word-break: break-all;
+    max-width: 100%;
+    text-align: center;
+}
+
+.file-selected {
+    color: #2980b9;
+    font-weight: 500;
+}
+
+.file-format-info {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.format-note {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
 .error, .validation-message {
     color: #e74c3c;
     font-size: 0.85em;
     margin-top: 5px;
+    display: block;
+    text-align: center;
 }
 
 /* Submit button */
@@ -873,11 +991,15 @@ textarea.input-field {
     color: white;
     border: none;
     border-radius: 6px;
-    padding: 10px 20px;
+    padding: 12px 24px;
     font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.3s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .submit-button:hover:not(:disabled) {
@@ -892,6 +1014,7 @@ textarea.input-field {
 
 .submit-group {
     text-align: center;
+    margin-top: 20px;
 }
 
 /* Section divider */
@@ -1069,6 +1192,10 @@ textarea.input-field {
     
     .button-icon {
         margin-right: 4px;
+    }
+    
+    .file-input-label {
+        height: 100px;
     }
 }
 
