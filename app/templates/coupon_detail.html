@@ -130,16 +130,16 @@
                             {% if is_owner and coupon.status == 'פעיל' %}
                                 {% if coupon.is_one_time %}
                                     <!-- For one-time coupons: buttons side by side centered -->
-                                    <div class="one-time-buttons-container">
+                                    <div class="coupon-buttons-wrapper">
                                         <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
                                             {{ mark_form.hidden_tag() }}
-                                            <button type="submit" class="action-button danger-button" onclick="return confirmAction('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');">
+                                            <button type="submit" class="coupon-action-btn coupon-danger-btn" onclick="return confirmAction('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');">
                                                 <i class="fas fa-times-circle"></i> סימון הקופון כנוצל
                                             </button>
                                         </form>
                                         
                                         {% if can_share %}
-                                        <button class="action-button share-button" onclick="openShareModal()">
+                                        <button class="coupon-action-btn coupon-share-btn" onclick="openShareModal()">
                                             <i class="fas fa-share-alt"></i> 
                                             {% if current_user.gender == 'נקבה' or current_user.gender == 'female' %}
                                                 שתפי את הקופון עם חבר
@@ -151,10 +151,10 @@
                                     </div>
                                 {% else %}
                                     <!-- For regular coupons: only mark as used button centered -->
-                                    <div class="mark-as-used-container">
+                                    <div class="coupon-single-button-wrapper">
                                         <form action="{{ url_for('coupons.mark_coupon_as_used', id=coupon.id) }}" method="POST">
                                             {{ mark_form.hidden_tag() }}
-                                            <button type="submit" class="action-button danger-button" onclick="return confirmAction('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');">
+                                            <button type="submit" class="coupon-action-btn coupon-danger-btn" onclick="return confirmAction('האם אתה בטוח שברצונך לסמן קופון זה כנוצל?');">
                                                 <i class="fas fa-times-circle"></i> סימון הקופון כנוצל
                                             </button>
                                         </form>

@@ -1551,41 +1551,36 @@ def extract_coupon_detail_image_proccess(client_id, image_path, companies_list):
 
     try:
 
-        def upload_image_to_imgur(client_id, image_path):
-            import requests
-
-            try:
-                url = "https://api.imgur.com/3/upload"
-                headers = {"Authorization": f"Client-ID {client_id}"}
-                with open(image_path, "rb") as image_file:
-                    data = {"image": image_file.read(), "type": "file"}
-                    response = requests.post(url, headers=headers, files=data)
-                    if response.status_code == 429:
-                        print("השתמשת יותר מדי, imgur חוסמים אותך מלהעלות תמונות חדשות")
-                        print(response.status_code)
-                    if response.status_code == 200:
-                        json_data = response.json()
-                        return (
-                            json_data["data"]["link"],
-                            json_data["data"]["deletehash"],
-                        )
-                    else:
-                        return None, None
-            except Exception as e:
-                return None, None
-
-        def extract_coupon_detail_image(coupon_image_url, companies_list):
+        def extract_coupon_detail_image(image_path, companies_list):
             import openai
             import os
             from dotenv import load_dotenv
             import json
             import pandas as pd
             import requests
+            import base64
             from datetime import datetime, timezone
 
             try:
                 load_dotenv()
                 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+                # Convert image to base64
+                with open(image_path, "rb") as image_file:
+                    base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+                
+                # Determine image format
+                image_extension = os.path.splitext(image_path)[1].lower()
+                if image_extension in ['.jpg', '.jpeg']:
+                    image_format = 'jpeg'
+                elif image_extension == '.png':
+                    image_format = 'png'
+                elif image_extension == '.gif':
+                    image_format = 'gif'
+                elif image_extension == '.webp':
+                    image_format = 'webp'
+                else:
+                    image_format = 'jpeg'  # default fallback
 
                 companies_str = ", ".join(companies_list)
 
@@ -1652,7 +1647,7 @@ def extract_coupon_detail_image_proccess(client_id, image_path, companies_list):
                                     {
                                         "type": "image_url",
                                         "image_url": {
-                                            "url": coupon_image_url,
+                                            "url": f"data:image/{image_format};base64,{base64_image}",
                                             "detail": "high",
                                         },
                                     },
@@ -1761,29 +1756,10 @@ def extract_coupon_detail_image_proccess(client_id, image_path, companies_list):
             except Exception:
                 return pd.DataFrame(), pd.DataFrame()
 
-        def delete_image_from_imgur(client_id, delete_hash):
-            import requests
-
-            try:
-                url = f"https://api.imgur.com/3/image/{delete_hash}"
-                headers = {"Authorization": f"Client-ID {client_id}"}
-                response = requests.delete(url, headers=headers)
-                if response.status_code == 200:
-                    return "התמונה נמחקה בהצלחה!"
-                else:
-                    return None
-            except Exception:
-                return None
-
-        coupon_image_url, delete_hash = upload_image_to_imgur(client_id, image_path)
-        if coupon_image_url is None or delete_hash is None:
-            return pd.DataFrame(), pd.DataFrame()
+        # Direct processing with base64 - no need for external image hosting
         coupon_df, pricing_df = extract_coupon_detail_image(
-            coupon_image_url, companies_list
+            image_path, companies_list
         )
-        if coupon_df.empty and pricing_df.empty:
-            return pd.DataFrame(), pd.DataFrame()
-        delete_image_from_imgur(client_id, delete_hash)
         return coupon_df, pricing_df
     except Exception:
         return pd.DataFrame(), pd.DataFrame()

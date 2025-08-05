@@ -713,6 +713,77 @@ select:focus {
     }
 }
 
+/* # Button Containers for Coupon Detail Page */
+.coupon-buttons-wrapper,
+.coupon-single-button-wrapper {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 15px;
+    margin: 20px auto !important;
+    flex-wrap: wrap;
+    width: 100% !important;
+    text-align: center !important;
+}
+
+.coupon-single-button-wrapper {
+    flex-direction: column;
+}
+
+.coupon-action-btn {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-family);
+    font-size: 16px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all var(--transition-speed);
+    cursor: pointer;
+    text-align: center;
+    min-width: 200px;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.coupon-danger-btn {
+    background-color: var(--danger-color) !important;
+    color: var(--danger-text) !important;
+}
+
+.coupon-danger-btn:hover {
+    background-color: #a93226 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(192, 57, 43, 0.3);
+}
+
+.coupon-share-btn {
+    background-color: var(--success-color) !important;
+    color: var(--success-text) !important;
+}
+
+.coupon-share-btn:hover {
+    background-color: #229954 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
+}
+
+@media (max-width: 768px) {
+    .coupon-buttons-wrapper {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .coupon-action-btn {
+        min-width: 100%;
+        padding: 15px;
+        font-size: 18px;
+    }
+}
+
 /* # Responsive Design */
 @media (max-width: 480px) {
     h2 {
