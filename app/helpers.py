@@ -1895,24 +1895,50 @@ def process_coupons_excel(file_path, user):
         for index, row in df.iterrows():
             try:
                 # Reading the coupon data from the row (as strings)
-                code = str(row.get("קוד קופון", "")).strip()
-                value_str = row.get("ערך מקורי", "")  # String
-                cost_str = row.get("עלות", "")  # String
-                company_name = str(row.get("חברה", "")).strip()
-                description = row.get("תיאור", "") or ""
-                date_str = row.get("תאריך תפוגה", "") or ""
+                # Handle code with nan check
+                code_raw = row.get("קוד קופון", "")
+                code = "" if pd.isna(code_raw) else str(code_raw).strip()
+                
+                # Handle value with nan check
+                value_raw = row.get("ערך מקורי", "")
+                value_str = "" if pd.isna(value_raw) else str(value_raw).strip()
+                
+                # Handle cost with nan check
+                cost_raw = row.get("עלות", "")
+                cost_str = "" if pd.isna(cost_raw) else str(cost_raw).strip()
+                
+                # Handle company name with nan check
+                company_raw = row.get("חברה", "")
+                company_name = "" if pd.isna(company_raw) else str(company_raw).strip()
+                # Handle description with nan check
+                description_raw = row.get("תיאור", "")
+                description = "" if pd.isna(description_raw) else str(description_raw).strip()
+                
+                # Handle date string with nan check
+                date_raw = row.get("תאריך תפוגה", "")
+                date_str = "" if pd.isna(date_raw) else str(date_raw).strip()
 
-                # Reading additional fields
-                one_time_str = row.get(
-                    "קוד לשימוש חד פעמי", "False"
-                )  # Default to 'False' if not present
-                purpose = row.get("מטרת הקופון", "") or ""
-                tags_field = row.get("תגיות", "") or ""
+                # Reading additional fields with nan checks
+                one_time_raw = row.get("קוד לשימוש חד פעמי", "False")
+                one_time_str = "False" if pd.isna(one_time_raw) else str(one_time_raw).strip()
+                
+                # Handle purpose with nan check
+                purpose_raw = row.get("מטרת הקופון", "")
+                purpose = "" if pd.isna(purpose_raw) else str(purpose_raw).strip()
+                
+                # Handle tags with nan check
+                tags_raw = row.get("תגיות", "")
+                tags_field = "" if pd.isna(tags_raw) else str(tags_raw).strip()
 
-                # *** New fields (replaced with keys from the Excel columns) ***
-                source_val = row.get("מאיפה קיבלת את הקופון", "") or ""
-                buyme_url_val = row.get("כתובת URL של הקופון ל-BuyMe", "") or ""
-                strauss_url_val = row.get("כתובת URL של הקופון שטראוס פלוס", "") or ""
+                # *** New fields with proper nan handling ***
+                source_raw = row.get("מאיפה קיבלת את הקופון", "")
+                source_val = "" if pd.isna(source_raw) else str(source_raw).strip()
+                
+                buyme_url_raw = row.get("כתובת URL של הקופון ל-BuyMe", "")
+                buyme_url_val = "" if pd.isna(buyme_url_raw) else str(buyme_url_raw).strip()
+                
+                strauss_url_raw = row.get("כתובת URL של הקופון שטראוס פלוס", "")
+                strauss_url_val = "" if pd.isna(strauss_url_raw) else str(strauss_url_raw).strip()
 
                 # Check for missing fields
                 missing_fields = []
