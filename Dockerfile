@@ -5,7 +5,7 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive \
-    CHROME_BIN=/usr/bin/google-chrome \
+    CHROME_BIN=/usr/bin/google-chrome-stable \
     CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
 
 # Create app directory
@@ -83,4 +83,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:10000/ || exit 1
 
 # Default command for web service
-CMD ["gunicorn", "--bind", "0.0.0.0:10000", "--workers", "4", "--timeout", "120", "wsgi:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:10000", "--workers", "4", "--timeout", "300", "--worker-class", "sync", "wsgi:app"]

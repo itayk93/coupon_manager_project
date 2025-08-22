@@ -234,8 +234,25 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     if coupon_kind == "Multipass":
         driver = None
         try:
-            # Set Chrome binary path - try environment variable first, then hardcoded paths
-            chrome_bin = os.getenv('CHROME_BIN') or '/usr/bin/google-chrome' or '/usr/bin/chromium-browser'
+            # Set Chrome binary path - try multiple possible locations
+            possible_chrome_paths = [
+                os.getenv('CHROME_BIN'),
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/google-chrome',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/chromium',
+                '/opt/google/chrome/chrome'
+            ]
+            
+            chrome_bin = None
+            for path in possible_chrome_paths:
+                if path and os.path.isfile(path):
+                    chrome_bin = path
+                    break
+            
+            if not chrome_bin:
+                chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                
             chrome_options.binary_location = chrome_bin
             
             driver = webdriver.Chrome(options=chrome_options)
@@ -350,8 +367,25 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     # -------------------- Handling Max Scenario --------------------
     elif coupon_kind == "Max":
         try:
-            # Set Chrome binary path - try environment variable first, then hardcoded paths
-            chrome_bin = os.getenv('CHROME_BIN') or '/usr/bin/google-chrome' or '/usr/bin/chromium-browser'
+            # Set Chrome binary path - try multiple possible locations
+            possible_chrome_paths = [
+                os.getenv('CHROME_BIN'),
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/google-chrome',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/chromium',
+                '/opt/google/chrome/chrome'
+            ]
+            
+            chrome_bin = None
+            for path in possible_chrome_paths:
+                if path and os.path.isfile(path):
+                    chrome_bin = path
+                    break
+            
+            if not chrome_bin:
+                chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                
             chrome_options.binary_location = chrome_bin
             
             # Use with so that Selenium closes automatically at the end
@@ -731,8 +765,25 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
         driver = None
         try:
             debug_print("Initializing Selenium for Multipass")
-            # Set Chrome binary path - try environment variable first, then hardcoded paths
-            chrome_bin = os.getenv('CHROME_BIN') or '/usr/bin/google-chrome' or '/usr/bin/chromium-browser'
+            # Set Chrome binary path - try multiple possible locations
+            possible_chrome_paths = [
+                os.getenv('CHROME_BIN'),
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/google-chrome',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/chromium',
+                '/opt/google/chrome/chrome'
+            ]
+            
+            chrome_bin = None
+            for path in possible_chrome_paths:
+                if path and os.path.isfile(path):
+                    chrome_bin = path
+                    break
+            
+            if not chrome_bin:
+                chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                
             chrome_options.binary_location = chrome_bin
             debug_print(f"Using Chrome binary: {chrome_bin}")
             
@@ -849,8 +900,25 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     elif coupon_kind == "Max":
         try:
             debug_print("Initializing Selenium for Max")
-            # Set Chrome binary path - try environment variable first, then hardcoded paths
-            chrome_bin = os.getenv('CHROME_BIN') or '/usr/bin/google-chrome' or '/usr/bin/chromium-browser'
+            # Set Chrome binary path - try multiple possible locations
+            possible_chrome_paths = [
+                os.getenv('CHROME_BIN'),
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/google-chrome',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/chromium',
+                '/opt/google/chrome/chrome'
+            ]
+            
+            chrome_bin = None
+            for path in possible_chrome_paths:
+                if path and os.path.isfile(path):
+                    chrome_bin = path
+                    break
+            
+            if not chrome_bin:
+                chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                
             chrome_options.binary_location = chrome_bin
             debug_print(f"Using Chrome binary: {chrome_bin}")
             
@@ -992,8 +1060,25 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             chrome_options.add_argument("--disable-features=VizDisplayCompositor")
             chrome_options.add_argument("--remote-debugging-port=9222")
             
-            # Set Chrome binary path - try environment variable first, then hardcoded paths
-            chrome_bin = os.getenv('CHROME_BIN') or '/usr/bin/google-chrome' or '/usr/bin/chromium-browser'
+            # Set Chrome binary path - try multiple possible locations
+            possible_chrome_paths = [
+                os.getenv('CHROME_BIN'),
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/google-chrome',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/chromium',
+                '/opt/google/chrome/chrome'
+            ]
+            
+            chrome_bin = None
+            for path in possible_chrome_paths:
+                if path and os.path.isfile(path):
+                    chrome_bin = path
+                    break
+            
+            if not chrome_bin:
+                chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                
             chrome_options.binary_location = chrome_bin
             debug_print(f"Using Chrome binary: {chrome_bin}")
             
