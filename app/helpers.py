@@ -602,6 +602,12 @@ def get_coupon_data_with_retry(coupon, max_retries=3, save_directory="automatic_
     # Configure logger for multipass updates
     logger = logging.getLogger('multipass_updater')
     if not logger.handlers:
+        # Create logs directory if it doesn't exist
+        import os
+        log_dir = 'logs'
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
         # Create file handler
         handler = logging.FileHandler('logs/multipass_updates.log')
         formatter = logging.Formatter(
