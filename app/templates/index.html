@@ -278,10 +278,55 @@
                 </div>
 
                 <!-- Update Progress (hidden by default) -->
-                <div id="updateProgress" style="display: none; margin-bottom: 20px; padding: 15px; background: #e7f3ff; border-radius: 8px; border: 1px solid #b3d9ff;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                        <span style="color: #0056b3; font-weight: 600;">מעדכן קופונים נבחרים...</span>
+                <div id="updateProgress" style="display: none; margin-bottom: 20px; padding: 20px; background: #e7f3ff; border-radius: 12px; border: 1px solid #b3d9ff;">
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <!-- Header with spinner -->
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="display: inline-block; width: 24px; height: 24px; border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                            <span id="progressTitle" style="color: #0056b3; font-weight: 700; font-size: 16px;">מעדכן קופונים נבחרים...</span>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div style="background: #fff; border-radius: 20px; overflow: hidden; height: 12px; position: relative; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                            <div id="progressBar" style="height: 100%; background: linear-gradient(90deg, #007bff 0%, #0056b3 100%); width: 0%; transition: width 0.3s ease; border-radius: 20px;"></div>
+                        </div>
+                        
+                        <!-- Progress Stats -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #0056b3;">
+                            <span id="progressStats">0 מתוך 0 קופונים</span>
+                            <span id="progressPercentage">0%</span>
+                        </div>
+                        
+                        <!-- Current Coupon Being Processed -->
+                        <div id="currentCouponInfo" style="background: rgba(255,255,255,0.7); padding: 12px; border-radius: 8px; border-right: 4px solid #007bff;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-ticket-alt" style="color: #007bff;"></i>
+                                <span style="font-weight: 600; color: #0056b3;">מעבד כעת:</span>
+                                <span id="currentCouponDisplay" style="color: #495057;">-</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Results Summary (hidden initially) -->
+                        <div id="updateResults" style="display: none; margin-top: 10px;">
+                            <div style="display: flex; gap: 20px; justify-content: space-around; text-align: center;">
+                                <div style="padding: 8px; background: rgba(40, 167, 69, 0.1); border-radius: 8px; border: 1px solid rgba(40, 167, 69, 0.3);">
+                                    <div style="color: #28a745; font-weight: 700; font-size: 18px;" id="successCount">0</div>
+                                    <div style="color: #28a745; font-size: 12px;">הצליחו</div>
+                                </div>
+                                <div style="padding: 8px; background: rgba(220, 53, 69, 0.1); border-radius: 8px; border: 1px solid rgba(220, 53, 69, 0.3);">
+                                    <div style="color: #dc3545; font-weight: 700; font-size: 18px;" id="failureCount">0</div>
+                                    <div style="color: #dc3545; font-size: 12px;">נכשלו</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Cancel Button -->
+                        <div style="text-align: center; margin-top: 10px;">
+                            <button type="button" id="cancelUpdateBtn" class="btn btn-outline-danger btn-sm" style="padding: 6px 16px; font-size: 13px; border-radius: 6px;">
+                                <i class="fas fa-stop" style="margin-left: 5px;"></i>
+                                בטל עדכון
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -298,7 +343,8 @@
             </button>
             <button type="button" id="updateSelectedBtn" class="btn btn-primary" style="padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: 8px; border: 1px solid #007bff; background: #007bff; color: white; transition: all 0.3s ease;" disabled>
                 <i class="fas fa-sync-alt" style="margin-left: 5px;"></i>
-                עדכן קופונים נבחרים
+                <span id="updateBtnText">עדכן קופונים נבחרים</span>
+                <small id="updateBtnMode" style="display: block; font-size: 11px; margin-top: 2px; opacity: 0.8;"></small>
             </button>
         </div>
     </div>
@@ -3220,11 +3266,26 @@ function updateSelectionCount() {
     const checkboxes = document.querySelectorAll('.coupon-checkbox:checked');
     const counter = document.getElementById('selectionCounter');
     const updateButton = document.getElementById('updateSelectedBtn');
+    const updateBtnText = document.getElementById('updateBtnText');
+    const updateBtnMode = document.getElementById('updateBtnMode');
     
     const selectedCount = checkboxes.length;
     
     if (counter) {
-        counter.textContent = `נבחרו ${selectedCount} קופונים`;
+        counter.textContent = selectedCount;
+    }
+    
+    // Update button text and mode based on selection count
+    if (updateButton && updateBtnText && updateBtnMode) {
+        if (selectedCount > 5) {
+            updateBtnMode.textContent = 'עיבוד רקע - מתאים לכמויות גדולות';
+            updateBtnMode.style.color = '#28a745';
+        } else if (selectedCount > 0) {
+            updateBtnMode.textContent = 'עיבוד מיידי - מתאים לכמויות קטנות';
+            updateBtnMode.style.color = '#007bff';
+        } else {
+            updateBtnMode.textContent = '';
+        }
     }
     
     // Enable/disable update button based on selection
@@ -3253,6 +3314,9 @@ async function updateSelectedCoupons() {
     // Show progress modal
     updateModalProgress('preparing', selectedIds.length);
     
+    // Determine if background processing should be used (for large batches)
+    const useBackground = selectedIds.length > 5; // Use background for more than 5 coupons
+    
     try {
         const response = await fetch('/update_selected_coupons', {
             method: 'POST',
@@ -3260,7 +3324,8 @@ async function updateSelectedCoupons() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                coupon_ids: selectedIds
+                coupon_ids: selectedIds,
+                use_background: useBackground
             })
         });
         
@@ -3303,18 +3368,34 @@ async function updateSelectedCoupons() {
         }
         
         if (data.success) {
-            updateModalProgress('completed', selectedIds.length, data);
-            
-            // Show success message
-            const successMessage = `עודכנו בהצלחה ${data.updated_count || selectedIds.length} קופונים`;
-            showFlashMessage(successMessage, 'success');
-            
-            // Close modal after a short delay
-            setTimeout(() => {
-                closeMultipassModal();
-                // Optionally reload the page to show updated coupons
-                window.location.reload();
-            }, 2000);
+            // Handle background vs synchronous processing
+            if (data.background) {
+                // Background job started
+                updateModalProgress('completed', selectedIds.length, {
+                    updated_count: data.coupon_count,
+                    message: data.message
+                });
+                
+                showFlashMessage(`התחיל עדכון רקע עבור ${data.coupon_count} קופונים. תוכל לבדוק את הסטטוס בדף הניהול.`, 'info');
+                
+                // Optionally start polling for job status
+                if (data.job_id) {
+                    pollJobStatus(data.job_id, selectedIds.length);
+                }
+                
+            } else {
+                // Synchronous processing completed
+                updateModalProgress('completed', selectedIds.length, data);
+                
+                const successMessage = `עודכנו בהצלחה ${data.updated_count || selectedIds.length} קופונים`;
+                showFlashMessage(successMessage, 'success');
+                
+                // Close modal after a short delay
+                setTimeout(() => {
+                    closeMultipassModal();
+                    window.location.reload();
+                }, 2000);
+            }
             
         } else {
             throw new Error(data.message || 'SERVER_ERROR');
@@ -3364,78 +3445,149 @@ async function updateSelectedCoupons() {
     }
 }
 
+// Global variables for progress tracking
+let updateInProgress = false;
+let updateCancelled = false;
+
 /**
- * Shows progress during the update process
+ * Shows progress during the update process with enhanced UI
  */
 function updateModalProgress(stage, totalCount, data = {}) {
     const progressContainer = document.getElementById('updateProgress');
     const couponsList = document.getElementById('updatableCouponsList');
     const selectionActions = document.getElementById('selectionActions');
+    const progressBar = document.getElementById('progressBar');
+    const progressStats = document.getElementById('progressStats');
+    const progressPercentage = document.getElementById('progressPercentage');
+    const progressTitle = document.getElementById('progressTitle');
+    const currentCouponDisplay = document.getElementById('currentCouponDisplay');
+    const updateResults = document.getElementById('updateResults');
+    const successCount = document.getElementById('successCount');
+    const failureCount = document.getElementById('failureCount');
+    const cancelBtn = document.getElementById('cancelUpdateBtn');
+    const updateBtn = document.getElementById('updateSelectedBtn');
     
     if (!progressContainer) return;
     
-    let html = '';
-    
     switch (stage) {
         case 'preparing':
-            html = `
-                <div class="text-center py-4">
-                    <div class="spinner-border text-primary mb-3" role="status">
-                        <span class="visually-hidden">טוען...</span>
-                    </div>
-                    <h5>מכין עדכון עבור ${totalCount} קופונים...</h5>
-                    <p class="text-muted">אנא המתן, התהליך עשוי לקחת כמה רגעים</p>
-                </div>
-            `;
+            updateInProgress = true;
+            updateCancelled = false;
+            progressContainer.style.display = 'block';
+            if (couponsList) couponsList.style.display = 'none';
+            if (selectionActions) selectionActions.style.display = 'none';
+            if (updateBtn) updateBtn.disabled = true;
+            
+            // Reset progress elements
+            if (progressBar) progressBar.style.width = '0%';
+            if (progressStats) progressStats.textContent = `0 מתוך ${totalCount} קופונים`;
+            if (progressPercentage) progressPercentage.textContent = '0%';
+            if (progressTitle) progressTitle.textContent = 'מכין עדכון...';
+            if (currentCouponDisplay) currentCouponDisplay.textContent = 'מכין נתונים';
+            if (updateResults) updateResults.style.display = 'none';
+            if (cancelBtn) {
+                cancelBtn.style.display = 'block';
+                cancelBtn.onclick = () => {
+                    updateCancelled = true;
+                    progressTitle.textContent = 'מבטל עדכון...';
+                    cancelBtn.disabled = true;
+                };
+            }
+            break;
+            
+        case 'progress':
+            const current = data.current || 0;
+            const couponInfo = data.couponInfo || {};
+            const percentage = Math.round((current / totalCount) * 100);
+            
+            if (progressBar) progressBar.style.width = `${percentage}%`;
+            if (progressStats) progressStats.textContent = `${current} מתוך ${totalCount} קופונים`;
+            if (progressPercentage) progressPercentage.textContent = `${percentage}%`;
+            if (progressTitle) progressTitle.textContent = 'מעדכן קופונים...';
+            if (currentCouponDisplay) {
+                currentCouponDisplay.textContent = `${couponInfo.code || 'לא ידוע'} (${couponInfo.company || ''})`;
+            }
             break;
             
         case 'completed':
+            updateInProgress = false;
             const updatedCount = data.updated_count || totalCount;
             const failedCount = totalCount - updatedCount;
             
-            html = `
-                <div class="text-center py-4">
-                    <div class="text-success mb-3">
-                        <i class="fas fa-check-circle fa-3x"></i>
-                    </div>
-                    <h5 class="text-success">העדכון הושלם בהצלחה!</h5>
-                    <div class="mt-3">
-                        <p><strong>עודכנו בהצלחה:</strong> ${updatedCount} קופונים</p>
-                        ${failedCount > 0 ? `<p class="text-warning"><strong>נכשלו:</strong> ${failedCount} קופונים</p>` : ''}
-                    </div>
-                    <div class="mt-3">
-                        <small class="text-muted">הדף יתרענן אוטומטית בעוד כמה שניות...</small>
-                    </div>
-                </div>
-            `;
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressStats) progressStats.textContent = `${totalCount} מתוך ${totalCount} קופונים`;
+            if (progressPercentage) progressPercentage.textContent = '100%';
+            if (progressTitle) progressTitle.textContent = 'עדכון הושלם!';
+            if (currentCouponDisplay) currentCouponDisplay.textContent = 'הושלם';
+            if (cancelBtn) cancelBtn.style.display = 'none';
+            
+            // Show results
+            if (updateResults) {
+                updateResults.style.display = 'block';
+                if (successCount) successCount.textContent = updatedCount;
+                if (failureCount) failureCount.textContent = failedCount;
+            }
             break;
             
         case 'error':
-            html = `
-                <div class="text-center py-4">
-                    <div class="text-danger mb-3">
-                        <i class="fas fa-exclamation-triangle fa-3x"></i>
-                    </div>
-                    <h5 class="text-danger">שגיאה בעדכון הקופונים</h5>
-                    <p class="text-muted mt-3">${data.error || 'אירעה שגיאה לא צפויה'}</p>
-                    <button type="button" class="btn btn-primary mt-3" onclick="loadUpdatableCoupons()">
-                        נסה שוב
-                    </button>
-                </div>
-            `;
+            updateInProgress = false;
+            const errorMessage = data.error || 'שגיאה לא ידועה';
+            
+            if (progressTitle) progressTitle.textContent = 'שגיאה בעדכון';
+            if (progressTitle) progressTitle.style.color = '#dc3545';
+            if (progressBar) {
+                progressBar.style.background = '#dc3545';
+                progressBar.style.width = '100%';
+            }
+            if (currentCouponDisplay) currentCouponDisplay.textContent = errorMessage;
+            if (cancelBtn) cancelBtn.style.display = 'none';
+            if (updateBtn) updateBtn.disabled = false;
             break;
     }
+}
+
+/**
+ * Poll job status for background tasks
+ */
+async function pollJobStatus(jobId, totalCoupons) {
+    const maxPolls = 60; // Poll for up to 30 minutes (30s intervals)
+    let polls = 0;
     
-    progressContainer.innerHTML = html;
-    progressContainer.style.display = 'block';
+    const poll = async () => {
+        try {
+            const response = await fetch(`/job_status/${jobId}`);
+            const status = await response.json();
+            
+            polls++;
+            
+            if (status.status === 'finished') {
+                const result = status.result;
+                if (result) {
+                    showFlashMessage(`עדכון רקע הושלם: ${result.success_count} הצליחו, ${result.failure_count} נכשלו`, 'success');
+                    setTimeout(() => window.location.reload(), 2000);
+                }
+                return;
+            } else if (status.status === 'failed') {
+                showFlashMessage(`עדכון רקע נכשל: ${status.error || 'שגיאה לא ידועה'}`, 'danger');
+                return;
+            } else if (polls >= maxPolls) {
+                showFlashMessage('עדכון רקע עדיין רץ. בדוק את הסטטוס בדף הניהול.', 'warning');
+                return;
+            }
+            
+            // Continue polling
+            setTimeout(poll, 30000); // Poll every 30 seconds
+            
+        } catch (error) {
+            console.error('Error polling job status:', error);
+            if (polls < maxPolls) {
+                setTimeout(poll, 30000);
+            }
+        }
+    };
     
-    // Hide other sections during progress
-    if (couponsList) {
-        couponsList.style.display = stage === 'preparing' || stage === 'completed' || stage === 'error' ? 'none' : 'block';
-    }
-    if (selectionActions) {
-        selectionActions.style.display = stage === 'preparing' || stage === 'completed' || stage === 'error' ? 'none' : 'block';
-    }
+    // Start polling after 30 seconds
+    setTimeout(poll, 30000);
 }
 
 /**

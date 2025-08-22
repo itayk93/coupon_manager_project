@@ -1,0 +1,131 @@
+services:
+  # Redis service for background tasks
+  - type: redis
+    name: coupon-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+
+  # PostgreSQL database
+  - type: pserv
+    name: coupon-database
+    plan: free
+    databaseName: coupon_manager
+    user: coupon_user
+
+  # Main web application
+  - type: web
+    name: coupon-manager-web
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    buildCommand: ""
+    startCommand: "gunicorn --bind 0.0.0.0:10000 --workers 4 --timeout 120 wsgi:app"
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: wsgi.py
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: coupon-database
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: coupon-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      # Chrome/Selenium environment variables
+      - key: CHROME_BIN
+        value: /usr/bin/google-chrome
+      - key: CHROMEDRIVER_PATH
+        value: /usr/local/bin/chromedriver
+      - key: DISPLAY
+        value: ":99"
+
+  # Background worker for coupon updates
+  - type: worker
+    name: coupon-worker
+    env: docker
+    plan: starter  # Worker requires paid plan for Chrome/Selenium
+    dockerfilePath: ./Dockerfile
+    buildCommand: ""
+    startCommand: "python -m app.tasks"
+    autoDeploy: true
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: wsgi.py
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: coupon-database
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: coupon-redis
+          property: connectionString
+      - key: SECRET_KEY
+        sync: false
+        fromService:
+          type: web
+          name: coupon-manager-web
+          envVarKey: SECRET_KEY
+      # Chrome/Selenium environment variables
+      - key: CHROME_BIN
+        value: /usr/bin/google-chrome
+      - key: CHROMEDRIVER_PATH
+        value: /usr/local/bin/chromedriver
+      - key: DISPLAY
+        value: ":99"
+      # Selenium Chrome options for headless operation
+      - key: SELENIUM_HEADLESS
+        value: "true"
+
+  # Cron job for daily automatic updates
+  - type: cron
+    name: daily-coupon-update
+    schedule: "0 3 * * *"  # Run daily at 3 AM UTC
+    buildCommand: ""
+    startCommand: "python scripts/daily_update.py"
+    env: docker
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: wsgi.py
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: coupon-database
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: coupon-redis
+          property: connectionString
+      - key: SECRET_KEY
+        sync: false
+        fromService:
+          type: web
+          name: coupon-manager-web
+          envVarKey: SECRET_KEY
+      # Chrome/Selenium environment variables
+      - key: CHROME_BIN
+        value: /usr/bin/google-chrome
+      - key: CHROMEDRIVER_PATH
+        value: /usr/local/bin/chromedriver
+      - key: DISPLAY
+        value: ":99"
+      - key: SELENIUM_HEADLESS
+        value: "true"

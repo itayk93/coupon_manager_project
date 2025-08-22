@@ -1,11 +1,81 @@
+# Environment variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Flask instance
 instance/
+
+# Uploads
 uploads/
+
+# Python cache
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Logs
+logs/
+*.log
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# OS specific
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Selenium
+chromedriver
+geckodriver
+*.crx
+
+# Background task processing
+automatic_coupon_update/input_html/
+temp/
+tmp/
+*.tmp
+
+# Redis
+dump.rdb
+
+# Reports and documentation (if not needed in repo)
 sample_text/
 reports_to_improve/
 project_structure.txt
-CLAUDE.md
-PROJECT_DOCUMENTATION.md
+multipass_update_action_plan.md
+optimizations_documentation.md
+
+# Git tracking
 git_commits_log.xlsx
+
+# Render specific
+.render/
+
+# Node modules (if any)
+node_modules/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Backup files
+*.bak
+*.backup

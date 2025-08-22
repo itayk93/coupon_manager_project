@@ -591,6 +591,76 @@ def set_debug_mode(mode):
     DEBUG_MODE = mode
 
 
+def get_coupon_data_with_retry(coupon, max_retries=3, save_directory="automatic_coupon_update/input_html"):
+    """
+    Wrapper function for get_coupon_data with retry mechanism and advanced logging
+    """
+    import time
+    import logging
+    from datetime import datetime
+    
+    # Configure logger for multipass updates
+    logger = logging.getLogger('multipass_updater')
+    if not logger.handlers:
+        # Create file handler
+        handler = logging.FileHandler('logs/multipass_updates.log')
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+    
+    start_time = datetime.now()
+    logger.info(f"Starting update process for coupon {coupon.code} ({coupon.company})")
+    
+    for attempt in range(max_retries):
+        attempt_start = datetime.now()
+        try:
+            logger.info(f"Attempt {attempt + 1}/{max_retries} for coupon {coupon.code}")
+            
+            result = get_coupon_data(coupon, save_directory)
+            
+            if result is not None:
+                attempt_duration = (datetime.now() - attempt_start).total_seconds()
+                total_duration = (datetime.now() - start_time).total_seconds()
+                
+                logger.info(f"✅ SUCCESS: Coupon {coupon.code} updated successfully on attempt {attempt + 1}")
+                logger.info(f"   - Attempt duration: {attempt_duration:.2f}s")
+                logger.info(f"   - Total duration: {total_duration:.2f}s")
+                logger.info(f"   - Records found: {len(result) if hasattr(result, '__len__') else 'N/A'}")
+                
+                return result
+            else:
+                attempt_duration = (datetime.now() - attempt_start).total_seconds()
+                logger.warning(f"❌ No data returned for coupon {coupon.code} on attempt {attempt + 1} (duration: {attempt_duration:.2f}s)")
+                
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 5  # Exponential backoff: 5, 10, 15 seconds
+                    logger.info(f"   - Waiting {wait_time} seconds before retry...")
+                    time.sleep(wait_time)
+                    
+        except Exception as e:
+            attempt_duration = (datetime.now() - attempt_start).total_seconds()
+            logger.error(f"💥 ERROR on attempt {attempt + 1} for coupon {coupon.code}: {str(e)}")
+            logger.error(f"   - Error type: {type(e).__name__}")
+            logger.error(f"   - Attempt duration: {attempt_duration:.2f}s")
+            
+            if attempt == max_retries - 1:
+                total_duration = (datetime.now() - start_time).total_seconds()
+                logger.error(f"🚫 FINAL FAILURE: All {max_retries} attempts failed for coupon {coupon.code}")
+                logger.error(f"   - Total duration: {total_duration:.2f}s")
+                raise e
+            else:
+                wait_time = (attempt + 1) * 5  # Exponential backoff
+                logger.info(f"   - Waiting {wait_time} seconds before retry...")
+                time.sleep(wait_time)
+    
+    total_duration = (datetime.now() - start_time).total_seconds()
+    logger.error(f"🚫 FINAL FAILURE: All {max_retries} attempts failed for coupon {coupon.code} (total duration: {total_duration:.2f}s)")
+    return None
+
+
 def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html"):
     # Helper function to print debug messages when DEBUG_MODE is enabled
     def debug_print(message):

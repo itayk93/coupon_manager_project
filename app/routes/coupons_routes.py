@@ -63,6 +63,7 @@ from app.forms import (
 from app.helpers import (
     update_coupon_status,
     get_coupon_data,
+    get_coupon_data_with_retry,
     process_coupons_excel,
     extract_coupon_detail_sms,
     extract_coupon_detail_image_proccess,
@@ -3877,7 +3878,7 @@ def update_coupon_usage_from_multipass(id):
         return redirect(url_for("coupons.coupon_detail", id=id))
 
     # מעבירים את אובייקט הקופון, ולא רק את code
-    df = get_coupon_data(coupon)
+    df = get_coupon_data_with_retry(coupon, max_retries=3)
     if df is None:
         flash("לא ניתן לעדכן את השימוש מ-Multipass.", "danger")
         return redirect(url_for("coupons.coupon_detail", id=id))
@@ -4034,7 +4035,7 @@ def update_all_active_coupons():
 
     for cpn in active_coupons:
         try:
-            df = get_coupon_data(cpn)  # מעבירים קופון שלם
+            df = get_coupon_data_with_retry(cpn, max_retries=3)  # מעבירים קופון שלם
             if df is not None:
                 total_usage = float(df["usage_amount"].sum())
                 cpn.used_value = total_usage
@@ -4080,28 +4081,61 @@ def update_all_active_coupons():
 @login_required
 def update_selected_coupons():
     """
-    עדכון קופונים נבחרים ממודל הבחירה
+    עדכון קופונים נבחרים ממודל הבחירה - עם תמיכה ב-background tasks
     """
     if not current_user.is_admin:
         return jsonify({"error": "אין הרשאה"}), 403
 
-    coupon_ids = request.json.get('coupon_ids', [])
+    data = request.json
+    coupon_ids = data.get('coupon_ids', [])
+    use_background = data.get('use_background', False)  # Allow choosing sync/async mode
+    
     if not coupon_ids:
         return jsonify({"error": "לא נבחרו קופונים"}), 400
 
+    # Validate that coupons exist and are updatable
     selected_coupons = Coupon.query.filter(
         Coupon.id.in_(coupon_ids),
         Coupon.status == "פעיל",
         Coupon.is_one_time == False,
         Coupon.auto_download_details.isnot(None),
     ).all()
+    
+    if not selected_coupons:
+        return jsonify({"error": "לא נמצאו קופונים תקינים לעדכון"}), 400
 
+    # Background processing (for production/Render)
+    if use_background:
+        try:
+            from app.tasks import enqueue_multiple_coupon_updates
+            
+            valid_coupon_ids = [c.id for c in selected_coupons]
+            job = enqueue_multiple_coupon_updates(valid_coupon_ids, max_retries=3)
+            
+            return jsonify({
+                "success": True,
+                "background": True,
+                "job_id": job.id,
+                "coupon_count": len(valid_coupon_ids),
+                "message": f"התחיל עדכון רקע עבור {len(valid_coupon_ids)} קופונים",
+                "status_url": f"/job_status/{job.id}"
+            })
+            
+        except ImportError:
+            # Fallback to synchronous processing if Redis/RQ not available
+            use_background = False
+        except Exception as e:
+            return jsonify({
+                "error": f"שגיאה בהפעלת עדכון רקע: {str(e)}"
+            }), 500
+
+    # Synchronous processing (for development/testing)
     updated_coupons = []
     failed_coupons = []
 
     for cpn in selected_coupons:
         try:
-            df = get_coupon_data(cpn)  
+            df = get_coupon_data_with_retry(cpn, max_retries=3)  
             if df is not None:
                 total_usage = float(df["usage_amount"].sum())
                 cpn.used_value = total_usage
@@ -4140,13 +4174,35 @@ def update_selected_coupons():
         db.session.commit()
         return jsonify({
             'success': True,
+            'background': False,
             'updated_coupons': updated_coupons,
             'failed_coupons': failed_coupons,
+            'updated_count': len(updated_coupons),
+            'failed_count': len(failed_coupons),
             'message': f'עודכנו {len(updated_coupons)} קופונים בהצלחה'
         })
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
+
+
+@coupons_bp.route("/job_status/<job_id>", methods=["GET"])
+@login_required
+def get_job_status(job_id):
+    """
+    בדיקת סטטוס של background job
+    """
+    if not current_user.is_admin:
+        return jsonify({"error": "אין הרשאה"}), 403
+    
+    try:
+        from app.tasks import get_job_status
+        status = get_job_status(job_id)
+        return jsonify(status)
+    except ImportError:
+        return jsonify({"error": "Background tasks not available"}), 503
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @coupons_bp.route("/update_coupon_transactions", methods=["POST"])
@@ -4191,7 +4247,7 @@ def update_coupon_transactions():
         return redirect(url_for("coupons.coupon_detail"))
 
     try:
-        df = get_coupon_data(coupon)  # מעבירים את האובייקט
+        df = get_coupon_data_with_retry(coupon, max_retries=3)  # מעבירים את האובייקט
         if df is not None:
             total_usage = float(df["usage_amount"].sum())
             coupon.used_value = total_usage
