@@ -4192,31 +4192,34 @@ def update_all_multipass_coupons():
     """
     עדכון אוטומטי של כל הקופונים שיש להם auto_download_details
     """
-    if not current_user.is_admin:
-        return jsonify({"error": "אין הרשאה"}), 403
+    try:
+        current_app.logger.info(f"Starting update_all_multipass_coupons for user {current_user.id}")
+        
+        if not current_user.is_admin:
+            return jsonify({"error": "אין הרשאה"}), 403
 
-    # Handle both JSON and form data
-    if request.is_json:
-        data = request.json or {}
-        use_background = data.get('use_background', True)
-    else:
-        # Form data from fetch with FormData
-        use_background = request.form.get('use_background', 'true').lower() == 'true'
-    
-    # Get all coupons that can be updated automatically
-    updatable_coupons = Coupon.query.filter(
-        Coupon.status == "פעיל",
-        Coupon.is_one_time == False,
-        Coupon.auto_download_details.isnot(None)
-    ).all()
-    
-    if not updatable_coupons:
-        return jsonify({
-            "success": True,
-            "message": "לא נמצאו קופונים לעדכון",
-            "updated_count": 0,
-            "failed_count": 0
-        })
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.json or {}
+            use_background = data.get('use_background', True)
+        else:
+            # Form data from fetch with FormData
+            use_background = request.form.get('use_background', 'true').lower() == 'true'
+        
+        # Get all coupons that can be updated automatically
+        updatable_coupons = Coupon.query.filter(
+            Coupon.status == "פעיל",
+            Coupon.is_one_time == False,
+            Coupon.auto_download_details.isnot(None)
+        ).all()
+        
+        if not updatable_coupons:
+            return jsonify({
+                "success": True,
+                "message": "לא נמצאו קופונים לעדכון",
+                "updated_count": 0,
+                "failed_count": 0
+            })
 
     coupon_ids = [c.id for c in updatable_coupons]
     
@@ -4299,6 +4302,15 @@ def update_all_multipass_coupons():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
+        
+    except Exception as e:
+        current_app.logger.error(f"Fatal error in update_all_multipass_coupons: {str(e)}")
+        import traceback
+        current_app.logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            "error": f"שגיאה כללית: {str(e)}",
+            "details": "בדוק את הלוגים לפרטים נוספים"
+        }), 500
 
 
 @coupons_bp.route("/job_status/<job_id>", methods=["GET"])
