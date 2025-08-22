@@ -2901,14 +2901,13 @@ async function updateAllMultipassCoupons() {
     
     try {
         // Call the new endpoint that processes all coupons automatically
+        const formData = new FormData();
+        formData.append('csrf_token', '{{ csrf_token() }}');
+        formData.append('use_background', 'true');
+        
         const response = await fetch('/update_all_multipass_coupons', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                use_background: true  // Always use background for full updates
-            })
+            body: formData
         });
         
         if (!response.ok) {

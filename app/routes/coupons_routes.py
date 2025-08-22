@@ -4195,8 +4195,13 @@ def update_all_multipass_coupons():
     if not current_user.is_admin:
         return jsonify({"error": "אין הרשאה"}), 403
 
-    data = request.json or {}
-    use_background = data.get('use_background', True)  # Default to background mode
+    # Handle both JSON and form data
+    if request.is_json:
+        data = request.json or {}
+        use_background = data.get('use_background', True)
+    else:
+        # Form data from fetch with FormData
+        use_background = request.form.get('use_background', 'true').lower() == 'true'
     
     # Get all coupons that can be updated automatically
     updatable_coupons = Coupon.query.filter(
