@@ -209,10 +209,13 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
 
     # Basic Selenium options setup
     chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run in headless mode for production
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+    chrome_options.add_argument("--remote-debugging-port=9222")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_argument("--disable-images")  # Prevent image loading
     chrome_options.add_argument(
@@ -231,10 +234,9 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     if coupon_kind == "Multipass":
         driver = None
         try:
-            # Set Chrome binary path if available in environment
-            chrome_bin = os.getenv('CHROME_BIN')
-            if chrome_bin:
-                chrome_options.binary_location = chrome_bin
+            # Set Chrome binary path - try environment variable first, then hardcoded paths
+            chrome_bin = os.getenv('CHROME_BIN') or '/usr/bin/google-chrome' or '/usr/bin/chromium-browser'
+            chrome_options.binary_location = chrome_bin
             
             driver = webdriver.Chrome(options=chrome_options)
             driver.get(
@@ -348,10 +350,9 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     # -------------------- Handling Max Scenario --------------------
     elif coupon_kind == "Max":
         try:
-            # Set Chrome binary path if available in environment
-            chrome_bin = os.getenv('CHROME_BIN')
-            if chrome_bin:
-                chrome_options.binary_location = chrome_bin
+            # Set Chrome binary path - try environment variable first, then hardcoded paths
+            chrome_bin = os.getenv('CHROME_BIN') or '/usr/bin/google-chrome' or '/usr/bin/chromium-browser'
+            chrome_options.binary_location = chrome_bin
             
             # Use with so that Selenium closes automatically at the end
             with webdriver.Chrome(options=chrome_options) as driver:
@@ -704,10 +705,13 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     # Configure basic Selenium Chrome options
     debug_print("Configuring Chrome options")
     chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run in headless mode for production
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+    chrome_options.add_argument("--remote-debugging-port=9222")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_argument("--disable-images")  # Prevent image loading
     chrome_options.add_argument(
@@ -727,11 +731,10 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
         driver = None
         try:
             debug_print("Initializing Selenium for Multipass")
-            # Set Chrome binary path if available in environment
-            chrome_bin = os.getenv('CHROME_BIN')
-            if chrome_bin:
-                chrome_options.binary_location = chrome_bin
-                debug_print(f"Using Chrome binary: {chrome_bin}")
+            # Set Chrome binary path - try environment variable first, then hardcoded paths
+            chrome_bin = os.getenv('CHROME_BIN') or '/usr/bin/google-chrome' or '/usr/bin/chromium-browser'
+            chrome_options.binary_location = chrome_bin
+            debug_print(f"Using Chrome binary: {chrome_bin}")
             
             driver = webdriver.Chrome(options=chrome_options)
             driver.get(
@@ -846,11 +849,10 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     elif coupon_kind == "Max":
         try:
             debug_print("Initializing Selenium for Max")
-            # Set Chrome binary path if available in environment
-            chrome_bin = os.getenv('CHROME_BIN')
-            if chrome_bin:
-                chrome_options.binary_location = chrome_bin
-                debug_print(f"Using Chrome binary: {chrome_bin}")
+            # Set Chrome binary path - try environment variable first, then hardcoded paths
+            chrome_bin = os.getenv('CHROME_BIN') or '/usr/bin/google-chrome' or '/usr/bin/chromium-browser'
+            chrome_options.binary_location = chrome_bin
+            debug_print(f"Using Chrome binary: {chrome_bin}")
             
             with webdriver.Chrome(options=chrome_options) as driver:
                 wait = WebDriverWait(driver, 30)
@@ -984,14 +986,16 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             # Import webdriver_manager to manage the Chrome driver
             from webdriver_manager.chrome import ChromeDriverManager
 
+            chrome_options.add_argument("--headless")  # Run in headless mode for production
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+            chrome_options.add_argument("--remote-debugging-port=9222")
             
-            # Set Chrome binary path if available in environment
-            chrome_bin = os.getenv('CHROME_BIN')
-            if chrome_bin:
-                chrome_options.binary_location = chrome_bin
-                debug_print(f"Using Chrome binary: {chrome_bin}")
+            # Set Chrome binary path - try environment variable first, then hardcoded paths
+            chrome_bin = os.getenv('CHROME_BIN') or '/usr/bin/google-chrome' or '/usr/bin/chromium-browser'
+            chrome_options.binary_location = chrome_bin
+            debug_print(f"Using Chrome binary: {chrome_bin}")
             
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
