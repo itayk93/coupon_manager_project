@@ -4186,6 +4186,116 @@ def update_selected_coupons():
         return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
 
 
+@coupons_bp.route("/update_all_multipass_coupons", methods=["POST"])
+@login_required
+def update_all_multipass_coupons():
+    """
+    עדכון אוטומטי של כל הקופונים שיש להם auto_download_details
+    """
+    if not current_user.is_admin:
+        return jsonify({"error": "אין הרשאה"}), 403
+
+    data = request.json or {}
+    use_background = data.get('use_background', True)  # Default to background mode
+    
+    # Get all coupons that can be updated automatically
+    updatable_coupons = Coupon.query.filter(
+        Coupon.status == "פעיל",
+        Coupon.is_one_time == False,
+        Coupon.auto_download_details.isnot(None)
+    ).all()
+    
+    if not updatable_coupons:
+        return jsonify({
+            "success": True,
+            "message": "לא נמצאו קופונים לעדכון",
+            "updated_count": 0,
+            "failed_count": 0
+        })
+
+    coupon_ids = [c.id for c in updatable_coupons]
+    
+    # Background processing (recommended for multiple coupons)
+    if use_background:
+        try:
+            from app.tasks import enqueue_multiple_coupon_updates
+            
+            job = enqueue_multiple_coupon_updates(coupon_ids, max_retries=3)
+            
+            return jsonify({
+                "success": True,
+                "background": True,
+                "job_id": job.id,
+                "coupon_count": len(coupon_ids),
+                "message": f"התחיל עדכון רקע עבור {len(coupon_ids)} קופונים",
+                "status_url": f"/job_status/{job.id}"
+            })
+            
+        except ImportError:
+            # Fallback to synchronous processing if Redis/RQ not available
+            use_background = False
+        except Exception as e:
+            return jsonify({
+                "error": f"שגיאה בהפעלת עדכון רקע: {str(e)}"
+            }), 500
+
+    # Synchronous processing (fallback)
+    updated_coupons = []
+    failed_coupons = []
+
+    for cpn in updatable_coupons:
+        try:
+            df = get_coupon_data_with_retry(cpn, max_retries=3)  
+            if df is not None:
+                total_usage = float(df["usage_amount"].sum())
+                cpn.used_value = total_usage
+                update_coupon_status(cpn)
+
+                usage = CouponUsage(
+                    coupon_id=cpn.id,
+                    used_amount=total_usage,
+                    timestamp=datetime.now(timezone.utc),
+                    action="עדכון אוטומטי",
+                    details="עדכון אוטומטי של כל הקופונים",
+                )
+                db.session.add(usage)
+
+                updated_coupons.append({
+                    'code': cpn.code,
+                    'company': cpn.company,
+                    'usage': total_usage
+                })
+            else:
+                failed_coupons.append({
+                    'code': cpn.code,
+                    'company': cpn.company,
+                    'error': 'לא ניתן לקבל נתונים'
+                })
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating coupon {cpn.code}: {e}")
+            failed_coupons.append({
+                'code': cpn.code,
+                'company': cpn.company,
+                'error': str(e)
+            })
+
+    try:
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'background': False,
+            'updated_coupons': updated_coupons,
+            'failed_coupons': failed_coupons,
+            'updated_count': len(updated_coupons),
+            'failed_count': len(failed_coupons),
+            'message': f'עודכנו {len(updated_coupons)} קופונים בהצלחה'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
+
+
 @coupons_bp.route("/job_status/<job_id>", methods=["GET"])
 @login_required
 def get_job_status(job_id):

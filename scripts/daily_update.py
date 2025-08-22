@@ -50,16 +50,65 @@ def main():
                 logger.info("No updatable coupons found")
                 return
             
-            coupon_ids = [c.id for c in updatable_coupons]
-            logger.info(f"Found {len(coupon_ids)} coupons to update")
+            logger.info(f"Found {len(updatable_coupons)} coupons to update")
             
             # Log coupon details
             for coupon in updatable_coupons:
                 logger.info(f"  - {coupon.code} ({coupon.company}) - {coupon.auto_download_details}")
             
-            # Enqueue batch update job
-            job = enqueue_multiple_coupon_updates(coupon_ids, max_retries=3)
-            logger.info(f"Enqueued batch update job: {job.id}")
+            # Use the new endpoint logic directly
+            try:
+                from app.tasks import enqueue_multiple_coupon_updates
+                
+                coupon_ids = [c.id for c in updatable_coupons]
+                job = enqueue_multiple_coupon_updates(coupon_ids, max_retries=3)
+                logger.info(f"Enqueued batch update job: {job.id}")
+            except ImportError:
+                logger.warning("Redis/RQ not available, using synchronous processing")
+                # Direct synchronous processing fallback
+                from app.helpers import get_coupon_data_with_retry, update_coupon_status
+                from app.models import CouponUsage
+                from app.extensions import db
+                from datetime import timezone
+                
+                updated_count = 0
+                failed_count = 0
+                
+                for cpn in updatable_coupons:
+                    try:
+                        df = get_coupon_data_with_retry(cpn, max_retries=3)  
+                        if df is not None:
+                            total_usage = float(df["usage_amount"].sum())
+                            cpn.used_value = total_usage
+                            update_coupon_status(cpn)
+
+                            usage = CouponUsage(
+                                coupon_id=cpn.id,
+                                used_amount=total_usage,
+                                timestamp=datetime.now(timezone.utc),
+                                action="עדכון יומי",
+                                details="עדכון יומי אוטומטי",
+                            )
+                            db.session.add(usage)
+                            updated_count += 1
+                            logger.info(f"✅ Updated coupon {cpn.code}: {total_usage}")
+                        else:
+                            failed_count += 1
+                            logger.warning(f"❌ Failed to update coupon {cpn.code}: No data")
+                    except Exception as e:
+                        failed_count += 1
+                        logger.error(f"💥 Error updating coupon {cpn.code}: {e}")
+                        db.session.rollback()
+                
+                try:
+                    db.session.commit()
+                    logger.info(f"=== Daily Update Completed ===")
+                    logger.info(f"Updated: {updated_count}, Failed: {failed_count}")
+                    return
+                except Exception as e:
+                    db.session.rollback()
+                    logger.error(f"Database commit failed: {e}")
+                    raise e
             
             # Wait for job completion (with timeout)
             import time
