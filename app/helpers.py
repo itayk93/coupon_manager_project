@@ -231,6 +231,12 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     if coupon_kind == "Multipass":
         driver = None
         try:
+            # Set Chrome binary path if available in environment
+            import os
+            chrome_bin = os.getenv('CHROME_BIN')
+            if chrome_bin:
+                chrome_options.binary_location = chrome_bin
+            
             driver = webdriver.Chrome(options=chrome_options)
             driver.get(
                 "https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/"
@@ -343,6 +349,12 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     # -------------------- Handling Max Scenario --------------------
     elif coupon_kind == "Max":
         try:
+            # Set Chrome binary path if available in environment
+            import os
+            chrome_bin = os.getenv('CHROME_BIN')
+            if chrome_bin:
+                chrome_options.binary_location = chrome_bin
+            
             # Use with so that Selenium closes automatically at the end
             with webdriver.Chrome(options=chrome_options) as driver:
                 wait = WebDriverWait(driver, 30)
@@ -717,6 +729,13 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
         driver = None
         try:
             debug_print("Initializing Selenium for Multipass")
+            # Set Chrome binary path if available in environment
+            import os
+            chrome_bin = os.getenv('CHROME_BIN')
+            if chrome_bin:
+                chrome_options.binary_location = chrome_bin
+                debug_print(f"Using Chrome binary: {chrome_bin}")
+            
             driver = webdriver.Chrome(options=chrome_options)
             driver.get(
                 "https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/"
@@ -830,6 +849,13 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     elif coupon_kind == "Max":
         try:
             debug_print("Initializing Selenium for Max")
+            # Set Chrome binary path if available in environment
+            import os
+            chrome_bin = os.getenv('CHROME_BIN')
+            if chrome_bin:
+                chrome_options.binary_location = chrome_bin
+                debug_print(f"Using Chrome binary: {chrome_bin}")
+            
             with webdriver.Chrome(options=chrome_options) as driver:
                 wait = WebDriverWait(driver, 30)
                 driver.get("https://www.max.co.il/gift-card-transactions/main")
@@ -961,9 +987,17 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             debug_print("Initializing Selenium for BuyMe")
             # Import webdriver_manager to manage the Chrome driver
             from webdriver_manager.chrome import ChromeDriverManager
+            import os
 
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
+            
+            # Set Chrome binary path if available in environment
+            chrome_bin = os.getenv('CHROME_BIN')
+            if chrome_bin:
+                chrome_options.binary_location = chrome_bin
+                debug_print(f"Using Chrome binary: {chrome_bin}")
+            
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
 
