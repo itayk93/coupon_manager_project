@@ -232,7 +232,6 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
         driver = None
         try:
             # Set Chrome binary path if available in environment
-            import os
             chrome_bin = os.getenv('CHROME_BIN')
             if chrome_bin:
                 chrome_options.binary_location = chrome_bin
@@ -350,7 +349,6 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     elif coupon_kind == "Max":
         try:
             # Set Chrome binary path if available in environment
-            import os
             chrome_bin = os.getenv('CHROME_BIN')
             if chrome_bin:
                 chrome_options.binary_location = chrome_bin
@@ -609,13 +607,13 @@ def get_coupon_data_with_retry(coupon, max_retries=3, save_directory="automatic_
     """
     import time
     import logging
+    import os
     from datetime import datetime
     
     # Configure logger for multipass updates
     logger = logging.getLogger('multipass_updater')
     if not logger.handlers:
         # Create logs directory if it doesn't exist
-        import os
         log_dir = 'logs'
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
@@ -730,7 +728,6 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
         try:
             debug_print("Initializing Selenium for Multipass")
             # Set Chrome binary path if available in environment
-            import os
             chrome_bin = os.getenv('CHROME_BIN')
             if chrome_bin:
                 chrome_options.binary_location = chrome_bin
@@ -850,7 +847,6 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
         try:
             debug_print("Initializing Selenium for Max")
             # Set Chrome binary path if available in environment
-            import os
             chrome_bin = os.getenv('CHROME_BIN')
             if chrome_bin:
                 chrome_options.binary_location = chrome_bin
@@ -987,7 +983,6 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             debug_print("Initializing Selenium for BuyMe")
             # Import webdriver_manager to manage the Chrome driver
             from webdriver_manager.chrome import ChromeDriverManager
-            import os
 
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
