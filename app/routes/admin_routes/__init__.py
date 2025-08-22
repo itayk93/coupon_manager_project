@@ -10,6 +10,7 @@ from .admin_coupons import admin_coupons_bp
 from .admin_messages_routes import admin_messages_bp
 from .admin_whatsapp_banner_routes import admin_whatsapp_banner_bp
 from .admin_email_routes import admin_email_bp
+from .admin_scheduled_emails_routes import admin_scheduled_emails_bp
 
 # יצירת ה-Blueprint הראשי עבור /admin
 admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
@@ -25,6 +26,7 @@ admin_bp.register_blueprint(
 admin_bp.register_blueprint(admin_messages_bp)
 admin_bp.register_blueprint(admin_whatsapp_banner_bp)
 admin_bp.register_blueprint(admin_email_bp, url_prefix="/email")
+admin_bp.register_blueprint(admin_scheduled_emails_bp, url_prefix="/scheduled-emails")
 
 
 @admin_bp.route("/dashboard", methods=["GET"])

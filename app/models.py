@@ -850,6 +850,8 @@ class Newsletter(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     is_published = db.Column(db.Boolean, default=False)
     sent_count = db.Column(db.Integer, default=0)
+    scheduled_send_time = db.Column(db.DateTime(timezone=True), nullable=True)  # זמן שליחה מתוכנן
+    is_sent = db.Column(db.Boolean, default=False)  # האם הניוזלטר נשלח
     
     # קשר למשתמש שיצר את הניוזלטר
     creator = db.relationship("User", backref="created_newsletters")

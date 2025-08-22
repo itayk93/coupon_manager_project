@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}ניהול מיילים מתוכננים - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4" dir="rtl">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-clock"></i>
+                        ניהול מיילים מתוכננים
+                    </h3>
+                    <small class="text-light">מיילים המתוכננים להישלח היום: {{ current_time.strftime('%d/%m/%Y') }}</small>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- כפתור שליחת מיילים שעברו זמנם -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <h5><i class="fas fa-info-circle"></i> הוראות שימוש</h5>
+                                <p class="mb-2">במסך זה תוכל לראות את כל המיילים שמתוכננים להישלח היום ולשלוח באופן ידני מיילים שעברו זמנם.</p>
+                                <p class="mb-0">הכפתור למטה ישלח רק מיילים שהזמן שלהם כבר עבר ועדיין לא נשלחו.</p>
+                            </div>
+                            
+                            <button id="send-pending-btn" class="btn btn-success btn-lg">
+                                <i class="fas fa-paper-plane"></i>
+                                שלח מיילים שעברו זמנם
+                            </button>
+                            
+                            <!-- תוצאות השליחה -->
+                            <div id="send-results" class="mt-3" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- רשימת המיילים המתוכננים -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h4>מיילים מתוכננים להיום ({{ email_data|length }} מיילים)</h4>
+                            
+                            {% if email_data %}
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="thead-dark">
+                                        <tr>
+                                            <th>כותרת המייל</th>
+                                            <th>זמן מתוכנן</th>
+                                            <th>סטטוס</th>
+                                            <th>מספר נמענים</th>
+                                            <th>יוצר</th>
+                                            <th>פעולות</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in email_data %}
+                                        <tr class="{% if item.should_be_sent %}table-warning{% elif item.newsletter.is_sent %}table-success{% else %}table-light{% endif %}">
+                                            <td>
+                                                <strong>{{ item.newsletter.title }}</strong>
+                                                {% if item.newsletter.newsletter_type == 'custom' %}
+                                                <span class="badge badge-info">מותאם אישית</span>
+                                                {% else %}
+                                                <span class="badge badge-secondary">מובנה</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="{% if item.is_past_due %}text-danger{% else %}text-primary{% endif %}">
+                                                    {{ item.scheduled_time.strftime('%H:%M') }}
+                                                </span>
+                                                {% if item.is_past_due %}
+                                                <br><small class="text-muted">עבר זמנו</small>
+                                                {% else %}
+                                                <br><small class="text-muted">
+                                                    {% set time_diff = item.scheduled_time - current_time %}
+                                                    {% if time_diff.total_seconds() > 0 %}
+                                                        עוד {{ (time_diff.total_seconds() / 3600) | round(1) }} שעות
+                                                    {% endif %}
+                                                </small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if item.newsletter.is_sent %}
+                                                <span class="badge badge-success">נשלח</span>
+                                                {% elif item.should_be_sent %}
+                                                <span class="badge badge-warning">ממתין לשליחה</span>
+                                                {% else %}
+                                                <span class="badge badge-info">מתוכנן</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-primary">{{ item.newsletter.sent_count }}</span> נשלח
+                                            </td>
+                                            <td>
+                                                {% if item.newsletter.creator %}
+                                                {{ item.newsletter.creator.first_name }} {{ item.newsletter.creator.last_name }}
+                                                {% else %}
+                                                לא ידוע
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    {% if not item.newsletter.is_sent %}
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="previewEmail({{ item.newsletter.id }})">
+                                                        <i class="fas fa-eye"></i> תצוגה מקדימה
+                                                    </button>
+                                                    {% endif %}
+                                                    {% if item.newsletter.is_sent %}
+                                                    <button class="btn btn-outline-info btn-sm" onclick="viewSentReport({{ item.newsletter.id }})">
+                                                        <i class="fas fa-chart-bar"></i> דוח שליחה
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info text-center">
+                                <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                                <h4>אין מיילים מתוכננים להיום</h4>
+                                <p>לא נמצאו מיילים שמתוכננים להישלח היום.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- סטטיסטיקות נוספות -->
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-primary">סה"כ מיילים</h5>
+                                    <h3 class="text-primary">{{ email_data|length }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-success">נשלחו</h5>
+                                    <h3 class="text-success">{{ email_data|selectattr('newsletter.is_sent')|list|length }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-warning">ממתינים</h5>
+                                    <h3 class="text-warning">{{ email_data|selectattr('should_be_sent')|list|length }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-info">עתידיים</h5>
+                                    <h3 class="text-info">{{ email_data|rejectattr('is_past_due')|rejectattr('newsletter.is_sent')|list|length }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal לתצוגה מקדימה -->
+<div class="modal fade" id="previewModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">תצוגה מקדימה</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="preview-content">
+                <!-- תוכן התצוגה המקדימה יוטען כאן -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- פרטי קריאת API -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="card-title mb-0">
+                    <i class="fas fa-code"></i>
+                    פרטי API לשליחת מיילים
+                </h4>
+            </div>
+            <div class="card-body">
+                <h5>עבור Cron Job:</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>URL:</h6>
+                        <code class="d-block p-2 bg-light">
+                            POST {{ request.url_root }}admin/scheduled-emails/send-pending-emails
+                        </code>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Headers דרושים:</h6>
+                        <code class="d-block p-2 bg-light">
+                            Content-Type: application/json<br>
+                            Authorization: Bearer YOUR_API_TOKEN
+                        </code>
+                    </div>
+                </div>
+                
+                <h6 class="mt-3">דוגמה לקריאת cURL:</h6>
+                <pre class="bg-dark text-light p-3 rounded"><code>curl -X POST {{ request.url_root }}admin/scheduled-emails/send-pending-emails \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"</code></pre>
+                
+                <div class="alert alert-warning mt-3">
+                    <strong>הערה:</strong> הAPI ישלח רק מיילים שהזמן שלהם עבר (מאוחר יותר מהשעה הנוכחית) ועדיין לא נשלחו.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // טיפול בכפתור שליחת מיילים
+    document.getElementById('send-pending-btn').addEventListener('click', function() {
+        const button = this;
+        const originalText = button.innerHTML;
+        
+        // הצגת אינדיקטור טעינה
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> שולח מיילים...';
+        button.disabled = true;
+        
+        // שליחת בקשה לשרת
+        fetch('{{ url_for("admin_bp.admin_scheduled_emails_bp.send_pending_emails") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const resultsDiv = document.getElementById('send-results');
+            
+            if (data.success) {
+                let html = `<div class="alert alert-success">
+                    <h5><i class="fas fa-check-circle"></i> ${data.message}</h5>`;
+                
+                if (data.sent_emails && data.sent_emails.length > 0) {
+                    html += '<h6>מיילים שנשלחו:</h6><ul>';
+                    data.sent_emails.forEach(email => {
+                        html += `<li>${email.title} (${email.scheduled_time})</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                if (data.failed_emails && data.failed_emails.length > 0) {
+                    html += '<h6 class="text-danger">מיילים שנכשלו:</h6><ul>';
+                    data.failed_emails.forEach(email => {
+                        html += `<li>${email.title} (${email.scheduled_time}) - ${email.error}</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+                
+                // רענון הדף אחרי 3 שניות
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+                
+            } else {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-triangle"></i> שגיאה</h5>
+                        <p>${data.message}</p>
+                    </div>
+                `;
+            }
+            
+            resultsDiv.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('send-results').innerHTML = `
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle"></i> שגיאה בחיבור</h5>
+                    <p>שגיאה בחיבור לשרת: ${error.message}</p>
+                </div>
+            `;
+            document.getElementById('send-results').style.display = 'block';
+        })
+        .finally(() => {
+            // החזרת הכפתור למצב הרגיל
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
+    });
+});
+
+function previewEmail(newsletterId) {
+    // פונקציה לתצוגה מקדימה של מייל
+    $('#previewModal').modal('show');
+    document.getElementById('preview-content').innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> טוען...</div>';
+    
+    // כאן ניתן להוסיף קריאה לשרת לקבלת תצוגה מקדימה
+    // fetch(`/admin/newsletter/preview/${newsletterId}`)...
+}
+
+function viewSentReport(newsletterId) {
+    // פונקציה לצפייה בדוח שליחה
+    window.open(`/admin/newsletter/report/${newsletterId}`, '_blank');
+}
+</script>
+{% endblock %}

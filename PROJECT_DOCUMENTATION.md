@@ -224,7 +224,30 @@ coupon_manager_project/
 | `/admin/tags/transfer_coupons/<int:source_tag_id>` | GET, POST | `transfer_coupons` | Transfer coupons between tags |
 | `/admin/tags/manage` | GET, POST | `manage_tags` | Tag management interface |
 
-### 15. Telegram Bot Routes (`/telegram/*`)
+### 15. Admin Scheduled Emails Routes (`/admin/scheduled-emails/*`)
+**Blueprint:** `admin_scheduled_emails_bp` (prefix: `/admin/scheduled-emails`)
+**File:** `app/routes/admin_routes/admin_scheduled_emails_routes.py`
+
+| URL Pattern | HTTP Methods | Function | Description |
+|-------------|-------------|----------|-------------|
+| `/admin/scheduled-emails/scheduled-emails` | GET | `scheduled_emails` | View scheduled emails for today with management interface |
+| `/admin/scheduled-emails/send-pending-emails` | POST | `send_pending_emails` | API endpoint to send emails that are past due and haven't been sent |
+
+**Key Features:**
+- **Email Scheduling Management**: View all emails scheduled to be sent today with their status
+- **Pending Email Delivery**: Send emails that are past their scheduled time but haven't been sent yet
+- **Real-time Status Tracking**: Track which emails have been sent, are pending, or are scheduled for future
+- **Cron Job Integration**: API endpoint designed for hourly cron job execution
+- **Admin Access Only**: All routes require admin authentication
+
+**API Details for Cron Job:**
+- **URL**: `POST /admin/scheduled-emails/send-pending-emails`
+- **Purpose**: Send emails that are past their scheduled time but haven't been sent
+- **Behavior**: Only sends emails where `scheduled_send_time <= current_time` and `is_sent = False`
+- **Response**: JSON with sent/failed email counts and details
+- **Recommended Schedule**: Every hour via cron job
+
+### 17. Telegram Bot Routes (`/telegram/*`)
 **Blueprint:** `telegram_bp` (prefix: `/telegram`)
 **File:** `app/routes/telegram_routes.py`
 
@@ -236,7 +259,7 @@ coupon_manager_project/
 | `/telegram/verify_telegram` | POST | `verify_telegram` | Verify Telegram connection |
 | `/telegram/api/telegram_coupons` | POST | `get_telegram_coupons` | API endpoint for Telegram bot coupon access |
 
-### 16. Statistics Routes (`/statistics/*`)
+### 18. Statistics Routes (`/statistics/*`)
 **Blueprint:** `statistics_bp` (prefix: `/statistics`)
 **File:** `app/routes/statistics_routes.py`
 
@@ -245,7 +268,7 @@ coupon_manager_project/
 | `/statistics/` | GET | `statistics_page` | Statistics and analytics dashboard |
 | `/statistics/api/data` | GET | `get_statistics_data` | API endpoint for statistics data |
 
-### 17. Sharing Routes (`/sharing/*`)
+### 19. Sharing Routes (`/sharing/*`)
 **Blueprint:** `sharing_bp` (no prefix)
 **File:** `app/routes/sharing_routes.py`
 
@@ -260,7 +283,7 @@ coupon_manager_project/
 | `/track_coupon_viewer/<int:coupon_id>` | POST | `track_coupon_viewer` | Track who views shared coupons |
 | `/get_active_viewers/<int:coupon_id>` | GET | `get_active_viewers` | Get list of active coupon viewers |
 
-### 18. Cron/Scheduled Tasks Routes
+### 20. Cron/Scheduled Tasks Routes
 **Blueprint:** `cron_bp` (no prefix)
 **File:** `app/routes/cron_routes.py`
 
