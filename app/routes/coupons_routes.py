@@ -4233,6 +4233,14 @@ def update_all_multipass_coupons_playwright():
         if not current_user.is_admin:
             return jsonify({"error": "אין הרשאה"}), 403
 
+        # Check if Playwright is available
+        from app.helpers import PLAYWRIGHT_AVAILABLE
+        if not PLAYWRIGHT_AVAILABLE:
+            return jsonify({
+                "error": "Playwright לא זמין. נא להתקין עם: pip install playwright",
+                "success": False
+            }), 500
+
         # Handle both JSON and form data
         if request.is_json:
             data = request.json or {}

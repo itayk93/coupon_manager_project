@@ -13,7 +13,14 @@ from flask import current_app, render_template, url_for, flash
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from playwright.sync_api import sync_playwright
+
+# Import Playwright only if available
+try:
+    from playwright.sync_api import sync_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    sync_playwright = None
 
 # from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
@@ -800,7 +807,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 
             chrome_options.binary_location = chrome_bin
             debug_print(f"Final Chrome binary setting: {chrome_bin}")
-            debug_print("=== END CHROME DEBUG ==="))
+            debug_print("=== END CHROME DEBUG ===")
             
             driver = webdriver.Chrome(options=chrome_options)
             driver.get(
@@ -949,7 +956,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 
             chrome_options.binary_location = chrome_bin
             debug_print(f"Final Chrome binary setting: {chrome_bin}")
-            debug_print("=== END CHROME DEBUG ==="))
+            debug_print("=== END CHROME DEBUG ===")
             
             with webdriver.Chrome(options=chrome_options) as driver:
                 wait = WebDriverWait(driver, 30)
@@ -1123,7 +1130,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 
             chrome_options.binary_location = chrome_bin
             debug_print(f"Final Chrome binary setting: {chrome_bin}")
-            debug_print("=== END CHROME DEBUG ==="))
+            debug_print("=== END CHROME DEBUG ===")
             
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -2815,6 +2822,10 @@ def get_coupon_data_with_playwright(coupon, max_retries=3, save_directory="autom
     """
     Wrapper function for get_coupon_data_playwright with retry mechanism and advanced logging
     """
+    if not PLAYWRIGHT_AVAILABLE:
+        logging.error("Playwright is not available. Please install it with: pip install playwright")
+        return None
+        
     import time
     import logging
     import os
@@ -2878,6 +2889,10 @@ def get_coupon_data_playwright(coupon, save_directory="automatic_coupon_update/i
     """
     Get coupon data using Playwright instead of Selenium
     """
+    if not PLAYWRIGHT_AVAILABLE:
+        logging.error("Playwright is not available. Please install it with: pip install playwright")
+        return None
+        
     import os
     from datetime import datetime
     import pandas as pd
