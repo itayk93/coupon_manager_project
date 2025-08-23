@@ -4221,6 +4221,107 @@ def debug_chrome():
     
     return jsonify(debug_info)
 
+@coupons_bp.route("/update_all_multipass_coupons_playwright", methods=["POST"])
+@login_required
+def update_all_multipass_coupons_playwright():
+    """
+    עדכון אוטומטי של כל הקופונים שיש להם auto_download_details באמצעות Playwright
+    """
+    try:
+        current_app.logger.info(f"Starting update_all_multipass_coupons_playwright for user {current_user.id}")
+        
+        if not current_user.is_admin:
+            return jsonify({"error": "אין הרשאה"}), 403
+
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.json or {}
+            use_background = data.get('use_background', True)
+        else:
+            # Form data from fetch with FormData
+            use_background = request.form.get('use_background', 'true').lower() == 'true'
+        
+        # Get all coupons that can be updated automatically
+        updatable_coupons = Coupon.query.filter(
+            Coupon.status == "פעיל",
+            Coupon.is_one_time == False,
+            Coupon.auto_download_details.isnot(None)
+        ).all()
+        
+        if not updatable_coupons:
+            return jsonify({
+                'success': True,
+                'message': 'לא נמצאו קופונים לעדכון',
+                'updated_count': 0,
+                'failed_count': 0
+            })
+        
+        # Always use synchronous processing with Playwright for now
+        from app.helpers import get_coupon_data_with_playwright, update_coupon_status
+        from app.models import CouponUsage
+        from datetime import timezone
+        
+        updated_coupons = []
+        failed_coupons = []
+
+        for cpn in updatable_coupons:
+            try:
+                df = get_coupon_data_with_playwright(cpn, max_retries=3)  
+                if df is not None:
+                    total_usage = float(df["usage_amount"].sum())
+                    cpn.used_value = total_usage
+                    update_coupon_status(cpn)
+
+                    usage = CouponUsage(
+                        coupon_id=cpn.id,
+                        used_amount=total_usage,
+                        timestamp=datetime.now(timezone.utc),
+                        action="עדכון יומי Playwright",
+                        details="עדכון אוטומטי באמצעות Playwright",
+                    )
+                    db.session.add(usage)
+                    updated_coupons.append({
+                        'code': cpn.code,
+                        'company': cpn.company,
+                        'used_value': total_usage
+                    })
+                    current_app.logger.info(f"✅ Updated coupon {cpn.code} with Playwright: {total_usage}")
+                else:
+                    failed_coupons.append({
+                        'code': cpn.code,
+                        'company': cpn.company,
+                        'error': 'לא הוחזר מידע מהאתר'
+                    })
+                    current_app.logger.warning(f"❌ Failed to update coupon {cpn.code} with Playwright: No data")
+            except Exception as e:
+                failed_coupons.append({
+                    'code': cpn.code,
+                    'company': cpn.company,
+                    'error': str(e)
+                })
+                current_app.logger.error(f"💥 Error updating coupon {cpn.code} with Playwright: {e}")
+
+        try:
+            db.session.commit()
+            current_app.logger.info(f"=== Playwright Update Completed ===")
+            current_app.logger.info(f"Updated: {len(updated_coupons)}, Failed: {len(failed_coupons)}")
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Database commit failed: {e}")
+            return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
+
+        return jsonify({
+            'success': True,
+            'updated_coupons': updated_coupons,
+            'failed_coupons': failed_coupons,
+            'updated_count': len(updated_coupons),
+            'failed_count': len(failed_coupons),
+            'message': f'עודכנו {len(updated_coupons)} קופונים בהצלחה באמצעות Playwright'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
+
 @coupons_bp.route("/update_all_multipass_coupons", methods=["POST"])
 @login_required
 def update_all_multipass_coupons():

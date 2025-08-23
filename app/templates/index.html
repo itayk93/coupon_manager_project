@@ -503,9 +503,12 @@
 </div>
 
 {% if current_user.is_admin %}
-<div class="d-flex justify-content-center" style="margin-top: 40px; margin-bottom: 20px;">
+<div class="d-flex justify-content-center flex-wrap" style="margin-top: 40px; margin-bottom: 20px; gap: 15px;">
     <button type="button" class="action-button small-button multipass-update-button" onclick="startMultipassUpdate()">
-      <i class="fa fa-refresh"></i> עדכן את כל הקופונים הפעילים מ-Multipass
+      <i class="fa fa-refresh"></i> עדכן קופונים (Selenium)
+    </button>
+    <button type="button" class="action-button small-button playwright-update-button" onclick="startPlaywrightUpdate()">
+      <i class="fa fa-magic"></i> עדכן קופונים (Playwright)
     </button>
 </div>
 {% endif %}
@@ -1346,9 +1349,19 @@
   visibility: visible;
 }
 
-/* סגנון ספציפי רק לכפתור העדכון מ-Multipass */
-.multipass-update-button {
+/* סגנון ספציפי לכפתורי העדכון */
+.multipass-update-button, .playwright-update-button {
   flex-direction: row;  
+}
+
+.playwright-update-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.playwright-update-button:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
 }
 
 #tooltipEl {
@@ -2856,6 +2869,80 @@ function startMultipassUpdate() {
         
         // Start the update process
         updateAllMultipassCoupons();
+    }
+}
+
+// Playwright Update Functions
+function startPlaywrightUpdate() {
+    const modal = document.getElementById('multipassProgressModal');
+    if (modal) {
+        // Update modal title to indicate Playwright
+        const modalTitle = modal.querySelector('h2');
+        if (modalTitle) {
+            modalTitle.textContent = 'עדכון קופונים באמצעות Playwright';
+        }
+        
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        
+        // Start the Playwright update process
+        updateAllPlaywrightCoupons();
+    }
+}
+
+async function updateAllPlaywrightCoupons() {
+    try {
+        document.getElementById('multipassProgress').textContent = 'מתחיל עדכון באמצעות Playwright...';
+        document.getElementById('multipassDetails').innerHTML = '';
+        
+        // Create FormData for CSRF protection
+        const formData = new FormData();
+        formData.append('csrf_token', '{{ csrf_token() }}');
+        formData.append('use_background', 'false'); // Use sync for now to avoid errors
+
+        const response = await fetch('/update_all_multipass_coupons_playwright', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('multipassProgress').textContent = 
+                `עדכון הושלם בהצלחה! עודכנו ${data.updated_count} קופונים, ${data.failed_count} נכשלו.`;
+            
+            let detailsHTML = '<h3>פירוט התוצאות:</h3>';
+            
+            if (data.updated_coupons && data.updated_coupons.length > 0) {
+                detailsHTML += '<h4 style="color: green;">קופונים שעודכנו בהצלחה:</h4><ul>';
+                data.updated_coupons.forEach(coupon => {
+                    detailsHTML += `<li>${coupon.code} (${coupon.company}) - ₪${coupon.used_value}</li>`;
+                });
+                detailsHTML += '</ul>';
+            }
+            
+            if (data.failed_coupons && data.failed_coupons.length > 0) {
+                detailsHTML += '<h4 style="color: red;">קופונים שנכשלו:</h4><ul>';
+                data.failed_coupons.forEach(coupon => {
+                    detailsHTML += `<li>${coupon.code} (${coupon.company}) - ${coupon.error}</li>`;
+                });
+                detailsHTML += '</ul>';
+            }
+            
+            document.getElementById('multipassDetails').innerHTML = detailsHTML;
+            
+            // Refresh the page after 3 seconds to show updated data
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+        } else {
+            document.getElementById('multipassProgress').textContent = `שגיאה: ${data.error}`;
+            document.getElementById('multipassDetails').innerHTML = '';
+        }
+    } catch (error) {
+        document.getElementById('multipassProgress').textContent = `שגיאה בתקשורת: ${error.message}`;
+        document.getElementById('multipassDetails').innerHTML = '';
+        console.error('Error updating coupons with Playwright:', error);
     }
 }
 

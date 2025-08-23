@@ -3,6 +3,7 @@ Flask-Migrate==4.0.7
 SQLAlchemy==2.0.35
 pandas==2.2.1
 selenium==4.19.0
+playwright==1.40.0
 wtforms==3.0.1
 Flask-WTF==1.2.1
 requests==2.31.0

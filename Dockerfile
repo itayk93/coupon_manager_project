@@ -62,7 +62,9 @@ RUN CHROME_VERSION=$(google-chrome --version | sed 's/Google Chrome //g' | cut -
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    # Install Playwright browsers
+    playwright install --with-deps chromium
 
 # Copy application code
 COPY . .
