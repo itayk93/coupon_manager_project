@@ -43,7 +43,11 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
     echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
     apt-get update && \
     apt-get install -y google-chrome-stable && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    # Debug: Check if Chrome was installed correctly
+    ls -la /usr/bin/google-chrome* || echo "Chrome not found in /usr/bin/" && \
+    which google-chrome-stable || echo "google-chrome-stable not in PATH" && \
+    google-chrome-stable --version || echo "Cannot run Chrome"
 
 # Install ChromeDriver
 RUN CHROME_VERSION=$(google-chrome --version | sed 's/Google Chrome //g' | cut -d '.' -f 1-3) && \

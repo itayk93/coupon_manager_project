@@ -775,17 +775,31 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 '/opt/google/chrome/chrome'
             ]
             
+            # Debug: Check what Chrome binaries exist
+            debug_print("=== DEBUGGING CHROME INSTALLATION ===")
+            debug_print(f"CHROME_BIN env var: {os.getenv('CHROME_BIN')}")
+            
+            # Check what's actually in /usr/bin/
+            import glob
+            chrome_files = glob.glob('/usr/bin/*chrome*')
+            debug_print(f"Chrome-related files in /usr/bin/: {chrome_files}")
+            
             chrome_bin = None
             for path in possible_chrome_paths:
                 if path and os.path.isfile(path):
                     chrome_bin = path
+                    debug_print(f"✅ Found Chrome at: {chrome_bin}")
                     break
+                elif path:
+                    debug_print(f"❌ Chrome NOT found at: {path}")
             
             if not chrome_bin:
                 chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                debug_print(f"⚠️ No Chrome found, using default: {chrome_bin}")
                 
             chrome_options.binary_location = chrome_bin
-            debug_print(f"Using Chrome binary: {chrome_bin}")
+            debug_print(f"Final Chrome binary setting: {chrome_bin}")
+            debug_print("=== END CHROME DEBUG ==="))
             
             driver = webdriver.Chrome(options=chrome_options)
             driver.get(
@@ -910,17 +924,31 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 '/opt/google/chrome/chrome'
             ]
             
+            # Debug: Check what Chrome binaries exist
+            debug_print("=== DEBUGGING CHROME INSTALLATION ===")
+            debug_print(f"CHROME_BIN env var: {os.getenv('CHROME_BIN')}")
+            
+            # Check what's actually in /usr/bin/
+            import glob
+            chrome_files = glob.glob('/usr/bin/*chrome*')
+            debug_print(f"Chrome-related files in /usr/bin/: {chrome_files}")
+            
             chrome_bin = None
             for path in possible_chrome_paths:
                 if path and os.path.isfile(path):
                     chrome_bin = path
+                    debug_print(f"✅ Found Chrome at: {chrome_bin}")
                     break
+                elif path:
+                    debug_print(f"❌ Chrome NOT found at: {path}")
             
             if not chrome_bin:
                 chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                debug_print(f"⚠️ No Chrome found, using default: {chrome_bin}")
                 
             chrome_options.binary_location = chrome_bin
-            debug_print(f"Using Chrome binary: {chrome_bin}")
+            debug_print(f"Final Chrome binary setting: {chrome_bin}")
+            debug_print("=== END CHROME DEBUG ==="))
             
             with webdriver.Chrome(options=chrome_options) as driver:
                 wait = WebDriverWait(driver, 30)
@@ -1070,17 +1098,31 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 '/opt/google/chrome/chrome'
             ]
             
+            # Debug: Check what Chrome binaries exist
+            debug_print("=== DEBUGGING CHROME INSTALLATION ===")
+            debug_print(f"CHROME_BIN env var: {os.getenv('CHROME_BIN')}")
+            
+            # Check what's actually in /usr/bin/
+            import glob
+            chrome_files = glob.glob('/usr/bin/*chrome*')
+            debug_print(f"Chrome-related files in /usr/bin/: {chrome_files}")
+            
             chrome_bin = None
             for path in possible_chrome_paths:
                 if path and os.path.isfile(path):
                     chrome_bin = path
+                    debug_print(f"✅ Found Chrome at: {chrome_bin}")
                     break
+                elif path:
+                    debug_print(f"❌ Chrome NOT found at: {path}")
             
             if not chrome_bin:
                 chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                debug_print(f"⚠️ No Chrome found, using default: {chrome_bin}")
                 
             chrome_options.binary_location = chrome_bin
-            debug_print(f"Using Chrome binary: {chrome_bin}")
+            debug_print(f"Final Chrome binary setting: {chrome_bin}")
+            debug_print("=== END CHROME DEBUG ==="))
             
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)

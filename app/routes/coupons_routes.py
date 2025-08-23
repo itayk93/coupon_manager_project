@@ -4186,6 +4186,41 @@ def update_selected_coupons():
         return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
 
 
+@coupons_bp.route("/debug_chrome", methods=["GET"])
+@login_required
+def debug_chrome():
+    """Debug endpoint to check Chrome installation"""
+    if not current_user.is_admin:
+        return jsonify({"error": "אין הרשאה"}), 403
+    
+    import os
+    import glob
+    import subprocess
+    
+    debug_info = {
+        "chrome_bin_env": os.getenv('CHROME_BIN'),
+        "chrome_files_in_usr_bin": glob.glob('/usr/bin/*chrome*'),
+        "chrome_files_in_opt": glob.glob('/opt/google/chrome/chrome'),
+        "chrome_files_everywhere": glob.glob('/**/chrome', recursive=True)[:10],  # Limit to first 10
+    }
+    
+    # Try to run chrome --version
+    try:
+        result = subprocess.run(['google-chrome-stable', '--version'], 
+                              capture_output=True, text=True, timeout=10)
+        debug_info["chrome_version_stable"] = result.stdout.strip() if result.returncode == 0 else result.stderr
+    except Exception as e:
+        debug_info["chrome_version_stable"] = f"Error: {str(e)}"
+    
+    try:
+        result = subprocess.run(['google-chrome', '--version'], 
+                              capture_output=True, text=True, timeout=10)
+        debug_info["chrome_version"] = result.stdout.strip() if result.returncode == 0 else result.stderr
+    except Exception as e:
+        debug_info["chrome_version"] = f"Error: {str(e)}"
+    
+    return jsonify(debug_info)
+
 @coupons_bp.route("/update_all_multipass_coupons", methods=["POST"])
 @login_required
 def update_all_multipass_coupons():
