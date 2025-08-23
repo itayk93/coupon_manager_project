@@ -2877,7 +2877,7 @@ function startPlaywrightUpdate() {
     const modal = document.getElementById('multipassProgressModal');
     if (modal) {
         // Update modal title to indicate Playwright
-        const modalTitle = modal.querySelector('h2');
+        const modalTitle = modal.querySelector('h3');
         if (modalTitle) {
             modalTitle.textContent = 'עדכון קופונים באמצעות Playwright';
         }
@@ -2892,8 +2892,26 @@ function startPlaywrightUpdate() {
 
 async function updateAllPlaywrightCoupons() {
     try {
-        document.getElementById('multipassProgress').textContent = 'מתחיל עדכון באמצעות Playwright...';
-        document.getElementById('multipassDetails').innerHTML = '';
+        // Use the correct modal elements
+        const progressTitle = document.getElementById('progressTitle');
+        const currentCouponDisplay = document.getElementById('currentCouponDisplay');
+        const progressStats = document.getElementById('progressStats');
+        const successCount = document.getElementById('successCount');
+        const failureCount = document.getElementById('failureCount');
+        const updateResults = document.getElementById('updateResults');
+        const closeButtonContainer = document.getElementById('closeButtonContainer');
+        
+        if (!progressTitle) {
+            console.error('Modal elements not found. Modal might not be open.');
+            alert('שגיאה: לא נמצאו אלמנטי המודל. אנא נסה שוב.');
+            return;
+        }
+        
+        // Initialize display
+        progressTitle.textContent = 'מתחיל עדכון באמצעות Playwright...';
+        if (currentCouponDisplay) currentCouponDisplay.textContent = 'מכין נתונים...';
+        if (updateResults) updateResults.style.display = 'none';
+        if (closeButtonContainer) closeButtonContainer.style.display = 'none';
         
         // Create FormData for CSRF protection
         const formData = new FormData();
@@ -2908,41 +2926,54 @@ async function updateAllPlaywrightCoupons() {
         const data = await response.json();
 
         if (data.success) {
-            document.getElementById('multipassProgress').textContent = 
-                `עדכון הושלם בהצלחה! עודכנו ${data.updated_count} קופונים, ${data.failed_count} נכשלו.`;
+            // Update progress title
+            progressTitle.textContent = 'עדכון הושלם בהצלחה!';
+            if (currentCouponDisplay) currentCouponDisplay.textContent = `${data.updated_count} עודכנו, ${data.failed_count} נכשלו`;
             
-            let detailsHTML = '<h3>פירוט התוצאות:</h3>';
+            // Show results
+            if (updateResults) updateResults.style.display = 'block';
+            if (successCount) successCount.textContent = data.updated_count;
+            if (failureCount) failureCount.textContent = data.failed_count;
             
+            // Update progress stats
+            if (progressStats) {
+                const total = data.updated_count + data.failed_count;
+                progressStats.textContent = `${total} מתוך ${total} קופונים`;
+            }
+            
+            // Show close button
+            if (closeButtonContainer) closeButtonContainer.style.display = 'block';
+            
+            // Log detailed results to console
             if (data.updated_coupons && data.updated_coupons.length > 0) {
-                detailsHTML += '<h4 style="color: green;">קופונים שעודכנו בהצלחה:</h4><ul>';
-                data.updated_coupons.forEach(coupon => {
-                    detailsHTML += `<li>${coupon.code} (${coupon.company}) - ₪${coupon.used_value}</li>`;
-                });
-                detailsHTML += '</ul>';
+                console.log('קופונים שעודכנו:', data.updated_coupons);
             }
-            
             if (data.failed_coupons && data.failed_coupons.length > 0) {
-                detailsHTML += '<h4 style="color: red;">קופונים שנכשלו:</h4><ul>';
-                data.failed_coupons.forEach(coupon => {
-                    detailsHTML += `<li>${coupon.code} (${coupon.company}) - ${coupon.error}</li>`;
-                });
-                detailsHTML += '</ul>';
+                console.log('קופונים שנכשלו:', data.failed_coupons);
             }
             
-            document.getElementById('multipassDetails').innerHTML = detailsHTML;
-            
-            // Refresh the page after 3 seconds to show updated data
-            setTimeout(() => {
-                location.reload();
-            }, 3000);
         } else {
-            document.getElementById('multipassProgress').textContent = `שגיאה: ${data.error}`;
-            document.getElementById('multipassDetails').innerHTML = '';
+            progressTitle.textContent = `שגיאה: ${data.error}`;
+            if (currentCouponDisplay) currentCouponDisplay.textContent = 'העדכון נכשל';
+            if (closeButtonContainer) closeButtonContainer.style.display = 'block';
         }
     } catch (error) {
-        document.getElementById('multipassProgress').textContent = `שגיאה בתקשורת: ${error.message}`;
-        document.getElementById('multipassDetails').innerHTML = '';
+        const progressTitle = document.getElementById('progressTitle');
+        const currentCouponDisplay = document.getElementById('currentCouponDisplay');
+        const closeButtonContainer = document.getElementById('closeButtonContainer');
+        
+        if (progressTitle) {
+            progressTitle.textContent = `שגיאה בתקשורת: ${error.message}`;
+        }
+        if (currentCouponDisplay) {
+            currentCouponDisplay.textContent = 'שגיאה בתקשורת';
+        }
+        if (closeButtonContainer) {
+            closeButtonContainer.style.display = 'block';
+        }
+        
         console.error('Error updating coupons with Playwright:', error);
+        alert(`שגיאה בתקשורת: ${error.message}`);
     }
 }
 
