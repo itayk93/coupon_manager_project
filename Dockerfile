@@ -9,16 +9,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install system deps
+# Install system deps (curl + gpg + כל השאר)
 RUN apt-get update && apt-get install -y \
     wget curl unzip gnupg ca-certificates \
     fonts-liberation libasound2 libatk-bridge2.0-0 libdrm2 libgtk-3-0 \
     libnspr4 libnss3 libxss1 libgbm1 xvfb build-essential \
-    # חבילות אופציונליות (בדביאן 12 קיימות, ב-13 אולי לא)
-    software-properties-common apt-transport-https || true && \
-    rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
 
-# Add Google Chrome repo (בלי apt-key!)
+# Add Google Chrome repo and install Chrome
 RUN mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
       | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg && \
@@ -28,7 +26,7 @@ RUN mkdir -p /etc/apt/keyrings && \
     rm -rf /var/lib/apt/lists/* && \
     google-chrome-stable --version
 
-# Install ChromeDriver תואם
+# Install ChromeDriver matching Chrome
 RUN CHROME_VERSION=$(google-chrome-stable --version | sed 's/Google Chrome //g' | cut -d '.' -f 1-3) && \
     echo "Chrome version: $CHROME_VERSION" && \
     DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION%.*}") && \
