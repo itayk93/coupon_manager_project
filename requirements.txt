@@ -37,7 +37,7 @@ python-telegram-bot==20.8
 asyncpg==0.29.0
 pytz==2024.1
 beautifulsoup4==4.12.3
-Pillow==10.0.0
+Pillow>=10.3.0
 
 # Background task processing
 redis==5.0.0
