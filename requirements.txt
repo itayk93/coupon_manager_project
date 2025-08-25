@@ -34,7 +34,7 @@ flask-dance==7.1.0
 webdriver-manager
 flask_mail
 python-telegram-bot==20.8
-asyncpg==0.29.0
+asyncpg>=0.30.0
 pytz==2024.1
 beautifulsoup4==4.12.3
 Pillow>=10.3.0
