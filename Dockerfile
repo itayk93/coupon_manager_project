@@ -13,15 +13,11 @@ WORKDIR /app
 
 # Install system dependencies and Chrome
 RUN apt-get update && apt-get install -y \
-    # Basic system tools
     wget \
     curl \
     unzip \
     gnupg \
-    software-properties-common \
-    apt-transport-https \
     ca-certificates \
-    # For Chrome
     fonts-liberation \
     libappindicator3-1 \
     libasound2 \
@@ -32,11 +28,12 @@ RUN apt-get update && apt-get install -y \
     libnss3 \
     libxss1 \
     libgbm1 \
-    # For virtual display (if needed)
     xvfb \
-    # For build tools
     build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    || true && \
+    # Optional packages (exist only in Debian 12, missing in Debian 13)
+    apt-get install -y software-properties-common apt-transport-https || true && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Google Chrome
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
