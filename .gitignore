@@ -5,6 +5,9 @@
 .env.test.local
 .env.production.local
 
+# MCP configuration
+.mcp.json
+
 # Flask instance
 instance/
 
@@ -55,12 +58,9 @@ tmp/
 # Redis
 dump.rdb
 
-# Reports and documentation (if not needed in repo)
-sample_text/
-reports_to_improve/
-project_structure.txt
-multipass_update_action_plan.md
-optimizations_documentation.md
+# Documentation and analysis folders (not needed in repo)
+docs/
+archives/
 
 # Git tracking
 git_commits_log.xlsx

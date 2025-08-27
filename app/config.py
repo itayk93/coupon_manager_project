@@ -24,3 +24,6 @@ class Config:
     TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME")
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+    
+    # API Configuration
+    CRON_API_TOKEN = os.getenv("CRON_API_TOKEN", "your-secure-api-token-here")

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, current_app
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import Newsletter, NewsletterSending, User
@@ -15,6 +15,31 @@ def admin_required(f):
         if not current_user.is_authenticated or not current_user.is_admin:
             flash('אין לך הרשאה לצפות בעמוד זה.', 'danger')
             return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def api_token_required(f):
+    """Decorator to require API token for cron jobs"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({
+                'success': False,
+                'error': 'Missing or invalid authorization header',
+                'message': 'Authorization header with Bearer token is required'
+            }), 401
+        
+        token = auth_header.split(' ')[1]
+        expected_token = current_app.config.get('CRON_API_TOKEN')
+        
+        if not expected_token or token != expected_token:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid API token',
+                'message': 'The provided API token is invalid'
+            }), 401
+        
         return f(*args, **kwargs)
     return decorated_function
 
@@ -133,6 +158,102 @@ def send_pending_emails():
             'success': False,
             'error': str(e),
             'message': f'שגיאה בשליחת המיילים: {str(e)}'
+        }), 500
+
+@admin_scheduled_emails_bp.route('/api/cron/send-pending-emails', methods=['POST'])
+@api_token_required
+def cron_send_pending_emails():
+    """
+    API endpoint לשליחת מיילים שאמורים להישלח - מיועד לCron Jobs
+    דורש API token authentication במקום login session
+    """
+    try:
+        current_time = datetime.now(timezone.utc)
+        
+        # חיפוש מיילים שאמורים להישלח (זמן שעבר, עדיין לא נשלחו)
+        pending_emails = Newsletter.query.filter(
+            Newsletter.scheduled_send_time <= current_time,
+            Newsletter.is_sent == False,
+            Newsletter.is_published == True,
+            Newsletter.scheduled_send_time.isnot(None)
+        ).all()
+        
+        sent_count = 0
+        failed_count = 0
+        sent_emails = []
+        failed_emails = []
+        
+        # לוג תחילת תהליך
+        logging.info(f"Cron job started: Found {len(pending_emails)} pending emails to send")
+        
+        for newsletter in pending_emails:
+            try:
+                # שליחת הניוזלטר לכל המשתמשים המנויים
+                success = send_newsletter_to_subscribers(newsletter)
+                
+                if success:
+                    # עדכון שהניוזלטר נשלח
+                    newsletter.is_sent = True
+                    newsletter.sent_at = current_time
+                    db.session.commit()
+                    sent_count += 1
+                    sent_emails.append({
+                        'id': newsletter.id,
+                        'title': newsletter.title,
+                        'scheduled_time': newsletter.scheduled_send_time.strftime('%d/%m/%Y %H:%M'),
+                        'sent_count': newsletter.sent_count
+                    })
+                    logging.info(f"Newsletter {newsletter.id} ({newsletter.title}) sent successfully to {newsletter.sent_count} users")
+                else:
+                    failed_count += 1
+                    failed_emails.append({
+                        'id': newsletter.id,
+                        'title': newsletter.title,
+                        'scheduled_time': newsletter.scheduled_send_time.strftime('%d/%m/%Y %H:%M'),
+                        'error': 'שגיאה בשליחה'
+                    })
+                    logging.error(f"Failed to send newsletter {newsletter.id} ({newsletter.title})")
+                    
+            except Exception as e:
+                logging.error(f"Error sending newsletter {newsletter.id}: {e}")
+                failed_count += 1
+                failed_emails.append({
+                    'id': newsletter.id,
+                    'title': newsletter.title,
+                    'scheduled_time': newsletter.scheduled_send_time.strftime('%d/%m/%Y %H:%M'),
+                    'error': str(e)
+                })
+        
+        # הכנת תגובה מפורטת
+        response_data = {
+            'success': True,
+            'timestamp': current_time.isoformat(),
+            'summary': {
+                'total_processed': len(pending_emails),
+                'sent_count': sent_count,
+                'failed_count': failed_count
+            },
+            'sent_emails': sent_emails,
+            'failed_emails': failed_emails,
+            'message': f'Cron job completed: {sent_count} emails sent successfully'
+        }
+        
+        if failed_count > 0:
+            response_data['message'] += f', {failed_count} emails failed'
+        
+        if sent_count == 0 and failed_count == 0:
+            response_data['message'] = 'No pending emails found to send'
+        
+        logging.info(f"Cron job completed: {sent_count} sent, {failed_count} failed")
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logging.error(f"Critical error in cron_send_pending_emails: {e}")
+        return jsonify({
+            'success': False,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'error': str(e),
+            'message': f'Critical error in cron job: {str(e)}'
         }), 500
 
 def send_newsletter_to_subscribers(newsletter):
