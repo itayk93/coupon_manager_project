@@ -1,4 +1,4 @@
-# wsgi.py
+    # wsgi.py
 import os
 import sys
 import logging
@@ -42,7 +42,7 @@ def setup_production_logging():
     
     # Silence noisy third-party loggers but keep our app logs
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
-    logging.getLogger('apscheduler.scheduler').setLevel(logging.WARNING)
+    # logging.getLogger('apscheduler.scheduler').setLevel(logging.WARNING) - removed scheduler
     logging.getLogger('httpx').setLevel(logging.WARNING)
     logging.getLogger('telegram.ext.Application').setLevel(logging.WARNING)
     logging.getLogger('fuzzywuzzy').setLevel(logging.ERROR)
@@ -102,12 +102,12 @@ def start_telegram_bot_thread():
                     logger.info("Daily reminder scheduler started in background.")
                     print("Daily reminder scheduler started in background.", flush=True)
                 except Exception as e:
-                    logger.error(f"Failed to start scheduler: {e}")
-                    print(f"Failed to start scheduler: {e}", flush=True)
+                    logger.error(f"Failed to start telegram scheduler: {e}")
+                    print(f"Failed to start telegram scheduler: {e}", flush=True)
 
                 await app_bot.initialize()
                 await app_bot.start()
-                await app_bot.updater.start_polling(allowed_updates=['message', 'callback_query'])
+                await app_bot.start_polling(allowed_updates=['message', 'callback_query'])
                 
                 # Keep the bot running
                 try:
