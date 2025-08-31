@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import Newsletter, NewsletterSending, User
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from functools import wraps
 
 admin_scheduled_emails_bp = Blueprint('admin_scheduled_emails_bp', __name__)
@@ -52,30 +52,45 @@ def scheduled_emails():
     מציג את כל המיילים שמתוכננים להישלח היום
     """
     try:
-        # קבלת התאריך הנוכחי (רק התאריך, ללא שעה)
-        today = datetime.now(timezone.utc).date()
+        import pytz
+        israel_tz = pytz.timezone('Asia/Jerusalem')
         
-        # חיפוש כל הניוזלטרים המתוכננים להישלח היום
+        # קבלת התאריך הנוכחי
+        now_utc = datetime.now(timezone.utc)
+        now_israel = now_utc.astimezone(israel_tz)
+        today_israel = now_israel.date()
+        tomorrow_israel = today_israel + timedelta(days=1)
+        
+        # חיפוש כל הניוזלטרים המתוכננים להישלח היום ומחר (בזמן ישראל)
         scheduled_emails = Newsletter.query.filter(
-            db.func.date(Newsletter.scheduled_send_time) == today,
             Newsletter.is_published == True,
-            Newsletter.scheduled_send_time.isnot(None)
+            Newsletter.scheduled_send_time.isnot(None),
+            Newsletter.scheduled_send_time > now_utc  # רק מיילים עתידיים
         ).order_by(Newsletter.scheduled_send_time.asc()).all()
         
         # הוספת מידע נוסף לכל מייל
         email_data = []
         for email in scheduled_emails:
+            # המרת זמן לזמן ישראל
+            scheduled_israel = email.scheduled_send_time.astimezone(israel_tz)
+            
+            # חישוב זמן שנותר
+            time_diff = email.scheduled_send_time - now_utc
+            hours_remaining = time_diff.total_seconds() / 3600 if time_diff.total_seconds() > 0 else 0
+            
             email_info = {
                 'newsletter': email,
-                'scheduled_time': email.scheduled_send_time,
-                'is_past_due': email.scheduled_send_time <= datetime.now(timezone.utc),
-                'should_be_sent': email.scheduled_send_time <= datetime.now(timezone.utc) and not email.is_sent
+                'scheduled_time': scheduled_israel,  # זמן ישראל במקום UTC
+                'scheduled_time_utc': email.scheduled_send_time,  # UTC לחישובים
+                'is_past_due': email.scheduled_send_time <= now_utc,
+                'should_be_sent': email.scheduled_send_time <= now_utc and not email.is_sent,
+                'hours_remaining': round(hours_remaining, 1)
             }
             email_data.append(email_info)
         
         return render_template('admin/admin_scheduled_emails.html', 
                              email_data=email_data,
-                             current_time=datetime.now(timezone.utc))
+                             current_time=now_israel)  # זמן ישראל לטמפלט
         
     except Exception as e:
         logging.error(f"Error loading scheduled emails: {e}")
@@ -254,6 +269,239 @@ def cron_send_pending_emails():
             'timestamp': datetime.now(timezone.utc).isoformat(),
             'error': str(e),
             'message': f'Critical error in cron job: {str(e)}'
+        }), 500
+
+@admin_scheduled_emails_bp.route('/api/cron/send-expiration-reminders', methods=['POST'])
+@api_token_required
+def cron_send_expiration_reminders():
+    """
+    API endpoint לשליחת תזכורות תפוגת קופונים - מיועד לCron Jobs
+    שולח תזכורות ל-30, 7 ו-1 ימים לפני תפוגה
+    """
+    try:
+        from datetime import date, timedelta
+        from app.models import Coupon, User, Company
+        from app.helpers import send_email
+        import base64
+        import os
+        
+        current_time = datetime.now(timezone.utc)
+        today = current_time.date()
+        
+        # חיפוש קופונים שצריכים תזכורות
+        # 30 ימים לפני תפוגה
+        date_30_days = today + timedelta(days=30)
+        # 7 ימים לפני תפוגה  
+        date_7_days = today + timedelta(days=7)
+        # יום אחד לפני תפוגה
+        date_1_day = today + timedelta(days=1)
+        
+        sent_count = 0
+        failed_count = 0
+        sent_reminders = []
+        failed_reminders = []
+        
+        # פונקציה לשליחת תזכורת
+        def send_reminder(coupon, user, days_left, reminder_type):
+            try:
+                # הכנת תוכן המייל
+                company_obj = Company.query.filter_by(name=coupon.company).first()
+                logo_filename = (
+                    company_obj.image_path
+                    if company_obj and company_obj.image_path
+                    else "default_logo.png"
+                )
+                
+                # קריאת לוגו החברה
+                logo_filepath = os.path.join(
+                    current_app.root_path, "static", "logos", "images", logo_filename
+                )
+                
+                try:
+                    with open(logo_filepath, "rb") as image_file:
+                        encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
+                except Exception as e:
+                    logging.warning(f"Could not read logo file {logo_filepath}: {e}")
+                    encoded_string = ""
+                
+                # הכנת נתוני הקופון למייל
+                coupon_data = {
+                    "company": coupon.company,
+                    "company_logo_base64": encoded_string,
+                    "code": coupon.code,
+                    "remaining_value": coupon.remaining_value,
+                    "expiration": coupon.expiration,
+                    "expiration_formatted": datetime.strptime(coupon.expiration, "%Y-%m-%d").strftime("%d/%m/%Y"),
+                    "days_left": days_left,
+                    "coupon_detail_link": f"https://www.couponmasteril.com/coupon_detail/{coupon.id}",
+                }
+                
+                # קביעת כותרת המייל לפי מספר הימים
+                if days_left == 30:
+                    subject = "תזכורת: קופון פג תוקף בעוד 30 יום"
+                elif days_left == 7:
+                    subject = "תזכורת: קופון פג תוקף בעוד שבוע"
+                elif days_left == 1:
+                    subject = "תזכורת דחופה: קופון פג תוקף מחר!"
+                else:
+                    subject = f"תזכורת: קופון פג תוקף בעוד {days_left} ימים"
+                
+                # רינדור תבנית המייל
+                from flask import render_template
+                html_content = render_template(
+                    "emails/coupon_expiration_warning.html",
+                    user={"first_name": user.first_name, "email": user.email},
+                    coupons=[coupon_data],
+                    current_year=today.year,
+                )
+                
+                # שליחת המייל
+                success = send_email(
+                    sender_email="noreply@couponmasteril.com",
+                    sender_name="Coupon Master",
+                    recipient_email=user.email,
+                    recipient_name=f"{user.first_name} {user.last_name}",
+                    subject=subject,
+                    html_content=html_content,
+                )
+                
+                if success:
+                    # עדכון הדגל שהתזכורת נשלחה
+                    if reminder_type == 30:
+                        coupon.reminder_sent_30_days = True
+                    elif reminder_type == 7:
+                        coupon.reminder_sent_7_days = True
+                    elif reminder_type == 1:
+                        coupon.reminder_sent_1_day = True
+                    
+                    db.session.commit()
+                    
+                    return True, None
+                else:
+                    return False, "Email sending failed"
+                    
+            except Exception as e:
+                return False, str(e)
+        
+        # לוג תחילת תהליך
+        logging.info(f"Expiration reminders cron job started")
+        
+        # תזכורות 30 ימים
+        coupons_30_days = Coupon.query.join(User).filter(
+            Coupon.expiration == date_30_days.strftime("%Y-%m-%d"),
+            Coupon.reminder_sent_30_days == False,
+            Coupon.status == 'פעיל',
+            Coupon.is_for_sale == False
+        ).all()
+        
+        for coupon in coupons_30_days:
+            success, error = send_reminder(coupon, coupon.user, 30, 30)
+            if success:
+                sent_count += 1
+                sent_reminders.append({
+                    'type': '30_days',
+                    'coupon_id': coupon.id,
+                    'user_email': coupon.user.email,
+                    'company': coupon.company,
+                    'code': coupon.code
+                })
+            else:
+                failed_count += 1
+                failed_reminders.append({
+                    'type': '30_days',
+                    'coupon_id': coupon.id,
+                    'user_email': coupon.user.email,
+                    'error': error
+                })
+        
+        # תזכורות 7 ימים
+        coupons_7_days = Coupon.query.join(User).filter(
+            Coupon.expiration == date_7_days.strftime("%Y-%m-%d"),
+            Coupon.reminder_sent_7_days == False,
+            Coupon.status == 'פעיל',
+            Coupon.is_for_sale == False
+        ).all()
+        
+        for coupon in coupons_7_days:
+            success, error = send_reminder(coupon, coupon.user, 7, 7)
+            if success:
+                sent_count += 1
+                sent_reminders.append({
+                    'type': '7_days',
+                    'coupon_id': coupon.id,
+                    'user_email': coupon.user.email,
+                    'company': coupon.company,
+                    'code': coupon.code
+                })
+            else:
+                failed_count += 1
+                failed_reminders.append({
+                    'type': '7_days',
+                    'coupon_id': coupon.id,
+                    'user_email': coupon.user.email,
+                    'error': error
+                })
+        
+        # תזכורות יום אחד
+        coupons_1_day = Coupon.query.join(User).filter(
+            Coupon.expiration == date_1_day.strftime("%Y-%m-%d"),
+            Coupon.reminder_sent_1_day == False,
+            Coupon.status == 'פעיל',
+            Coupon.is_for_sale == False
+        ).all()
+        
+        for coupon in coupons_1_day:
+            success, error = send_reminder(coupon, coupon.user, 1, 1)
+            if success:
+                sent_count += 1
+                sent_reminders.append({
+                    'type': '1_day',
+                    'coupon_id': coupon.id,
+                    'user_email': coupon.user.email,
+                    'company': coupon.company,
+                    'code': coupon.code
+                })
+            else:
+                failed_count += 1
+                failed_reminders.append({
+                    'type': '1_day',
+                    'coupon_id': coupon.id,
+                    'user_email': coupon.user.email,
+                    'error': error
+                })
+        
+        # הכנת תגובה מפורטת
+        response_data = {
+            'success': True,
+            'timestamp': current_time.isoformat(),
+            'summary': {
+                'total_sent': sent_count,
+                'total_failed': failed_count,
+                'reminders_30_days': len([r for r in sent_reminders if r['type'] == '30_days']),
+                'reminders_7_days': len([r for r in sent_reminders if r['type'] == '7_days']),
+                'reminders_1_day': len([r for r in sent_reminders if r['type'] == '1_day'])
+            },
+            'sent_reminders': sent_reminders,
+            'failed_reminders': failed_reminders,
+            'message': f'Expiration reminders completed: {sent_count} sent successfully'
+        }
+        
+        if failed_count > 0:
+            response_data['message'] += f', {failed_count} failed'
+        
+        if sent_count == 0 and failed_count == 0:
+            response_data['message'] = 'No expiration reminders needed today'
+        
+        logging.info(f"Expiration reminders completed: {sent_count} sent, {failed_count} failed")
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logging.error(f"Critical error in cron_send_expiration_reminders: {e}")
+        return jsonify({
+            'success': False,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'error': str(e),
+            'message': f'Critical error in expiration reminders cron job: {str(e)}'
         }), 500
 
 def send_newsletter_to_subscribers(newsletter):

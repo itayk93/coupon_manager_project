@@ -5,9 +5,7 @@ import logging
 from datetime import datetime, timedelta
 from flask import Flask, render_template, url_for, request
 from dotenv import load_dotenv
-from apscheduler.schedulers.background import BackgroundScheduler
 from app.routes.coupons_routes import to_israel_time_filter  # Import the function
-from scheduler_config import configure_scheduler
 from app.helpers import has_feature_access
 
 
@@ -20,12 +18,6 @@ from app.models import User, Coupon
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-scheduler = BackgroundScheduler()
-
-# Import the Scheduler
-from scheduler_config import (
-    configure_scheduler,
-)  # ← Changed import according to file location
 
 
 def create_app():
@@ -135,10 +127,7 @@ def create_app():
         except Exception as e:
             logger.error(f"שגיאה ביצירת תיקיית ההעלאה: {e}")
 
-    # 📌 Call the scheduler **only after the application is loaded**
-    from scheduler_config import configure_scheduler
-
-    configure_scheduler(app)
+    # Scheduler functionality removed - now using external cron jobs
 
     @app.context_processor
     def utility_processor():
@@ -161,60 +150,3 @@ def create_app():
         csrf.exempt(telegram_bp)
 
     return app
-
-
-def send_expiration_warnings():
-    """Sends notifications about coupons that are about to expire, using Flask context."""
-    from app import create_app  # Load the application
-
-    app = create_app()
-
-    with app.app_context():
-        from app.models import Coupon
-
-        today = datetime.utcnow().date()
-        one_month_ahead = today + timedelta(days=30)
-
-        coupons_month = Coupon.query.filter(
-            Coupon.expiration == one_month_ahead.strftime("%Y-%m-%d"),
-            Coupon.reminder_sent_30_days == False,
-        ).all()
-
-        for coupon in coupons_month:
-            user = coupon.user
-            if user:
-                try:
-                    expiration_date = coupon.expiration
-                    coupon_detail_link = request.host_url.rstrip("/") + url_for(
-                        "coupon_detail", id=coupon.id
-                    )
-                    html_content = render_template(
-                        "emails/coupon_expiration_warning.html",
-                        user=user,
-                        coupon=coupon,
-                        expiration_date=expiration_date,
-                        coupon_detail_link=coupon_detail_link,
-                        days_left=30,
-                    )
-
-                    # Send email
-                    send_email(
-                        sender_email="noreply@couponmasteril.com",
-                        sender_name="Coupon Master",
-                        recipient_email=user.email,
-                        recipient_name=f"{user.first_name} {user.last_name}",
-                        subject="התראה על תפוגת קופון - 30 יום נותרו",
-                        html_content=html_content,
-                    )
-
-                    coupon.reminder_sent_30_days = True
-                    db.session.commit()
-                    logger.info(
-                        f"Sent 30-day expiration warning for coupon {coupon.code} to {user.email}"
-                    )
-
-                except Exception as e:
-                    logger.error(
-                        f"Error sending 30-day expiration warning for coupon {coupon.code}: {e}"
-                    )
-                    db.session.rollback()

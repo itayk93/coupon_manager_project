@@ -25,7 +25,7 @@ def generate_unsubscribe_link(user):
 
 logger = logging.getLogger(__name__)
 
-admin_newsletter_bp = Blueprint("admin_newsletter_bp", __name__, url_prefix="/admin/newsletter")
+admin_newsletter_bp = Blueprint("admin_newsletter_bp", __name__)
 
 # Admin-only decorator
 def admin_required(f):

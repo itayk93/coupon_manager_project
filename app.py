@@ -5,7 +5,7 @@ from flask import Flask
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
-from apscheduler.schedulers.background import BackgroundScheduler
+# Scheduler functionality removed - using external cron jobs
 from dotenv import load_dotenv
 
 from app.extensions import db, login_manager, csrf
@@ -119,8 +119,7 @@ try:
 except Exception as e:
     logging.error(f"Error creating upload folder: {e}")
 
-# Configure Scheduler
-scheduler = BackgroundScheduler()
+# Scheduler functionality removed - using external cron jobs
 
 if __name__ == "__main__":
     app.run(debug=True)

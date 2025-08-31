@@ -111,12 +111,17 @@ def email_settings():
                                     'אפשרויות תוכן הדוח המתקדם')
             logging.info("Saved email_report_options")
             
-            # עדכון הscheduler עם ההגדרות החדשות
-            from scheduler_config import update_scheduler_time
-            update_scheduler_time(int(email_hour), int(email_minute))
-            logging.info("Updated scheduler time")
+            # עדכון מיילים מתוכננים קיימים לזמן החדש
+            try:
+                update_existing_scheduled_emails(int(email_hour), int(email_minute))
+                logging.info("Updated existing scheduled emails with new timing")
+            except Exception as e:
+                logging.error(f"Error updating existing scheduled emails: {e}")
             
-            flash('הגדרות המייל נשמרו בהצלחה! הזמן עודכן בscheduler.', 'success')
+            # Scheduler functionality removed - using external cron jobs
+            logging.info("Email settings saved (scheduler disabled)")
+            
+            flash('הגדרות המייל נשמרו בהצלחה! מיילים מתוכננים עודכנו לזמן החדש.', 'success')
             logging.info("Settings saved successfully!")
             
         except Exception as e:
@@ -158,9 +163,8 @@ def email_settings():
         'specific_dates': AdminSettings.get_setting('email_specific_dates', '')
     }
     
-    # בדיקת סטטוס שליחה היום
-    from scheduler_utils import load_process_status  # Local import
-    email_sent_today = load_process_status('daily_email')
+    # בדיקת סטטוס שליחה היום (scheduler disabled)
+    email_sent_today = False
     
     return render_template('admin/email_settings.html', 
                          settings=current_settings, 
@@ -174,16 +178,12 @@ def send_email_now():
     שליחת מייל מיידית (ללא תלות בזמן הזמנה)
     """
     try:
-        from app import create_app  # Local import to avoid circular dependency
-        from scheduler_utils import update_company_counts_and_send_email, save_process_status  # Local import
-        app = create_app()
-        with app.app_context():
-            # שליחת המייל
-            update_company_counts_and_send_email(app)
-            # עדכון סטטוס שנשלח
-            save_process_status('daily_email', True)
-            
-        flash('המייל נשלח בהצלחה!', 'success')
+        # יצירת ניוזלטר יומי על בסיס ההגדרות
+        success = create_daily_newsletter()
+        if success:
+            flash('ניוזלטר יומי נוצר והוגדר לשליחה!', 'success')
+        else:
+            flash('שגיאה ביצירת הניוזלטר היומי', 'danger')
         
     except Exception as e:
         flash(f'שגיאה בשליחת המייל: {str(e)}', 'danger')
@@ -199,8 +199,7 @@ def reset_email_status():
     איפוס סטטוס שליחת המייל (מאפשר שליחה מחדש)
     """
     try:
-        from scheduler_utils import save_process_status  # Local import
-        save_process_status('daily_email', False)
+        # איפוס סטטוס המייל (scheduler disabled - placeholder)
         flash('סטטוס המייל אופס בהצלחה. המייל יכול להישלח שוב.', 'success')
         
     except Exception as e:
@@ -270,3 +269,293 @@ def test_email():
         logging.error(f"Error sending test email: {e}")
     
     return redirect(url_for('admin_bp.admin_email_bp.email_settings'))
+
+
+def create_daily_newsletter():
+    """
+    יצירת ניוזלטר יומי על בסיס הגדרות המייל
+    """
+    try:
+        from app.models import Newsletter, AdminSettings, Company
+        from datetime import datetime, timezone, timedelta
+        from sqlalchemy import text
+        
+        # קבלת ההגדרות
+        schedule_type = AdminSettings.get_setting('email_schedule_type', 'daily')
+        send_time_hour = AdminSettings.get_setting('daily_email_hour', 9)
+        send_time_minute = AdminSettings.get_setting('daily_email_minute', 0)
+        recipient_email = AdminSettings.get_setting('daily_email_recipient', 'itayk93@gmail.com')
+        
+        # קבלת הגדרות תזמון נוספות
+        weekly_day = AdminSettings.get_setting('email_weekly_day', 1)  # יום בשבוע (1=ב׳, 7=א׳)
+        monthly_day = AdminSettings.get_setting('email_monthly_day', 1)  # יום בחודש
+        specific_dates = AdminSettings.get_setting('email_specific_dates', '')  # תאריכים ספציפיים
+        
+        # יצירת זמן השליחה - המרה מזמן ישראל לUTC
+        import pytz
+        israel_tz = pytz.timezone('Asia/Jerusalem')
+        utc_tz = pytz.timezone('UTC')
+        
+        now = datetime.now(timezone.utc)
+        
+        if schedule_type == 'daily':
+            # יצירת תאריך השליחה בזמן ישראל
+            israel_now = now.astimezone(israel_tz)
+            israel_scheduled = israel_now.replace(hour=send_time_hour, minute=send_time_minute, second=0, microsecond=0)
+            
+            # אם הזמן כבר עבר היום בישראל, הגדר למחר
+            if israel_scheduled <= israel_now:
+                israel_scheduled += timedelta(days=1)
+            
+            # המרה חזרה ל-UTC
+            scheduled_time = israel_scheduled.astimezone(utc_tz).replace(tzinfo=timezone.utc)
+            
+        elif schedule_type == 'weekly':
+            # תזמון שבועי - שליחה ביום מסוים בשבוע
+            israel_now = now.astimezone(israel_tz)
+            
+            # חישוב היום הנוכחי בשבוע (0=א׳, 1=ב׳, ..., 6=ש׳)
+            current_weekday = israel_now.weekday()
+            target_weekday = (weekly_day - 1) % 7  # המרה מ-1-7 ל-0-6
+            
+            # חישוב כמה ימים צריך להוסיף כדי להגיע ליום המטרה
+            days_to_add = (target_weekday - current_weekday) % 7
+            if days_to_add == 0 and israel_now.hour >= send_time_hour and israel_now.minute >= send_time_minute:
+                # אם היום הוא היום המטרה והזמן כבר עבר, נקבע לשבוע הבא
+                days_to_add = 7
+            
+            # יצירת התאריך המתוזמן
+            israel_scheduled = israel_now.replace(hour=send_time_hour, minute=send_time_minute, second=0, microsecond=0) + timedelta(days=days_to_add)
+            
+            # המרה חזרה ל-UTC
+            scheduled_time = israel_scheduled.astimezone(utc_tz).replace(tzinfo=timezone.utc)
+            
+        elif schedule_type == 'monthly':
+            # תזמון חודשי - שליחה ביום מסוים בחודש
+            israel_now = now.astimezone(israel_tz)
+            
+            # יצירת התאריך המתוזמן לחודש הבא
+            if israel_now.day >= monthly_day and (israel_now.hour > send_time_hour or (israel_now.hour == send_time_hour and israel_now.minute >= send_time_minute)):
+                # אם היום כבר עבר או הזמן עבר, נקבע לחודש הבא
+                if israel_now.month == 12:
+                    next_month = israel_now.replace(year=israel_now.year + 1, month=1, day=monthly_day)
+                else:
+                    next_month = israel_now.replace(month=israel_now.month + 1, day=monthly_day)
+                israel_scheduled = next_month.replace(hour=send_time_hour, minute=send_time_minute, second=0, microsecond=0)
+            else:
+                # נקבע לחודש הנוכחי
+                israel_scheduled = israel_now.replace(day=monthly_day, hour=send_time_hour, minute=send_time_minute, second=0, microsecond=0)
+            
+            # המרה חזרה ל-UTC
+            scheduled_time = israel_scheduled.astimezone(utc_tz).replace(tzinfo=timezone.utc)
+            
+        elif schedule_type == 'specific_dates':
+            # תזמון לתאריכים ספציפיים
+            if specific_dates:
+                # פיצול התאריכים המופרדים בפסיקים
+                date_list = [d.strip() for d in specific_dates.split(',') if d.strip()]
+                if date_list:
+                    # נקבע לתאריך הראשון שעדיין לא עבר
+                    for date_str in date_list:
+                        try:
+                            # ניסיון לפרסר את התאריך בפורמטים שונים
+                            for fmt in ['%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y']:
+                                try:
+                                    parsed_date = datetime.strptime(date_str, fmt)
+                                    # הוספת השעה והדקה
+                                    scheduled_date = parsed_date.replace(hour=send_time_hour, minute=send_time_minute, second=0, microsecond=0)
+                                    
+                                    # המרה לזמן ישראל
+                                    israel_scheduled = israel_tz.localize(scheduled_date)
+                                    
+                                    # בדיקה אם התאריך עדיין לא עבר
+                                    if israel_scheduled > israel_now:
+                                        scheduled_time = israel_scheduled.astimezone(utc_tz).replace(tzinfo=timezone.utc)
+                                        break
+                                except ValueError:
+                                    continue
+                            else:
+                                continue
+                            break
+                        except:
+                            continue
+                    else:
+                        # אם כל התאריכים עברו, נקבע לתאריך הבא
+                        scheduled_time = now + timedelta(days=1)
+                        scheduled_time = scheduled_time.replace(hour=send_time_hour, minute=send_time_minute, second=0, microsecond=0)
+                else:
+                    # אם אין תאריכים, נקבע לשעה הבאה
+                    scheduled_time = now + timedelta(hours=1)
+                    scheduled_time = scheduled_time.replace(minute=send_time_minute, second=0, microsecond=0)
+            else:
+                # אם אין תאריכים, נקבע לשעה הבאה
+                scheduled_time = now + timedelta(hours=1)
+                scheduled_time = scheduled_time.replace(minute=send_time_minute, second=0, microsecond=0)
+        else:
+            # ברירת מחדל - לשעה הבאה
+            scheduled_time = now + timedelta(hours=1)
+            scheduled_time = scheduled_time.replace(minute=send_time_minute, second=0, microsecond=0)
+
+        # עדכון ספירת הקופונים לחברות
+        update_query = text(
+            """
+            UPDATE companies c
+            SET company_count = COALESCE(subquery.company_count, 0)
+            FROM (
+                SELECT c.id, COUNT(cp.company) AS company_count
+                FROM companies c
+                LEFT JOIN coupon cp ON c.name = cp.company
+                GROUP BY c.id
+            ) AS subquery
+            WHERE c.id = subquery.id;
+            """
+        )
+        db.session.execute(update_query)
+        db.session.commit()
+        
+        # קבלת נתוני החברות המעודכנים
+        companies = Company.query.order_by(Company.company_count.desc()).all()
+        
+        # קביעת כותרת ותיאור בהתאם לסוג התזמון
+        if schedule_type == 'daily':
+            report_title = "דוח יומי - סטטיסטיקות קופונים"
+            report_description = "דוח אוטומטי יומי עם נתוני החברות והקופונים העדכניים"
+            title_suffix = "יומי"
+        elif schedule_type == 'weekly':
+            report_title = "דוח שבועי - סטטיסטיקות קופונים"
+            report_description = "דוח אוטומטי שבועי עם נתוני החברות והקופונים העדכניים"
+            title_suffix = "שבועי"
+        elif schedule_type == 'monthly':
+            report_title = "דוח חודשי - סטטיסטיקות קופונים"
+            report_description = "דוח אוטומטי חודשי עם נתוני החברות והקופונים העדכניים"
+            title_suffix = "חודשי"
+        elif schedule_type == 'specific_dates':
+            report_title = "דוח מיוחד - סטטיסטיקות קופונים"
+            report_description = "דוח אוטומטי לתאריכים מיוחדים עם נתוני החברות והקופונים העדכניים"
+            title_suffix = "מיוחד"
+        else:
+            report_title = "דוח - סטטיסטיקות קופונים"
+            report_description = "דוח אוטומטי עם נתוני החברות והקופונים העדכניים"
+            title_suffix = ""
+        
+        # יצירת תוכן הניוזלטר
+        html_content = f"""
+        <div style="direction: rtl; font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2c3e50; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+                {report_title}
+            </h2>
+            <p style="text-align: center; color: #7f8c8d; margin-bottom: 30px;">
+                נתונים מעודכנים נכון לתאריך: {now.strftime("%d/%m/%Y %H:%M")}
+            </p>
+            
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="color: #2c3e50; margin-top: 0;">סיכום כללי:</h3>
+                <p><strong>סך הכל חברות:</strong> {str(len(companies))}</p>
+                <p><strong>סך הכל קופונים:</strong> {str(sum(c.company_count for c in companies))}</p>
+            </div>
+            
+            <h3 style="color: #2c3e50;">פירוט לפי חברות:</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <thead>
+                    <tr style="background-color: #3498db; color: white;">
+                        <th style="padding: 12px; text-align: right; border: 1px solid #ddd;">שם החברה</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #ddd;">מספר קופונים</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        
+        for i, company in enumerate(companies):
+            row_color = "#f2f2f2" if i % 2 == 0 else "white"
+            html_content += f"""
+                    <tr style="background-color: {row_color};">
+                        <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">{company.name}</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #2c3e50;">{company.company_count}</td>
+                    </tr>
+            """
+        
+        html_content += """
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 30px; padding: 15px; background-color: #e8f5e8; border-radius: 5px; text-align: center;">
+                <p style="margin: 0; color: #27ae60; font-size: 14px;">
+                    <strong>דוח זה נוצר אוטומטית ע"י מערכת ניהול הקופונים</strong>
+                </p>
+            </div>
+        </div>
+        """
+        
+        # יצירת הניוזלטר במסד הנתונים
+        newsletter = Newsletter(
+            title=f"דוח {title_suffix} - {now.strftime('%d/%m/%Y')}",
+            newsletter_type='custom',
+            custom_html=html_content,
+            main_title=report_title,
+            content=report_description,
+            is_published=True,
+            scheduled_send_time=scheduled_time,
+            created_by=1,  # Admin user ID
+            is_sent=False
+        )
+        
+        db.session.add(newsletter)
+        db.session.commit()
+        
+        logging.info(f"Daily newsletter created successfully with ID {newsletter.id}, scheduled for {scheduled_time}")
+        return True
+        
+    except Exception as e:
+        logging.error(f"Error creating daily newsletter: {e}")
+        db.session.rollback()
+        return False
+
+
+def update_existing_scheduled_emails(new_hour, new_minute):
+    """
+    עדכון מיילים מתוכננים קיימים לזמן חדש
+    """
+    try:
+        import pytz
+        from datetime import datetime, timezone
+        from app.models import Newsletter
+        
+        israel_tz = pytz.timezone('Asia/Jerusalem')
+        utc_tz = pytz.timezone('UTC')
+        
+        # מציאת כל המיילים המתוכננים שטרם נשלחו
+        future_emails = Newsletter.query.filter(
+            Newsletter.is_sent == False,
+            Newsletter.title.like('דוח%'),
+            Newsletter.scheduled_send_time.isnot(None),
+            Newsletter.scheduled_send_time > datetime.now(timezone.utc)
+        ).all()
+        
+        logging.info(f"Found {len(future_emails)} scheduled emails to update")
+        
+        for newsletter in future_emails:
+            old_time = newsletter.scheduled_send_time
+            old_israel = old_time.astimezone(israel_tz)
+            
+            # יצירת זמן חדש - אותו תאריך, זמן חדש
+            new_israel = old_israel.replace(
+                hour=new_hour,
+                minute=new_minute,
+                second=0,
+                microsecond=0
+            )
+            
+            # המרה ל-UTC
+            new_utc = new_israel.astimezone(utc_tz).replace(tzinfo=timezone.utc)
+            
+            newsletter.scheduled_send_time = new_utc
+            logging.info(f"Updated newsletter {newsletter.id} from {old_israel.strftime('%H:%M')} to {new_israel.strftime('%H:%M')} Israel time")
+        
+        db.session.commit()
+        logging.info(f"Successfully updated {len(future_emails)} scheduled emails")
+        return True
+        
+    except Exception as e:
+        logging.error(f"Error updating scheduled emails: {e}")
+        db.session.rollback()
+        return False

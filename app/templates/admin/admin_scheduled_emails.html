@@ -479,9 +479,8 @@
                                 <div class="time-sub">עבר זמנו</div>
                                 {% else %}
                                 <div class="time-sub">
-                                    {% set time_diff = item.scheduled_time - current_time %}
-                                    {% if time_diff.total_seconds() > 0 %}
-                                        עוד {{ (time_diff.total_seconds() / 3600) | round(1) }} שעות
+                                    {% if item.hours_remaining > 0 %}
+                                        עוד {{ item.hours_remaining }} שעות
                                     {% endif %}
                                 </div>
                                 {% endif %}
@@ -565,6 +564,30 @@
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_CRON_API_TOKEN"</div>
         
+        <div class="mt-4" style="border-top: 2px solid #e2e8f0; padding-top: 20px;">
+            <h6 class="mt-3">עבור תזכורות תפוגת קופונים:</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>URL:</h6>
+                    <div class="code-block">
+                        POST {{ request.url_root }}admin/scheduled-emails/api/cron/send-expiration-reminders
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6>Headers דרושים:</h6>
+                    <div class="code-block">
+                        Content-Type: application/json<br>
+                        Authorization: Bearer YOUR_CRON_API_TOKEN
+                    </div>
+                </div>
+            </div>
+            
+            <h6 class="mt-3">דוגמה לקריאת cURL:</h6>
+            <div class="code-block dark">curl -X POST {{ request.url_root }}admin/scheduled-emails/api/cron/send-expiration-reminders \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_CRON_API_TOKEN"</div>
+        </div>
+
         <div class="mt-3" style="background: linear-gradient(135deg, #e6f7ff, #d6f4ff); border: 1px solid #b8e6ff; border-radius: 8px; padding: 16px;">
             <h6 style="color: #1a365d; font-weight: 600; margin-bottom: 8px;">
                 <i class="fas fa-info-circle"></i> הגדרת API Token
@@ -574,9 +597,19 @@
                 הטוקן צריך להיות מחרוזת בטוחה ויחודית לאותנטיקציה של הCron Jobs.
             </p>
         </div>
+
+        <div class="mt-3" style="background: linear-gradient(135deg, #f0fff4, #e6ffed); border: 1px solid #c6f6d5; border-radius: 8px; padding: 16px;">
+            <h6 style="color: #22543d; font-weight: 600; margin-bottom: 8px;">
+                <i class="fas fa-clock"></i> המלצות זמני הרצה
+            </h6>
+            <p style="color: #2d3748; margin: 0; font-size: 0.9rem;">
+                <strong>מיילים מתוכננים:</strong> הרץ כל שעה - <code>0 * * * *</code><br>
+                <strong>תזכורות תפוגה:</strong> הרץ פעם ביום בשעה 9:00 - <code>0 9 * * *</code>
+            </p>
+        </div>
         
         <div class="alert-warning">
-            <strong>הערה:</strong> הAPI ישלח רק מיילים שהזמן שלהם עבר (מאוחר יותר מהשעה הנוכחית) ועדיין לא נשלחו.
+            <strong>הערה:</strong> מערכת ה-API מבוססת על עמודות מעקב בדאטהבייס (reminder_sent_30_days, reminder_sent_7_days, reminder_sent_1_day) כדי למנוע שליחות כפולות.
         </div>
     </div>
 </div>
@@ -754,19 +787,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function previewEmail(newsletterId) {
-    $('#previewModal').modal('show');
-    const content = document.getElementById('preview-content');
-    content.innerHTML = `
-        <div class="text-center" style="padding: 40px;">
-            <div style="display: inline-block; padding: 20px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); margin-bottom: 20px;">
-                <i class="fas fa-spinner fa-spin" style="color: white; font-size: 2rem;"></i>
-            </div>
-            <h5 style="color: #4a5568; font-weight: 600;">טוען תצוגה מקדימה...</h5>
-        </div>
-    `;
-    
-    // כאן ניתן להוסיף קריאה לשרת לקבלת תצוגה מקדימה
-    // fetch(`/admin/newsletter/preview/${newsletterId}`)...
+    // פתיחת התצוגה המקדימה בחלון חדש
+    const previewUrl = `/admin/newsletter/preview/${newsletterId}`;
+    window.open(previewUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
 }
 
 function viewSentReport(newsletterId) {

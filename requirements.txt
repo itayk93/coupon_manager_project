@@ -17,7 +17,7 @@ openpyxl
 psycopg2-binary>=2.9.10
 python-dotenv
 sib-api-v3-sdk==7.6.0
-apscheduler
+# apscheduler - removed (using external cron jobs)
 cryptography
 fuzzywuzzy==0.18.0
 python-Levenshtein>=0.25.0
