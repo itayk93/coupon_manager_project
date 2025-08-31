@@ -323,20 +323,239 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle image file input change to show selected filename
+    // Check if we have stored coupon data from image processing
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('show_form') === '1') {
+        const storedData = sessionStorage.getItem('couponData');
+        const successMessage = sessionStorage.getItem('successMessage');
+        
+        if (storedData) {
+            try {
+                const data = JSON.parse(storedData);
+                
+                // Show success message if available
+                if (successMessage) {
+                    showFlashMessage(successMessage, 'success');
+                }
+                
+                // Fill form with extracted data
+                setTimeout(() => fillCouponForm(data), 100); // Small delay to ensure form is ready
+                
+                // Clear stored data
+                sessionStorage.removeItem('couponData');
+                sessionStorage.removeItem('successMessage');
+            } catch (e) {
+                console.error('Error parsing stored coupon data:', e);
+            }
+        }
+    }
+    // Handle image file input change to show selected filename and process image
     const imageFileInput = document.getElementById('image-file-input');
     const imageFileNameDisplay = document.getElementById('selected-image-name');
     
     if (imageFileInput && imageFileNameDisplay) {
         imageFileInput.addEventListener('change', function() {
             if (imageFileInput.files.length > 0) {
-                imageFileNameDisplay.textContent = imageFileInput.files[0].name;
+                const file = imageFileInput.files[0];
+                imageFileNameDisplay.textContent = file.name;
                 imageFileNameDisplay.classList.add('file-selected');
+                
+                // Process the image immediately
+                processImageFile(file);
             } else {
                 imageFileNameDisplay.textContent = 'לא נבחרה תמונה';
                 imageFileNameDisplay.classList.remove('file-selected');
             }
         });
+    }
+
+    // Function to process image file and extract coupon details
+    function processImageFile(file) {
+        // Show loading indicator
+        const uploadForm = document.querySelector('.upload-form');
+        if (uploadForm) {
+            uploadForm.style.opacity = '0.5';
+            uploadForm.style.pointerEvents = 'none';
+        }
+        
+        // Create loading message
+        let loadingDiv = document.getElementById('loading-message');
+        if (!loadingDiv) {
+            loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loading-message';
+            loadingDiv.innerHTML = '<p style="text-align: center; padding: 20px; font-weight: bold; color: #3498db;"><i class="fa fa-spinner fa-spin"></i> מעבד את התמונה ומחלץ פרטי קופון...</p>';
+            uploadForm.parentNode.insertBefore(loadingDiv, uploadForm.nextSibling);
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Data = e.target.result;
+            
+            // Send to server for processing
+            fetch('{{ url_for("coupons.process_base64_image") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    image_data: base64Data
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading indicator
+                if (uploadForm) {
+                    uploadForm.style.opacity = '1';
+                    uploadForm.style.pointerEvents = 'auto';
+                }
+                if (loadingDiv) {
+                    loadingDiv.remove();
+                }
+
+                if (data.success) {
+                    // Store the extracted data for after redirect
+                    sessionStorage.setItem('couponData', JSON.stringify(data.data));
+                    sessionStorage.setItem('successMessage', data.message);
+                    
+                    // Show coupon form (this will redirect)
+                    showCouponForm();
+                } else {
+                    // Show error message
+                    showFlashMessage(data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                // Hide loading indicator
+                if (uploadForm) {
+                    uploadForm.style.opacity = '1';
+                    uploadForm.style.pointerEvents = 'auto';
+                }
+                if (loadingDiv) {
+                    loadingDiv.remove();
+                }
+                
+                console.error('Error:', error);
+                showFlashMessage('אירעה שגיאה בעת עיבוד התמונה. נסה שוב מאוחר יותר.', 'danger');
+            });
+        };
+        
+        reader.readAsDataURL(file);
+    }
+
+    // Function to show flash messages
+    function showFlashMessage(message, category) {
+        let flashContainer = document.querySelector('.flash-messages');
+        if (!flashContainer) {
+            flashContainer = document.createElement('div');
+            flashContainer.className = 'flash-messages';
+            const addCouponSection = document.querySelector('.add-coupon');
+            const instructionsPanel = document.getElementById('instructions-panel');
+            addCouponSection.insertBefore(flashContainer, instructionsPanel.nextSibling);
+        }
+        
+        const flashDiv = document.createElement('div');
+        flashDiv.className = `flash ${category}`;
+        flashDiv.innerHTML = `
+            <span class="message-text">${message}</span>
+            <button class="close-flash" aria-label="Close">&times;</button>
+        `;
+        
+        flashContainer.appendChild(flashDiv);
+        
+        // Add close event listener
+        const closeBtn = flashDiv.querySelector('.close-flash');
+        closeBtn.addEventListener('click', function() {
+            flashDiv.remove();
+        });
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            if (flashDiv.parentNode) {
+                flashDiv.classList.add('fade-out');
+                setTimeout(() => flashDiv.remove(), 500);
+            }
+        }, 5000);
+    }
+
+    // Function to fill coupon form with extracted data
+    function fillCouponForm(data) {
+        // Company
+        const companySelect = document.getElementById('company_select');
+        if (companySelect && data.company_id) {
+            companySelect.value = data.company_id;
+            
+            // Trigger change event to activate related logic
+            companySelect.dispatchEvent(new Event('change'));
+            
+            // If it's "other", also fill the other company field
+            if (data.company_id === "other" && data["חברה"]) {
+                // Wait a bit for the other company field to be shown
+                setTimeout(() => {
+                    const otherCompanyInput = document.getElementById('other_company');
+                    if (otherCompanyInput) {
+                        otherCompanyInput.value = data["חברה"];
+                    }
+                }, 50);
+            }
+        }
+        
+        // Code
+        const codeInput = document.getElementById('code');
+        if (codeInput && data["קוד קופון"]) {
+            codeInput.value = data["קוד קופון"];
+        }
+        
+        // Cost
+        const costInput = document.getElementById('coupon_cost');
+        if (costInput && data["עלות"]) {
+            costInput.value = data["עלות"];
+        }
+        
+        // Value
+        const valueInput = document.getElementById('desired_value');
+        if (valueInput && data["ערך מקורי"]) {
+            valueInput.value = data["ערך מקורי"];
+        }
+        
+        // Description
+        const descriptionInput = document.getElementById('description');
+        if (descriptionInput && data["תיאור"]) {
+            descriptionInput.value = data["תיאור"];
+        }
+        
+        // Expiration date
+        const expirationInput = document.getElementById('expiration');
+        if (expirationInput && data["תאריך תפוגה"]) {
+            expirationInput.value = data["תאריך תפוגה"];
+        }
+        
+        // Calculate discount percentage if cost and value are available
+        if (data["עלות"] && data["ערך מקורי"]) {
+            const cost = parseFloat(data["עלות"]);
+            const value = parseFloat(data["ערך מקורי"]);
+            if (value > 0) {
+                const discount = ((value - cost) / value) * 100;
+                const discountInput = document.getElementById('discount_percentage_input');
+                if (discountInput) {
+                    discountInput.value = Math.max(0, Math.round(discount * 100) / 100).toFixed(2);
+                }
+            }
+        }
+        
+        // Trigger form validation update
+        if (typeof updateFields === 'function') {
+            updateFields(null);
+        }
+    }
+
+    // Function to show coupon form
+    function showCouponForm() {
+        // Since the template already shows the form when show_coupon_form is true,
+        // we'll redirect with the parameter to show it properly
+        const url = new URL(window.location);
+        url.searchParams.set('show_form', '1');
+        window.location.href = url.toString();
     }
 
     // Toggle instructions panel

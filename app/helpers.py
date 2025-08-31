@@ -2009,6 +2009,191 @@ def extract_coupon_detail_image_proccess(client_id, image_path, companies_list):
         return pd.DataFrame(), pd.DataFrame()
 
 
+def extract_coupon_from_base64_image(base64_image, image_format, companies_list):
+    """
+    Extract coupon details from a base64 encoded image using OpenAI's vision API.
+    
+    Args:
+        base64_image (str): Base64 encoded image string
+        image_format (str): Image format (e.g., 'jpeg', 'png', 'gif', 'webp')
+        companies_list (list): List of company names for matching
+    
+    Returns:
+        tuple: (coupon_df, pricing_df) - DataFrames containing coupon data and pricing info
+    """
+    import openai
+    import os
+    from dotenv import load_dotenv
+    import json
+    import pandas as pd
+    import requests
+    from datetime import datetime, timezone
+    from flask import flash
+    
+    try:
+        load_dotenv()
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+        
+        companies_str = ", ".join(companies_list)
+        
+        functions = [
+            {
+                "name": "coupon_details",
+                "description": "Extract coupon details from image.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "קוד קופון": {"type": "string"},
+                        "ערך מקורי": {"type": "number"},
+                        "עלות": {"type": "number"},
+                        "חברה": {"type": "string"},
+                        "תיאור": {"type": "string"},
+                        "תאריך תפוגה": {"type": "string", "format": "date"},
+                    },
+                    "required": [
+                        "קוד קופון",
+                        "ערך מקורי",
+                        "עלות",
+                        "חברה",
+                        "תיאור",
+                        "תאריך תפוגה",
+                    ],
+                },
+            }
+        ]
+        
+        prompt = f"""
+        אנא נתח את התמונה הבאה והפק את פרטי הקופון:
+        אלו הן רשימת החברות הקיימות במאגר שלנו:
+        {companies_str}
+        אנא זיהה את החברה מהתמונה:
+        - אם שם החברה שזיהית דומה מאוד (מעל 90% דמיון) לאחת החברות ברשימה, השתמש בשם החברה כפי שהוא מופיע ברשימה.
+        - אם לא קיימת התאמה מספקת, השתמש בשם החברה המקורי שזיהית.
+        אנא ספק פלט JSON עם המפתחות הבאים:
+        - קוד קופון
+        - ערך מקורי
+        - עלות
+        - חברה
+        - תיאור
+        - תאריך תפוגה
+        בנוסף, ודא שהמידע נכון ומלא, במיוחד:
+        - 'ערך מקורי' חייב להיות בערך המשוער של המוצר או השירות.
+        - 'חברה' היא הרשת או הארגון המספק את ההטבה, תוך שימוש בהנחיה שלעיל לגבי רשימת החברות.
+        """
+        
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "אנא נתח את התמונה הבאה והפק את פרטי הקופון:",
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/{image_format};base64,{base64_image}",
+                                    "detail": "high",
+                                },
+                            },
+                            {"type": "text", "text": prompt},
+                        ],
+                    }
+                ],
+                functions=functions,
+                function_call={"name": "coupon_details"},
+                max_tokens=1000,
+            )
+            
+            if "choices" in response and len(response["choices"]) > 0:
+                choice = response["choices"][0]
+                if "message" in choice and "function_call" in choice["message"]:
+                    function_call = choice["message"]["function_call"]
+                    if "arguments" in function_call:
+                        response_data = function_call["arguments"]
+                    else:
+                        raise ValueError("השגיאה: הפלט שהתקבל אינו מכיל arguments.")
+                else:
+                    raise ValueError("השגיאה: הפלט שהתקבל אינו מכיל function_call.")
+            else:
+                raise ValueError("השגיאה: לא התקבלה תגובה תקינה מה-API.")
+            
+            try:
+                coupon_data = json.loads(response_data)
+            except json.JSONDecodeError:
+                raise ValueError("השגיאה: הפלט שהתקבל אינו בפורמט JSON תקין.")
+            
+            coupon_df = pd.DataFrame([coupon_data])
+            
+            pricing_data = {
+                "prompt_tokens": response["usage"]["prompt_tokens"],
+                "completion_tokens": response["usage"]["completion_tokens"],
+                "total_tokens": response["usage"]["total_tokens"],
+                "id": response["id"],
+                "object": response["object"],
+                "created": datetime.fromtimestamp(
+                    response["created"], tz=timezone.utc
+                ).strftime("%Y-%m-%d %H:%M:%S"),
+                "model": response["model"],
+                "prompt_text": prompt,
+                "response_text": json.dumps(coupon_data, ensure_ascii=False),
+            }
+            
+            try:
+                exchange_rate_response = requests.get(
+                    "https://api.exchangerate-api.com/v4/latest/USD"
+                )
+                exchange_rate_data = exchange_rate_response.json()
+                usd_to_ils_rate = exchange_rate_data["rates"]["ILS"]
+            except Exception:
+                usd_to_ils_rate = 3.75
+            
+            pricing_data["cost_usd"] = pricing_data["total_tokens"] * 0.00004
+            pricing_data["cost_ils"] = pricing_data["cost_usd"] * usd_to_ils_rate
+            pricing_data["exchange_rate"] = usd_to_ils_rate
+            pricing_df = pd.DataFrame([pricing_data])
+            
+            return coupon_df, pricing_df
+            
+        except openai.error.RateLimitError:
+            # Send email in case of quota exceeded
+            recipients = ["couponmasteril2@gmail.com", "itayk93@gmail.com"]
+            for recipient in recipients:
+                send_email(
+                    sender_email="noreply@couponmasteril.com",
+                    sender_name="Coupon Master System",
+                    recipient_email=recipient,
+                    recipient_name="Admin",
+                    subject="⚠️ חריגה ממכסת OpenAI - ניתוח קופון מתמונה",
+                    html_content=f"""
+                    <h2>התראת מערכת - חרגת ממכסת OpenAI</h2>
+                    <p>ניסיון לנתח קופון מתוך תמונה נכשל עקב חריגה ממכסת השימוש.</p>
+                    <p><strong>מועד האירוע:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+                    <br>
+                    <p>בברכה,<br>מערכת Coupon Master</p>
+                    """,
+                )
+            flash("הגעת למכסת השימוש שלך ב-OpenAI. יש לפנות למנהל התוכנה.", "danger")
+            return pd.DataFrame(), pd.DataFrame()
+            
+        except openai.error.OpenAIError as e:
+            flash("אירעה שגיאה ב-OpenAI. יש לפנות למנהל התוכנה.", "danger")
+            print(f"❌ שגיאת OpenAI: {str(e)}")
+            return pd.DataFrame(), pd.DataFrame()
+            
+        except Exception as e:
+            flash("שגיאה כללית בעת עיבוד התמונה. נסה שוב מאוחר יותר.", "danger")
+            print(f"❌ שגיאה כללית: {str(e)}")
+            return pd.DataFrame(), pd.DataFrame()
+            
+    except Exception as e:
+        print(f"❌ שגיאה כללית בפונקציית base64: {str(e)}")
+        return pd.DataFrame(), pd.DataFrame()
+
+
 def send_coupon_purchase_request_email(seller, buyer, coupon):
     """
     Sends an email to the seller when a buyer requests to purchase a coupon.

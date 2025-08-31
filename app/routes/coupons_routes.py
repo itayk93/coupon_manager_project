@@ -2513,6 +2513,10 @@ def add_coupon_with_image():
     coupon_form = CouponForm()
     show_coupon_form = False
 
+    # Check if we should show the coupon form (from URL parameter)
+    if request.args.get('show_form') == '1':
+        show_coupon_form = True
+
     # Fetch the list of companies from the database
     companies = Company.query.order_by(Company.name).all()
 
@@ -2791,7 +2795,100 @@ def add_coupon_with_image():
         upload_image_form=upload_image_form,
         show_coupon_form=show_coupon_form,
         form=upload_image_form if not show_coupon_form else coupon_form,
+        companies=companies,
     )
+
+
+@coupons_bp.route("/process_base64_image", methods=["POST"])
+@login_required
+def process_base64_image():
+    """
+    API route to process base64 encoded images and extract coupon details
+    """
+    from app.helpers import extract_coupon_from_base64_image
+    import base64
+    import json
+    
+    try:
+        data = request.get_json()
+        if not data or 'image_data' not in data:
+            return {"error": "No image data provided"}, 400
+            
+        image_data = data['image_data']
+        
+        # Remove data URL prefix if present (data:image/jpeg;base64,)
+        if ',' in image_data:
+            header, base64_data = image_data.split(',', 1)
+            # Extract format from header
+            if 'image/' in header:
+                image_format = header.split('image/')[-1].split(';')[0]
+            else:
+                image_format = 'jpeg'  # default
+        else:
+            base64_data = image_data
+            image_format = 'jpeg'  # default
+        
+        # Validate base64
+        try:
+            base64.b64decode(base64_data, validate=True)
+        except Exception:
+            return {"error": "Invalid base64 data"}, 400
+        
+        # Get companies list
+        companies = Company.query.order_by(Company.name).all()
+        companies_list = [company.name for company in companies]
+        
+        # Process image
+        coupon_df, pricing_df = extract_coupon_from_base64_image(
+            base64_data, image_format, companies_list
+        )
+        
+        if not coupon_df.empty:
+            # Check user slots
+            if current_user.slots_automatic_coupons > 0:
+                current_user.slots_automatic_coupons -= 1
+                db.session.commit()
+            else:
+                return {"error": "אין לך מספיק סלוטים להוספת קופונים."}, 403
+            
+            # Convert DataFrame to dict for JSON response
+            coupon_data = coupon_df.iloc[0].to_dict()
+            
+            # Find matching company ID for form
+            company_name = coupon_data.get("חברה", "").strip()
+            best_match_ratio = 0
+            best_match_company = None
+            
+            for company in companies:
+                try:
+                    from difflib import SequenceMatcher
+                    ratio = SequenceMatcher(None, company_name.lower(), company.name.lower()).ratio()
+                    if ratio > best_match_ratio and ratio > 0.8:  # 80% match threshold
+                        best_match_ratio = ratio
+                        best_match_company = company
+                except Exception:
+                    continue
+            
+            if best_match_company:
+                coupon_data["company_id"] = best_match_company.id
+            else:
+                coupon_data["company_id"] = "other"
+            
+            return {
+                "success": True,
+                "data": coupon_data,
+                "message": "הטופס מולא בהצלחה. אנא בדוק וערוך אם נדרש."
+            }
+        else:
+            return {
+                "error": "לא ניתן היה לחלץ פרטי קופון מהתמונה. נסה תמונה אחרת או הזן את הפרטים ידנית."
+            }, 400
+            
+    except Exception as e:
+        current_app.logger.error(f"Error processing base64 image: {e}")
+        return {
+            "error": "אירעה שגיאה בעת עיבוד התמונה. נסה שוב מאוחר יותר."
+        }, 500
 
 
 @coupons_bp.route("/add_coupon_manual", methods=["GET", "POST"])
