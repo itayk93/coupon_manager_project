@@ -91,13 +91,13 @@
         </h3>
         <ol class="instructions-list" data-asw-org-font-size="16" style="font-size: 16px;">
             {% if current_user.gender == "female" %}
-            <li data-asw-org-font-size="16" style="font-size: 16px;">העלי תמונה של הקופון באמצעות הכפתור למטה.</li>
-            <li data-asw-org-font-size="16" style="font-size: 16px;">המערכת תנתח את התמונה באופן אוטומטי ותמלא את הפרטים.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">העלי תמונה של הקופון - לחצי על הכפתור או פשוט גררי את התמונה לאזור ההעלאה.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">המערכת תנתח את התמונה באופן אוטומטי ותמלא את הפרטים מיד.</li>
             <li data-asw-org-font-size="16" style="font-size: 16px;">בדקי את הפרטים שהמערכת זיהתה ותקני במידת הצורך.</li>
             <li data-asw-org-font-size="16" style="font-size: 16px;">לחצי על "הוספת הקופון לארנק" כשסיימת.</li>
             {% else %}
-            <li data-asw-org-font-size="16" style="font-size: 16px;">העלה תמונה של הקופון באמצעות הכפתור למטה.</li>
-            <li data-asw-org-font-size="16" style="font-size: 16px;">המערכת תנתח את התמונה באופן אוטומטי ותמלא את הפרטים.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">העלה תמונה של הקופון - לחץ על הכפתור או פשוט גרור את התמונה לאזור ההעלאה.</li>
+            <li data-asw-org-font-size="16" style="font-size: 16px;">המערכת תנתח את התמונה באופן אוטומטי ותמלא את הפרטים מיד.</li>
             <li data-asw-org-font-size="16" style="font-size: 16px;">בדוק את הפרטים שהמערכת זיהתה ותקן במידת הצורך.</li>
             <li data-asw-org-font-size="16" style="font-size: 16px;">לחץ על "הוספת הקופון לארנק" כשסיימת.</li>
             {% endif %}
@@ -136,11 +136,18 @@
                 העלה תמונה של הקופון:<span class="required">*</span>
             </label>
             
-            <div class="file-upload-container">
+            <div class="file-upload-container" id="drop-zone">
                 {{ upload_image_form.coupon_image(class="file-input", id="image-file-input") }}
-                <label for="image-file-input" class="file-input-label">
+                <label for="image-file-input" class="file-input-label" id="upload-label">
                     <i class="fa fa-image upload-icon" aria-hidden="true"></i>
-                    <span class="file-input-text">בחר תמונה...</span>
+                    <span class="file-input-text">בחר תמונה או גרור לכאן...</span>
+                    <div class="drag-text" style="display: none;">
+                        <i class="fa fa-cloud-upload" aria-hidden="true"></i>
+                        שחרר כאן את התמונה
+                        <small style="display: block; margin-top: 5px; font-size: 0.8em; opacity: 0.8;">
+                            תמיכה ב-JPEG, PNG, GIF, WebP
+                        </small>
+                    </div>
                 </label>
                 <div class="selected-file-name" id="selected-image-name">לא נבחרה תמונה</div>
             </div>
@@ -349,6 +356,92 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
+
+    // Drag and Drop functionality
+    const dropZone = document.getElementById('drop-zone');
+    const uploadLabel = document.getElementById('upload-label');
+    const fileInputText = document.querySelector('.file-input-text');
+    const dragText = document.querySelector('.drag-text');
+
+    if (dropZone) {
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        // Highlight drop zone when item is dragged over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        // Handle dropped files
+        dropZone.addEventListener('drop', handleDrop, false);
+    }
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function highlight(e) {
+        dropZone.classList.add('drag-over');
+        if (fileInputText) fileInputText.style.display = 'none';
+        if (dragText) dragText.style.display = 'block';
+    }
+
+    function unhighlight(e) {
+        dropZone.classList.remove('drag-over');
+        if (fileInputText) fileInputText.style.display = 'block';
+        if (dragText) dragText.style.display = 'none';
+    }
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            const file = files[0];
+            
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type.toLowerCase())) {
+                showFlashMessage('אנא העלה קובץ תמונה בפורמט JPEG, PNG, GIF או WebP', 'danger');
+                return;
+            }
+            
+            // Validate file size (max 10MB)
+            const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+            if (file.size > maxSize) {
+                showFlashMessage('גודל הקובץ חייב להיות קטן מ-10MB', 'danger');
+                return;
+            }
+            
+            // Update the file input
+            const imageFileInput = document.getElementById('image-file-input');
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            imageFileInput.files = dataTransfer.files;
+            
+            // Update display
+            const imageFileNameDisplay = document.getElementById('selected-image-name');
+            if (imageFileNameDisplay) {
+                imageFileNameDisplay.textContent = file.name;
+                imageFileNameDisplay.classList.add('file-selected');
+            }
+            
+            // Show success message
+            showFlashMessage('📁 קובץ נבחר בהצלחה, מתחיל לעבד...', 'success');
+            
+            // Process the image
+            processImageFile(file);
+        }
+    }
+
     // Handle image file input change to show selected filename and process image
     const imageFileInput = document.getElementById('image-file-input');
     const imageFileNameDisplay = document.getElementById('selected-image-name');
@@ -357,8 +450,27 @@ document.addEventListener('DOMContentLoaded', function() {
         imageFileInput.addEventListener('change', function() {
             if (imageFileInput.files.length > 0) {
                 const file = imageFileInput.files[0];
+                
+                // Validate file type and size (same validation as drag & drop)
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                if (!allowedTypes.includes(file.type.toLowerCase())) {
+                    showFlashMessage('אנא בחר קובץ תמונה בפורמט JPEG, PNG, GIF או WebP', 'danger');
+                    imageFileInput.value = ''; // Clear the input
+                    return;
+                }
+                
+                const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+                if (file.size > maxSize) {
+                    showFlashMessage('גודל הקובץ חייב להיות קטן מ-10MB', 'danger');
+                    imageFileInput.value = ''; // Clear the input
+                    return;
+                }
+                
                 imageFileNameDisplay.textContent = file.name;
                 imageFileNameDisplay.classList.add('file-selected');
+                
+                // Show success message
+                showFlashMessage('📁 קובץ נבחר בהצלחה, מתחיל לעבד...', 'success');
                 
                 // Process the image immediately
                 processImageFile(file);
@@ -1158,6 +1270,69 @@ textarea.input-field {
 .file-input-label:hover {
     background-color: rgba(52, 152, 219, 0.1);
     border-color: #2980b9;
+}
+
+/* Drag and drop styling */
+.file-upload-container.drag-over .file-input-label {
+    background-color: rgba(52, 152, 219, 0.2);
+    border-color: #3498db;
+    border-style: solid;
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+}
+
+.drag-text {
+    font-weight: bold;
+    color: #3498db;
+    animation: pulse 1.5s ease-in-out infinite;
+    text-align: center;
+}
+
+.drag-text i {
+    font-size: 2.5rem;
+    color: #3498db;
+    margin-bottom: 10px;
+    display: block;
+    animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes bounce {
+    0%, 20%, 60%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    80% {
+        transform: translateY(-5px);
+    }
+}
+
+/* Enhanced file upload container for better drag and drop experience */
+.file-upload-container {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.file-upload-container:hover {
+    transform: translateY(-1px);
+}
+
+.file-upload-container.drag-over {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(52, 152, 219, 0.3);
 }
 
 .upload-icon {
