@@ -50,76 +50,134 @@
 {% endblock %}
 
 {% block content %}
-<section class="add-coupon">
-    <h2 class="section-title">הוספת קופון מתמונה</h2>
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header Section -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4 font-rubik">
+            <i class="fas fa-camera text-blue-600 ml-3"></i>
+            הוספת קופון מתמונה
+        </h1>
+        <p class="text-gray-600 text-lg">העלו תמונה של הקופון והמערכת תנתח אותה באופן אוטומטי</p>
+    </div>
     
-    <!-- Action buttons in a single row -->
-    <div class="action-buttons-row">
-        <a href="{{ url_for('coupons.add_coupon') }}" class="action-button">
-            <span class="button-content">
-                <span class="button-text">הוספת קופון ידני</span>
-                <i class="fa fa-edit button-icon" aria-hidden="true"></i>
-            </span>
+    <!-- Action buttons -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <a href="{{ url_for('coupons.add_coupon') }}" 
+           class="group flex items-center justify-center p-4 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-blue-300 hover:bg-blue-50">
+            <div class="text-center">
+                <i class="fas fa-edit text-2xl text-blue-600 mb-2 group-hover:scale-110 transition-transform duration-300"></i>
+                <div class="font-medium text-gray-800">הוספת קופון ידני</div>
+            </div>
         </a>
-        <a href="{{ url_for('coupons.add_coupons_bulk') }}" class="action-button">
-            <span class="button-content">
-                <span class="button-text">הוספת קופונים מרובים</span>
-                <i class="fa fa-plus-circle button-icon" aria-hidden="true"></i>
-            </span>
+        <a href="{{ url_for('coupons.add_coupons_bulk') }}" 
+           class="group flex items-center justify-center p-4 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-green-300 hover:bg-green-50">
+            <div class="text-center">
+                <i class="fas fa-plus-circle text-2xl text-green-600 mb-2 group-hover:scale-110 transition-transform duration-300"></i>
+                <div class="font-medium text-gray-800">הוספת קופונים מרובים</div>
+            </div>
         </a>
-        <a href="{{ url_for('coupons.upload_coupons') }}" class="action-button">
-            <span class="button-content">
-                <span class="button-text">העלאת קובץ קופונים</span>
-                <i class="fa fa-upload button-icon" aria-hidden="true"></i>
-            </span>
+        <a href="{{ url_for('coupons.upload_coupons') }}" 
+           class="group flex items-center justify-center p-4 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-purple-300 hover:bg-purple-50">
+            <div class="text-center">
+                <i class="fas fa-upload text-2xl text-purple-600 mb-2 group-hover:scale-110 transition-transform duration-300"></i>
+                <div class="font-medium text-gray-800">העלאת קובץ קופונים</div>
+            </div>
         </a>
     </div>
 
     <!-- Help button that toggles instructions -->
-    <div class="help-button-container">
-        <button type="button" id="toggle-instructions" class="help-button" aria-label="הצג/הסתר הסברים">
-            <i class="fa fa-question-circle" aria-hidden="true"></i>
-            <span class="help-button-text">הסבר</span>
+    <div class="flex justify-center mb-6">
+        <button type="button" id="toggle-instructions" 
+                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg" 
+                aria-label="הצג/הסתר הסברים">
+            <i class="fas fa-question-circle ml-2"></i>
+            <span>הסבר כיצד להשתמש</span>
         </button>
     </div>
 
     <!-- Instructions panel with gender sensitivity - hidden by default -->
-    <div class="instructions-panel" id="instructions-panel" style="display: block;">
-        <h3 class="instructions-title" data-asw-org-font-size="19" style="font-size: 19px;">
-            <i class="fa fa-question-circle" aria-hidden="true"></i>
-            איך להוסיף קופון מתמונה?
-        </h3>
-        <ol class="instructions-list" data-asw-org-font-size="16" style="font-size: 16px;">
-            {% if current_user.gender == "female" %}
-            <li data-asw-org-font-size="16" style="font-size: 16px;">העלי תמונה של הקופון - לחצי על הכפתור או פשוט גררי את התמונה לאזור ההעלאה.</li>
-            <li data-asw-org-font-size="16" style="font-size: 16px;">המערכת תנתח את התמונה באופן אוטומטי ותמלא את הפרטים מיד.</li>
-            <li data-asw-org-font-size="16" style="font-size: 16px;">בדקי את הפרטים שהמערכת זיהתה ותקני במידת הצורך.</li>
-            <li data-asw-org-font-size="16" style="font-size: 16px;">לחצי על "הוספת הקופון לארנק" כשסיימת.</li>
-            {% else %}
-            <li data-asw-org-font-size="16" style="font-size: 16px;">העלה תמונה של הקופון - לחץ על הכפתור או פשוט גרור את התמונה לאזור ההעלאה.</li>
-            <li data-asw-org-font-size="16" style="font-size: 16px;">המערכת תנתח את התמונה באופן אוטומטי ותמלא את הפרטים מיד.</li>
-            <li data-asw-org-font-size="16" style="font-size: 16px;">בדוק את הפרטים שהמערכת זיהתה ותקן במידת הצורך.</li>
-            <li data-asw-org-font-size="16" style="font-size: 16px;">לחץ על "הוספת הקופון לארנק" כשסיימת.</li>
-            {% endif %}
-        </ol>
-        <div class="important-note">
-            <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
-            {% if current_user.gender == "female" %}
-            <span data-asw-org-font-size="16" style="font-size: 16px;">שימי לב: המערכת משתמשת בבינה מלאכותית לניתוח התמונה. תמיד בדקי את הפרטים לפני השמירה.</span>
-            {% else %}
-            <span data-asw-org-font-size="16" style="font-size: 16px;">שים לב: המערכת משתמשת בבינה מלאכותית לניתוח התמונה. תמיד בדוק את הפרטים לפני השמירה.</span>
-            {% endif %}
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 mb-8 overflow-hidden" id="instructions-panel" style="display: block;">
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
+            <h3 class="text-xl font-bold text-white flex items-center">
+                <i class="fas fa-lightbulb ml-3 text-yellow-300"></i>
+                איך להוסיף קופון מתמונה?
+            </h3>
+        </div>
+        <div class="p-6">
+            <ol class="space-y-4 text-gray-700">
+                {% if current_user.gender == "female" %}
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm ml-3">1</span>
+                    <span class="text-base">העלי תמונה של הקופון - לחצי על הכפתור או פשוט גררי את התמונה לאזור ההעלאה.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm ml-3">2</span>
+                    <span class="text-base">המערכת תנתח את התמונה באופן אוטומטי ותמלא את הפרטים מיד.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm ml-3">3</span>
+                    <span class="text-base">בדקי את הפרטים שהמערכת זיהתה ותקני במידת הצורך.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm ml-3">4</span>
+                    <span class="text-base">לחצי על "הוספת הקופון לארנק" כשסיימת.</span>
+                </li>
+                {% else %}
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm ml-3">1</span>
+                    <span class="text-base">העלה תמונה של הקופון - לחץ על הכפתור או פשוט גרור את התמונה לאזור ההעלאה.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm ml-3">2</span>
+                    <span class="text-base">המערכת תנתח את התמונה באופן אוטומטי ותמלא את הפרטים מיד.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm ml-3">3</span>
+                    <span class="text-base">בדוק את הפרטים שהמערכת זיהתה ותקן במידת הצורך.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm ml-3">4</span>
+                    <span class="text-base">לחץ על "הוספת הקופון לארנק" כשסיימת.</span>
+                </li>
+                {% endif %}
+            </ol>
+            <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div class="flex items-start">
+                    <i class="fas fa-exclamation-triangle text-amber-500 text-lg ml-3 mt-1"></i>
+                    <div class="text-amber-800">
+                        {% if current_user.gender == "female" %}
+                        <span class="font-medium">שימי לב:</span> המערכת משתמשת בבינה מלאכותית לניתוח התמונה. תמיד בדקי את הפרטים לפני השמירה.
+                        {% else %}
+                        <span class="font-medium">שים לב:</span> המערכת משתמשת בבינה מלאכותית לניתוח התמונה. תמיד בדוק את הפרטים לפני השמירה.
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Display flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <div class="flash-messages">
+        <div class="space-y-3 mb-6">
           {% for category, message in messages %}
-            <div class="flash {{ category }}">
-                <span class="message-text">{{ message }}</span>
-                <button class="close-flash" aria-label="Close">&times;</button>
+            <div class="{% if category == 'success' %}bg-green-50 border border-green-200 text-green-800{% elif category == 'error' or category == 'danger' %}bg-red-50 border border-red-200 text-red-800{% elif category == 'warning' %}bg-yellow-50 border border-yellow-200 text-yellow-800{% else %}bg-blue-50 border border-blue-200 text-blue-800{% endif %} rounded-lg p-4 flex items-center justify-between shadow-sm">
+                <div class="flex items-center">
+                    {% if category == 'success' %}
+                    <i class="fas fa-check-circle text-green-500 ml-3"></i>
+                    {% elif category == 'error' or category == 'danger' %}
+                    <i class="fas fa-exclamation-circle text-red-500 ml-3"></i>
+                    {% elif category == 'warning' %}
+                    <i class="fas fa-exclamation-triangle text-yellow-500 ml-3"></i>
+                    {% else %}
+                    <i class="fas fa-info-circle text-blue-500 ml-3"></i>
+                    {% endif %}
+                    <span class="font-medium">{{ message }}</span>
+                </div>
+                <button class="close-flash text-gray-500 hover:text-gray-700 p-1 rounded-md hover:bg-white hover:bg-opacity-50 transition-colors" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
           {% endfor %}
         </div>
@@ -128,202 +186,343 @@
 
     <!-- Image upload form -->
     {% if not show_coupon_form %}
-    <form method="POST" enctype="multipart/form-data" class="upload-form">
-        {{ upload_image_form.hidden_tag() }}
-        
-        <div class="form-group file-upload-group">
-            <label for="{{ upload_image_form.coupon_image.id }}" class="form-label">
-                העלה תמונה של הקופון:<span class="required">*</span>
-            </label>
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-6">
+            <h2 class="text-xl font-bold text-white flex items-center">
+                <i class="fas fa-upload ml-3"></i>
+                העלאת תמונת קופון
+            </h2>
+            <p class="text-indigo-100 mt-2">גררו תמונה לכאן או לחצו לבחירה</p>
+        </div>
+        <form method="POST" enctype="multipart/form-data" class="p-6">
+            {{ upload_image_form.hidden_tag() }}
             
-            <div class="file-upload-container" id="drop-zone">
-                {{ upload_image_form.coupon_image(class="file-input", id="image-file-input") }}
-                <label for="image-file-input" class="file-input-label" id="upload-label">
-                    <i class="fa fa-image upload-icon" aria-hidden="true"></i>
-                    <span class="file-input-text">בחר תמונה או גרור לכאן...</span>
-                    <div class="drag-text" style="display: none;">
-                        <i class="fa fa-cloud-upload" aria-hidden="true"></i>
-                        שחרר כאן את התמונה
-                        <small style="display: block; margin-top: 5px; font-size: 0.8em; opacity: 0.8;">
-                            תמיכה ב-JPEG, PNG, GIF, WebP
-                        </small>
-                    </div>
+            <div class="mb-6">
+                <label for="{{ upload_image_form.coupon_image.id }}" class="block text-sm font-medium text-gray-700 mb-3">
+                    העלה תמונה של הקופון <span class="text-red-500">*</span>
                 </label>
-                <div class="selected-file-name" id="selected-image-name">לא נבחרה תמונה</div>
+                
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-400 hover:bg-indigo-50 transition-all duration-300 cursor-pointer relative group" id="drop-zone">
+                    {{ upload_image_form.coupon_image(class="absolute inset-0 w-full h-full opacity-0 cursor-pointer", id="image-file-input") }}
+                    
+                    <div class="file-input-content" id="upload-label">
+                        <div class="file-input-text">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 group-hover:text-indigo-500 transition-colors duration-300 mb-4"></i>
+                            <p class="text-lg font-medium text-gray-600 group-hover:text-indigo-600 transition-colors duration-300 mb-2">בחרו תמונה או גררו לכאן</p>
+                            <p class="text-sm text-gray-500">פורמטים נתמכים: JPEG, PNG, GIF, WebP</p>
+                        </div>
+                        
+                        <div class="drag-text hidden">
+                            <i class="fas fa-download text-5xl text-indigo-500 mb-4 animate-bounce"></i>
+                            <p class="text-xl font-bold text-indigo-600 mb-2">שחררו כאן את התמונה</p>
+                            <p class="text-sm text-indigo-500">תמיכה ב-JPEG, PNG, GIF, WebP</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-gray-50 rounded-lg border" id="selected-image-name">
+                        <p class="text-sm text-gray-600">לא נבחרה תמונה</p>
+                    </div>
+                </div>
+                
+                {% for error in upload_image_form.coupon_image.errors %}
+                    <p class="mt-2 text-sm text-red-600 flex items-center">
+                        <i class="fas fa-exclamation-circle ml-2"></i>
+                        {{ error }}
+                    </p>
+                {% endfor %}
             </div>
-            
-            {% for error in upload_image_form.coupon_image.errors %}
-                <span class="error">{{ error }}</span>
-            {% endfor %}
-            
-            <div class="file-format-info">
-                <p class="format-note">
-                    <i class="fa fa-info-circle" aria-hidden="true"></i>
-                    פורמטים נתמכים: JPEG, PNG, GIF, WebP
-                </p>
-            </div>
-        </div>
 
-        <!-- Submit button -->
-        <div class="form-group submit-group">
-            <button type="submit" class="submit-button">
-                <i class="fa fa-magic" aria-hidden="true"></i>
-                {{ upload_image_form.submit_upload_image.label.text }}
-            </button>
-        </div>
-    </form>
+            <!-- Submit button -->
+            <div class="text-center">
+                <button type="submit" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    <i class="fas fa-magic ml-3"></i>
+                    {{ upload_image_form.submit_upload_image.label.text }}
+                </button>
+            </div>
+        </form>
+    </div>
     {% endif %}
 
     {% if show_coupon_form %}
     <!-- Section divider -->
-    <div class="section-divider">
-        <span>פרטי הקופון שזוהו</span>
+    <div class="flex items-center mb-8">
+        <div class="flex-grow border-t border-gray-300"></div>
+        <div class="flex-shrink-0 px-4">
+            <span class="bg-gradient-to-r from-green-600 to-blue-600 text-white px-4 py-2 rounded-full font-medium text-sm shadow-lg">
+                <i class="fas fa-robot ml-2"></i>
+                פרטי הקופון שזוהו
+            </span>
+        </div>
+        <div class="flex-grow border-t border-gray-300"></div>
     </div>
     
     <!-- Manual coupon entry form -->
-    <form method="POST" class="manual-coupon-form">
-        {{ coupon_form.hidden_tag() }}
-
-        <!-- Company Name -->
-        <div class="form-group">
-            {{ coupon_form.company_id.label(class="form-label") }}
-            {{ coupon_form.company_id(class="input-field", id="company_select", required=True) }}
-            {% for error in coupon_form.company_id.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-green-500 to-blue-600 p-6">
+            <h2 class="text-xl font-bold text-white flex items-center">
+                <i class="fas fa-edit ml-3"></i>
+                עריכת פרטי הקופון
+            </h2>
+            <p class="text-green-100 mt-2">בדקו ותקנו את הפרטים שהמערכת זיהתה</p>
         </div>
-        <div class="form-group" id="other_company_group" style="display: none;">
-            {{ coupon_form.other_company.label(class="form-label") }}
-            {{ coupon_form.other_company(class="input-field", id="other_company") }}
-            {% for error in coupon_form.other_company.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
-        </div>
+        <form method="POST" class="p-6 space-y-6">
+            {{ coupon_form.hidden_tag() }}
 
-        <!-- Code Field -->
-        <div class="form-group">
-            {{ coupon_form.code.label(class="form-label") }}
-            {{ coupon_form.code(class="input-field", id="code", required=True) }}
-            {% for error in coupon_form.code.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
-        </div>
+            <!-- Company Name -->
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700">{{ coupon_form.company_id.label.text }}</label>
+                {{ coupon_form.company_id(class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors", id="company_select", required=True) }}
+                {% for error in coupon_form.company_id.errors %}
+                    <p class="text-sm text-red-600 flex items-center">
+                        <i class="fas fa-exclamation-circle ml-2"></i>
+                        {{ error }}
+                    </p>
+                {% endfor %}
+            </div>
+            <div class="space-y-2 hidden" id="other_company_group">
+                <label class="block text-sm font-medium text-gray-700">{{ coupon_form.other_company.label.text }}</label>
+                {{ coupon_form.other_company(class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors", id="other_company") }}
+                {% for error in coupon_form.other_company.errors %}
+                    <p class="text-sm text-red-600 flex items-center">
+                        <i class="fas fa-exclamation-circle ml-2"></i>
+                        {{ error }}
+                    </p>
+                {% endfor %}
+            </div>
 
-        <!-- Coupon Cost Field -->
-        <div class="form-group">
-            {{ coupon_form.cost.label(class="form-label") }}
-            {{ coupon_form.cost(class="input-field", id="coupon_cost", required=True, type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
-            {% for error in coupon_form.cost.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
-        </div>
+            <!-- Code Field -->
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700">{{ coupon_form.code.label.text }}</label>
+                <div class="relative">
+                    <i class="fas fa-barcode absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    {{ coupon_form.code(class="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors font-mono", id="code", required=True) }}
+                </div>
+                {% for error in coupon_form.code.errors %}
+                    <p class="text-sm text-red-600 flex items-center">
+                        <i class="fas fa-exclamation-circle ml-2"></i>
+                        {{ error }}
+                    </p>
+                {% endfor %}
+            </div>
 
-        <!-- Discount Percentage Field -->
-        <div class="form-group">
-            {{ coupon_form.discount_percentage.label(class="form-label") }}
-            {{ coupon_form.discount_percentage(class="input-field", id="discount_percentage_input", type="number", inputmode="numeric", pattern="[0-9]*", min="0", max="100", step="0.01") }}
-            {% for error in coupon_form.discount_percentage.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
-            
-            <!-- Visual discount display -->
-            <div class="discount-display-container">
-                <div class="discount-display">
-                    <span class="discount-value">0%</span>
+            <!-- Price Fields Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Coupon Cost Field -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">{{ coupon_form.cost.label.text }}</label>
+                    <div class="relative">
+                        <i class="fas fa-shekel-sign absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        {{ coupon_form.cost(class="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors", id="coupon_cost", required=True, type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
+                    </div>
+                    {% for error in coupon_form.cost.errors %}
+                        <p class="text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle ml-2"></i>
+                            {{ error }}
+                        </p>
+                    {% endfor %}
+                </div>
+
+                <!-- Desired Value Field -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">{{ coupon_form.value.label.text }}</label>
+                    <div class="relative">
+                        <i class="fas fa-shekel-sign absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        {{ coupon_form.value(class="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors", id="desired_value", required=True, type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
+                    </div>
+                    {% for error in coupon_form.value.errors %}
+                        <p class="text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle ml-2"></i>
+                            {{ error }}
+                        </p>
+                    {% endfor %}
+                </div>
+
+                <!-- Discount Percentage Field -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">{{ coupon_form.discount_percentage.label.text }}</label>
+                    <div class="relative">
+                        <i class="fas fa-percent absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        {{ coupon_form.discount_percentage(class="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors", id="discount_percentage_input", type="number", inputmode="numeric", pattern="[0-9]*", min="0", max="100", step="0.01") }}
+                    </div>
+                    {% for error in coupon_form.discount_percentage.errors %}
+                        <p class="text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle ml-2"></i>
+                            {{ error }}
+                        </p>
+                    {% endfor %}
                 </div>
             </div>
-        </div>
+            
+            <!-- Visual discount display -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700">אחוז הנחה חיזואי</span>
+                    <span class="discount-value text-lg font-bold text-purple-600">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div class="discount-display bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
 
-        <!-- Desired Value Field -->
-        <div class="form-group">
-            {{ coupon_form.value.label(class="form-label") }}
-            {{ coupon_form.value(class="input-field", id="desired_value", required=True, type="number", inputmode="numeric", pattern="[0-9]*", step="0.01") }}
-            {% for error in coupon_form.value.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <!-- Expiration Field -->
-        <div class="form-group">
-            {{ coupon_form.expiration.label(class="form-label") }}
-            {{ coupon_form.expiration(class="input-field date-input", id="expiration") }}
-            {% for error in coupon_form.expiration.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <!-- Description Field -->
-        <div class="form-group">
-            {{ coupon_form.description.label(class="form-label") }}
-            {{ coupon_form.description(class="input-field", id="description") }}
-            {% for error in coupon_form.description.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <!-- Checkbox: האם להכניס תוקף כרטיס ו-CVV -->
-        <div class="form-group checkbox-container">
-            <input type="checkbox" id="include_card_info" name="include_card_info" class="checkbox-input">
-            <label for="include_card_info" class="checkbox-label">האם להכניס תוקף כרטיס ו-CVV?</label>
-        </div>
-
-        <!-- Card fields, hidden by default -->
-        <div id="card_fields_container" class="card-fields" style="display: none;">
-            <!-- CVV Field -->
-            <div class="form-group">
-                {{ coupon_form.cvv.label(class="form-label") }}
-                {{ coupon_form.cvv(class="input-field", id="cvv") }}
-                {% for error in coupon_form.cvv.errors %}
-                    <div class="error">{{ error }}</div>
+            <!-- Expiration Field -->
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700">{{ coupon_form.expiration.label.text }}</label>
+                <div class="relative">
+                    <i class="fas fa-calendar-alt absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    {{ coupon_form.expiration(class="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors", id="expiration") }}
+                </div>
+                {% for error in coupon_form.expiration.errors %}
+                    <p class="text-sm text-red-600 flex items-center">
+                        <i class="fas fa-exclamation-circle ml-2"></i>
+                        {{ error }}
+                    </p>
                 {% endfor %}
             </div>
 
-            <!-- Card Exp Field -->
-            <div class="form-group">
-                <label for="card_exp" class="form-label">תוקף כרטיס</label>
-                <input type="text" id="card_exp" name="card_exp" class="input-field" maxlength="5" placeholder="MM/YY"
-                    value="{{ coupon_form.card_exp.data if coupon_form.card_exp.data else '' }}">
-                {% for error in coupon_form.card_exp.errors %}
-                    <div class="error">{{ error }}</div>
+            <!-- Description Field -->
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700">{{ coupon_form.description.label.text }}</label>
+                <div class="relative">
+                    <i class="fas fa-align-right absolute right-3 top-3 text-gray-400"></i>
+                    {{ coupon_form.description(class="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[80px] resize-vertical", id="description") }}
+                </div>
+                {% for error in coupon_form.description.errors %}
+                    <p class="text-sm text-red-600 flex items-center">
+                        <i class="fas fa-exclamation-circle ml-2"></i>
+                        {{ error }}
+                    </p>
                 {% endfor %}
             </div>
-        </div>
 
-        <!-- One-Time Use Checkbox (with tooltip) -->
-        <div class="form-group checkbox-container tooltip-container">
-            <input type="checkbox" id="is_one_time" name="is_one_time" class="checkbox-input" {{ coupon_form.is_one_time.data and 'checked' }}>
-            <label for="is_one_time" class="checkbox-label">
-                <span class="checkbox-text">{{ coupon_form.is_one_time.label }}</span>
-            </label>
-            <button type="button" class="tooltip-button" id="tooltipOneTimeButton" aria-label="מידע נוסף">❔</button>
-            <div class="mobile-tooltip" id="TooltipOneTimeUse">
-                קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
-                <span class="close-tooltip" id="closeTooltipOneTime">×</span>
+            <!-- Checkbox: האם להכניס תוקף כרטיס ו-CVV -->
+            <div class="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
+                <input type="checkbox" id="include_card_info" name="include_card_info" 
+                       class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
+                <label for="include_card_info" class="text-sm font-medium text-gray-700 cursor-pointer">
+                    <i class="fas fa-credit-card ml-2 text-blue-500"></i>
+                    האם להכניס תוקף כרטיס ו-CVV?
+                </label>
             </div>
-            <div class="tooltip" id="TooltipOneTimeUseDesktop">
-                קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
-            </div>
-        </div>
 
-        <!-- Purpose Field (Hidden by default) -->
-        <div class="form-group" id="purpose_group" style="display: none;">
-            {{ coupon_form.purpose.label(class="form-label") }}
-            {{ coupon_form.purpose(class="input-field", id="purpose") }}
-            {% for error in coupon_form.purpose.errors %}
-                <div class="error">{{ error }}</div>
-            {% endfor %}
-        </div>
+            <!-- Card fields, hidden by default -->
+            <div id="card_fields_container" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                <div class="flex items-center mb-2">
+                    <i class="fas fa-credit-card text-blue-600 ml-2"></i>
+                    <h3 class="font-medium text-blue-800">פרטי כרטיס אשראי</h3>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- CVV Field -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">{{ coupon_form.cvv.label.text }}</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            {{ coupon_form.cvv(class="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors", id="cvv") }}
+                        </div>
+                        {% for error in coupon_form.cvv.errors %}
+                            <p class="text-sm text-red-600 flex items-center">
+                                <i class="fas fa-exclamation-circle ml-2"></i>
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
 
-        <!-- Submit Button -->
-        <div class="form-group submit-group">
-            {{ coupon_form.submit_coupon(class="submit-button", id="submit_coupon_button", disabled=true) }}
-            <div id="validation_message" class="validation-message" style="display:none;">
-                יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה, בערך גדול מ-0.
+                    <!-- Card Exp Field -->
+                    <div class="space-y-2">
+                        <label for="card_exp" class="block text-sm font-medium text-gray-700">תוקף כרטיס</label>
+                        <div class="relative">
+                            <i class="fas fa-calendar absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="card_exp" name="card_exp" 
+                                   class="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" 
+                                   maxlength="5" placeholder="MM/YY"
+                                   value="{{ coupon_form.card_exp.data if coupon_form.card_exp.data else '' }}">
+                        </div>
+                        {% for error in coupon_form.card_exp.errors %}
+                            <p class="text-sm text-red-600 flex items-center">
+                                <i class="fas fa-exclamation-circle ml-2"></i>
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
-        </div>
-    </form>
+
+            <!-- One-Time Use Checkbox (with tooltip) -->
+            <div class="relative">
+                <div class="flex items-center space-x-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <input type="checkbox" id="is_one_time" name="is_one_time" 
+                           class="w-5 h-5 text-yellow-600 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500 focus:ring-2" 
+                           {{ coupon_form.is_one_time.data and 'checked' }}>
+                    <label for="is_one_time" class="text-sm font-medium text-gray-700 cursor-pointer">
+                        <i class="fas fa-exclamation-triangle ml-2 text-yellow-500"></i>
+                        {{ coupon_form.is_one_time.label.text }}
+                    </label>
+                    <button type="button" 
+                            class="group relative inline-flex items-center justify-center w-6 h-6 text-xs bg-gray-200 text-gray-600 rounded-full hover:bg-gray-300 transition-colors" 
+                            id="tooltipOneTimeButton" aria-label="מידע נוסף">
+                        <i class="fas fa-question"></i>
+                        <div class="absolute bottom-full mb-2 right-0 w-64 p-3 bg-gray-800 text-white text-sm rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10" 
+                             id="TooltipOneTimeUseDesktop">
+                            קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                            <div class="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                        </div>
+                    </button>
+                </div>
+                
+                <!-- Mobile tooltip -->
+                <div class="hidden fixed inset-0 bg-black bg-opacity-50 z-50" id="TooltipOneTimeUse">
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-xl max-w-sm mx-4">
+                        <div class="flex items-start justify-between mb-4">
+                            <h3 class="font-medium text-gray-900">מידע על קופון חד-פעמי</h3>
+                            <button class="text-gray-400 hover:text-gray-600" id="closeTooltipOneTime">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600">
+                            קופון חד-פעמי - מאפשר שימוש אחד בלבד, בניגוד לקופונים רב-פעמיים בהם היתרה נשמרת לשימושים הבאים.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purpose Field (Hidden by default) -->
+            <div class="space-y-2 hidden" id="purpose_group">
+                <label class="block text-sm font-medium text-gray-700">{{ coupon_form.purpose.label.text }}</label>
+                <div class="relative">
+                    <i class="fas fa-bullseye absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    {{ coupon_form.purpose(class="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors", id="purpose") }}
+                </div>
+                {% for error in coupon_form.purpose.errors %}
+                    <p class="text-sm text-red-600 flex items-center">
+                        <i class="fas fa-exclamation-circle ml-2"></i>
+                        {{ error }}
+                    </p>
+                {% endfor %}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="border-t border-gray-200 pt-6 mt-8">
+                <div class="text-center space-y-4">
+                    <div id="validation_message" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-triangle ml-3"></i>
+                            <span>יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה, בערך גדול מ-0.</span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="submit_coupon_button" 
+                            class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-blue-600 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" 
+                            disabled>
+                        <i class="fas fa-plus-circle ml-3"></i>
+                        {{ coupon_form.submit_coupon.label.text }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
     {% endif %}
-</section>
+</div>
+</div>
 {% endblock %}
 
 {% block scripts %}
