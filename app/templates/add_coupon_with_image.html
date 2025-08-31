@@ -1224,6 +1224,17 @@ document.addEventListener('DOMContentLoaded', function() {
     outline: none;
 }
 
+/* Hide number input spinners/arrows */
+.input-field[type="number"]::-webkit-outer-spin-button,
+.input-field[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input-field[type="number"] {
+    -moz-appearance: textfield;
+}
+
 textarea.input-field {
     min-height: 80px;
     resize: vertical;
