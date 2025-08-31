@@ -1,4 +1,5 @@
 import os
+import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app.extensions import db
@@ -6,6 +7,8 @@ from app.models import Company, AdminSettings
 from app.forms import CompanyManagementForm, DeleteCompanyForm
 from app.utils.logo_fetcher import fetch_company_logo_auto_approve, fetch_company_logo
 from app.utils.logo_fetcher import LogoFetcher
+
+logger = logging.getLogger(__name__)
 
 admin_companies_bp = Blueprint(
     "admin_companies_bp", __name__, url_prefix="/admin/companies"
@@ -298,7 +301,12 @@ def upload_logo(company_id):
             return redirect(url_for("admin_companies_bp.manage_companies"))
         
         # Process and save the image
-        fetcher = LogoFetcher()
+        try:
+            fetcher = LogoFetcher()
+        except Exception as e:
+            logger.error(f"Failed to initialize LogoFetcher: {e}")
+            flash(f"שגיאה בהכנת תיקיית התמונות: {str(e)}", "danger")
+            return redirect(url_for("admin_companies_bp.manage_companies"))
         
         # Create a unique filename
         file_extension = file.filename.rsplit('.', 1)[1].lower()
@@ -325,7 +333,18 @@ def upload_logo(company_id):
         
         # Save image
         file_path = os.path.join(fetcher.static_images_path, filename)
-        image.save(file_path, 'PNG', optimize=True)
+        try:
+            image.save(file_path, 'PNG', optimize=True)
+            logger.info(f"Logo file saved successfully: {file_path}")
+            
+            # Verify file was actually created
+            if not os.path.exists(file_path):
+                raise Exception(f"File was not created: {file_path}")
+                
+        except Exception as e:
+            logger.error(f"Failed to save image file: {e}")
+            flash(f"שגיאה בשמירת קובץ התמונה: {str(e)}", "danger")
+            return redirect(url_for("admin_companies_bp.manage_companies"))
         
         # Update database
         relative_path = f"images/{filename}"

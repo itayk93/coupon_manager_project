@@ -95,7 +95,15 @@ def start_telegram_bot_thread():
             
             # Use run_polling which handles the async event loop internally
             print("Starting basic bot without scheduler...", flush=True)
-            app_bot.run_polling(allowed_updates=['message', 'callback_query'], stop_signals=None)
+            try:
+                app_bot.run_polling(
+                    allowed_updates=['message', 'callback_query'], 
+                    stop_signals=None,
+                    drop_pending_updates=True
+                )
+            except Exception as polling_error:
+                logger.error(f"Error in run_polling: {polling_error}", exc_info=True)
+                print(f"Error in run_polling: {polling_error}", flush=True)
         else:
             logger.warning("Failed to create bot application")
             print("Failed to create bot application", flush=True)

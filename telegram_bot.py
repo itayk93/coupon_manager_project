@@ -4569,10 +4569,17 @@ def create_bot_application():
         if not ENABLE_BOT:
             logger.warning("טלגרם בוט מושבת - מדלג על יצירת האפליקציה")
             return None
-            
-        logger.info("יוצר את אפליקציית הבוט...")
         
-        # Create application
+        # Log python-telegram-bot version for debugging
+        import telegram
+        logger.info(f"יוצר את אפליקציית הבוט... (python-telegram-bot version: {telegram.__version__})")
+        
+        # Validate token exists
+        if not TELEGRAM_BOT_TOKEN:
+            logger.error("TELEGRAM_BOT_TOKEN is not set")
+            return None
+        
+        # Create application with error handling
         app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
         
         # Add all handlers
@@ -4628,7 +4635,14 @@ def run_bot():
         # Add scheduler to bot startup
         app.post_init = start_scheduler
         
-        app.run_polling(allowed_updates=['message', 'callback_query'])
+        try:
+            app.run_polling(
+                allowed_updates=['message', 'callback_query'],
+                drop_pending_updates=True
+            )
+        except Exception as polling_error:
+            logger.error(f"Error in run_polling: {polling_error}", exc_info=True)
+            raise
 
 if __name__ == '__main__':
     try:

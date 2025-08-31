@@ -22,6 +22,11 @@ COPY . /app
 RUN pip install --upgrade pip
 RUN if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
 
+# --- Create static directories with proper permissions ---
+RUN mkdir -p /app/app/static/images && \
+    chmod -R 755 /app/app/static && \
+    chown -R 1000:1000 /app/app/static
+
 # --- Set environment variables (optional, adjust as needed) ---
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1

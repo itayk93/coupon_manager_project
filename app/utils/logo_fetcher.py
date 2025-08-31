@@ -31,9 +31,28 @@ class LogoFetcher:
         self.ensure_images_directory()
     
     def ensure_images_directory(self):
-        """Ensure the images directory exists"""
-        if not os.path.exists(self.static_images_path):
-            os.makedirs(self.static_images_path, exist_ok=True)
+        """Ensure the images directory exists with proper permissions for production"""
+        try:
+            if not os.path.exists(self.static_images_path):
+                os.makedirs(self.static_images_path, exist_ok=True)
+                # Set proper permissions for production deployment
+                os.chmod(self.static_images_path, 0o755)
+                logger.info(f"Created images directory: {self.static_images_path}")
+            
+            # Test write access
+            test_file = os.path.join(self.static_images_path, '.write_test')
+            try:
+                with open(test_file, 'w') as f:
+                    f.write('test')
+                os.remove(test_file)
+                logger.debug(f"Write access confirmed for {self.static_images_path}")
+            except (OSError, IOError) as e:
+                logger.error(f"No write access to {self.static_images_path}: {e}")
+                raise Exception(f"Cannot write to images directory: {self.static_images_path}")
+                
+        except Exception as e:
+            logger.error(f"Failed to ensure images directory: {e}")
+            raise
     
     def is_auto_fetch_enabled(self):
         """Check if automatic logo fetching is enabled in admin settings"""
