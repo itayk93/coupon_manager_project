@@ -93,27 +93,9 @@ def start_telegram_bot_thread():
             logger.info("Bot application created, starting polling without signal handlers...")
             print("Bot application created, starting polling without signal handlers...", flush=True)
             
-            # Start polling without signal handlers (to avoid main thread requirement)
-            async def run_polling():
-                # Skip scheduler initialization for now to test basic bot functionality
-                print("Starting basic bot without scheduler...", flush=True)
-
-                await app_bot.initialize()
-                await app_bot.start()
-                await app_bot.start_polling(allowed_updates=['message', 'callback_query'])
-                
-                # Keep the bot running
-                try:
-                    while True:
-                        await asyncio.sleep(1)
-                except asyncio.CancelledError:
-                    pass
-                finally:
-                    await app_bot.stop()
-                    await app_bot.shutdown()
-            
-            # Run the bot
-            loop.run_until_complete(run_polling())
+            # Use run_polling which handles the async event loop internally
+            print("Starting basic bot without scheduler...", flush=True)
+            app_bot.run_polling(allowed_updates=['message', 'callback_query'], stop_signals=None)
         else:
             logger.warning("Failed to create bot application")
             print("Failed to create bot application", flush=True)
