@@ -1154,6 +1154,21 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             driver.get(url)
             time.sleep(6)
 
+            # Check for Cloudflare challenge and wait for it to complete
+            max_cloudflare_wait = 30  # seconds
+            cloudflare_wait_time = 0
+            while cloudflare_wait_time < max_cloudflare_wait:
+                if "Just a moment" in driver.page_source or "challenge-platform" in driver.page_source:
+                    debug_print(f"Cloudflare challenge detected, waiting... ({cloudflare_wait_time}s)")
+                    time.sleep(2)
+                    cloudflare_wait_time += 2
+                else:
+                    debug_print("Cloudflare challenge completed or not present")
+                    break
+            
+            if cloudflare_wait_time >= max_cloudflare_wait:
+                debug_print("⚠️ Cloudflare challenge timeout - proceeding anyway")
+
             # Save the HTML before clicking to load details (coupon code, expiration date, load amount)
             before_click_file = os.path.join(
                 save_directory, f"buyme_before_{coupon_number}.html"
@@ -1164,16 +1179,40 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
 
             # Click the "Where did I redeem" button to load usage details
             try:
-                where_used_button = driver.find_element(
-                    By.XPATH, "//button[contains(text(), 'איפה מימשתי')]"
-                )
-                driver.execute_script("arguments[0].click();", where_used_button)
-                time.sleep(3)  # Wait for content to load
-                debug_print("Clicked 'Where did I redeem' button")
+                from selenium.webdriver.support.ui import WebDriverWait
+                from selenium.webdriver.support import expected_conditions as EC
+                
+                # Wait up to 15 seconds for the button to appear - try multiple possible texts
+                wait = WebDriverWait(driver, 15)
+                button_xpaths = [
+                    "//button[contains(text(), 'איפה מימשתי')]",
+                    "//button[contains(text(), 'איפה המימוש')]", 
+                    "//button[contains(text(), 'פרטי המימוש')]",
+                    "//button[contains(text(), 'היכן מומש')]",
+                    "//a[contains(text(), 'איפה מימשתי')]",
+                    "//a[contains(text(), 'איפה המימוש')]"
+                ]
+                
+                where_used_button = None
+                for xpath in button_xpaths:
+                    try:
+                        where_used_button = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+                        debug_print(f"Found button with xpath: {xpath}")
+                        break
+                    except:
+                        continue
+                
+                if where_used_button:
+                    driver.execute_script("arguments[0].click();", where_used_button)
+                    time.sleep(3)  # Wait for content to load
+                    debug_print("Clicked 'Where did I redeem' button")
+                else:
+                    raise Exception("Button not found with any of the expected texts")
             except Exception as e:
                 debug_print(f"Error clicking 'Where did I redeem' button: {e}")
-                driver.quit()
-                return None
+                debug_print("Button may not exist or page may not have loaded properly")
+                # Don't quit - try to continue and see what we can extract
+                debug_print("Continuing without clicking the button...")
 
             # Save the HTML after clicking (usage details)
             after_click_file = os.path.join(
