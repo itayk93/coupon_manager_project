@@ -33,7 +33,7 @@ Flask-SQLAlchemy==3.1.1
 flask-dance==7.1.0
 webdriver-manager
 flask_mail
-python-telegram-bot==21.3
+python-telegram-bot==20.7
 asyncpg>=0.30.0
 pytz==2024.1
 beautifulsoup4==4.12.3
