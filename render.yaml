@@ -90,36 +90,6 @@ services:
       - key: SELENIUM_HEADLESS
         value: "true"
 
-  # Telegram bot worker
-  - type: worker
-    name: telegram-bot-worker
-    env: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    buildCommand: ""
-    startCommand: "python telegram_bot.py"
-    autoDeploy: true
-    envVars:
-      - key: FLASK_ENV
-        value: production
-      - key: FLASK_APP
-        value: wsgi.py
-      - key: DATABASE_URL
-        fromService:
-          type: pserv
-          name: coupon-database
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: coupon-redis
-          property: connectionString
-      - key: SECRET_KEY
-        sync: false
-        fromService:
-          type: web
-          name: coupon-manager-web
-          envVarKey: SECRET_KEY
 
   # Cron job for daily automatic updates
   - type: cron
