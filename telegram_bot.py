@@ -4564,25 +4564,59 @@ def create_bot_application():
     Create and return bot application without running it.
     This allows external modules to control when and how the bot runs.
     """
+    import signal
+    import time
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Bot application creation timed out")
+    
     try:
+        logger.info("=== create_bot_application() started ===")
+        print("=== create_bot_application() started ===", flush=True)
+        
+        # Set timeout for the entire function (60 seconds)
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(60)
+        
         # Check if bot is enabled
+        logger.info(f"Checking ENABLE_BOT: {ENABLE_BOT}")
+        print(f"Checking ENABLE_BOT: {ENABLE_BOT}", flush=True)
         if not ENABLE_BOT:
             logger.warning("טלגרם בוט מושבת - מדלג על יצירת האפליקציה")
+            print("טלגרם בוט מושבת - מדלג על יצירת האפליקציה", flush=True)
             return None
         
         # Log python-telegram-bot version for debugging
         import telegram
         logger.info(f"יוצר את אפליקציית הבוט... (python-telegram-bot version: {telegram.__version__})")
+        print(f"יוצר את אפליקציית הבוט... (python-telegram-bot version: {telegram.__version__})", flush=True)
         
         # Validate token exists
+        logger.info(f"Checking TELEGRAM_BOT_TOKEN: {'SET' if TELEGRAM_BOT_TOKEN else 'NOT SET'}")
+        print(f"Checking TELEGRAM_BOT_TOKEN: {'SET' if TELEGRAM_BOT_TOKEN else 'NOT SET'}", flush=True)
         if not TELEGRAM_BOT_TOKEN:
             logger.error("TELEGRAM_BOT_TOKEN is not set")
+            print("TELEGRAM_BOT_TOKEN is not set", flush=True)
             return None
         
         # Create application with error handling
-        app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+        logger.info("Creating Application with token...")
+        print("Creating Application with token...", flush=True)
+        
+        # Add timeout and connection settings for better deploy compatibility
+        app = (Application.builder()
+               .token(TELEGRAM_BOT_TOKEN)
+               .connect_timeout(30.0)  # 30 seconds connection timeout
+               .read_timeout(30.0)     # 30 seconds read timeout
+               .write_timeout(30.0)    # 30 seconds write timeout
+               .build())
+        
+        logger.info("Application created successfully")
+        print("Application created successfully", flush=True)
         
         # Add all handlers
+        logger.info("Adding command handlers...")
+        print("Adding command handlers...", flush=True)
         app.add_handler(CommandHandler('start', start))
         app.add_handler(CommandHandler('help', help_command))
         app.add_handler(CommandHandler('disconnect', disconnect))
@@ -4592,6 +4626,8 @@ def create_bot_application():
         app.add_handler(CommandHandler('change_monthly_day', change_monthly_day_command))
         
         # First handle regular text messages (verification code)
+        logger.info("Adding message handlers...")
+        print("Adding message handlers...", flush=True)
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_coupon_fsm))
         
         # Then handle number messages (menu choices)
@@ -4602,10 +4638,24 @@ def create_bot_application():
         context_app = app
         
         logger.info("אפליקציית הבוט נוצרה בהצלחה")
+        print("אפליקציית הבוט נוצרה בהצלחה", flush=True)
+        
+        # Cancel timeout
+        signal.alarm(0)
         return app
         
+    except TimeoutError as e:
+        logger.error(f"Timeout creating bot application: {e}")
+        print(f"Timeout creating bot application: {e}", flush=True)
+        signal.alarm(0)
+        return None
+        
     except Exception as e:
-        logger.error(f"שגיאה ביצירת אפליקציית הבוט: {e}")
+        logger.error(f"שגיאה ביצירת אפליקציית הבוט: {e}", exc_info=True)
+        print(f"שגיאה ביצירת אפליקציית הבוט: {e}", flush=True)
+        import traceback
+        print(f"Full traceback: {traceback.format_exc()}", flush=True)
+        signal.alarm(0)  # Make sure to cancel alarm
         return None
 
 def run_bot():
