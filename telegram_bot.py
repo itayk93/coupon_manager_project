@@ -4564,19 +4564,9 @@ def create_bot_application():
     Create and return bot application without running it.
     This allows external modules to control when and how the bot runs.
     """
-    import signal
-    import time
-    
-    def timeout_handler(signum, frame):
-        raise TimeoutError("Bot application creation timed out")
-    
     try:
         logger.info("=== create_bot_application() started ===")
         print("=== create_bot_application() started ===", flush=True)
-        
-        # Set timeout for the entire function (60 seconds)
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(60)
         
         # Check if bot is enabled
         logger.info(f"Checking ENABLE_BOT: {ENABLE_BOT}")
@@ -4639,23 +4629,13 @@ def create_bot_application():
         
         logger.info("אפליקציית הבוט נוצרה בהצלחה")
         print("אפליקציית הבוט נוצרה בהצלחה", flush=True)
-        
-        # Cancel timeout
-        signal.alarm(0)
         return app
-        
-    except TimeoutError as e:
-        logger.error(f"Timeout creating bot application: {e}")
-        print(f"Timeout creating bot application: {e}", flush=True)
-        signal.alarm(0)
-        return None
         
     except Exception as e:
         logger.error(f"שגיאה ביצירת אפליקציית הבוט: {e}", exc_info=True)
         print(f"שגיאה ביצירת אפליקציית הבוט: {e}", flush=True)
         import traceback
         print(f"Full traceback: {traceback.format_exc()}", flush=True)
-        signal.alarm(0)  # Make sure to cancel alarm
         return None
 
 def run_bot():
