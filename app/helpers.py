@@ -270,7 +270,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             driver.get(
                 "https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/"
             )
-            wait = WebDriverWait(driver, 30)
+            wait = WebDriverWait(driver, 120)  # 2 minutes for Multipass
             time.sleep(5)
 
             card_number_field = driver.find_element(
@@ -583,7 +583,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
 
         if df_new.empty:
             print("No new transactions to add (all references already exist in DB).")
-            return None
+            return pd.DataFrame()  # Return empty DataFrame instead of None
 
         # Add new transactions
         for idx, row in df_new.iterrows():
@@ -688,10 +688,18 @@ def get_coupon_data_with_retry(coupon, max_retries=3, save_directory="automatic_
                 attempt_duration = (datetime.now() - attempt_start).total_seconds()
                 total_duration = (datetime.now() - start_time).total_seconds()
                 
-                logger.info(f"✅ SUCCESS: Coupon {coupon.code} updated successfully on attempt {attempt + 1}")
-                logger.info(f"   - Attempt duration: {attempt_duration:.2f}s")
-                logger.info(f"   - Total duration: {total_duration:.2f}s")
-                logger.info(f"   - Records found: {len(result) if hasattr(result, '__len__') else 'N/A'}")
+                # Check if DataFrame is empty (no new data) vs has data
+                records_count = len(result) if hasattr(result, '__len__') else 0
+                if records_count > 0:
+                    logger.info(f"✅ SUCCESS: Coupon {coupon.code} updated successfully on attempt {attempt + 1}")
+                    logger.info(f"   - Attempt duration: {attempt_duration:.2f}s")
+                    logger.info(f"   - Total duration: {total_duration:.2f}s")
+                    logger.info(f"   - Records found: {records_count}")
+                else:
+                    logger.info(f"✅ SUCCESS: Coupon {coupon.code} processed successfully on attempt {attempt + 1} (no new data)")
+                    logger.info(f"   - Attempt duration: {attempt_duration:.2f}s")
+                    logger.info(f"   - Total duration: {total_duration:.2f}s")
+                    logger.info(f"   - No new transactions found (all data already exists)")
                 
                 return result
             else:
@@ -833,7 +841,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             driver.get(
                 "https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/"
             )
-            wait = WebDriverWait(driver, 30)
+            wait = WebDriverWait(driver, 120)  # 2 minutes for Multipass
             time.sleep(5)
 
             debug_print("Locating card number input field")
@@ -1203,9 +1211,9 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 from selenium.webdriver.support.ui import WebDriverWait
                 from selenium.webdriver.support import expected_conditions as EC
                 
-                # Wait up to 60 seconds for the button to appear - try multiple possible texts
-                debug_print("🔍 Looking for 'Where did I redeem' button (60s timeout) - you can interact with the page manually")
-                wait = WebDriverWait(driver, 60)  # Increased for manual interaction
+                # Wait up to 15 seconds for the button to appear - try multiple possible texts
+                debug_print("🔍 Looking for 'Where did I redeem' button (15s timeout) - you can interact with the page manually")
+                wait = WebDriverWait(driver, 15)  # 15 seconds for BuyMe
                 button_xpaths = [
                     "//button[contains(text(), 'איפה מימשתי')]",
                     "//button[contains(text(), 'איפה המימוש')]", 
@@ -1428,7 +1436,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             debug_print(
                 "No new transactions to add (all references already exist in DB)."
             )
-            return None
+            return pd.DataFrame()  # Return empty DataFrame instead of None
 
         debug_print(f"Adding {len(df_new)} new transactions to the database")
         for idx, row in df_new.iterrows():
@@ -3110,7 +3118,16 @@ def get_coupon_data_with_playwright(coupon, max_retries=3, save_directory="autom
             if result is not None:
                 attempt_duration = (datetime.now() - attempt_start).total_seconds()
                 total_duration = (datetime.now() - total_start_time).total_seconds()
-                logger.info(f"✅ Successfully retrieved data for coupon {coupon.code} (attempt duration: {attempt_duration:.2f}s, total: {total_duration:.2f}s)")
+                
+                # Check if DataFrame is empty (no new data) vs has data
+                records_count = len(result) if hasattr(result, '__len__') else 0
+                if records_count > 0:
+                    logger.info(f"✅ SUCCESS: Coupon {coupon.code} updated successfully (attempt duration: {attempt_duration:.2f}s, total: {total_duration:.2f}s)")
+                    logger.info(f"   - Records found: {records_count}")
+                else:
+                    logger.info(f"✅ SUCCESS: Coupon {coupon.code} processed successfully (no new data, attempt duration: {attempt_duration:.2f}s, total: {total_duration:.2f}s)")
+                    logger.info(f"   - No new transactions found (all data already exists)")
+                
                 return result
             else:
                 attempt_duration = (datetime.now() - attempt_start).total_seconds()
@@ -3192,11 +3209,11 @@ def get_coupon_data_playwright(coupon, save_directory="automatic_coupon_update/i
                 try:
                     # Navigate to Multipass website
                     page.goto("https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/", 
-                             wait_until="domcontentloaded", timeout=30000)
+                             wait_until="domcontentloaded", timeout=120000)
                     debug_print("Navigated to Multipass website")
                     
                     # Wait for the card number input field
-                    page.wait_for_selector("input#newcardid", timeout=30000)
+                    page.wait_for_selector("input#newcardid", timeout=120000)
                     debug_print("Found card number input field")
                     
                     # Clear and enter coupon number
@@ -3207,7 +3224,7 @@ def get_coupon_data_playwright(coupon, save_directory="automatic_coupon_update/i
                     # Handle reCAPTCHA
                     debug_print("Handling reCAPTCHA")
                     # Wait for reCAPTCHA iframe
-                    page.wait_for_selector("iframe[src*='recaptcha']", timeout=30000)
+                    page.wait_for_selector("iframe[src*='recaptcha']", timeout=120000)
                     
                     # Switch to reCAPTCHA frame and click checkbox
                     recaptcha_frame = page.frame_locator("iframe[src*='recaptcha']")
@@ -3261,11 +3278,11 @@ def get_coupon_data_playwright(coupon, save_directory="automatic_coupon_update/i
                 try:
                     # Navigate to BuyMe balance check page
                     page.goto("https://www.buyme.co.il/YitratKartis/CheckBalance", 
-                             wait_until="domcontentloaded", timeout=30000)
+                             wait_until="domcontentloaded", timeout=15000)
                     debug_print("Navigated to BuyMe website")
                     
                     # Wait for and fill the card number input
-                    page.wait_for_selector("input[name='GiftCardNumber']", timeout=30000)
+                    page.wait_for_selector("input[name='GiftCardNumber']", timeout=15000)
                     page.fill("input[name='GiftCardNumber']", coupon_number)
                     debug_print(f"Entered coupon number: {coupon_number}")
                     
@@ -3284,7 +3301,7 @@ def get_coupon_data_playwright(coupon, save_directory="automatic_coupon_update/i
                     
                     # Look for "Show Details" or similar button and click it
                     try:
-                        page.click("text=הצג פרטי שימוש", timeout=10000)
+                        page.click("text=הצג פרטי שימוש", timeout=15000)
                         debug_print("Clicked show details button")
                         page.wait_for_timeout(3000)
                         
