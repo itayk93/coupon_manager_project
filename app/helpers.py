@@ -245,6 +245,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             # Set Chrome binary path - try multiple possible locations
             possible_chrome_paths = [
                 os.getenv('CHROME_BIN'),
+                '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 '/usr/bin/google-chrome-stable',
                 '/usr/bin/google-chrome',
                 '/usr/bin/chromium-browser',
@@ -259,7 +260,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
                     break
             
             if not chrome_bin:
-                chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                chrome_bin = possible_chrome_paths[2]  # Default to google-chrome-stable
                 
             chrome_options.binary_location = chrome_bin
             
@@ -378,6 +379,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             # Set Chrome binary path - try multiple possible locations
             possible_chrome_paths = [
                 os.getenv('CHROME_BIN'),
+                '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 '/usr/bin/google-chrome-stable',
                 '/usr/bin/google-chrome',
                 '/usr/bin/chromium-browser',
@@ -392,7 +394,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
                     break
             
             if not chrome_bin:
-                chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                chrome_bin = possible_chrome_paths[2]  # Default to google-chrome-stable
                 
             chrome_options.binary_location = chrome_bin
             
@@ -776,6 +778,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             # Set Chrome binary path - try multiple possible locations
             possible_chrome_paths = [
                 os.getenv('CHROME_BIN'),
+                '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 '/usr/bin/google-chrome-stable',
                 '/usr/bin/google-chrome',
                 '/usr/bin/chromium-browser',
@@ -802,7 +805,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     debug_print(f"❌ Chrome NOT found at: {path}")
             
             if not chrome_bin:
-                chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                chrome_bin = possible_chrome_paths[2]  # Default to google-chrome-stable
                 debug_print(f"⚠️ No Chrome found, using default: {chrome_bin}")
                 
             chrome_options.binary_location = chrome_bin
@@ -925,6 +928,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             # Set Chrome binary path - try multiple possible locations
             possible_chrome_paths = [
                 os.getenv('CHROME_BIN'),
+                '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 '/usr/bin/google-chrome-stable',
                 '/usr/bin/google-chrome',
                 '/usr/bin/chromium-browser',
@@ -951,7 +955,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     debug_print(f"❌ Chrome NOT found at: {path}")
             
             if not chrome_bin:
-                chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                chrome_bin = possible_chrome_paths[2]  # Default to google-chrome-stable
                 debug_print(f"⚠️ No Chrome found, using default: {chrome_bin}")
                 
             chrome_options.binary_location = chrome_bin
@@ -1099,6 +1103,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             # Set Chrome binary path - try multiple possible locations
             possible_chrome_paths = [
                 os.getenv('CHROME_BIN'),
+                '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 '/usr/bin/google-chrome-stable',
                 '/usr/bin/google-chrome',
                 '/usr/bin/chromium-browser',
@@ -1125,7 +1130,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     debug_print(f"❌ Chrome NOT found at: {path}")
             
             if not chrome_bin:
-                chrome_bin = possible_chrome_paths[1]  # Default to google-chrome-stable
+                chrome_bin = possible_chrome_paths[2]  # Default to google-chrome-stable
                 debug_print(f"⚠️ No Chrome found, using default: {chrome_bin}")
                 
             chrome_options.binary_location = chrome_bin
