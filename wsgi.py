@@ -69,11 +69,15 @@ def start_telegram_bot_thread():
     This works around the signal handler limitation.
     """
     try:
-        logger.info("Starting Telegram bot in background thread...")
-        print("Starting Telegram bot in background thread...", flush=True)
+        logger.info("=== start_telegram_bot_thread() started ===")
+        print("=== start_telegram_bot_thread() started ===", flush=True)
         
         # Import here to avoid circular imports
+        logger.info("Importing telegram_bot modules...")
+        print("Importing telegram_bot modules...", flush=True)
         from telegram_bot import create_bot_application, initialize_monthly_summary_settings
+        logger.info("Successfully imported telegram_bot modules")
+        print("Successfully imported telegram_bot modules", flush=True)
         
         # Create new event loop for this thread
         loop = asyncio.new_event_loop()
@@ -117,11 +121,16 @@ def start_bot_if_enabled():
     """
     Start bot if enabled, regardless of execution mode.
     """
+    logger.info("=== start_bot_if_enabled() called ===")
+    print("=== start_bot_if_enabled() called ===", flush=True)
+    
     enable_bot = os.getenv('ENABLE_BOT', 'true').lower() == 'true'
+    logger.info(f"ENABLE_BOT environment variable: {os.getenv('ENABLE_BOT', 'not set')} -> {enable_bot}")
+    print(f"ENABLE_BOT environment variable: {os.getenv('ENABLE_BOT', 'not set')} -> {enable_bot}", flush=True)
     
     if enable_bot:
-        logger.info("Starting Telegram bot in background thread...")
-        print("Starting Telegram bot in background thread...", flush=True)
+        logger.info("Bot is enabled, starting Telegram bot in background thread...")
+        print("Bot is enabled, starting Telegram bot in background thread...", flush=True)
         
         bot_thread = threading.Thread(target=start_telegram_bot_thread, daemon=True)
         bot_thread.start()
