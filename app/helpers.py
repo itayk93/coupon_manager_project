@@ -217,7 +217,9 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
 
     # Basic Selenium options setup
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run in headless mode for production
+    # Only run headless in production environment or if explicitly set
+    if os.getenv('FLASK_ENV') == 'production' or os.getenv('SELENIUM_HEADLESS', 'false').lower() == 'true':
+        chrome_options.add_argument("--headless")  # Run in headless mode for production
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--no-sandbox")
@@ -749,7 +751,9 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     # Configure basic Selenium Chrome options
     debug_print("Configuring Chrome options")
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run in headless mode for production
+    # Only run headless in production environment or if explicitly set
+    if os.getenv('FLASK_ENV') == 'production' or os.getenv('SELENIUM_HEADLESS', 'false').lower() == 'true':
+        chrome_options.add_argument("--headless")  # Run in headless mode for production
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--no-sandbox")
@@ -1094,7 +1098,9 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             # Import webdriver_manager to manage the Chrome driver
             from webdriver_manager.chrome import ChromeDriverManager
 
-            chrome_options.add_argument("--headless")  # Run in headless mode for production
+            # Only run headless in production environment or if explicitly set
+            if os.getenv('FLASK_ENV') == 'production' or os.getenv('SELENIUM_HEADLESS', 'false').lower() == 'true':
+                chrome_options.add_argument("--headless")  # Run in headless mode for production
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--disable-features=VizDisplayCompositor")
@@ -3142,9 +3148,10 @@ def get_coupon_data_playwright(coupon, save_directory="automatic_coupon_update/i
     debug_print(f"Coupon kind detected: {coupon_kind}")
     
     with sync_playwright() as p:
-        # Launch browser in headless mode for production
+        # Launch browser - headless only in production or if explicitly set
+        is_headless = os.getenv('FLASK_ENV') == 'production' or os.getenv('SELENIUM_HEADLESS', 'false').lower() == 'true'
         browser = p.chromium.launch(
-            headless=True,
+            headless=is_headless,
             args=[
                 '--no-sandbox',
                 '--disable-dev-shm-usage',
