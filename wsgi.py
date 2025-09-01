@@ -13,6 +13,7 @@ load_dotenv()
 from app import create_app
 
 
+
 def setup_production_logging():
     """
     Setup logging configuration that works in both development and production environments.
