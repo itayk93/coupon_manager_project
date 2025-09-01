@@ -1158,18 +1158,20 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
 
             debug_print(f"Opening URL for BuyMe: {url}")
             driver.get(url)
-            time.sleep(6)
+            debug_print("⏳ Waiting 10 seconds for page to fully load...")
+            time.sleep(10)  # Increased initial wait time
 
             # Check for Cloudflare challenge and wait for it to complete
-            max_cloudflare_wait = 30  # seconds
+            max_cloudflare_wait = 120  # seconds - increased for manual CAPTCHA solving
             cloudflare_wait_time = 0
+            debug_print(f"🔍 Checking for Cloudflare challenges (max wait: {max_cloudflare_wait}s)")
             while cloudflare_wait_time < max_cloudflare_wait:
                 if "Just a moment" in driver.page_source or "challenge-platform" in driver.page_source:
-                    debug_print(f"Cloudflare challenge detected, waiting... ({cloudflare_wait_time}s)")
+                    debug_print(f"🔒 Cloudflare challenge detected, waiting... ({cloudflare_wait_time}s) - Please solve any CAPTCHA manually")
                     time.sleep(2)
                     cloudflare_wait_time += 2
                 else:
-                    debug_print("Cloudflare challenge completed or not present")
+                    debug_print("✅ Cloudflare challenge completed or not present")
                     break
             
             if cloudflare_wait_time >= max_cloudflare_wait:
@@ -1188,8 +1190,9 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 from selenium.webdriver.support.ui import WebDriverWait
                 from selenium.webdriver.support import expected_conditions as EC
                 
-                # Wait up to 15 seconds for the button to appear - try multiple possible texts
-                wait = WebDriverWait(driver, 15)
+                # Wait up to 60 seconds for the button to appear - try multiple possible texts
+                debug_print("🔍 Looking for 'Where did I redeem' button (60s timeout) - you can interact with the page manually")
+                wait = WebDriverWait(driver, 60)  # Increased for manual interaction
                 button_xpaths = [
                     "//button[contains(text(), 'איפה מימשתי')]",
                     "//button[contains(text(), 'איפה המימוש')]", 
