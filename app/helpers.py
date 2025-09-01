@@ -725,6 +725,19 @@ def get_coupon_data_with_retry(coupon, max_retries=3, save_directory="automatic_
 
 
 def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html"):
+    # Import required modules at function level
+    import os
+    import time
+    import pandas as pd
+    from datetime import datetime
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from webdriver_manager.chrome import ChromeDriverManager
+    
     # Helper function to print debug messages when DEBUG_MODE is enabled
     def debug_print(message):
         if DEBUG_MODE:
