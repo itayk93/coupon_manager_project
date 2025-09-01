@@ -553,6 +553,34 @@ class CouponTransaction(db.Model):
 
     coupon = db.relationship("Coupon", back_populates="multipass_transactions")
 
+    def __init__(self, **kwargs):
+        # Handle invalid transaction_date values before creating the object
+        import pandas as pd
+        
+        if 'transaction_date' in kwargs:
+            transaction_date = kwargs['transaction_date']
+            # Check for NaT, NaN, or invalid date strings
+            if (transaction_date is not None and 
+                (pd.isna(transaction_date) or 
+                 str(transaction_date) in ['NaT', 'NaN', 'nat', 'nan'])):
+                kwargs['transaction_date'] = None
+                print(f"Warning: Invalid transaction_date '{transaction_date}' converted to None")
+        
+        # Skip transactions with invalid location or reference_number
+        invalid_texts = ["לא נמצאו רשומות", "לא נמצא", "שגיאה"]
+        
+        if 'location' in kwargs and kwargs['location']:
+            location = str(kwargs['location'])
+            if any(invalid_text in location for invalid_text in invalid_texts):
+                raise ValueError(f"Invalid location data: {location}")
+                
+        if 'reference_number' in kwargs and kwargs['reference_number']:
+            reference_number = str(kwargs['reference_number'])  
+            if any(invalid_text in reference_number for invalid_text in invalid_texts):
+                raise ValueError(f"Invalid reference_number data: {reference_number}")
+        
+        super(CouponTransaction, self).__init__(**kwargs)
+
 
 class GptUsage(db.Model):
     """

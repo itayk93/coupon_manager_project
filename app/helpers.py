@@ -587,15 +587,37 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
 
         # Add new transactions
         for idx, row in df_new.iterrows():
-            transaction = CouponTransaction(
-                coupon_id=coupon.id,
-                transaction_date=row.get("transaction_date"),
-                location=row.get("location", ""),
-                recharge_amount=row.get("recharge_amount", 0.0),
-                usage_amount=row.get("usage_amount", 0.0),
-                reference_number=row.get("reference_number", ""),
-            )
-            db.session.add(transaction)
+            # Handle invalid transaction_date values (NaT, NaN, etc.)
+            transaction_date = row.get("transaction_date")
+            if pd.isna(transaction_date) or str(transaction_date) in ['NaT', 'NaN', 'nat', 'nan']:
+                transaction_date = None
+                
+            # Skip transactions with invalid data
+            location = row.get("location", "")
+            reference_number = row.get("reference_number", "")
+            
+            # Skip if location or reference contains error messages
+            if any(invalid_text in str(location) for invalid_text in ["לא נמצאו רשומות", "לא נמצא", "שגיאה"]):
+                print(f"Skipping invalid transaction with location: {location}")
+                continue
+                
+            if any(invalid_text in str(reference_number) for invalid_text in ["לא נמצאו רשומות", "לא נמצא", "שגיאה"]):
+                print(f"Skipping invalid transaction with reference: {reference_number}")
+                continue
+                
+            try:
+                transaction = CouponTransaction(
+                    coupon_id=coupon.id,
+                    transaction_date=transaction_date,
+                    location=location,
+                    recharge_amount=row.get("recharge_amount", 0.0),
+                    usage_amount=row.get("usage_amount", 0.0),
+                    reference_number=reference_number,
+                )
+                db.session.add(transaction)
+            except ValueError as e:
+                print(f"Skipping invalid transaction: {e}")
+                continue
 
         # Update total usage in the database
         total_used = (
@@ -1443,15 +1465,37 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
 
         debug_print(f"Adding {len(df_new)} new transactions to the database")
         for idx, row in df_new.iterrows():
-            transaction = CouponTransaction(
-                coupon_id=coupon.id,
-                transaction_date=row.get("transaction_date"),
-                location=row.get("location", ""),
-                recharge_amount=row.get("recharge_amount", 0.0),
-                usage_amount=row.get("usage_amount", 0.0),
-                reference_number=row.get("reference_number", ""),
-            )
-            db.session.add(transaction)
+            # Handle invalid transaction_date values (NaT, NaN, etc.)
+            transaction_date = row.get("transaction_date")
+            if pd.isna(transaction_date) or str(transaction_date) in ['NaT', 'NaN', 'nat', 'nan']:
+                transaction_date = None
+                
+            # Skip transactions with invalid data
+            location = row.get("location", "")
+            reference_number = row.get("reference_number", "")
+            
+            # Skip if location or reference contains error messages
+            if any(invalid_text in str(location) for invalid_text in ["לא נמצאו רשומות", "לא נמצא", "שגיאה"]):
+                debug_print(f"Skipping invalid transaction with location: {location}")
+                continue
+                
+            if any(invalid_text in str(reference_number) for invalid_text in ["לא נמצאו רשומות", "לא נמצא", "שגיאה"]):
+                debug_print(f"Skipping invalid transaction with reference: {reference_number}")
+                continue
+                
+            try:
+                transaction = CouponTransaction(
+                    coupon_id=coupon.id,
+                    transaction_date=transaction_date,
+                    location=location,
+                    recharge_amount=row.get("recharge_amount", 0.0),
+                    usage_amount=row.get("usage_amount", 0.0),
+                    reference_number=reference_number,
+                )
+                db.session.add(transaction)
+            except ValueError as e:
+                print(f"Skipping invalid transaction: {e}")
+                continue
 
         debug_print("Calculating total used value from transactions")
         total_used = (
