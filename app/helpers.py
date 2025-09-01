@@ -1211,9 +1211,9 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 from selenium.webdriver.support.ui import WebDriverWait
                 from selenium.webdriver.support import expected_conditions as EC
                 
-                # Wait up to 15 seconds for the button to appear - try multiple possible texts
-                debug_print("🔍 Looking for 'Where did I redeem' button (15s timeout) - you can interact with the page manually")
-                wait = WebDriverWait(driver, 15)  # 15 seconds for BuyMe
+                # Wait up to 15 seconds total for the button to appear - try multiple possible texts
+                debug_print("🔍 Looking for 'Where did I redeem' button (15s timeout total) - you can interact with the page manually")
+                
                 button_xpaths = [
                     "//button[contains(text(), 'איפה מימשתי')]",
                     "//button[contains(text(), 'איפה המימוש')]", 
@@ -1223,14 +1223,17 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     "//a[contains(text(), 'איפה המימוש')]"
                 ]
                 
+                # Create a combined XPath expression to find any of these buttons
+                combined_xpath = " | ".join(button_xpaths)
+                
                 where_used_button = None
-                for xpath in button_xpaths:
-                    try:
-                        where_used_button = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-                        debug_print(f"Found button with xpath: {xpath}")
-                        break
-                    except:
-                        continue
+                try:
+                    # Use short timeout for quick check - only 15 seconds total
+                    wait = WebDriverWait(driver, 15)
+                    where_used_button = wait.until(EC.element_to_be_clickable((By.XPATH, combined_xpath)))
+                    debug_print("Found 'Where did I redeem' button")
+                except:
+                    pass  # Button not found within timeout
                 
                 if where_used_button:
                     driver.execute_script("arguments[0].click();", where_used_button)
