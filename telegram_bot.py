@@ -7,6 +7,20 @@ import hashlib
 import secrets
 from datetime import datetime, timezone, timedelta
 import pytz
+
+# Python 3.13 compatibility workaround for telegram bot
+import sys
+print(f"Python version: {sys.version}", flush=True)
+
+if sys.version_info >= (3, 13):
+    print("Applying Python 3.13 compatibility patches for telegram-bot", flush=True)
+    
+    # Simple workaround: disable bot for Python 3.13 and inform user
+    PYTHON_313_INCOMPATIBLE = True
+    print("WARNING: Telegram bot is disabled due to Python 3.13 compatibility issues", flush=True)
+else:
+    PYTHON_313_INCOMPATIBLE = False
+
 from telegram import Update
 from telegram.ext import Application, ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
@@ -4567,6 +4581,12 @@ def create_bot_application():
     try:
         logger.info("=== create_bot_application() started ===")
         print("=== create_bot_application() started ===", flush=True)
+        
+        # Check Python 3.13 compatibility first
+        if PYTHON_313_INCOMPATIBLE:
+            logger.warning("Telegram bot is disabled due to Python 3.13 compatibility issues")
+            print("Telegram bot is disabled due to Python 3.13 compatibility issues", flush=True)
+            return None
         
         # Check if bot is enabled
         logger.info(f"Checking ENABLE_BOT: {ENABLE_BOT}")
