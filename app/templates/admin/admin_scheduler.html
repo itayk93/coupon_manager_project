@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+
+{% block title %}
+ניהול תזמון משימות
+{% endblock %}
+
+{% block content %}
+<section class="admin-scheduler">
+    <div class="scheduler-header">
+        <h1>ניהול תזמון משימות</h1>
+        <div class="header-actions">
+            <a href="{{ url_for('admin_scheduler_bp.create_task') }}" class="btn btn-primary">
+                <i class="icon">➕</i>
+                יצירת משימה חדשה
+            </a>
+            <a href="{{ url_for('admin_scheduler_bp.coupon_auto_update_settings') }}" class="btn btn-success">
+                <i class="icon">⚙️</i>
+                הגדרות עדכון קופונים
+            </a>
+            <a href="{{ url_for('admin_dashboard_bp.dashboard') }}" class="btn btn-secondary">
+                <i class="icon">🏠</i>
+                חזרה למנהל
+            </a>
+        </div>
+    </div>
+
+    {% if tasks %}
+    <div class="tasks-container">
+        <div class="tasks-grid">
+            {% for task in tasks %}
+            <div class="task-card {% if not task.is_active %}inactive{% endif %}">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>{{ task.task_name }}</h3>
+                        <span class="task-type">{{ task.task_type }}</span>
+                    </div>
+                    <div class="task-status">
+                        {% if task.is_active %}
+                            <span class="status-badge active">פעיל</span>
+                        {% else %}
+                            <span class="status-badge inactive">כבוי</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="task-details">
+                    <div class="detail-item">
+                        <strong>סוג תזמון:</strong>
+                        {% if task.schedule_type == 'daily' %}
+                            יומי
+                        {% elif task.schedule_type == 'weekly' %}
+                            שבועי
+                        {% elif task.schedule_type == 'monthly' %}
+                            חודשי
+                        {% elif task.schedule_type == 'specific_date' %}
+                            תאריך ספציפי
+                        {% endif %}
+                    </div>
+
+                    <div class="detail-item">
+                        <strong>שעת הפעלה:</strong>
+                        {{ task.execution_time.strftime('%H:%M') }}
+                    </div>
+
+                    {% if task.schedule_type == 'weekly' %}
+                        <div class="detail-item">
+                            <strong>יום בשבוע:</strong>
+                            {% set weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'] %}
+                            {{ weekdays[task.get_schedule_details().get('weekday', 0)] }}
+                        </div>
+                    {% elif task.schedule_type == 'monthly' %}
+                        <div class="detail-item">
+                            <strong>יום בחודש:</strong>
+                            {{ task.get_schedule_details().get('day', 1) }}
+                        </div>
+                    {% elif task.schedule_type == 'specific_date' %}
+                        <div class="detail-item">
+                            <strong>תאריך:</strong>
+                            {{ task.get_schedule_details().get('date', 'לא הוגדר') }}
+                        </div>
+                    {% endif %}
+
+                    {% if task.next_run %}
+                        <div class="detail-item">
+                            <strong>הפעלה הבאה:</strong>
+                            <span class="next-run">{{ task.next_run.strftime('%d/%m/%Y %H:%M') }}</span>
+                        </div>
+                    {% endif %}
+
+                    {% if task.last_run %}
+                        <div class="detail-item">
+                            <strong>הפעלה אחרונה:</strong>
+                            {{ task.last_run.strftime('%d/%m/%Y %H:%M') }}
+                        </div>
+                    {% endif %}
+
+                    {% if task.description %}
+                        <div class="detail-item">
+                            <strong>תיאור:</strong>
+                            {{ task.description }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="task-actions">
+                    <form method="POST" action="{{ url_for('admin_scheduler_bp.toggle_task', task_id=task.id) }}" style="display: inline;">
+                        {% if task.is_active %}
+                            <button type="submit" class="btn btn-warning btn-sm">השבת</button>
+                        {% else %}
+                            <button type="submit" class="btn btn-success btn-sm">הפעל</button>
+                        {% endif %}
+                    </form>
+
+                    <form method="POST" action="{{ url_for('admin_scheduler_bp.run_task_now', task_id=task.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-info btn-sm">הרץ עכשיו</button>
+                    </form>
+
+                    <a href="{{ url_for('admin_scheduler_bp.edit_task', task_id=task.id) }}" class="btn btn-primary btn-sm">ערוך</a>
+                    
+                    <a href="{{ url_for('admin_scheduler_bp.task_logs', task_id=task.id) }}" class="btn btn-secondary btn-sm">יומן</a>
+
+                    <form method="POST" action="{{ url_for('admin_scheduler_bp.delete_task', task_id=task.id) }}" 
+                          style="display: inline;" 
+                          onsubmit="return confirm('האם אתה בטוח שברצונך למחוק את המשימה?')">
+                        <button type="submit" class="btn btn-danger btn-sm">מחק</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="no-tasks">
+        <div class="no-tasks-content">
+            <div class="no-tasks-icon">📅</div>
+            <h3>אין משימות מתוכננות</h3>
+            <p>צור משימה חדשה כדי להתחיל לתזמן פעולות אוטומטיות</p>
+            <a href="{{ url_for('admin_scheduler_bp.create_task') }}" class="btn btn-primary">
+                יצירת משימה ראשונה
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh every 30 seconds to update next run times
+    setInterval(function() {
+        const nextRunElements = document.querySelectorAll('.next-run');
+        // Could implement real-time updates here if needed
+    }, 30000);
+    
+    // Add fade-in animation to cards
+    const taskCards = document.querySelectorAll('.task-card');
+    taskCards.forEach((card, index) => {
+        setTimeout(() => {
+            card.classList.add('visible');
+        }, 100 * index);
+    });
+});
+</script>
+
+<style>
+:root {
+    --primary-color: #4895ef;
+    --primary-hover: #3a56d4;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+    --secondary-color: #6c757d;
+    --background-light: #f8f9fa;
+    --card-shadow: 0 10px 20px rgba(0,0,0,0.05), 0 6px 6px rgba(0,0,0,0.07);
+    --hover-shadow: 0 14px 28px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.08);
+    --border-radius: 12px;
+    --transition-speed: 0.3s;
+}
+
+.admin-scheduler {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--background-light);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    direction: rtl;
+}
+
+.scheduler-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.scheduler-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2b2d42;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--hover-shadow);
+    text-decoration: none;
+    color: white;
+}
+
+.btn-primary { background-color: var(--primary-color); }
+.btn-primary:hover { background-color: var(--primary-hover); }
+.btn-success { background-color: var(--success-color); }
+.btn-warning { background-color: var(--warning-color); }
+.btn-danger { background-color: var(--danger-color); }
+.btn-info { background-color: var(--info-color); }
+.btn-secondary { background-color: var(--secondary-color); }
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.tasks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 1.5rem;
+}
+
+.task-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    padding: 1.5rem;
+    transition: all var(--transition-speed);
+    opacity: 0;
+    transform: translateY(20px);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.task-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.task-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--hover-shadow);
+}
+
+.task-card.inactive {
+    opacity: 0.6;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.task-title h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2b2d42;
+}
+
+.task-type {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge.active {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.status-badge.inactive {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.task-details {
+    margin-bottom: 1.5rem;
+}
+
+.detail-item {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.detail-item strong {
+    color: #495057;
+    margin-left: 0.5rem;
+}
+
+.next-run {
+    color: var(--info-color);
+    font-weight: 600;
+}
+
+.task-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.no-tasks {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.no-tasks-content {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.no-tasks-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.no-tasks h3 {
+    font-size: 1.5rem;
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.no-tasks p {
+    color: #6c757d;
+    margin-bottom: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-scheduler {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+    
+    .scheduler-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .tasks-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .task-actions {
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}

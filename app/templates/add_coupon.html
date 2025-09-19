@@ -176,6 +176,12 @@
             {{ coupon_form.buyme_coupon_url(class="input-field", id="buyme_coupon_link") }}
         </div>
 
+        <!-- Power Gift URL Field -->
+        <div class="form-group" id="power_gift_url_field" style="display: none;">
+            <label for="power_gift_url" class="form-label">כתובת URL של הקופון מPower Gift:</label>
+            <input type="url" id="power_gift_url" name="xtra_coupon_url" class="input-field" placeholder="הדבק כאן את הקישור לקופון">
+        </div>
+
         <!-- Code Field -->
         <div class="form-group">
             {{ coupon_form.code.label(class="form-label") }}
@@ -716,6 +722,30 @@ document.addEventListener('DOMContentLoaded', function() {
         companySelect.addEventListener('change', toggleBuymeCouponLinkField);
         // Initial trigger on page load
         toggleBuymeCouponLinkField();
+    }
+
+    // === Handle Power Gift URL Field ===
+    const powerGiftUrlField = document.getElementById('power_gift_url_field');
+    
+    function togglePowerGiftField() {
+        // Power Gift company id is 73
+        if (companySelect && companySelect.value === '73') {
+            console.log('🔥 Showing Power Gift URL field!');
+            powerGiftUrlField.style.display = 'block';
+        } else {
+            console.log('❌ Hiding Power Gift URL field');
+            powerGiftUrlField.style.display = 'none';
+            const powerGiftInput = document.getElementById('power_gift_url');
+            if (powerGiftInput) {
+                powerGiftInput.value = '';
+            }
+        }
+    }
+    if (companySelect) {
+        companySelect.addEventListener('change', togglePowerGiftField);
+        // Initial trigger on page load
+        togglePowerGiftField();
+        console.log('✅ Power Gift field handler added!');
     }
 
     // === Handle Coupon Purpose Field if One-Time is checked ===
@@ -1725,6 +1755,18 @@ textarea.input-field {
 
 .shepherd-modal-overlay-container.shepherd-modal-is-visible {
     opacity: 0.5 !important;
+}
+
+/* Hide number input arrows/spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
 }
 </style>
 {% endblock %}

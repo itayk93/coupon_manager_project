@@ -108,6 +108,11 @@
                         <span class="desktop-text">קופוני BuyMe</span>
                         <span class="mobile-text">BuyMe</span>
                     </button>
+                    <button type="button" class="action-button-small open-modal-button xgiftcard-link-button">
+                        <i class="fa fa-gift action-icon"></i> 
+                        <span class="desktop-text">קופוני Xgiftcard</span>
+                        <span class="mobile-text">Xgiftcard</span>
+                    </button>
                     {% endif %}
                 </div>
                 
@@ -140,6 +145,22 @@
                     <input type="url" id="coupons-{{ loop.index0 }}-buyme_coupon_url" 
                            name="coupons-{{ loop.index0 }}-buyme_coupon_url" 
                            class="input-field" value="{{ coupon_data.url if coupon_data else '' }}">
+                </div>
+
+                <!-- Xgiftcard URL field - shown only for Xgiftcard company -->
+                <div class="form-group" id="xgiftcard_coupon_link_group_{{ loop.index0 }}" style="display: none;">
+                    <label for="coupons-{{ loop.index0 }}-xgiftcard_coupon_url" class="form-label">כתובת URL של הקופון מXgiftcard</label>
+                    <input type="url" id="coupons-{{ loop.index0 }}-xgiftcard_coupon_url" 
+                           name="coupons-{{ loop.index0 }}-xgiftcard_coupon_url" 
+                           class="input-field" value="{{ coupon_data.url if coupon_data and 'xgiftcard' in (coupon_data.url or '').lower() else '' }}">
+                </div>
+
+                <!-- Xtra URL field - shown only for PowerGift company -->
+                <div class="form-group" id="xtra_coupon_link_group_{{ loop.index0 }}" style="display: none;">
+                    <label for="coupons-{{ loop.index0 }}-xtra_coupon_url" class="form-label">כתובת URL של הקופון מXtra (PowerGift)</label>
+                    <input type="url" id="coupons-{{ loop.index0 }}-xtra_coupon_url" 
+                           name="coupons-{{ loop.index0 }}-xtra_coupon_url" 
+                           class="input-field" value="{{ coupon_data.xtra_url if coupon_data else '' }}">
                 </div>
 
                 <!-- Strauss Plus URL field - shown only for Strauss Plus company -->
@@ -363,6 +384,19 @@
         </div>
     </div>
 </div>
+
+<!-- Modal for entering Xgiftcard coupon URLs -->
+<div id="xgiftcardUrlModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3 class="modal-title">הזן URL של הקופונים מXgiftcard</h3>
+        <p class="modal-description">הזן את ה-URL של הקופונים מXgiftcard (אם יש יותר מאחד, יש ללחוץ ENTER אחרי כל URL חדש):</p>
+        <textarea id="xgiftcard-coupon-urls" class="input-field" rows="10" placeholder="הזן URL של קופונים מXgiftcard כאן..."></textarea>
+        <div class="modal-footer">
+            <button id="submitXgiftcardUrls" class="submit-button">שלח קישורים</button>
+        </div>
+    </div>
+</div>
 {% endif %}
  
 <!-- Template for new coupon fieldsets -->
@@ -384,6 +418,11 @@
                 <i class="fa fa-link action-icon"></i> 
                 <span class="desktop-text">קופוני BuyMe</span>
                 <span class="mobile-text">BuyMe</span>
+            </button>
+            <button type="button" class="action-button-small open-modal-button xgiftcard-link-button">
+                <i class="fa fa-gift action-icon"></i> 
+                <span class="desktop-text">קופוני Xgiftcard</span>
+                <span class="mobile-text">Xgiftcard</span>
             </button>
             {% endif %}
         </div>
@@ -410,6 +449,22 @@
             <label for="coupons-__INDEX__-buyme_coupon_url" class="form-label">כתובת URL של הקופון ל-BuyMe</label>
             <input type="url" id="coupons-__INDEX__-buyme_coupon_url" 
                    name="coupons-__INDEX__-buyme_coupon_url" 
+                   class="input-field">
+        </div>
+
+        <!-- Xgiftcard URL field -->
+        <div class="form-group" id="xgiftcard_coupon_link_group___INDEX__" style="display: none;">
+            <label for="coupons-__INDEX__-xgiftcard_coupon_url" class="form-label">כתובת URL של הקופון מXgiftcard</label>
+            <input type="url" id="coupons-__INDEX__-xgiftcard_coupon_url" 
+                   name="coupons-__INDEX__-xgiftcard_coupon_url" 
+                   class="input-field">
+        </div>
+
+        <!-- Xtra URL field -->
+        <div class="form-group" id="xtra_coupon_link_group___INDEX__" style="display: none;">
+            <label for="coupons-__INDEX__-xtra_coupon_url" class="form-label">כתובת URL של הקופון מXtra (PowerGift)</label>
+            <input type="url" id="coupons-__INDEX__-xtra_coupon_url" 
+                   name="coupons-__INDEX__-xtra_coupon_url" 
                    class="input-field">
         </div>
 
@@ -576,6 +631,9 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    alert('🔥 DEBUG: השינויים של Claude נטענו בהצלחה! 🔥');
+    console.log('✅ DOMContentLoaded event fired - JavaScript is running!');
+    
     // Toggle instructions panel
     const helpButton = document.getElementById('toggle-instructions');
     const instructionsPanel = document.getElementById('instructions-panel');
@@ -842,6 +900,52 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleStraussCouponLinkField();
         }
 
+        // Setup Xtra URL field toggle for Power Gift
+        console.log('=== Setting up Xtra URL field toggle ===');
+        console.log('Current index (idx):', idx);
+        console.log('Looking for Xtra group with selector:', '#xtra_coupon_link_group_' + idx);
+        const xtraCouponLinkGroup = fieldset.querySelector('#xtra_coupon_link_group_' + idx);
+        console.log('Found xtraCouponLinkGroup:', xtraCouponLinkGroup);
+        console.log('Company select element:', companySelect);
+        console.log('All elements with xtra in ID:', fieldset.querySelectorAll('[id*="xtra"]'));
+
+        function toggleXtraCouponLinkField() {
+            console.log('🔥 toggleXtraCouponLinkField called for Xtra');
+            console.log('🔥 companySelect:', companySelect);
+            console.log('🔥 xtraCouponLinkGroup:', xtraCouponLinkGroup);
+            
+            if (!companySelect || !xtraCouponLinkGroup) {
+                console.log('❌ Missing elements for Xtra:', { companySelect: !!companySelect, xtraCouponLinkGroup: !!xtraCouponLinkGroup });
+                return;
+            }
+            
+            // Show Xtra URL field for Power Gift (ID: 73) and similar companies
+            const companyName = companySelect.options[companySelect.selectedIndex].text;
+            const companyValue = companySelect.value;
+            console.log('🔥 Company selected for Xtra:', { value: companyValue, name: companyName });
+            console.log('🔥 Checking if value === "73":', companyValue === '73');
+            console.log('🔥 Company name includes "power gift":', companyName && companyName.toLowerCase().includes('power gift'));
+            
+            if (companySelect.value === '73' || 
+                (companyName && (companyName.toLowerCase().includes('power gift') || 
+                                companyName.toLowerCase().includes('פאואר גיפט')))) {
+                console.log('✅ Showing Xtra field for Power Gift');
+                xtraCouponLinkGroup.style.display = 'block';
+                console.log('✅ Set display to block, current style:', xtraCouponLinkGroup.style.display);
+            } else {
+                console.log('❌ Hiding Xtra field - not Power Gift');
+                xtraCouponLinkGroup.style.display = 'none';
+                const xtraCouponLinkInput = xtraCouponLinkGroup.querySelector('input');
+                if (xtraCouponLinkInput) {
+                    xtraCouponLinkInput.value = '';
+                }
+            }
+        }
+        if (companySelect && xtraCouponLinkGroup) {
+            companySelect.addEventListener('change', toggleXtraCouponLinkField);
+            toggleXtraCouponLinkField();
+        }
+
         // Setup one-time purpose field toggle
         const isOneTimeCheckbox = fieldset.querySelector('input[type="checkbox"][name$="-is_one_time"]');
         const purposeGroup = fieldset.querySelector('.purpose-field');
@@ -1059,6 +1163,12 @@ document.addEventListener('DOMContentLoaded', function() {
             element.id = element.id.replace('___INDEX__', newIndex);
         });
 
+        fieldset.querySelectorAll('[id^="xtra_coupon_link_group_"]').forEach(element => {
+            element.id = element.id.replace('_' + oldIndex, '_' + newIndex);
+            element.id = element.id.replace('__INDEX__', newIndex);
+            element.id = element.id.replace('___INDEX__', newIndex);
+        });
+
         // Update legend text
         const legend = fieldset.querySelector('legend');
         if (legend) {
@@ -1157,31 +1267,47 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // === Modal handling (admin-only) ===
-    const openModalButtons = document.querySelectorAll('.open-modal-button');
-    const modal = document.getElementById('urlModal');
-    const closeModalButton = document.querySelector('.close-modal');
+    const buymeModal = document.getElementById('urlModal');
+    const xgiftcardModal = document.getElementById('xgiftcardUrlModal');
     
-    openModalButtons.forEach(function(button) {
+    // Handle BuyMe button clicks
+    const buymeButtons = document.querySelectorAll('.buyme-link-button');
+    buymeButtons.forEach(function(button) {
         button.addEventListener('click', function(e) {
             e.preventDefault();
-            if (modal) modal.style.display = 'block';
+            if (buymeModal) buymeModal.style.display = 'block';
+        });
+    });
+    
+    // Handle Xgiftcard button clicks
+    const xgiftcardButtons = document.querySelectorAll('.xgiftcard-link-button');
+    xgiftcardButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (xgiftcardModal) xgiftcardModal.style.display = 'block';
         });
     });
 
-    if (closeModalButton && modal) {
-        closeModalButton.addEventListener('click', function() {
-            modal.style.display = 'none';
+    // Handle close buttons for all modals
+    const closeModalButtons = document.querySelectorAll('.close-modal');
+    closeModalButtons.forEach(function(closeButton) {
+        closeButton.addEventListener('click', function() {
+            // Find the parent modal and close it
+            const modal = closeButton.closest('.modal');
+            if (modal) modal.style.display = 'none';
         });
-    }
+    });
 
-    // Close modal when clicking outside
-    if (modal) {
-        window.addEventListener('click', function(event) {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    }
+    // Close modals when clicking outside
+    [buymeModal, xgiftcardModal].forEach(function(modal) {
+        if (modal) {
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+    });
 
     // === Form submission validation ===
     const couponsForm = document.getElementById('coupons-form');
@@ -1346,7 +1472,8 @@ if (submitUrlsButton) {
             // Handle HTML response (which contains the form)
             if (response.ok && contentType && contentType.includes("text/html")) {
                 // First, we'll close the modal and clear the textarea
-                modal.style.display = 'none';
+                const modal = document.getElementById('urlModal');
+                if (modal) modal.style.display = 'none';
                 textarea.value = '';
                 
                 // Get the HTML response
@@ -1408,7 +1535,7 @@ if (submitUrlsButton) {
                         });
                         
                         // Update other specific elements that have indices
-                        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="strauss_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
+                        fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="xgiftcard_coupon_link_group_"], [id^="strauss_coupon_link_group_"], [id^="xtra_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
                             const baseId = el.id.split('_')[0] + '_' + el.id.split('_')[1] + '_';
                             el.id = `${baseId}${idx}`;
                         });
@@ -1439,7 +1566,8 @@ if (submitUrlsButton) {
                 }
             } else if (response.ok && contentType && contentType.includes("application/json")) {
                 const data = await response.json();
-                modal.style.display = 'none';
+                const modal = document.getElementById('urlModal');
+                if (modal) modal.style.display = 'none';
                 textarea.value = '';
                 
                 if (data.added_coupons && data.added_coupons.length > 0) {
@@ -1472,6 +1600,105 @@ if (submitUrlsButton) {
         } catch (error) {
             console.error("Error:", error);
             alert("שגיאה בעיבוד הקישורים: " + error.message);
+        } finally {
+            // Restore button
+            submitButton.textContent = originalText;
+            submitButton.disabled = false;
+        }
+    });
+}
+
+// === Submit Xgiftcard URLs Handler (admin only) ===
+const submitXgiftcardUrlsButton = document.getElementById('submitXgiftcardUrls');
+if (submitXgiftcardUrlsButton) {
+    submitXgiftcardUrlsButton.addEventListener('click', async function () {
+        const textarea = document.getElementById('xgiftcard-coupon-urls');
+        const rawText = textarea.value.trim();
+    
+        if (!rawText) {
+            alert('אנא הזן לפחות URL אחד.');
+            return;
+        }
+    
+        // Split by lines and filter out empty lines
+        const urls = rawText.split('\n')
+            .map(url => url.trim())
+            .filter(url => url.length > 0);
+    
+        if (urls.length === 0) {
+            alert('לא נמצאו URLs תקינים.');
+            return;
+        }
+    
+        // Get CSRF token
+        const csrfTokenElement = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfTokenElement.getAttribute('content');
+        
+        // Show loading indicator
+        const submitButton = document.getElementById('submitXgiftcardUrls');
+        const originalText = submitButton.textContent;
+        submitButton.textContent = "מעבד קופוני Xgiftcard...";
+        submitButton.disabled = true;
+        
+        try {
+            const response = await fetch('/submit_xgiftcard_coupon_urls', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ urls: urls })
+            });
+        
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("text/html")) {
+                // Server returned HTML (likely the form with pre-filled data)
+                
+                // Get the HTML response
+                const html = await response.text();
+                
+                // Create a temporary container to parse the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                
+                // Replace the entire page content with the new content
+                document.body.innerHTML = tempDiv.innerHTML;
+                
+                // Reinitialize JavaScript after replacing content
+                location.reload(); // Simple solution - reload to reinitialize all JS
+                
+            } else if (contentType && contentType.includes("application/json")) {
+                // Handle JSON response if used
+                const data = await response.json();
+                const modal = document.getElementById('xgiftcardUrlModal');
+                modal.style.display = 'none';
+                textarea.value = '';
+                
+                if (data.added_coupons && data.added_coupons.length > 0) {
+                    let successMsg = `נוספו בהצלחה ${data.added_coupons.length} קופוני Xgiftcard!`;
+                    
+                    if (data.failed_coupons && data.failed_coupons.length > 0) {
+                        successMsg += `\n(${data.failed_coupons.length} קופונים נכשלו בהוספה)`;
+                    }
+                    alert(successMsg);
+                    location.reload(); // Refresh to show the new coupons
+                } else if (data.message) {
+                    alert(data.message);
+                }
+            } else {
+                // Handle error response
+                let errorMsg = "שגיאה בעיבוד קופוני Xgiftcard.";
+                if (contentType && contentType.includes("application/json")) {
+                    const errorData = await response.json();
+                    errorMsg = errorData.message || errorMsg;
+                } else if (contentType && contentType.includes("text/html")) {
+                    errorMsg = "שגיאת שרת. נא לבדוק את הלוגים.";
+                }
+                alert(errorMsg);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("שגיאה בעיבוד קישורי Xgiftcard: " + error.message);
         } finally {
             // Restore button
             submitButton.textContent = originalText;
@@ -1525,7 +1752,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Update special IDs (containers, etc.)
-                fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="strauss_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
+                fieldset.querySelectorAll('[id^="other_company_group_"], [id^="purpose_group_"], [id^="buyme_coupon_link_group_"], [id^="xgiftcard_coupon_link_group_"], [id^="strauss_coupon_link_group_"], [id^="xtra_coupon_link_group_"], [id^="card_fields_container_"]').forEach(el => {
                     const parts = el.id.split('_');
                     if (parts.length >= 3) {
                         // Rebuild ID with new index
@@ -2319,6 +2546,13 @@ document.addEventListener('DOMContentLoaded', function() {
 .buyme-link-button {
     font-size: 0.9rem !important;
     max-width: 130px !important;
+}
+
+/* Special styling for Xgiftcard button */
+.xgiftcard-link-button {
+    font-size: 0.9rem !important;
+    max-width: 130px !important;
+    background-color: #28a745 !important; /* Green color to differentiate from BuyMe */
 }
 
 /* Adjustments for very small screens */

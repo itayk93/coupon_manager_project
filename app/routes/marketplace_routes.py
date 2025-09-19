@@ -13,6 +13,7 @@ from flask import (
 from flask_login import login_required, current_user
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
+from app.cache_helpers import cached_user_data, cache_for_minutes
 from app.models import (
     Coupon,
     User,
@@ -94,6 +95,7 @@ def log_user_activity(action, coupon_id=None):
 
 @marketplace_bp.route("/marketplace")
 @login_required
+@cached_user_data(timeout=300, key_prefix="marketplace")
 def marketplace():
     """
     מציג את שוק הקופונים עם הקופונים הזמינים והבקשות לקנייה.

@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 import pytz  # ספרייה לניהול אזורי זמן
 import random
 
-from app.extensions import db
+from app.extensions import db, cache
 from app.models import (
     Coupon,
     Company,

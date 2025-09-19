@@ -112,6 +112,11 @@
         </div>
     </div>
 
+    <!-- DEBUG: Claude Code is working on this file! -->
+    <div style="background: red; color: white; padding: 20px; text-align: center; font-size: 24px; margin: 10px 0;">
+        🔥 DEBUG: Claude עובד על הקובץ הזה! 🔥
+    </div>
+
     <!-- Display flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -198,6 +203,12 @@
             {% for error in coupon_form.other_company.errors %}
                 <div class="error">{{ error }}</div>
             {% endfor %}
+        </div>
+
+        <!-- Power Gift URL Field -->
+        <div class="form-group" id="power_gift_url_field" style="display: none;">
+            <label for="power_gift_url" class="form-label">כתובת URL של הקופון מPower Gift:</label>
+            <input type="url" id="power_gift_url" name="xtra_coupon_url" class="input-field" placeholder="הדבק כאן את הקישור לקופון">
         </div>
 
         <!-- Code Field -->
@@ -720,6 +731,28 @@ document.addEventListener('DOMContentLoaded', function() {
     if(companySelect) {
         toggleOtherCompanyField();
         companySelect.addEventListener('change', toggleOtherCompanyField);
+    }
+
+    // === Handle Power Gift URL Field ===
+    const powerGiftUrlField = document.getElementById('power_gift_url_field');
+    
+    function togglePowerGiftField() {
+        if (companySelect && companySelect.value === '73') {
+            console.log('🔥 Showing Power Gift URL field!');
+            powerGiftUrlField.style.display = 'block';
+        } else {
+            console.log('❌ Hiding Power Gift URL field');
+            powerGiftUrlField.style.display = 'none';
+            // Clear the input
+            const powerGiftInput = document.getElementById('power_gift_url');
+            if (powerGiftInput) powerGiftInput.value = '';
+        }
+    }
+    
+    if(companySelect && powerGiftUrlField) {
+        togglePowerGiftField();
+        companySelect.addEventListener('change', togglePowerGiftField);
+        console.log('✅ Power Gift field handler added!');
     }
 
     // === Handle Coupon Purpose Field if One-Time is checked ===

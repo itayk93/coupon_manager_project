@@ -27,3 +27,8 @@ class Config:
     
     # API Configuration
     CRON_API_TOKEN = os.getenv("CRON_API_TOKEN", "your-secure-api-token-here")
+    
+    # Cache Configuration
+    CACHE_TYPE = "RedisCache"
+    CACHE_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    CACHE_DEFAULT_TIMEOUT = 300  # 5 minutes default

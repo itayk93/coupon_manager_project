@@ -1,0 +1,616 @@
+{% extends "base.html" %}
+
+{% block title %}
+ניהול עדכון אוטומטי לקופונים
+{% endblock %}
+
+{% block content %}
+<section class="admin-coupon-settings">
+    <div class="settings-header">
+        <h1>ניהול עדכון אוטומטי לקופונים</h1>
+        <div class="header-actions">
+            <a href="{{ url_for('admin_scheduler_bp.scheduler_dashboard') }}" class="btn btn-secondary">
+                <i class="icon">🔙</i>
+                חזרה לתזמון
+            </a>
+        </div>
+    </div>
+
+    <!-- סטטיסטיקות -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+                <h3>{{ stats.total_coupons }}</h3>
+                <p>סה"כ קופונים</p>
+            </div>
+        </div>
+        <div class="stat-card enabled">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <h3>{{ stats.auto_update_enabled }}</h3>
+                <p>עדכון אוטומטי מופעל</p>
+            </div>
+        </div>
+        <div class="stat-card disabled">
+            <div class="stat-icon">❌</div>
+            <div class="stat-content">
+                <h3>{{ stats.auto_update_disabled }}</h3>
+                <p>עדכון אוטומטי מושבת</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- כלי עבודה -->
+    <div class="tools-section">
+        <form method="POST" action="{{ url_for('admin_scheduler_bp.bulk_update_auto_update') }}" id="bulkUpdateForm">
+            <div class="tools-bar">
+                <div class="selection-tools">
+                    <button type="button" id="selectAll" class="btn btn-sm btn-secondary">בחר הכל</button>
+                    <button type="button" id="selectNone" class="btn btn-sm btn-secondary">בטל בחירה</button>
+                    <span id="selectedCount" class="selection-counter">0 נבחרו</span>
+                </div>
+                
+                <div class="bulk-actions">
+                    <button type="submit" name="action" value="enable_all" class="btn btn-sm btn-success">
+                        הפעל נבחרים
+                    </button>
+                    <button type="submit" name="action" value="disable_all" class="btn btn-sm btn-warning">
+                        השבת נבחרים  
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- רשימת קופונים -->
+    {% if coupons %}
+    <div class="coupons-container">
+        <div class="coupons-grid">
+            {% for coupon in coupons %}
+            <div class="coupon-card {% if not coupon.auto_update %}auto-update-disabled{% endif %}">
+                <div class="coupon-header">
+                    <div class="coupon-select">
+                        <input type="checkbox" name="selected_coupons" value="{{ coupon.id }}" 
+                               class="coupon-checkbox" onchange="updateSelectedCount()">
+                    </div>
+                    <div class="coupon-info">
+                        <h3>{{ coupon.code[:20] }}{% if coupon.code|length > 20 %}...{% endif %}</h3>
+                        <span class="coupon-company">{{ coupon.company }}</span>
+                    </div>
+                    <div class="auto-update-status">
+                        <label class="toggle-switch">
+                            <input type="checkbox" {% if coupon.auto_update %}checked{% endif %}
+                                   onchange="toggleAutoUpdate({{ coupon.id }}, this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="coupon-details">
+                    <div class="detail-row">
+                        <span class="label">ערך:</span>
+                        <span class="value">₪{{ "%.2f"|format(coupon.value) }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">מחיר:</span>
+                        <span class="value">₪{{ "%.2f"|format(coupon.cost) }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">נוסף:</span>
+                        <span class="value">{{ coupon.date_added.strftime('%d/%m/%Y') }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">סטטוס:</span>
+                        <span class="value status-{{ coupon.status.lower() }}">{{ coupon.status }}</span>
+                    </div>
+                    {% if coupon.used_value > 0 %}
+                    <div class="detail-row">
+                        <span class="label">נוצל:</span>
+                        <span class="value">₪{{ "%.2f"|format(coupon.used_value) }} ({{ coupon.usage_percentage }}%)</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="coupon-status-indicator">
+                    {% if coupon.auto_update %}
+                        <span class="status-badge enabled">עדכון אוטומטי פעיל</span>
+                    {% else %}
+                        <span class="status-badge disabled">עדכון אוטומטי כבוי</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="no-coupons">
+        <div class="no-coupons-content">
+            <div class="no-coupons-icon">🎫</div>
+            <h3>אין קופונים במערכת</h3>
+            <p>כאשר יהיו קופונים, תוכל לנהל את הגדרות העדכון האוטומטי שלהם כאן</p>
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// פונקציות JavaScript לניהול הממשק
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.coupon-checkbox:checked');
+    const count = checkboxes.length;
+    document.getElementById('selectedCount').textContent = `${count} נבחרו`;
+    
+    // עדכון הכפתורים בהתבסס על הבחירה
+    const bulkActions = document.querySelectorAll('.bulk-actions button');
+    bulkActions.forEach(btn => {
+        btn.disabled = count === 0;
+    });
+}
+
+function toggleAutoUpdate(couponId, enabled) {
+    fetch('{{ url_for("admin_scheduler_bp.update_coupon_auto_update") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}',
+        },
+        body: JSON.stringify({
+            coupon_id: couponId,
+            auto_update: enabled
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // עדכון המראה של הכרטיס
+            const card = document.querySelector(`input[value="${couponId}"]`).closest('.coupon-card');
+            const statusBadge = card.querySelector('.status-badge');
+            
+            if (enabled) {
+                card.classList.remove('auto-update-disabled');
+                statusBadge.className = 'status-badge enabled';
+                statusBadge.textContent = 'עדכון אוטומטי פעיל';
+            } else {
+                card.classList.add('auto-update-disabled');
+                statusBadge.className = 'status-badge disabled';
+                statusBadge.textContent = 'עדכון אוטומטי כבוי';
+            }
+            
+            // הצגת הודעת הצלחה
+            showNotification(data.message, 'success');
+            
+            // עדכון הסטטיסטיקות
+            updateStats();
+        } else {
+            showNotification(data.error || 'אירעה שגיאה', 'error');
+            // החזרת ה-checkbox למצב הקודם
+            event.target.checked = !enabled;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('שגיאת תקשורת', 'error');
+        // החזרת ה-checkbox למצב הקודם
+        event.target.checked = !enabled;
+    });
+}
+
+function showNotification(message, type) {
+    // הצגת הודעה זמנית
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // הסרת ההודעה אחרי 3 שניות
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+function updateStats() {
+    // עדכון הסטטיסטיקות בזמן אמת
+    const enabledCount = document.querySelectorAll('.coupon-card:not(.auto-update-disabled)').length;
+    const totalCount = document.querySelectorAll('.coupon-card').length;
+    const disabledCount = totalCount - enabledCount;
+    
+    // עדכון הכרטיסי סטטיסטיקה
+    document.querySelector('.stat-card.enabled h3').textContent = enabledCount;
+    document.querySelector('.stat-card.disabled h3').textContent = disabledCount;
+}
+
+// כפתורי בחירה
+document.getElementById('selectAll').addEventListener('click', function() {
+    const checkboxes = document.querySelectorAll('.coupon-checkbox');
+    checkboxes.forEach(cb => cb.checked = true);
+    updateSelectedCount();
+});
+
+document.getElementById('selectNone').addEventListener('click', function() {
+    const checkboxes = document.querySelectorAll('.coupon-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    updateSelectedCount();
+});
+
+// אישור לפני פעולות מסיביות
+document.getElementById('bulkUpdateForm').addEventListener('submit', function(e) {
+    const selectedCount = document.querySelectorAll('.coupon-checkbox:checked').length;
+    const action = e.submitter.value;
+    
+    if (selectedCount === 0) {
+        e.preventDefault();
+        alert('נא לבחור לפחות קופון אחד');
+        return;
+    }
+    
+    const actionText = action === 'enable_all' ? 'להפעיל' : 'להשבית';
+    if (!confirm(`האם אתה בטוח שברצונך ${actionText} עדכון אוטומטי עבור ${selectedCount} קופונים נבחרים?`)) {
+        e.preventDefault();
+    }
+});
+
+// אתחול
+document.addEventListener('DOMContentLoaded', function() {
+    updateSelectedCount();
+    
+    // הוספת אנימציה לכרטיסים
+    const cards = document.querySelectorAll('.coupon-card');
+    cards.forEach((card, index) => {
+        setTimeout(() => {
+            card.classList.add('visible');
+        }, 50 * index);
+    });
+});
+</script>
+
+<style>
+:root {
+    --primary-color: #4895ef;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --secondary-color: #6c757d;
+    --background-light: #f8f9fa;
+    --card-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    --border-radius: 12px;
+    --transition-speed: 0.3s;
+}
+
+.admin-coupon-settings {
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    direction: rtl;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.settings-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2b2d42;
+    margin: 0;
+}
+
+.stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 2px solid transparent;
+    transition: all var(--transition-speed);
+}
+
+.stat-card.enabled {
+    border-color: var(--success-color);
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+}
+
+.stat-card.disabled {
+    border-color: var(--warning-color);
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+}
+
+.stat-icon {
+    font-size: 2rem;
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0 0 0.25rem 0;
+    color: #2b2d42;
+}
+
+.stat-content p {
+    margin: 0;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.tools-section {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 2rem;
+}
+
+.tools-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.selection-tools {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.selection-counter {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.bulk-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.coupons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.coupon-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    padding: 1.5rem;
+    transition: all var(--transition-speed);
+    opacity: 0;
+    transform: translateY(20px);
+    border: 2px solid transparent;
+}
+
+.coupon-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.coupon-card.auto-update-disabled {
+    border-color: #ffc107;
+    background: linear-gradient(135deg, #ffffff 0%, #fff8e1 100%);
+}
+
+.coupon-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+
+.coupon-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.coupon-select input {
+    transform: scale(1.2);
+}
+
+.coupon-info h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2b2d42;
+}
+
+.coupon-company {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--success-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.coupon-details {
+    margin-bottom: 1rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.detail-row .label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.status-badge.enabled {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.status-badge.disabled {
+    background-color: var(--warning-color);
+    color: #333;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    text-decoration: none;
+    color: white;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
+.btn-success { background-color: var(--success-color); }
+.btn-warning { background-color: var(--warning-color); color: #333; }
+.btn-secondary { background-color: var(--secondary-color); }
+
+.no-coupons {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.no-coupons-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.no-coupons h3 {
+    font-size: 1.5rem;
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius);
+    color: white;
+    font-weight: 500;
+    z-index: 1000;
+    animation: slideIn 0.3s ease;
+}
+
+.notification.success {
+    background-color: var(--success-color);
+}
+
+.notification.error {
+    background-color: var(--danger-color);
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-coupon-settings {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+    
+    .settings-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .tools-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .coupons-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .coupon-header {
+        flex-wrap: wrap;
+    }
+}
+</style>
+{% endblock %}

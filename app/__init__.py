@@ -11,7 +11,7 @@ from app.helpers import has_feature_access
 
 # Import configurations and "extensions"
 from app.config import Config
-from app.extensions import db, login_manager, csrf, migrate
+from app.extensions import db, login_manager, csrf, migrate, cache
 
 # Example models
 from app.models import User, Coupon
@@ -56,6 +56,19 @@ def create_app():
     )
     login_manager.login_view = "auth.login"
     csrf.init_app(app)
+    cache.init_app(app)
+
+    # Configure browser cache headers for static files
+    @app.after_request
+    def add_cache_headers(response):
+        # Cache static files for 1 year
+        if request.endpoint == 'static':
+            response.cache_control.max_age = 31536000  # 1 year
+            response.cache_control.public = True
+        # Cache API responses for 5 minutes
+        elif request.path.startswith('/api/'):
+            response.cache_control.max_age = 300  # 5 minutes
+        return response
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -82,6 +95,7 @@ def create_app():
     from app.routes.admin_routes.admin_dashboard_routes import admin_dashboard_bp
     from app.routes.admin_routes.admin_messages_routes import admin_messages_bp
     from app.routes.admin_routes.admin_newsletter_routes import admin_newsletter_bp
+    from app.routes.admin_routes.admin_scheduler_routes import admin_scheduler_bp
     from app.extensions import google_bp
     from app.routes.telegram_routes import telegram_bp
     from app.routes.statistics_routes import statistics_bp
@@ -106,6 +120,7 @@ def create_app():
     app.register_blueprint(admin_dashboard_bp, url_prefix="/admin")
     app.register_blueprint(admin_messages_bp)
     app.register_blueprint(admin_newsletter_bp)
+    app.register_blueprint(admin_scheduler_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(telegram_bp)
     app.register_blueprint(statistics_bp)
@@ -145,8 +160,21 @@ def create_app():
             generate_preferences_token=generate_preferences_token
         )
 
+    # Register template helpers for caching
+    from app.template_helpers import register_template_helpers
+    register_template_helpers(app)
+
     # עקיפת בדיקת CSRF עבור routes של טלגרם רק אם מוגדר
     if not app.config.get('TELEGRAM_CSRF_PROTECTION', False):
         csrf.exempt(telegram_bp)
+
+    # הפעלת מערכת התזמון
+    try:
+        from app.scheduler import TaskScheduler
+        scheduler = TaskScheduler(app)
+        scheduler.start()
+        print("✅ Task scheduler started successfully")
+    except Exception as e:
+        print(f"❌ Failed to start task scheduler: {e}")
 
     return app

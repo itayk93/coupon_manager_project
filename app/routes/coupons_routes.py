@@ -16,6 +16,7 @@ from sqlalchemy import func
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import text
+from app.cache_helpers import cache_for_minutes, invalidate_user_caches
 import os
 import pandas as pd
 import traceback
@@ -63,7 +64,6 @@ from app.forms import (
 from app.helpers import (
     update_coupon_status,
     get_coupon_data,
-    get_coupon_data_with_retry,
     process_coupons_excel,
     extract_coupon_detail_sms,
     extract_coupon_detail_image_proccess,
@@ -1032,6 +1032,15 @@ def add_coupons_bulk():
                     if coupon_form.strauss_coupon_url.data
                     else None
                 )
+
+                # === 6.2. עיבוד שדה "כתובת URL של הקופון מXtra (PowerGift)" ===
+                xtra_coupon_url = (
+                    (coupon_form.xtra_coupon_url.data or "").strip()
+                    if coupon_form.company_id.data == "73"
+                    else None
+                )
+                if DEBUG_PRINT:
+                    print(f"Xtra URL for coupon #{idx + 1}: {xtra_coupon_url}")
                 if DEBUG_PRINT:
                     print(f"Strauss URL for coupon #{idx + 1}: {strauss_coupon_url}")
 
@@ -1051,6 +1060,7 @@ def add_coupons_bulk():
                     "מאיפה קיבלת את הקופון": source,
                     "כתובת URL של הקופון ל-BuyMe": buyme_coupon_url,
                     "כתובת URL של הקופון שטראוס פלוס": strauss_coupon_url,
+                    "כתובת URL של הקופון מXtra (PowerGift)": xtra_coupon_url,
                 }
                 if DEBUG_PRINT:
                     print(f"Coupon data for coupon #{idx + 1}: {coupon_data}")
@@ -1326,6 +1336,207 @@ def submit_buyme_coupon_urls():
 
     # Add debugging for what we're returning to the template
     print(f"Returning form with {len(form.coupons.entries)} coupon entries")
+
+    return render_template(
+        "add_coupons.html", form=form, coupons=coupons, companies=companies, tags=tags
+    )
+
+
+@coupons_bp.route("/submit_xgiftcard_coupon_urls", methods=["POST"])
+@login_required
+def submit_xgiftcard_coupon_urls():
+    if not current_user.is_admin:
+        return jsonify({"message": "Unauthorized"}), 403
+
+    data = request.get_json(silent=True)
+    if not data or "urls" not in data:
+        return jsonify({"message": "No URLs provided."}), 400
+
+    urls = data["urls"]
+    if not isinstance(urls, list) or not urls:
+        return jsonify({"message": "Invalid URL list."}), 400
+
+    coupons = []
+    driver = None
+
+    try:
+        # Setup WebDriver
+        chrome_options = Options()
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+
+        for url in urls:
+            try:
+                driver.get(url)
+                time.sleep(6)  # Wait for page to load
+
+                page_source = driver.page_source
+
+                # Extract coupon title/name from h1 tag
+                title_match = re.search(r'<h1[^>]*class="page_title color_title"[^>]*>\s*([^<]+)\s*</h1>', page_source, re.IGNORECASE | re.MULTILINE)
+                coupon_title = title_match.group(1).strip() if title_match else ""
+                
+                # Extract coupon code from the provider code section
+                code_match = re.search(r'<span class="color"[^>]*>\s*(\d+)', page_source)
+                coupon_code = code_match.group(1).strip() if code_match else ""
+
+                # Extract expiration date
+                expiry_match = re.search(r'בתוקף עד\s*(\d{2}/\d{2}/\d{4})', page_source)
+                validity = expiry_match.group(1).strip() if expiry_match else ""
+                if validity:
+                    try:
+                        # Convert from dd/mm/yyyy to yyyy-mm-dd format
+                        validity_date = pd.to_datetime(validity, format="%d/%m/%Y")
+                        validity_formatted = validity_date.strftime("%Y-%m-%d")
+                    except Exception as e:
+                        print(f"[⚠] Error parsing date: {validity} ({e})")
+                        validity_formatted = validity
+                else:
+                    validity_formatted = ""
+
+                # Extract coupon value from title (looking for patterns like "30 ₪" or "בסך 30 ₪")
+                value_match = re.search(r'(?:בסך\s*)?(\d+)\s*₪', coupon_title)
+                coupon_value = value_match.group(1).strip() if value_match else ""
+
+                # If no value found in title, try alternative patterns
+                if not coupon_value:
+                    alt_value_match = re.search(r'(\d+)\s*שח', page_source)
+                    coupon_value = alt_value_match.group(1).strip() if alt_value_match else ""
+
+                # Extract company name (try to get from the provider section or title)
+                company_name = ""
+                if "POWER GIFT" in coupon_title:
+                    company_name = "POWER GIFT"
+                elif "פאואר גיפט" in coupon_title:
+                    company_name = "POWER GIFT"
+                else:
+                    # Try to extract from title - take the text after the value
+                    company_match = re.search(r'\d+\s*₪[^-]*-\s*([^-]+)', coupon_title)
+                    if company_match:
+                        company_name = company_match.group(1).strip()
+
+                # Build coupon dictionary
+                coupons.append(
+                    {
+                        "url": url,
+                        "coupon_code": coupon_code,
+                        "validity": validity_formatted,
+                        "value": coupon_value,
+                        "cost": "0",
+                        "discount_percentage": "0",
+                        "title": coupon_title,
+                        "company_name": company_name,
+                    }
+                )
+
+            except Exception as e:
+                print(f"[❌] Error loading URL {url}: {e}")
+                coupons.append(
+                    {
+                        "url": url,
+                        "coupon_code": "",
+                        "validity": "",
+                        "value": "",
+                        "cost": "0",
+                        "discount_percentage": "0",
+                        "title": "",
+                        "company_name": "",
+                        "error": str(e),
+                    }
+                )
+
+    finally:
+        if driver:
+            driver.quit()
+
+    form = AddCouponsBulkForm()
+
+    print("[ℹ] Extracted Xgiftcard Coupons:")
+    for coupon in coupons:
+        print(coupon)
+
+    # Try to get Xgiftcard company or POWER GIFT company
+    xgiftcard_company = Company.query.filter_by(name="Xgiftcard").first()
+    if not xgiftcard_company and coupons and coupons[0].get("company_name"):
+        # Try to find company by the extracted name
+        xgiftcard_company = Company.query.filter_by(name=coupons[0]["company_name"]).first()
+    
+    xgiftcard_company_id = str(xgiftcard_company.id) if xgiftcard_company else None
+
+    # Clear existing form entries
+    form.coupons.entries = []
+
+    # Add coupons to the form with ALL required fields
+    for coupon in coupons:
+        # Calculate discount percentage if not available but we have value and cost
+        if (
+            not coupon.get("discount_percentage")
+            and coupon.get("value")
+            and coupon.get("cost")
+        ):
+            try:
+                value = float(coupon["value"])
+                cost = float(coupon["cost"])
+                if value > 0:  # Avoid division by zero
+                    discount_percentage = ((value - cost) / value) * 100
+                    coupon["discount_percentage"] = str(round(discount_percentage, 2))
+                else:
+                    coupon["discount_percentage"] = "0"
+            except (ValueError, TypeError):
+                coupon["discount_percentage"] = "0"
+
+        # Make sure code is not empty (critical field)
+        if not coupon["coupon_code"]:
+            print(
+                f"[⚠] Warning: Empty coupon code for URL {coupon['url']}. Setting placeholder."
+            )
+            # Extract code and key from URL as fallback
+            url_match = re.search(r'code=(\d+)&key=([a-f0-9]+)', coupon["url"])
+            if url_match:
+                coupon["coupon_code"] = url_match.group(1)
+            else:
+                coupon["coupon_code"] = "XGIFT-" + coupon["url"].split("/")[-1][:8]
+
+        # Make sure we have numeric values for value and cost
+        try:
+            float(coupon["value"])
+        except (ValueError, TypeError):
+            coupon["value"] = "0"
+
+        try:
+            float(coupon["cost"])
+        except (ValueError, TypeError):
+            coupon["cost"] = "0"
+
+        # Append entry with all necessary fields to satisfy validation
+        form.coupons.append_entry(
+            {
+                "code": coupon["coupon_code"],
+                "expiration": coupon["validity"],
+                "xgiftcard_coupon_url": coupon["url"],  # Store the Xgiftcard URL
+                "company_id": xgiftcard_company_id,
+                "value": coupon["value"],
+                "cost": coupon["cost"],
+                "discount_percentage": coupon["discount_percentage"],
+                "is_one_time": False,
+                "purpose": "",
+                "source": "",
+                "notes": coupon.get("title", ""),  # Store the title in notes
+            }
+        )
+
+    # Add debug information
+    for idx, entry in enumerate(form.coupons.entries):
+        print(f"Xgiftcard Coupon #{idx + 1} form data:")
+        for field_name, field in entry.form._fields.items():
+            print(f"  {field_name}: {field.data}")
+
+    companies = Company.query.all()
+    tags = Tag.query.all()
+
+    print(f"Returning form with {len(form.coupons.entries)} Xgiftcard coupon entries")
 
     return render_template(
         "add_coupons.html", form=form, coupons=coupons, companies=companies, tags=tags
@@ -1833,8 +2044,14 @@ def add_coupon():
                     # Set URL fields
                     new_coupon.buyme_coupon_url = buyme_coupon_url
                     new_coupon.strauss_coupon_url = strauss_coupon_url
+                    # Extract Xtra URL if PowerGift is selected
+                    xtra_coupon_url = (
+                        request.form.get("xtra_coupon_url", "").strip() or None
+                    )
+                    new_coupon.xtra_coupon_url = xtra_coupon_url
                     debug_print(f"BuyMe URL: {buyme_coupon_url}")
                     debug_print(f"Strauss URL: {strauss_coupon_url}")
+                    debug_print(f"Xtra URL: {xtra_coupon_url}")
 
                     # Optional: Add tag
                     chosen_company_name = company.name
@@ -2260,6 +2477,8 @@ def add_coupon():
                 )
             elif "submit_coupon" in request.form and coupon_form.submit_coupon.data:
                 debug_print("Processing manual coupon submission")
+                # Define ip_address for logging
+                ip_address = request.remote_addr or "127.0.0.1"
                 # Manual flow - user pressed submit_coupon
                 if coupon_form.validate_on_submit():
                     debug_print("Form validation successful")
@@ -2395,6 +2614,13 @@ def add_coupon():
                         if coupon_form.strauss_coupon_url.data
                         else None
                     )
+
+                    new_coupon.xtra_coupon_url = (
+                        coupon_form.xtra_coupon_url.data.strip()
+                        if coupon_form.xtra_coupon_url.data
+                        else None
+                    )
+                    debug_print(f"Xtra URL: {new_coupon.xtra_coupon_url}")
                     debug_print(f"Strauss URL: {new_coupon.strauss_coupon_url}")
 
                     chosen_company_name = company.name
@@ -2986,7 +3212,7 @@ def edit_coupon(id):
             coupon.cvv = form.cvv.data.strip() if form.cvv.data else None
             coupon.card_exp = form.card_exp.data.strip() if form.card_exp.data else None
             
-            # Handle BuyMe and Strauss URLs
+            # Handle BuyMe, Strauss, and Xtra URLs
             coupon.buyme_coupon_url = (
                 form.buyme_coupon_url.data.strip()
                 if form.buyme_coupon_url.data
@@ -2995,6 +3221,11 @@ def edit_coupon(id):
             coupon.strauss_coupon_url = (
                 form.strauss_coupon_url.data.strip()
                 if form.strauss_coupon_url.data
+                else None
+            )
+            coupon.xtra_coupon_url = (
+                form.xtra_coupon_url.data.strip()
+                if form.xtra_coupon_url.data
                 else None
             )
 
@@ -3975,40 +4206,12 @@ def update_coupon_usage_from_multipass(id):
         return redirect(url_for("coupons.coupon_detail", id=id))
 
     # מעבירים את אובייקט הקופון, ולא רק את code
-    df = get_coupon_data_with_retry(coupon, max_retries=3)
+    df = get_coupon_data(coupon)
     if df is None:
         flash("לא ניתן לעדכן את השימוש מ-Multipass.", "danger")
         return redirect(url_for("coupons.coupon_detail", id=id))
 
-    try:
-        # לפי הסכמה החדשה, "usage_amount" בעמודה
-        total_usage = df["usage_amount"].sum()
-        coupon.used_value = float(total_usage)
-        update_coupon_status(coupon)
-
-        usage = CouponUsage(
-            coupon_id=coupon.id,
-            used_amount=total_usage,
-            timestamp=datetime.now(timezone.utc),
-            action="עדכון מ-Multipass",
-            details="שימוש מעודכן מ-Multipass.",
-        )
-        db.session.add(usage)
-        """""" """
-        notification = Notification(
-            user_id=coupon.user_id,
-            message=f"השימוש בקופון {coupon.code} עודכן מ-Multipass.",
-            link=url_for('coupons.coupon_detail', id=coupon.id)
-        )
-        db.session.add(notification)
-        """ """"""
-        db.session.commit()
-
-        flash("השימוש עודכן בהצלחה מ-Multipass.", "success")
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error updating coupon usage from Multipass: {e}")
-        flash("אירעה שגיאה בעת עדכון השימוש.", "danger")
+    flash("השימוש עודכן בהצלחה מ-Multipass.", "success")
 
     return redirect(url_for("coupons.coupon_detail", id=id))
 
@@ -4132,30 +4335,8 @@ def update_all_active_coupons():
 
     for cpn in active_coupons:
         try:
-            df = get_coupon_data_with_retry(cpn, max_retries=3)  # מעבירים קופון שלם
+            df = get_coupon_data(cpn)  # מעבירים קופון שלם
             if df is not None:
-                total_usage = float(df["usage_amount"].sum())
-                cpn.used_value = total_usage
-                update_coupon_status(cpn)
-
-                usage = CouponUsage(
-                    coupon_id=cpn.id,
-                    used_amount=total_usage,
-                    timestamp=datetime.now(timezone.utc),
-                    action="עדכון מרוכז",
-                    details="עדכון מתוך Multipass",
-                )
-                db.session.add(usage)
-
-                """""" """
-                notification = Notification(
-                    user_id=cpn.user_id,
-                    message=f"השימוש בקופון {cpn.code} עודכן מ-Multipass.",
-                    link=url_for('coupons.coupon_detail', id=cpn.id)
-                )
-                db.session.add(notification)
-                """ """"""
-
                 updated_coupons.append(cpn.code)
             else:
                 failed_coupons.append(cpn.code)
@@ -4232,25 +4413,12 @@ def update_selected_coupons():
 
     for cpn in selected_coupons:
         try:
-            df = get_coupon_data_with_retry(cpn, max_retries=3)  
+            df = get_coupon_data(cpn)  
             if df is not None:
-                total_usage = float(df["usage_amount"].sum())
-                cpn.used_value = total_usage
-                update_coupon_status(cpn)
-
-                usage = CouponUsage(
-                    coupon_id=cpn.id,
-                    used_amount=total_usage,
-                    timestamp=datetime.now(timezone.utc),
-                    action="עדכון נבחר",
-                    details="עדכון מתוך Multipass - קופון נבחר",
-                )
-                db.session.add(usage)
-
                 updated_coupons.append({
                     'code': cpn.code,
                     'company': cpn.company,
-                    'usage': total_usage
+                    'usage': 0  # The usage will be calculated by get_coupon_data function
                 })
             else:
                 failed_coupons.append({
@@ -4494,25 +4662,12 @@ def update_all_multipass_coupons():
 
         for cpn in updatable_coupons:
             try:
-                df = get_coupon_data_with_retry(cpn, max_retries=3)  
+                df = get_coupon_data(cpn)  
                 if df is not None:
-                    total_usage = float(df["usage_amount"].sum())
-                    cpn.used_value = total_usage
-                    update_coupon_status(cpn)
-
-                    usage = CouponUsage(
-                        coupon_id=cpn.id,
-                        used_amount=total_usage,
-                        timestamp=datetime.now(timezone.utc),
-                        action="עדכון אוטומטי",
-                        details="עדכון אוטומטי של כל הקופונים",
-                    )
-                    db.session.add(usage)
-
                     updated_coupons.append({
                         'code': cpn.code,
                         'company': cpn.company,
-                        'usage': total_usage
+                        'usage': 0  # The usage will be calculated by get_coupon_data function
                     })
                 else:
                     failed_coupons.append({
@@ -4615,29 +4770,30 @@ def update_coupon_transactions():
         return redirect(url_for("coupons.coupon_detail"))
 
     try:
-        df = get_coupon_data_with_retry(coupon, max_retries=3)  # מעבירים את האובייקט
+        df = get_coupon_data(coupon)  # מעבירים את האובייקט
         if df is not None:
-            total_usage = float(df["usage_amount"].sum())
-            coupon.used_value = total_usage
+            # Always recalculate total usage from ALL transactions in database
+            from sqlalchemy import func
+            from app.models import CouponTransaction
+            
+            total_usage = (
+                db.session.query(func.sum(CouponTransaction.usage_amount))
+                .filter_by(coupon_id=coupon.id)
+                .scalar()
+                or 0.0
+            )
+            
+            coupon.used_value = float(total_usage)
             update_coupon_status(coupon)
+            
+            current_app.logger.info(f"Updated coupon {coupon.code} - Total usage: {total_usage}")
+            
+            # Check if we had new data for logging
+            if not df.empty and 'usage_amount' in df.columns:
+                current_app.logger.info(f"New transactions added: {len(df)}")
+            else:
+                current_app.logger.info(f"No new transactions, but recalculated totals from existing data")
 
-            usage = CouponUsage(
-                coupon_id=coupon.id,
-                used_amount=total_usage,
-                timestamp=datetime.now(timezone.utc),
-                action="עדכון מרוכז",
-                details="עדכון מתוך Multipass",
-            )
-            db.session.add(usage)
-
-            """""" """
-            notification = Notification(
-                user_id=coupon.user_id,
-                message=f"השימוש בקופון {coupon.code} עודכן מ-Multipass.",
-                link=url_for('coupons.coupon_detail', id=coupon.id)
-            )
-            db.session.add(notification)
-            """ """"""
             flash(f"הקופון עודכן בהצלחה: {coupon.code}", "success")
         else:
             current_app.logger.error(

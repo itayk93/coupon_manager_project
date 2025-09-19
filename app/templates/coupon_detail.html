@@ -282,6 +282,18 @@
                             </div>
                         {% endif %}
 
+                        {% if coupon.xtra_coupon_url %}
+                            <div class="info-box">
+                                <div class="info-icon"><i class="fas fa-external-link-alt"></i></div>
+                                <div class="info-content">
+                                    <span class="info-title">קישור Xtra:</span>
+                                    <a href="{{ coupon.xtra_coupon_url }}" target="_blank" class="primary-button">
+                                        עבור ל-Xtra
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+
                         {% if coupon.strauss_coupon_url %}
                             <div class="info-box">
                                 <div class="info-icon"><i class="fas fa-external-link-alt"></i></div>

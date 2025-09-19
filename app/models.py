@@ -14,7 +14,7 @@ from itsdangerous import Serializer, URLSafeTimedSerializer
 from flask import current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from app.extensions import db  # Assuming you have the db object here
+from app.extensions import db, cache  # Assuming you have the db object here
 from sqlalchemy import Column, Integer, String  # Add the missing import
 
 # Load the .env file
@@ -26,6 +26,32 @@ if not ENCRYPTION_KEY:
     raise ValueError("No ENCRYPTION_KEY set for encryption")
 
 cipher_suite = Fernet(ENCRYPTION_KEY.encode())
+
+
+def generate_unique_coupon_id():
+    """
+    Generate a unique random ID for coupons between 1000 and 10000
+    Ensures no duplicates by checking existing IDs in database
+    """
+    import random
+    
+    max_attempts = 100
+    for _ in range(max_attempts):
+        # Generate random ID between 1000 and 10000
+        random_id = random.randint(1000, 10000)
+        
+        # Check if this ID already exists using raw SQL to avoid circular import
+        result = db.session.execute(
+            db.text("SELECT 1 FROM coupon WHERE id = :id LIMIT 1"),
+            {"id": random_id}
+        ).fetchone()
+        
+        if not result:
+            return random_id
+    
+    # If we couldn't find a unique ID after max_attempts, raise an exception
+    raise RuntimeError("Could not generate unique coupon ID after maximum attempts")
+
 
 
 class EncryptedString(TypeDecorator):
@@ -177,6 +203,25 @@ class User(UserMixin, db.Model):
     activities = db.relationship("UserActivity", back_populates="user", lazy=True)
     opt_out = db.relationship("OptOut", back_populates="user", uselist=False)
 
+    @classmethod
+    @cache.memoize(timeout=600)  # Cache for 10 minutes
+    def get_by_email_cached(cls, email):
+        """Get user by email with caching"""
+        return cls.query.filter_by(email=email).first()
+    
+    @classmethod
+    @cache.memoize(timeout=1800)  # Cache for 30 minutes
+    def get_admin_users_cached(cls):
+        """Get admin users with caching"""
+        return cls.query.filter_by(is_admin=True).all()
+    
+    @classmethod
+    def clear_user_cache(cls, user_id):
+        """Clear cache for specific user"""
+        user = cls.query.get(user_id)
+        if user:
+            cache.delete_memoized(cls.get_by_email_cached, user.email)
+
     def set_password(self, password):
         """Hash and set the user's password."""
         self.password = generate_password_hash(password)
@@ -237,7 +282,7 @@ class Coupon(db.Model):
 
     __tablename__ = "coupon"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=False)
     code = db.Column(EncryptedString(255), nullable=False, unique=True)
     description = db.Column(EncryptedString, nullable=True)
     value = db.Column(db.Float, nullable=False)
@@ -251,6 +296,12 @@ class Coupon(db.Model):
     strauss_coupon_url = db.Column(
         EncryptedString(255), nullable=True
     )  # >>> NEW FIELD: Strauss Plus Coupon URL <<<
+    xgiftcard_coupon_url = db.Column(
+        EncryptedString(255), nullable=True
+    )  # >>> NEW FIELD: Xgiftcard Coupon URL <<<
+    xtra_coupon_url = db.Column(
+        EncryptedString(255), nullable=True
+    )  # >>> NEW FIELD: Xtra Coupon URL (PowerGift) <<<
     date_added = db.Column(
         db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
@@ -297,6 +348,9 @@ class Coupon(db.Model):
     # Fields for tracking notifications
     notification_sent_pagh_tokev = db.Column(db.Boolean, default=False, nullable=False)
     notification_sent_nutzel = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Field for auto-update setting
+    auto_update = db.Column(db.Boolean, default=True, nullable=False)
 
     @property
     def remaining_value(self):
@@ -332,6 +386,39 @@ class Coupon(db.Model):
         if self.value > 0:
             return round((self.used_value / self.value) * self.cost, 2)
         return 0.0
+
+    @classmethod
+    @cache.memoize(timeout=300)  # Cache for 5 minutes
+    def get_user_coupons_cached(cls, user_id):
+        """Get user's coupons with caching"""
+        return cls.query.filter_by(user_id=user_id).all()
+    
+    @classmethod
+    @cache.memoize(timeout=600)  # Cache for 10 minutes
+    def get_active_coupons_by_company_cached(cls, company):
+        """Get active coupons by company with caching"""
+        return cls.query.filter_by(company=company, status="פעיל").all()
+    
+    @classmethod
+    @cache.memoize(timeout=900)  # Cache for 15 minutes
+    def get_marketplace_coupons_cached(cls):
+        """Get marketplace coupons with caching"""
+        return cls.query.filter_by(is_for_sale=True, status="פעיל").all()
+    
+    @classmethod
+    def clear_user_cache(cls, user_id):
+        """Clear cache for specific user"""
+        cache.delete_memoized(cls.get_user_coupons_cached, user_id)
+    
+    def __init__(self, **kwargs):
+        """
+        Initialize a new coupon with a random unique ID
+        """
+        # If ID is not explicitly provided, generate a random unique one
+        if 'id' not in kwargs:
+            kwargs['id'] = generate_unique_coupon_id()
+        
+        super(Coupon, self).__init__(**kwargs)
 
 
 class CouponUsage(db.Model):
@@ -1036,3 +1123,167 @@ class AdminSettings(db.Model):
         
         db.session.commit()
         return setting
+
+
+class ScheduledTask(db.Model):
+    """
+    מודל לניהול משימות מתוכננות בזמן
+    """
+    __tablename__ = "scheduled_tasks"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    task_name = db.Column(db.String(255), nullable=False)  # שם המשימה
+    task_type = db.Column(db.String(100), nullable=False)  # סוג המשימה (coupon_update, email_send, etc.)
+    
+    # הגדרות תזמון
+    schedule_type = db.Column(db.String(50), nullable=False)  # daily, weekly, monthly, specific_date, cron
+    schedule_value = db.Column(db.Text, nullable=True)  # JSON עם ההגדרות הספציפיות
+    
+    # זמן הפעלה
+    execution_time = db.Column(db.Time, nullable=False)  # שעה:דקה להפעלה
+    timezone = db.Column(db.String(50), default='Asia/Jerusalem', nullable=False)
+    
+    # הפעלה אחרונה והבאה
+    last_run = db.Column(db.DateTime(timezone=True), nullable=True)
+    next_run = db.Column(db.DateTime(timezone=True), nullable=True)
+    
+    # מצב המשימה
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    updated_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # מידע נוסף
+    description = db.Column(db.Text, nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    # רישום הפעלות
+    execution_log = db.relationship('TaskExecutionLog', backref='task', lazy=True, cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<ScheduledTask {self.task_name} - {self.schedule_type} at {self.execution_time}>"
+    
+    def get_schedule_details(self):
+        """החזרת פרטי התזמון כ-dict"""
+        import json
+        try:
+            return json.loads(self.schedule_value) if self.schedule_value else {}
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    
+    def set_schedule_details(self, details):
+        """הגדרת פרטי התזמון מ-dict"""
+        import json
+        self.schedule_value = json.dumps(details)
+    
+    def calculate_next_run(self):
+        """חישוב מועד ההפעלה הבא"""
+        from datetime import datetime, timedelta
+        import pytz
+        
+        tz = pytz.timezone(self.timezone)
+        now = datetime.now(tz)
+        
+        # יצירת datetime עם השעה המבוקשת
+        next_run = now.replace(hour=self.execution_time.hour, minute=self.execution_time.minute, second=0, microsecond=0)
+        
+        if self.schedule_type == 'daily':
+            # אם השעה כבר עברה היום, עבור למחר
+            if next_run <= now:
+                next_run += timedelta(days=1)
+                
+        elif self.schedule_type == 'weekly':
+            details = self.get_schedule_details()
+            target_weekday = details.get('weekday', 0)  # 0=ראשון, 6=שבת
+            
+            # חישוב כמה ימים עד יום השבוע הרצוי
+            days_ahead = target_weekday - now.weekday()
+            if days_ahead <= 0 or (days_ahead == 0 and next_run <= now):
+                days_ahead += 7
+            next_run += timedelta(days=days_ahead)
+            
+        elif self.schedule_type == 'monthly':
+            details = self.get_schedule_details()
+            target_day = details.get('day', 1)  # יום בחודש
+            
+            # נסה להגדיר לחודש הנוכחי
+            try:
+                next_run = next_run.replace(day=target_day)
+                if next_run <= now:
+                    # עבור לחודש הבא
+                    if next_run.month == 12:
+                        next_run = next_run.replace(year=next_run.year + 1, month=1, day=target_day)
+                    else:
+                        next_run = next_run.replace(month=next_run.month + 1, day=target_day)
+            except ValueError:
+                # אם היום לא קיים בחודש (למשל 31 בפברואר), קח את היום האחרון בחודש
+                if next_run.month == 12:
+                    next_run = next_run.replace(year=next_run.year + 1, month=1, day=1)
+                else:
+                    next_run = next_run.replace(month=next_run.month + 1, day=1)
+                next_run = next_run.replace(day=1) + timedelta(days=target_day - 1)
+                
+        elif self.schedule_type == 'specific_date':
+            details = self.get_schedule_details()
+            target_date = details.get('date')  # בפורמט YYYY-MM-DD
+            if target_date:
+                from datetime import datetime
+                target_datetime = datetime.strptime(target_date, '%Y-%m-%d')
+                next_run = tz.localize(target_datetime.replace(hour=self.execution_time.hour, minute=self.execution_time.minute))
+                if next_run <= now:
+                    # אם התאריך עבר, המשימה לא תרוץ עוד
+                    return None
+        
+        self.next_run = next_run
+        return next_run
+    
+    def should_run_now(self):
+        """בדיקה האם המשימה צריכה להתבצע עכשיו"""
+        if not self.is_active or not self.next_run:
+            return False
+            
+        from datetime import datetime
+        import pytz
+        
+        tz = pytz.timezone(self.timezone)
+        now = datetime.now(tz)
+        
+        # בדיקה אם הגיע הזמן להריץ (עם מרווח של דקה)
+        return self.next_run <= now
+
+
+class TaskExecutionLog(db.Model):
+    """
+    יומן הפעלת משימות מתוכננות
+    """
+    __tablename__ = "task_execution_logs"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('scheduled_tasks.id'), nullable=False)
+    
+    # פרטי ההפעלה
+    executed_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    status = db.Column(db.String(50), nullable=False)  # success, failed, running
+    
+    # תוצאה ושגיאות
+    result_message = db.Column(db.Text, nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    execution_time_seconds = db.Column(db.Integer, nullable=True)
+    
+    # מידע נוסף
+    additional_data = db.Column(db.Text, nullable=True)  # JSON עם מידע נוסף
+    
+    def __repr__(self):
+        return f"<TaskExecutionLog {self.task_id} - {self.status} at {self.executed_at}>"
+    
+    def get_additional_data(self):
+        """החזרת המידע הנוסף כ-dict"""
+        import json
+        try:
+            return json.loads(self.additional_data) if self.additional_data else {}
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    
+    def set_additional_data(self, data):
+        """הגדרת המידע הנוסף מ-dict"""
+        import json
+        self.additional_data = json.dumps(data)

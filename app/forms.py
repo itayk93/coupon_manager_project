@@ -67,6 +67,16 @@ class CouponForm(FlaskForm):
         "כתובת URL של הקופון שטראוס פלוס",
         validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
     )
+    # NEW: Xgiftcard Coupon URL field
+    xgiftcard_coupon_url = StringField(
+        "כתובת URL של הקופון מXgiftcard",
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
+    )
+    # NEW: Xtra Coupon URL field (PowerGift)
+    xtra_coupon_url = StringField(
+        "כתובת URL של הקופון מXtra (PowerGift)",
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
+    )
     tag_id = SelectField(
         "תגית", choices=[], validators=[Optional()]  # הבחירות ימולאו בנתיב
     )
@@ -186,6 +196,14 @@ class BulkCouponForm(FlaskForm):
     )
     strauss_coupon_url = StringField(
         "כתובת URL של הקופון שטראוס פלוס",
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
+    )
+    xgiftcard_coupon_url = StringField(
+        "כתובת URL של הקופון מXgiftcard",
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
+    )
+    xtra_coupon_url = StringField(
+        "כתובת URL של הקופון מXtra (PowerGift)",
         validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
     )
 
@@ -364,6 +382,16 @@ class EditCouponForm(FlaskForm):
     # שדה חדש להוספה - קישור לקופון שטראוס פלוס
     strauss_coupon_url = StringField(
         "כתובת URL של הקופון שטראוס פלוס",
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
+    )
+    # שדה חדש להוספה - קישור לקופון Xgiftcard
+    xgiftcard_coupon_url = StringField(
+        "כתובת URL של הקופון מXgiftcard",
+        validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
+    )
+    # שדה חדש להוספה - קישור לקופון Xtra (PowerGift)
+    xtra_coupon_url = StringField(
+        "כתובת URL של הקופון מXtra (PowerGift)",
         validators=[Optional(), URL(message="בבקשה להקליד url תקין"), Length(max=255)],
     )
     expiration = DateField("תאריך תפוגה:", format="%Y-%m-%d", validators=[Optional()])

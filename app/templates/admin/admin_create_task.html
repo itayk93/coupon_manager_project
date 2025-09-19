@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}
+יצירת משימה מתוכננת
+{% endblock %}
+
+{% block content %}
+<section class="admin-create-task">
+    <div class="create-task-header">
+        <h1>יצירת משימה מתוכננת</h1>
+        <a href="{{ url_for('admin_scheduler_bp.scheduler_dashboard') }}" class="btn btn-secondary">
+            <i class="icon">🔙</i>
+            חזרה לרשימה
+        </a>
+    </div>
+
+    <form method="POST" class="task-form">
+        <div class="form-section">
+            <h3>פרטי המשימה</h3>
+            
+            <div class="form-group">
+                <label for="task_name">שם המשימה</label>
+                <input type="text" id="task_name" name="task_name" required 
+                       placeholder="למשל: עדכון יומי של קופונים">
+            </div>
+
+            <div class="form-group">
+                <label for="task_type">סוג המשימה</label>
+                <select id="task_type" name="task_type" required>
+                    <option value="">בחר סוג משימה</option>
+                    <option value="coupon_update">עדכון קופונים</option>
+                    <option value="email_send">שליחת מייל</option>
+                    <option value="data_cleanup">ניקוי נתונים</option>
+                    <option value="backup">גיבוי</option>
+                    <option value="custom">מותאם אישית</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="description">תיאור (אופציונלי)</label>
+                <textarea id="description" name="description" rows="3" 
+                         placeholder="תיאור קצר של המשימה ומה היא עושה"></textarea>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>זמן הפעלה</h3>
+            
+            <div class="time-inputs">
+                <div class="form-group">
+                    <label for="execution_hour">שעה</label>
+                    <select id="execution_hour" name="execution_hour" required>
+                        {% for hour in range(0, 24) %}
+                            <option value="{{ hour }}" {% if hour == 9 %}selected{% endif %}>
+                                {{ '%02d' % hour }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="execution_minute">דקה</label>
+                    <select id="execution_minute" name="execution_minute" required>
+                        {% for minute in range(0, 60, 5) %}
+                            <option value="{{ minute }}" {% if minute == 0 %}selected{% endif %}>
+                                {{ '%02d' % minute }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>תזמון</h3>
+            
+            <div class="form-group">
+                <label for="schedule_type">סוג תזמון</label>
+                <select id="schedule_type" name="schedule_type" required onchange="showScheduleOptions()">
+                    <option value="">בחר סוג תזמון</option>
+                    <option value="daily">יומי</option>
+                    <option value="weekly">שבועי</option>
+                    <option value="monthly">חודשי</option>
+                    <option value="specific_date">תאריך ספציפי</option>
+                </select>
+            </div>
+
+            <!-- אפשרויות תזמון שבועי -->
+            <div id="weekly_options" class="schedule-options" style="display: none;">
+                <div class="form-group">
+                    <label for="weekday">יום בשבוע</label>
+                    <select id="weekday" name="weekday">
+                        <option value="0">ראשון</option>
+                        <option value="1">שני</option>
+                        <option value="2">שלישי</option>
+                        <option value="3">רביעי</option>
+                        <option value="4">חמישי</option>
+                        <option value="5">שישי</option>
+                        <option value="6">שבת</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- אפשרויות תזמון חודשי -->
+            <div id="monthly_options" class="schedule-options" style="display: none;">
+                <div class="form-group">
+                    <label for="monthly_day">יום בחודש</label>
+                    <select id="monthly_day" name="monthly_day">
+                        {% for day in range(1, 32) %}
+                            <option value="{{ day }}" {% if day == 1 %}selected{% endif %}>
+                                {{ day }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- אפשרויות תאריך ספציפי -->
+            <div id="specific_date_options" class="schedule-options" style="display: none;">
+                <div class="form-group">
+                    <label for="specific_date">תאריך</label>
+                    <input type="date" id="specific_date" name="specific_date" 
+                           min="{{ date.today().strftime('%Y-%m-%d') }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-large">
+                <i class="icon">✅</i>
+                יצירת המשימה
+            </button>
+            <a href="{{ url_for('admin_scheduler_bp.scheduler_dashboard') }}" class="btn btn-secondary btn-large">
+                <i class="icon">❌</i>
+                ביטול
+            </a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showScheduleOptions() {
+    const scheduleType = document.getElementById('schedule_type').value;
+    const options = document.querySelectorAll('.schedule-options');
+    
+    // Hide all options
+    options.forEach(option => {
+        option.style.display = 'none';
+    });
+    
+    // Show relevant options
+    if (scheduleType === 'weekly') {
+        document.getElementById('weekly_options').style.display = 'block';
+    } else if (scheduleType === 'monthly') {
+        document.getElementById('monthly_options').style.display = 'block';
+    } else if (scheduleType === 'specific_date') {
+        document.getElementById('specific_date_options').style.display = 'block';
+    }
+}
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.task-form');
+    
+    form.addEventListener('submit', function(e) {
+        const taskName = document.getElementById('task_name').value.trim();
+        const taskType = document.getElementById('task_type').value;
+        const scheduleType = document.getElementById('schedule_type').value;
+        
+        if (!taskName || !taskType || !scheduleType) {
+            e.preventDefault();
+            alert('נא למלא את כל השדות הנדרשים');
+            return;
+        }
+        
+        // Specific date validation
+        if (scheduleType === 'specific_date') {
+            const specificDate = document.getElementById('specific_date').value;
+            if (!specificDate) {
+                e.preventDefault();
+                alert('נא לבחור תאריך עבור המשימה');
+                return;
+            }
+            
+            const selectedDate = new Date(specificDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDate < today) {
+                e.preventDefault();
+                alert('לא ניתן לבחור תאריך בעבר');
+                return;
+            }
+        }
+    });
+    
+    // Add animation to form sections
+    const sections = document.querySelectorAll('.form-section');
+    sections.forEach((section, index) => {
+        setTimeout(() => {
+            section.classList.add('visible');
+        }, 100 * index);
+    });
+});
+</script>
+
+<style>
+:root {
+    --primary-color: #4895ef;
+    --primary-hover: #3a56d4;
+    --secondary-color: #6c757d;
+    --background-light: #f8f9fa;
+    --card-shadow: 0 10px 20px rgba(0,0,0,0.05), 0 6px 6px rgba(0,0,0,0.07);
+    --border-radius: 12px;
+    --transition-speed: 0.3s;
+}
+
+.admin-create-task {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--background-light);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    direction: rtl;
+}
+
+.create-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.create-task-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2b2d42;
+    margin: 0;
+}
+
+.task-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.form-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all var(--transition-speed);
+}
+
+.form-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.form-section h3 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.5rem;
+    color: #495057;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color var(--transition-speed);
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(72, 149, 239, 0.1);
+}
+
+.time-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.schedule-options {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    font-size: 1rem;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    text-decoration: none;
+    color: white;
+}
+
+.btn-primary { background-color: var(--primary-color); }
+.btn-primary:hover { background-color: var(--primary-hover); }
+.btn-secondary { background-color: var(--secondary-color); }
+
+.btn-large {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-create-task {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .create-task-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .create-task-header h1 {
+        font-size: 2rem;
+    }
+    
+    .time-inputs {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
