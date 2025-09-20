@@ -394,3 +394,40 @@ def api_get_user_statistics(user_id):
     except Exception as e:
         logger.error(f"Error fetching user statistics: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
+
+@api_bp.route('/api/debug/user/<int:user_id>', methods=['GET'])
+def api_debug_user(user_id):
+    """Debug endpoint to check user data"""
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                'debug': f'User with id {user_id} not found',
+                'all_users_count': User.query.count(),
+                'error': 'User not found'
+            }), 404
+        
+        user_data = {
+            'id': user.id,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_confirmed': user.is_confirmed,
+            'is_deleted': user.is_deleted,
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+            'password_hash': user.password[:50] + '...' if user.password else None  # First 50 chars only for security
+        }
+        
+        return jsonify({
+            'debug': f'Successfully found user {user_id}',
+            'user': user_data,
+            'database_connected': True
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Debug error: {str(e)}")
+        return jsonify({
+            'debug': f'Database error: {str(e)}',
+            'database_connected': False,
+            'error': 'Database connection failed'
+        }), 500
