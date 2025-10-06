@@ -978,10 +978,119 @@ def calculate_captcha_click_coordinates_fullscreen(image_path, matches, captcha_
 
 def solve_captcha_challenge(driver, wait_timeout=120):
     """
-    פותר CAPTCHA אוטומטי באמצעות אודיו (הפונקציה הראשית)
+    פותר CAPTCHA אוטומטי - בוחר שיטה לפי סוג ה-CAPTCHA
+    
+    - אם זה CAPTCHA של תמונות: משתמש בGPT Vision
+    - אם זה CAPTCHA טקסט: משתמש ב-TrueCaptcha API
+    - כ-fallback: משתמש באודיו
     """
-    # עכשיו נשתמש בפתרון אודיו במקום תמונה
-    return solve_captcha_with_audio(driver, wait_timeout)
+    return solve_captcha_smart_detection(driver, wait_timeout)
+
+
+def solve_captcha_smart_detection(driver, wait_timeout=120):
+    """
+    פונקציה חכמה לזיהוי סוג CAPTCHA ובחירת שיטת פתרון מתאימה
+    """
+    import time
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.by import By
+    
+    def debug_print(message):
+        if DEBUG_MODE:
+            print(f"[SMART CAPTCHA SOLVER] {message}")
+    
+    try:
+        debug_print("Starting smart CAPTCHA detection...")
+        time.sleep(3)
+        
+        # חיפוש iframe של CAPTCHA
+        captcha_iframes = driver.find_elements(By.XPATH, "//iframe[contains(@src, 'recaptcha') and contains(@src, 'bframe')]")
+        
+        if not captcha_iframes:
+            debug_print("No CAPTCHA iframe found - checking if button is enabled")
+            submit_button = driver.find_element(By.ID, "submit")
+            if not submit_button.get_attribute("disabled"):
+                debug_print("Submit button is enabled - CAPTCHA already solved")
+                return True
+            else:
+                debug_print("Submit button still disabled but no CAPTCHA iframe found")
+                return False
+        
+        debug_print(f"Found {len(captcha_iframes)} CAPTCHA iframe(s)")
+        
+        # מעבר ל-iframe לבדיקת סוג ה-CAPTCHA
+        driver.switch_to.frame(captcha_iframes[0])
+        time.sleep(2)
+        
+        # בדיקה אם זה CAPTCHA של תמונות (image challenge)
+        image_challenge_selectors = [
+            ".rc-imageselect-desc",
+            ".rc-imageselect-desc-no-canonical", 
+            ".rc-imageselect-instructions",
+            "td.rc-imageselect-desc-wrapper"
+        ]
+        
+        is_image_captcha = False
+        instruction_text = ""
+        
+        for selector in image_challenge_selectors:
+            try:
+                instruction_element = driver.find_element(By.CSS_SELECTOR, selector)
+                if instruction_element and instruction_element.is_displayed():
+                    instruction_text = instruction_element.text.strip()
+                    if instruction_text:
+                        is_image_captcha = True
+                        debug_print(f"Detected IMAGE CAPTCHA with instruction: '{instruction_text}'")
+                        break
+            except:
+                continue
+        
+        # חזרה ל-frame הראשי
+        driver.switch_to.default_content()
+        
+        if is_image_captcha:
+            # בדיקה אם Capsolver נכשל הרבה לאחרונה
+            if not hasattr(solve_captcha_smart_detection, 'capsolver_failures'):
+                solve_captcha_smart_detection.capsolver_failures = 0
+            
+            # אם Capsolver נכשל 3 פעמים רצופות, נעבור ישר ל-GPT
+            if solve_captcha_smart_detection.capsolver_failures >= 3:
+                debug_print("⚡ Capsolver failed too many times, skipping to GPT Vision")
+                print(f"\n⚡ [SKIP] Capsolver נכשל יותר מדי, עובר ישר ל-GPT Vision ⚡\n")
+                result = solve_captcha_challenge_with_image(driver, wait_timeout)
+                if result:
+                    solve_captcha_smart_detection.capsolver_failures = 0  # איפוס אם הצליח
+                return result
+            
+            # ניסיון עם Capsolver
+            debug_print("🤖 Using Capsolver API for image CAPTCHA (improved)")
+            print(f"\n🤖 [CAPSOLVER] משתמש ב-Capsolver API לCAPTCHA תמונות: '{instruction_text}' 🤖\n")
+            
+            result = solve_captcha_with_capsolver_improved(driver, wait_timeout, instruction_text)
+            if result:
+                solve_captcha_smart_detection.capsolver_failures = 0  # איפוס אם הצליח
+                return True
+            else:
+                # עדכון מונה כישלונות
+                solve_captcha_smart_detection.capsolver_failures += 1
+                debug_print(f"🖼️ Capsolver failed (failure #{solve_captcha_smart_detection.capsolver_failures}), falling back to GPT Vision")
+                print(f"\n🖼️ [FALLBACK] Capsolver נכשל ({solve_captcha_smart_detection.capsolver_failures}/3), עובר ל-GPT Vision 🖼️\n")
+                return solve_captcha_challenge_with_image(driver, wait_timeout)
+        else:
+            # אם זה לא CAPTCHA תמונות, נשתמש באודיו
+            debug_print("🔊 Not image CAPTCHA, using audio solving")
+            print(f"\n🔊 [AUDIO] לא זוהה CAPTCHA תמונות, עובר לפתרון אודיו 🔊\n")
+            return solve_captcha_with_audio(driver, wait_timeout)
+        
+    except Exception as e:
+        debug_print(f"Error in smart CAPTCHA detection: {e}")
+        # כ-fallback אחרון, נשתמש באודיו
+        debug_print("🔊 Using audio as final fallback")
+        try:
+            return solve_captcha_with_audio(driver, wait_timeout)
+        except:
+            return False
 
 
 def solve_captcha_challenge_with_image(driver, wait_timeout=120):
@@ -1759,6 +1868,1318 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
         return False
 
 
+def solve_captcha_with_capsolver(driver, wait_timeout=120, instruction_text=""):
+    """
+    פותר CAPTCHA אוטומטי באמצעות Capsolver API
+    מזהה reCAPTCHA תמונות ושולח ל-API לפתרון
+    """
+    import time
+    import base64
+    import tempfile
+    import os
+    import requests
+    import subprocess
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.by import By
+    
+    def debug_print(message):
+        if DEBUG_MODE:
+            print(f"[CAPSOLVER] {message}")
+    
+    try:
+        debug_print("Starting CAPTCHA solving process with Capsolver API...")
+        
+        # קבלת פרטי ה-API מהסביבה
+        capsolver_api_key = os.getenv("CAPSOLVER_API_KEY")
+        
+        if not capsolver_api_key:
+            debug_print("Capsolver API key not found in environment variables")
+            return False
+        
+        debug_print(f"Using Capsolver API key: {capsolver_api_key[:8]}...")
+        
+        time.sleep(3)
+        
+        try:
+            # חיפוש iframe של CAPTCHA
+            captcha_iframes = driver.find_elements(By.XPATH, "//iframe[contains(@src, 'recaptcha') and contains(@src, 'bframe')]")
+            
+            if not captcha_iframes:
+                debug_print("No CAPTCHA iframe found - checking if button is enabled")
+                submit_button = driver.find_element(By.ID, "submit")
+                if not submit_button.get_attribute("disabled"):
+                    debug_print("Submit button is enabled - CAPTCHA already solved")
+                    return True
+                else:
+                    debug_print("Submit button still disabled but no CAPTCHA iframe found")
+                    return False
+            
+            debug_print(f"Found {len(captcha_iframes)} CAPTCHA iframe(s)")
+            
+            # חזרה ל-frame הראשי לצילום מסך
+            driver.switch_to.default_content()
+            
+            # צילום מסך מלא של הדפדפן
+            timestamp = int(time.time())
+            screenshot_path = f"/Users/itaykarkason/Desktop/truecaptcha_screenshot_{timestamp}.png"
+            
+            debug_print("Taking CAPTCHA screenshot for TrueCaptcha API...")
+            try:
+                # שימוש בפקודת screencapture של macOS
+                subprocess.run(['screencapture', screenshot_path], check=True)
+                debug_print(f"Screenshot saved to: {screenshot_path}")
+            except Exception as e:
+                debug_print(f"Failed to take screenshot: {e}")
+                return False
+            
+            # הכנת התמונה לשליחה ל-API (עם דחיסה)
+            debug_print("Compressing and encoding image for TrueCaptcha API...")
+            try:
+                from PIL import Image
+                import io
+                import pyautogui
+                
+                # פתיחת התמונה ודחיסה
+                with Image.open(screenshot_path) as img:
+                    # המרה ל-RGB אם צריך
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    
+                    # גיזום לאזור CAPTCHA בלבד - חיתוך קטן וממוקד יותר
+                    screen_size = pyautogui.size()
+                    width, height = img.size
+                    
+                    # מיקום CAPTCHA מותאם למסך - חיתוך קטן יותר
+                    if width >= 1440:  # מסך גדול
+                        captcha_left = width // 2 - 180
+                        captcha_top = height // 2 - 120  
+                        captcha_right = width // 2 + 180
+                        captcha_bottom = height // 2 + 180
+                    else:  # מסך קטן יותר
+                        captcha_left = width // 2 - 150
+                        captcha_top = height // 2 - 100
+                        captcha_right = width // 2 + 150
+                        captcha_bottom = height // 2 + 150
+                    
+                    # וידוא שהחיתוך בגבולות התמונה
+                    captcha_left = max(0, captcha_left)
+                    captcha_top = max(0, captcha_top) 
+                    captcha_right = min(width, captcha_right)
+                    captcha_bottom = min(height, captcha_bottom)
+                    
+                    debug_print(f"Screen size: {screen_size}, Image size: {width}x{height}")
+                    debug_print(f"CAPTCHA crop area: ({captcha_left}, {captcha_top}) to ({captcha_right}, {captcha_bottom})")
+                    
+                    # חיתוך לאזור CAPTCHA
+                    img_cropped = img.crop((captcha_left, captcha_top, captcha_right, captcha_bottom))
+                    debug_print(f"Cropped image to CAPTCHA area: {img_cropped.size}")
+                    
+                    # הקטנת תמונה לגודל קטן יותר לפני דחיסה
+                    max_width = 300
+                    max_height = 300
+                    img_cropped.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+                    debug_print(f"Resized image to: {img_cropped.size}")
+                    
+                    # שמירה זמנית עם דחיסה חזקה
+                    buffer = io.BytesIO()
+                    img_cropped.save(buffer, format='JPEG', quality=40, optimize=True)
+                    
+                    # בדיקת גודל והקטנה נוספת אם צריך
+                    buffer_size = len(buffer.getvalue())
+                    debug_print(f"Compressed image size: {buffer_size} bytes")
+                    
+                    if buffer_size > 20000:  # 20KB limit
+                        debug_print("Image still too large, compressing to maximum...")
+                        # הקטנה עוד יותר
+                        img_cropped.thumbnail((200, 200), Image.Resampling.LANCZOS)
+                        buffer = io.BytesIO()
+                        img_cropped.save(buffer, format='JPEG', quality=30, optimize=True)
+                        buffer_size = len(buffer.getvalue())
+                        debug_print(f"Maximum compressed image size: {buffer_size} bytes")
+                    
+                    # קידוד ל-base64
+                    base64_image = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                    debug_print(f"Image encoded successfully (base64 size: {len(base64_image)} chars, file size: {buffer_size} bytes)")
+                
+            except Exception as e:
+                debug_print(f"Failed to compress/encode image: {e}")
+                # אם הדחיסה נכשלה, ננסה עם התמונה המקורית
+                try:
+                    with open(screenshot_path, "rb") as image_file:
+                        base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+                    debug_print(f"Using original image (size: {len(base64_image)} chars)")
+                except:
+                    debug_print("Failed to read original image")
+                    return False
+            
+            # שליחת הבקשה ל-TrueCaptcha API
+            debug_print("Sending request to TrueCaptcha API...")
+            api_url = "https://api.apitruecaptcha.org/one/gettext"
+            
+            api_payload = {
+                "userid": truecaptcha_userid,
+                "apikey": truecaptcha_api_key,
+                "data": base64_image,
+                "tag": "multipass_captcha",
+                "case": "mixed"
+            }
+            
+            try:
+                debug_print("Making API request...")
+                response = requests.post(api_url, json=api_payload, timeout=30)
+                debug_print(f"API Response Status: {response.status_code}")
+                debug_print(f"API Response Headers: {dict(response.headers)}")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    debug_print(f"API Response JSON: {result}")
+                    
+                    if "result" in result:
+                        captcha_text = result["result"].strip()
+                        debug_print(f"✅ CAPTCHA text detected: '{captcha_text}'")
+                        print(f"\n🤖 [TRUECAPTCHA] זוהה טקסט CAPTCHA: '{captcha_text}' 🤖\n")
+                        
+                        # מעבר ל-iframe של ה-CAPTCHA להקלדת התוצאה
+                        driver.switch_to.frame(captcha_iframes[0])
+                        time.sleep(2)
+                        
+                        # חיפוש שדה הקלט של ה-CAPTCHA
+                        input_selectors = [
+                            "#audio-response",
+                            ".rc-audiochallenge-response-field",
+                            "input[name='audio_response']",
+                            "input[type='text']"
+                        ]
+                        
+                        input_field = None
+                        for selector in input_selectors:
+                            try:
+                                input_field = driver.find_element(By.CSS_SELECTOR, selector)
+                                if input_field and input_field.is_displayed():
+                                    debug_print(f"Found input field with selector: {selector}")
+                                    break
+                            except:
+                                continue
+                        
+                        if input_field:
+                            # הקלדת הטקסט שזוהה
+                            input_field.clear()
+                            input_field.send_keys(captcha_text)
+                            debug_print(f"Entered CAPTCHA text: '{captcha_text}'")
+                            time.sleep(1)
+                            
+                            # חיפוש כפתור VERIFY
+                            verify_button = None
+                            verify_selectors = [
+                                "#recaptcha-verify-button",
+                                "button.rc-button-default",
+                                ".rc-button-default",
+                                "button[id*='verify']"
+                            ]
+                            
+                            for selector in verify_selectors:
+                                try:
+                                    verify_button = driver.find_element(By.CSS_SELECTOR, selector)
+                                    if verify_button and verify_button.is_displayed():
+                                        debug_print(f"Found verify button with selector: {selector}")
+                                        break
+                                except:
+                                    continue
+                            
+                            if verify_button:
+                                verify_button.click()
+                                debug_print("Clicked VERIFY button")
+                                time.sleep(3)
+                                
+                                # בדיקה אם הCAPTCHA נפתר
+                                driver.switch_to.default_content()
+                                debug_print("Checking if CAPTCHA was solved successfully...")
+                                
+                                try:
+                                    submit_button = driver.find_element(By.ID, "submit")
+                                    if not submit_button.get_attribute("disabled"):
+                                        debug_print("✅ CAPTCHA solved successfully with TrueCaptcha!")
+                                        print(f"\n🎉 [SUCCESS] CAPTCHA נפתר בהצלחה עם TrueCaptcha! 🎉\n")
+                                        return True
+                                    else:
+                                        debug_print("❌ CAPTCHA verification failed")
+                                        print(f"\n❌ [FAILED] פתרון CAPTCHA נכשל ❌\n")
+                                        return False
+                                except Exception as check_error:
+                                    debug_print(f"Error checking CAPTCHA result: {check_error}")
+                                    return False
+                            else:
+                                debug_print("Could not find VERIFY button")
+                                driver.switch_to.default_content()
+                                return False
+                        else:
+                            debug_print("Could not find CAPTCHA input field")
+                            driver.switch_to.default_content()
+                            return False
+                    else:
+                        debug_print(f"No 'result' field in API response: {result}")
+                        return False
+                else:
+                    debug_print(f"API request failed with status {response.status_code}")
+                    debug_print(f"Response text: {response.text}")
+                    return False
+                    
+            except requests.exceptions.RequestException as e:
+                debug_print(f"Request error: {e}")
+                return False
+            except Exception as e:
+                debug_print(f"Error processing API response: {e}")
+                return False
+            
+        except Exception as iframe_error:
+            debug_print(f"Error handling CAPTCHA iframe: {iframe_error}")
+            try:
+                driver.switch_to.default_content()
+            except:
+                pass
+            return False
+            
+    except Exception as e:
+        debug_print(f"General error in TrueCaptcha solving: {e}")
+        return False
+
+
+def solve_captcha_with_capsolver_new(driver, wait_timeout=120, instruction_text=""):
+    """
+    פותר CAPTCHA אוטומטי באמצעות Capsolver API
+    מזהה reCAPTCHA תמונות ושולח ל-API לפתרון
+    """
+    import time
+    import base64
+    import os
+    import requests
+    import subprocess
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.by import By
+    
+    def debug_print(message):
+        if DEBUG_MODE:
+            print(f"[CAPSOLVER] {message}")
+    
+    def extract_question_from_instruction(instruction_text):
+        """חילוץ סוג האובייקט מההוראה של reCAPTCHA"""
+        instruction_lower = instruction_text.lower()
+        
+        # מיפוי ההוראות לקודי Capsolver (לפי הדוקומנטציה הרשמית)
+        question_mapping = {
+            "crosswalks": "/m/014xcs",
+            "traffic lights": "/m/015qff", 
+            "bicycles": "/m/0199g",
+            "cars": "/m/0k4j",
+            "motorcycles": "/m/04_sv",
+            "buses": "/m/01bjv",
+            "bus": "/m/01bjv",
+            "school bus": "/m/02yvhj",
+            "taxis": "/m/0pg52",
+            "tractors": "/m/013xlm",
+            "bridges": "/m/015kr",
+            "boats": "/m/019jd",
+            "fire hydrants": "/m/01pns0",
+            "fire hydrant": "/m/01pns0",
+            "parking meters": "/m/015qbp",
+            "stairs": "/m/01lynh",
+            "chimneys": "/m/01jk_4",
+            "palm trees": "/m/0cdl1",
+            "mountains": "/m/09d_r",
+            "hills": "/m/09d_r"
+        }
+        
+        for key, value in question_mapping.items():
+            if key in instruction_lower:
+                debug_print(f"Matched '{key}' to code '{value}'")
+                return value
+        
+        # ברירת מחדל - נחזיר את המילה הראשונה אחרי "with"
+        words = instruction_lower.split()
+        try:
+            with_index = words.index("with")
+            if with_index + 1 < len(words):
+                return words[with_index + 1].rstrip('s')  # הסרת s בסוף
+        except ValueError:
+            pass
+        
+        return "/m/0k4j"  # ברירת מחדל - cars
+    
+    try:
+        debug_print("Starting CAPTCHA solving process with Capsolver API...")
+        
+        # קבלת פרטי ה-API מהסביבה
+        capsolver_api_key = os.getenv("CAPSOLVER_API_KEY")
+        
+        if not capsolver_api_key:
+            debug_print("Capsolver API key not found in environment variables")
+            return False
+        
+        debug_print(f"Using Capsolver API key: {capsolver_api_key[:8]}...")
+        debug_print(f"Instruction text: '{instruction_text}'")
+        
+        # חילוץ סוג האובייקט מההוראה
+        question = extract_question_from_instruction(instruction_text)
+        debug_print(f"Extracted question for Capsolver: '{question}'")
+        
+        # הכנת רשימת קודים אלטרנטיביים לניסיון
+        alternative_questions = []
+        if question == "/m/01bjv":  # buses
+            alternative_questions = ["/m/02yvhj"]  # school bus
+            debug_print(f"Will also try alternatives: {alternative_questions}")
+        elif question == "/m/0k4j":  # cars  
+            alternative_questions = ["/m/0199g"]  # bicycles - לפעמים מתבלבל
+            debug_print(f"Will also try alternatives: {alternative_questions}")
+        
+        all_questions = [question] + alternative_questions
+        
+        time.sleep(3)
+        
+        # חיפוש iframe של CAPTCHA
+        captcha_iframes = driver.find_elements(By.XPATH, "//iframe[contains(@src, 'recaptcha') and contains(@src, 'bframe')]")
+        
+        if not captcha_iframes:
+            debug_print("No CAPTCHA iframe found - checking if button is enabled")
+            submit_button = driver.find_element(By.ID, "submit")
+            if not submit_button.get_attribute("disabled"):
+                debug_print("Submit button is enabled - CAPTCHA already solved")
+                return True
+            else:
+                debug_print("Submit button still disabled but no CAPTCHA iframe found")
+                return False
+        
+        debug_print(f"Found {len(captcha_iframes)} CAPTCHA iframe(s)")
+        
+        # מעבר ל-iframe של CAPTCHA לצילום ישיר
+        driver.switch_to.frame(captcha_iframes[0])
+        time.sleep(2)
+        
+        debug_print("Taking direct screenshot of CAPTCHA iframe...")
+        timestamp = int(time.time())
+        
+        try:
+            from PIL import Image
+            import io
+            
+            # צילום מסך ישיר של האלמנט CAPTCHA
+            captcha_element = driver.find_element(By.CSS_SELECTOR, ".rc-imageselect-table, .rc-imageselect-challenge")
+            if not captcha_element:
+                captcha_element = driver.find_element(By.TAG_NAME, "body")
+            
+            # צילום מסך של האלמנט הספציפי
+            screenshot_bytes = captcha_element.screenshot_as_png
+            
+            # שמירת התמונה המקורית לבדיקה
+            screenshot_path = f"/Users/itaykarkason/Desktop/capsolver_screenshot_{timestamp}.png"
+            with open(screenshot_path, "wb") as f:
+                f.write(screenshot_bytes)
+            debug_print(f"Direct CAPTCHA screenshot saved to: {screenshot_path}")
+            
+            # טעינת התמונה לעיבוד
+            img = Image.open(io.BytesIO(screenshot_bytes))
+            
+            # המרה ל-RGB אם צריך
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            debug_print(f"CAPTCHA image size: {img.size}")
+            
+            # שמירה בפורמט JPEG
+            buffer = io.BytesIO()
+            img.save(buffer, format='JPEG', quality=90, optimize=True)
+            
+            # שמירת התמונה העובדת לבדיקה
+            processed_debug_path = f"/Users/itaykarkason/Desktop/capsolver_processed_debug_{timestamp}.png"
+            img.save(processed_debug_path)
+            debug_print(f"Processed image saved for debugging: {processed_debug_path}")
+            
+            # קידוד ל-base64
+            base64_image = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            debug_print(f"Image encoded successfully (base64 size: {len(base64_image)} chars)")
+            
+            # בדיקה נוספת - אורך בייטים ראשונים של base64
+            debug_print(f"Base64 starts with: {base64_image[:50]}...")
+            debug_print(f"Image dimensions after processing: {img.size}")
+            
+            # וידוא שהתמונה לא ריקה
+            if len(base64_image) < 1000:
+                debug_print("❌ Base64 image too small - possibly empty!")
+                return False
+            
+        except Exception as e:
+            debug_print(f"Failed to process image: {e}")
+            return False
+        
+        # חזרה ל-frame הראשי לפני שליחת API
+        driver.switch_to.default_content()
+        
+        # שליחת הבקשה ל-Capsolver API
+        debug_print("Sending request to Capsolver API...")
+        api_url = "https://api.capsolver.com/createTask"
+        
+        def try_capsolver_request(question_code):
+            """מנסה בקשה לCapsolver עם קוד שאלה מסוים"""
+            payload = {
+                "clientKey": capsolver_api_key,
+                "task": {
+                    "type": "ReCaptchaV2Classification",
+                    "websiteURL": "https://multipass.co.il",  # הוספת URL לדיוק טוב יותר
+                    "image": base64_image,
+                    "question": question_code
+                }
+            }
+            debug_print(f"Trying question code: {question_code}")
+            debug_print(f"Payload structure: clientKey={capsolver_api_key[:8]}..., task type={payload['task']['type']}")
+            debug_print(f"Image size in payload: {len(base64_image)} chars")
+            return requests.post(api_url, json=payload, timeout=30)
+        
+        # ניסיון עם כל הקודים ברצף
+        for i, current_question in enumerate(all_questions):
+            debug_print(f"Attempt {i+1}/{len(all_questions)} with question: {current_question}")
+            response = try_capsolver_request(current_question)
+            
+            try:
+                debug_print("Making API request...")
+                debug_print(f"API Response Status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    debug_print(f"API Response JSON: {result}")
+                    
+                    # דיבוג מפורט של התשובה
+                    debug_print(f"Response keys: {list(result.keys())}")
+                    debug_print(f"ErrorId: {result.get('errorId')}")
+                    debug_print(f"Status: {result.get('status')}")
+                    debug_print(f"TaskId: {result.get('taskId')}")
+                    
+                    if result.get('errorId') == 0 and 'solution' in result:
+                        solution = result['solution']
+                        debug_print(f"Solution received: {solution}")
+                        debug_print(f"Solution keys: {list(solution.keys()) if isinstance(solution, dict) else 'Not a dict'}")
+                        
+                        # בדיקת שני סוגי תגובות: multi-object ו-single object
+                        click_coordinates = []
+                        
+                        if 'objects' in solution and solution['objects']:
+                            # Multi-object response - מערך של מספרים
+                            click_coordinates = solution['objects']
+                            debug_print(f"✅ Multi-object CAPTCHA solution: {click_coordinates}")
+                            print(f"\n🤖 [CAPSOLVER] זוהו תמונות לקליקה: {click_coordinates} 🤖\n")
+                            return perform_captcha_clicks(driver, captcha_iframes, click_coordinates)
+                        elif solution.get('hasObject') == True:
+                            # Single object response - צריך למצוא איפה האובייקט
+                            debug_print("✅ Single object detected, but need to determine location")
+                            debug_print("Single object mode not yet implemented")
+                            continue  # נמשיך לקוד הבא
+                        elif solution.get('hasObject') == False:
+                            debug_print(f"❌ No objects found with question: {current_question}")
+                            continue  # נמשיך לקוד הבא
+                        else:
+                            debug_print("❓ Unknown solution format")
+                            debug_print(f"Solution details: {solution}")
+                            continue
+                    else:
+                        debug_print(f"API returned error: {result}")
+                        continue
+                else:
+                    debug_print(f"API request failed with status {response.status_code}")
+                    debug_print(f"Response text: {response.text}")
+                    continue
+                    
+            except requests.exceptions.RequestException as e:
+                debug_print(f"Request error with question {current_question}: {e}")
+                continue
+            except Exception as e:
+                debug_print(f"Error processing response for question {current_question}: {e}")
+                continue
+        
+        # אם הגענו לכאן, כל הניסיונות נכשלו
+        debug_print("❌ All Capsolver attempts failed")
+        return False
+            
+    except Exception as e:
+        debug_print(f"General error in Capsolver solving: {e}")
+        return False
+
+
+def solve_captcha_with_capsolver_improved(driver, wait_timeout=120, instruction_text=""):
+    """
+    פונקציה משופרת לפתרון CAPTCHA עם Capsolver API - גישות מרובות
+    """
+    import time
+    import base64
+    import os
+    import requests
+    import subprocess
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.by import By
+    
+    def debug_print(message):
+        if DEBUG_MODE:
+            print(f"[CAPSOLVER IMPROVED] {message}")
+    
+    def extract_question_from_instruction(instruction_text):
+        """חילוץ סוג האובייקט מההוראה של reCAPTCHA באמצעות GPT"""
+        debug_print(f"GPT analyzing: '{instruction_text}'")
+        
+        try:
+            # ייבוא נכון של OpenAI
+            import openai
+            if hasattr(openai, 'OpenAI'):
+                from openai import OpenAI
+            else:
+                # גרסה ישנה של openai
+                OpenAI = openai.OpenAI
+            
+            # בדיקת API key
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            if not openai_api_key:
+                debug_print("OpenAI API key not found, falling back to static mapping")
+                return extract_question_static(instruction_text)
+            
+            client = OpenAI(api_key=openai_api_key, timeout=10.0)  # 10 second timeout
+            
+            prompt = f"""
+reCAPTCHA instruction: "{instruction_text}"
+
+Return the best Capsolver code:
+/m/01bjv=bus /m/02yvhj=school_bus /m/0k4j=car /m/0199g=bicycle /m/04_sv=motorcycle 
+/m/015qff=traffic_light /m/01pns0=fire_hydrant /m/014xcs=crosswalk /m/0pg52=taxi
+/m/013xlm=tractor /m/015kr=bridge /m/07yv9=boat /m/01x3z=building /m/0cvnqh=stairs
+
+Return ONLY the code (e.g., /m/0k4j). If unsure, return /m/0k4j.
+"""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=15,
+                temperature=0,
+                timeout=10  # 10 second timeout for the request
+            )
+            
+            code = response.choices[0].message.content.strip()
+            debug_print(f"GPT suggested: {code}")
+            
+            if code.startswith('/m/'):
+                return code
+            else:
+                debug_print("Invalid GPT response, using static fallback")
+                return extract_question_static(instruction_text)
+                
+        except Exception as e:
+            debug_print(f"GPT failed: {e}, using static fallback")
+            return extract_question_static(instruction_text)
+
+    def get_recaptcha_site_key(driver):
+        """מוצא את ה-site key של ReCaptcha"""
+        try:
+            # חיפוש site key בדף
+            scripts = driver.find_elements(By.TAG_NAME, "script")
+            for script in scripts:
+                script_content = script.get_attribute("innerHTML") or ""
+                if "data-sitekey" in script_content or "sitekey" in script_content:
+                    # חיפוש regex של site key
+                    import re
+                    match = re.search(r'sitekey["\']?\s*[:\=]\s*["\']([^"\']+)["\']', script_content, re.IGNORECASE)
+                    if match:
+                        return match.group(1)
+            
+            # חיפוש בiframes
+            iframes = driver.find_elements(By.XPATH, "//iframe[contains(@src, 'recaptcha')]")
+            for iframe in iframes:
+                src = iframe.get_attribute("src")
+                if "k=" in src:
+                    import re
+                    match = re.search(r'k=([^&]+)', src)
+                    if match:
+                        return match.group(1)
+            
+            debug_print("Could not find reCaptcha site key")
+            return None
+        except Exception as e:
+            debug_print(f"Error finding site key: {e}")
+            return None
+
+    def wait_for_capsolver_result(api_url, api_key, task_id, driver, max_wait=60):
+        """ממתין לתוצאת משימה אסינכרונית מCapsolver"""
+        import time
+        
+        debug_print(f"Waiting for task {task_id} to complete...")
+        
+        for i in range(max_wait):
+            try:
+                time.sleep(2)  # המתנה של 2 שניות
+                
+                payload = {
+                    "clientKey": api_key,
+                    "taskId": task_id
+                }
+                
+                response = requests.post(api_url.replace("createTask", "getTaskResult"), json=payload, timeout=10)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    debug_print(f"Task status check: {result}")
+                    
+                    if result.get('status') == 'ready':
+                        solution = result.get('solution', {})
+                        if 'gRecaptchaResponse' in solution:
+                            debug_print("✅ Async task completed successfully!")
+                            debug_print(f"🎯 Capsolver analyzed and solved: '{instruction_text}' challenge")
+                            debug_print(f"📝 Full solution means Capsolver handled all image selection automatically")
+                            debug_print(f"🔑 Final token: ...{solution['gRecaptchaResponse'][-20:]} (last 20 chars)")
+                            return submit_recaptcha_response(driver, solution['gRecaptchaResponse'])
+                    elif result.get('status') == 'processing':
+                        debug_print(f"Task still processing... ({i+1}/{max_wait})")
+                        continue
+                    else:
+                        debug_print(f"Task failed: {result}")
+                        return False
+                        
+            except Exception as e:
+                debug_print(f"Error checking task status: {e}")
+                
+        debug_print("Task timeout - taking too long")
+        return False
+
+    def submit_recaptcha_response(driver, g_recaptcha_response):
+        """שולח את תשובת ReCaptcha לדף בשיטות מרובות"""
+        try:
+            debug_print("🔑 Submitting ReCaptcha response token...")
+            debug_print(f"Token preview: {g_recaptcha_response[:50]}...{g_recaptcha_response[-20:]}")
+            
+            # שיטה 1: הזנת הטוקן לtextarea הסמויה
+            debug_print("Method 1: Injecting token into g-recaptcha-response textarea")
+            
+            # מציאת ועדכון כל ה-textareas
+            textareas_updated = 0
+            
+            # חיפוש לפי ID
+            try:
+                textarea_id = driver.find_element(By.ID, "g-recaptcha-response")
+                driver.execute_script("arguments[0].style.display = 'block';", textarea_id)
+                driver.execute_script("arguments[0].innerHTML = arguments[1];", textarea_id, g_recaptcha_response)
+                driver.execute_script("arguments[0].value = arguments[1];", textarea_id, g_recaptcha_response)
+                textareas_updated += 1
+                debug_print("✅ Updated textarea by ID")
+            except:
+                debug_print("❌ No textarea found by ID")
+            
+            # חיפוש לפי NAME
+            textareas_name = driver.find_elements(By.NAME, "g-recaptcha-response")
+            for textarea in textareas_name:
+                try:
+                    driver.execute_script("arguments[0].style.display = 'block';", textarea)
+                    driver.execute_script("arguments[0].innerHTML = arguments[1];", textarea, g_recaptcha_response)
+                    driver.execute_script("arguments[0].value = arguments[1];", textarea, g_recaptcha_response)
+                    textareas_updated += 1
+                    debug_print("✅ Updated textarea by NAME")
+                except:
+                    pass
+            
+            debug_print(f"📝 Updated {textareas_updated} textarea(s)")
+            
+            # שיטה 2: הפעלת callback functions
+            debug_print("Method 2: Triggering reCAPTCHA callback functions")
+            
+            # ניסיון מספר שיטות callback
+            callback_methods = [
+                # שיטה סטנדרטית
+                f"___grecaptcha_cfg.clients[0].O.O.callback('{g_recaptcha_response}');",
+                # שיטות אלטרנטיביות
+                f"___grecaptcha_cfg.clients[0].callback('{g_recaptcha_response}');",
+                f"___grecaptcha_cfg.clients[0].L.L.callback('{g_recaptcha_response}');",
+                f"___grecaptcha_cfg.clients[0].M.M.callback('{g_recaptcha_response}');",
+                f"___grecaptcha_cfg.clients[0].N.N.callback('{g_recaptcha_response}');",
+                f"___grecaptcha_cfg.clients[0].P.P.callback('{g_recaptcha_response}');",
+                # חיפוש אוטומטי של callback
+                """
+                try {
+                    if (window.___grecaptcha_cfg && ___grecaptcha_cfg.clients) {
+                        for (let client in ___grecaptcha_cfg.clients) {
+                            for (let prop in ___grecaptcha_cfg.clients[client]) {
+                                if (___grecaptcha_cfg.clients[client][prop] && 
+                                    ___grecaptcha_cfg.clients[client][prop][prop] && 
+                                    ___grecaptcha_cfg.clients[client][prop][prop].callback) {
+                                    ___grecaptcha_cfg.clients[client][prop][prop].callback(arguments[0]);
+                                    console.log('Callback triggered via', prop);
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                } catch(e) { console.log('Callback error:', e); }
+                """
+            ]
+            
+            callbacks_triggered = 0
+            for method in callback_methods[:-1]:  # כל השיטות מלבד האחרונה
+                try:
+                    driver.execute_script(method)
+                    callbacks_triggered += 1
+                    debug_print(f"✅ Callback method {callbacks_triggered} executed")
+                except Exception as e:
+                    debug_print(f"❌ Callback method {callbacks_triggered + 1} failed: {str(e)[:50]}...")
+            
+            # הרצת השיטה האחרונה (חיפוש אוטומטי) עם הטוקן
+            try:
+                result = driver.execute_script(callback_methods[-1], g_recaptcha_response)
+                if result:
+                    callbacks_triggered += 1
+                    debug_print("✅ Auto-discovery callback executed")
+            except Exception as e:
+                debug_print(f"❌ Auto-discovery callback failed: {str(e)[:50]}...")
+            
+            debug_print(f"🔄 Triggered {callbacks_triggered} callback method(s)")
+            
+            # שיטה 3: עדכון grecaptcha response ישירות
+            debug_print("Method 3: Direct grecaptcha response update")
+            try:
+                driver.execute_script(f"""
+                    if (window.grecaptcha) {{
+                        window.grecaptcha.enterprise = window.grecaptcha.enterprise || {{}};
+                        window.grecaptcha.enterprise.getResponse = function() {{ return '{g_recaptcha_response}'; }};
+                        window.grecaptcha.getResponse = function() {{ return '{g_recaptcha_response}'; }};
+                    }}
+                """)
+                debug_print("✅ Direct grecaptcha response updated")
+            except Exception as e:
+                debug_print(f"❌ Direct update failed: {e}")
+            
+            # שיטה 4: חיפוש כפתור Verify בתוך iframe של reCAPTCHA
+            debug_print("Method 4: Looking for Verify button in reCAPTCHA iframe")
+            
+            verify_button_clicked = False
+            
+            # חיפוש בדף הראשי קודם
+            main_page_buttons = [
+                (By.ID, "submit"),
+                (By.CSS_SELECTOR, "button[type='submit']"),
+                (By.CSS_SELECTOR, "input[type='submit']"),
+                (By.XPATH, "//button[contains(text(), 'Submit')]"),
+                (By.XPATH, "//input[@value='Submit']")
+            ]
+            
+            for selector_type, selector in main_page_buttons:
+                try:
+                    button = driver.find_element(selector_type, selector)
+                    if button.is_enabled():
+                        debug_print(f"✅ Found enabled submit button in main page: {selector}")
+                        button.click()
+                        verify_button_clicked = True
+                        break
+                except:
+                    continue
+            
+            # אם לא נמצא בדף הראשי, חפש בתוך iframe של reCAPTCHA
+            if not verify_button_clicked:
+                debug_print("🔍 Searching for Verify button inside reCAPTCHA iframe...")
+                
+                try:
+                    # מציאת iframe של reCAPTCHA
+                    iframes = driver.find_elements(By.XPATH, "//iframe[contains(@src, 'recaptcha')]")
+                    
+                    for i, iframe in enumerate(iframes):
+                        try:
+                            debug_print(f"Checking iframe {i+1}/{len(iframes)}")
+                            driver.switch_to.frame(iframe)
+                            
+                            # חיפוש כפתור Verify בתוך iframe
+                            verify_selectors = [
+                                (By.ID, "recaptcha-verify-button"),
+                                (By.CSS_SELECTOR, "button.rc-button-default"),
+                                (By.XPATH, "//button[contains(text(), 'Verify')]"),
+                                (By.XPATH, "//button[@title='Verify']"),
+                                (By.CSS_SELECTOR, ".rc-button-default")
+                            ]
+                            
+                            for selector_type, selector in verify_selectors:
+                                try:
+                                    verify_button = driver.find_element(selector_type, selector)
+                                    if verify_button.is_enabled() and verify_button.is_displayed():
+                                        debug_print(f"✅ Found Verify button in iframe: {selector}")
+                                        verify_button.click()
+                                        debug_print("🎯 Verify button clicked successfully!")
+                                        verify_button_clicked = True
+                                        break
+                                except:
+                                    continue
+                            
+                            # חזרה לדף הראשי
+                            driver.switch_to.default_content()
+                            
+                            if verify_button_clicked:
+                                break
+                                
+                        except Exception as iframe_error:
+                            debug_print(f"Error checking iframe {i+1}: {str(iframe_error)[:50]}...")
+                            try:
+                                driver.switch_to.default_content()
+                            except:
+                                pass
+                            continue
+                
+                except Exception as e:
+                    debug_print(f"Error searching in iframes: {str(e)[:50]}...")
+                    try:
+                        driver.switch_to.default_content()
+                    except:
+                        pass
+            
+            if verify_button_clicked:
+                debug_print("✅ Verify button found and clicked!")
+            else:
+                debug_print("ℹ️ No Verify button found - token injection may be sufficient")
+            
+            # לפי המחקר: עכשיו צריך ללחוץ על כפתור Submit הראשי!
+            debug_print("🚀 CAPTCHA token processed - now waiting for Submit button")
+            
+            import time
+            time.sleep(3)  # זמן לעיבוד הטוקן
+            
+            # וידוא שחזרנו לframe הראשי
+            try:
+                driver.switch_to.default_content()
+                debug_print("✅ Switched back to main page content")
+            except:
+                pass
+            
+            # המתנה עד שכפתור Submit נהיה זמין ולחיצה עליו
+            debug_print("🔍 Waiting for Submit button to become enabled...")
+            
+            submit_clicked = False
+            max_wait_seconds = 15
+            
+            for wait_attempt in range(max_wait_seconds):
+                try:
+                    submit_button = driver.find_element(By.ID, "submit")
+                    
+                    if submit_button.is_enabled():
+                        debug_print(f"✅ Submit button enabled after {wait_attempt + 1} seconds!")
+                        debug_print("🎯 Clicking Submit button to complete CAPTCHA process...")
+                        
+                        # לחיצה על כפתור Submit
+                        submit_button.click()
+                        debug_print("✅ Submit button clicked successfully!")
+                        
+                        submit_clicked = True
+                        break
+                    else:
+                        if wait_attempt == 0:
+                            debug_print("⏳ Submit button still disabled, waiting for activation...")
+                        elif wait_attempt % 3 == 0:  # הודעה כל 3 שניות
+                            debug_print(f"⏳ Still waiting... ({wait_attempt + 1}/{max_wait_seconds})")
+                        
+                        time.sleep(1)
+                        
+                except Exception as e:
+                    debug_print(f"❌ Error checking submit button: {str(e)[:50]}...")
+                    time.sleep(1)
+            
+            if submit_clicked:
+                debug_print("🎉 CAPTCHA process completed with Submit button click!")
+                debug_print("📋 Form should now be processing...")
+                return True
+            else:
+                debug_print("⚠️ Submit button never became enabled - trying alternative approach")
+                debug_print("🔄 Based on Stack Overflow research: forcing submit via JavaScript")
+                
+                # פתרון מStack Overflow - כפיית submit via JavaScript
+                try:
+                    # ניסיון 1: לחיצה כפויה על submit
+                    driver.execute_script("""
+                        var submitBtn = document.getElementById('submit');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.click();
+                        }
+                    """)
+                    debug_print("✅ Forced submit button click via JavaScript")
+                    time.sleep(2)
+                    return True
+                    
+                except Exception as e:
+                    debug_print(f"❌ Forced submit failed: {e}")
+                
+                # ניסיון 2: רענון הדף (כמו ב-Stack Overflow)
+                try:
+                    debug_print("🔄 Trying page refresh to activate token (Stack Overflow method)")
+                    driver.refresh()
+                    time.sleep(3)
+                    debug_print("✅ Page refreshed - token should be processed")
+                    return True
+                    
+                except Exception as e:
+                    debug_print(f"❌ Page refresh failed: {e}")
+                    return False
+            
+            debug_print("✅ ReCaptcha token submission completed!")
+            
+        except Exception as e:
+            debug_print(f"❌ Error submitting ReCaptcha response: {e}")
+            return False
+
+    def extract_question_static(instruction_text):
+        """גיבוי סטטי למיפוי הוראות"""
+        instruction_lower = instruction_text.lower()
+        
+        question_mapping = {
+            "crosswalks": "/m/014xcs", "crosswalk": "/m/014xcs",
+            "traffic lights": "/m/015qff", "traffic light": "/m/015qff", 
+            "bicycles": "/m/0199g", "bicycle": "/m/0199g", "bike": "/m/0199g", "bikes": "/m/0199g",
+            "cars": "/m/0k4j", "car": "/m/0k4j", "vehicle": "/m/0k4j", "vehicles": "/m/0k4j",
+            "motorcycles": "/m/04_sv", "motorcycle": "/m/04_sv",
+            "buses": "/m/01bjv", "bus": "/m/01bjv",
+            "school buses": "/m/02yvhj", "school bus": "/m/02yvhj",
+            "taxis": "/m/0pg52", "taxi": "/m/0pg52",
+            "fire hydrants": "/m/01pns0", "fire hydrant": "/m/01pns0", "hydrant": "/m/01pns0",
+            "boats": "/m/07yv9", "boat": "/m/07yv9",
+            "stairs": "/m/0cvnqh", "stair": "/m/0cvnqh", "staircase": "/m/0cvnqh",
+            "buildings": "/m/01x3z", "building": "/m/01x3z",
+            "bridges": "/m/015kr", "bridge": "/m/015kr",
+            "tractors": "/m/013xlm", "tractor": "/m/013xlm"
+        }
+        
+        # חיפוש מדויק יותר
+        for key, value in question_mapping.items():
+            if key in instruction_lower:
+                debug_print(f"Matched '{key}' to code '{value}'")
+                return value
+        
+        # ברירת מחדל
+        debug_print("No exact match found, using default cars code")
+        return "/m/0k4j"
+    
+    try:
+        debug_print("Starting improved CAPTCHA solving with Capsolver...")
+        
+        # קבלת API key
+        capsolver_api_key = os.getenv("CAPSOLVER_API_KEY")
+        if not capsolver_api_key:
+            debug_print("Capsolver API key not found")
+            return False
+        
+        debug_print(f"Using API key: {capsolver_api_key[:8]}...")
+        debug_print(f"Instruction: '{instruction_text}'")
+        
+        # חילוץ קוד השאלה
+        question_code = extract_question_from_instruction(instruction_text)
+        debug_print(f"Question code: {question_code}")
+        
+        # עכשיו GPT בוחר את הקוד הנכון, אז לא צריך אלטרנטיבות
+        all_questions = [question_code]
+        debug_print(f"Using GPT-selected question code: {question_code}")
+        
+        time.sleep(2)
+        
+        # חיפוש iframe
+        captcha_iframes = driver.find_elements(By.XPATH, "//iframe[contains(@src, 'recaptcha') and contains(@src, 'bframe')]")
+        if not captcha_iframes:
+            debug_print("No CAPTCHA iframe found")
+            return False
+        
+        debug_print(f"Found {len(captcha_iframes)} iframe(s)")
+        
+        # מעבר ל-iframe וצילום
+        driver.switch_to.frame(captcha_iframes[0])
+        time.sleep(2)
+        
+        debug_print("Taking high-quality screenshot...")
+        timestamp = int(time.time())
+        
+        try:
+            from PIL import Image
+            import io
+            
+            # ניסיון מרובה לצילום איכותי
+            approaches = [
+                # גישה 1: צילום האלמנט הספציפי
+                {"selector": ".rc-imageselect-table", "name": "table"},
+                {"selector": ".rc-imageselect-challenge", "name": "challenge"}, 
+                {"selector": ".rc-imageselect", "name": "imageselect"},
+                {"selector": "body", "name": "body"}
+            ]
+            
+            screenshot_bytes = None
+            selected_approach = None
+            
+            for approach in approaches:
+                try:
+                    element = driver.find_element(By.CSS_SELECTOR, approach["selector"])
+                    if element and element.is_displayed():
+                        screenshot_bytes = element.screenshot_as_png
+                        selected_approach = approach["name"]
+                        debug_print(f"Screenshot taken using: {selected_approach}")
+                        break
+                except:
+                    continue
+            
+            if not screenshot_bytes:
+                debug_print("Failed to take screenshot with all approaches")
+                return False
+            
+            # שמירת התמונה המקורית
+            original_path = f"/Users/itaykarkason/Desktop/capsolver_improved_{timestamp}.png"
+            with open(original_path, "wb") as f:
+                f.write(screenshot_bytes)
+            debug_print(f"Original screenshot saved: {original_path}")
+            
+            # עיבוד התמונה
+            img = Image.open(io.BytesIO(screenshot_bytes))
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            debug_print(f"Original image size: {img.size}")
+            
+            # גישות שונות לעיבוד התמונה
+            image_variants = []
+            
+            # גרסה 1: איכות גבוהה
+            buffer1 = io.BytesIO()
+            img.save(buffer1, format='JPEG', quality=95, optimize=False)
+            image_variants.append({
+                "data": base64.b64encode(buffer1.getvalue()).decode('utf-8'),
+                "name": "high_quality",
+                "size": len(buffer1.getvalue())
+            })
+            
+            # גרסה 2: איכות בינונית
+            buffer2 = io.BytesIO()
+            img.save(buffer2, format='JPEG', quality=85, optimize=True)
+            image_variants.append({
+                "data": base64.b64encode(buffer2.getvalue()).decode('utf-8'),
+                "name": "medium_quality", 
+                "size": len(buffer2.getvalue())
+            })
+            
+            # גרסה 3: גרסה מוקטנת אם התמונה גדולה מ-500px
+            if max(img.size) > 500:
+                img_resized = img.copy()
+                img_resized.thumbnail((500, 500), Image.Resampling.LANCZOS)
+                buffer3 = io.BytesIO()
+                img_resized.save(buffer3, format='JPEG', quality=90, optimize=True)
+                image_variants.append({
+                    "data": base64.b64encode(buffer3.getvalue()).decode('utf-8'),
+                    "name": "resized_500px",
+                    "size": len(buffer3.getvalue())
+                })
+            
+            debug_print(f"Created {len(image_variants)} image variants")
+            for variant in image_variants:
+                debug_print(f"  {variant['name']}: {variant['size']} bytes")
+            
+            # חזרה ל-frame הראשי
+            driver.switch_to.default_content()
+            
+            # ניסיון עם שתי גישות - classification וfull task
+            api_url = "https://api.capsolver.com/createTask"
+            
+            # קבלת site key
+            site_key = get_recaptcha_site_key(driver)
+            debug_print(f"Found site key: {site_key}")
+            
+            # ניסיון ראשון - פתרון מלא של ReCaptcha V2 (מומלץ על ידי Capsolver)
+            if site_key:
+                debug_print("Trying full ReCaptcha V2 solution...")
+                full_payload = {
+                    "clientKey": capsolver_api_key,
+                    "task": {
+                        "type": "ReCaptchaV2TaskProxyLess",
+                        "websiteURL": "https://multipass.co.il",
+                        "websiteKey": site_key,
+                        "isInvisible": False
+                    }
+                }
+                
+                try:
+                    response = requests.post(api_url, json=full_payload, timeout=30)
+                    debug_print(f"Full API Response Status: {response.status_code}")
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        debug_print(f"Full API Response: {result}")
+                        
+                        if result.get('errorId') == 0:
+                            if result.get('status') == 'ready' and 'solution' in result:
+                                # פתרון מיידי
+                                solution = result['solution']
+                                if 'gRecaptchaResponse' in solution:
+                                    debug_print("✅ Full ReCaptcha solution received!")
+                                    debug_print(f"🎯 Capsolver solved the challenge: '{instruction_text}'")
+                                    debug_print(f"📝 Note: Full ReCaptcha solution doesn't show which images were selected")
+                                    debug_print(f"🔑 Solution token length: {len(solution['gRecaptchaResponse'])} characters")
+                                    return submit_recaptcha_response(driver, solution['gRecaptchaResponse'])
+                            elif 'taskId' in result:
+                                # משימה אסינכרונית - נחכה לתוצאה
+                                task_id = result['taskId']
+                                debug_print(f"Task created, waiting for result: {task_id}")
+                                return wait_for_capsolver_result(api_url, capsolver_api_key, task_id, driver)
+                except Exception as e:
+                    debug_print(f"Full solution failed: {e}")
+            
+            # גיבוי - ניסיון עם image classification
+            debug_print("Trying image classification as fallback...")
+            for question in all_questions:
+                debug_print(f"Trying question code: {question}")
+                
+                for variant in image_variants:
+                    debug_print(f"  -> with {variant['name']} variant...")
+                    
+                    payload = {
+                        "clientKey": capsolver_api_key,
+                        "task": {
+                            "type": "ReCaptchaV2Classification",
+                            "websiteURL": "https://multipass.co.il",
+                            "image": variant["data"],
+                            "question": question
+                        }
+                    }
+                
+                try:
+                    response = requests.post(api_url, json=payload, timeout=30)
+                    debug_print(f"API Response Status: {response.status_code}")
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        debug_print(f"API Response: {result}")
+                        
+                        if result.get('errorId') == 0 and 'solution' in result:
+                            solution = result['solution']
+                            
+                            if 'objects' in solution and solution['objects']:
+                                click_coordinates = solution['objects']
+                                debug_print(f"✅ SUCCESS with question {question} + {variant['name']}: {click_coordinates}")
+                                print(f"\n🤖 [CAPSOLVER] זוהו תמונות לקליקה ({question}): {click_coordinates} 🤖\n")
+                                return perform_captcha_clicks(driver, captcha_iframes, click_coordinates)
+                            elif solution.get('hasObject') == True:
+                                debug_print(f"Object detected but no coordinates with {question} + {variant['name']}")
+                                continue
+                            else:
+                                debug_print(f"No objects found with {question} + {variant['name']}")
+                                continue
+                        else:
+                            debug_print(f"API error with {question} + {variant['name']}: {result}")
+                            continue
+                    else:
+                        debug_print(f"HTTP error {response.status_code} with {question} + {variant['name']}")
+                        continue
+                        
+                except Exception as e:
+                    debug_print(f"Request error with {question} + {variant['name']}: {e}")
+                    continue
+            
+            debug_print("❌ All question codes and image variants failed")
+            return False
+            
+        except Exception as e:
+            debug_print(f"Image processing error: {e}")
+            return False
+            
+    except Exception as e:
+        debug_print(f"General error: {e}")
+        return False
+
+
+def perform_captcha_clicks(driver, captcha_iframes, click_coordinates):
+    """מבצע קליקות על תמונות ה-CAPTCHA לפי התוצאות מ-Capsolver"""
+    def debug_print(message):
+        if DEBUG_MODE:
+            print(f"[CAPSOLVER CLICKS] {message}")
+    
+    try:
+        debug_print(f"Performing clicks on coordinates: {click_coordinates}")
+        
+        # מעבר ל-iframe של CAPTCHA
+        driver.switch_to.frame(captcha_iframes[0])
+        time.sleep(2)
+        
+        # חיפוש הרשת של התמונות
+        grid_elements = driver.find_elements(By.CSS_SELECTOR, ".rc-imageselect-table td")
+        if not grid_elements:
+            grid_elements = driver.find_elements(By.CSS_SELECTOR, ".rc-imageselect-tile")
+        
+        if not grid_elements:
+            debug_print("Could not find CAPTCHA grid elements")
+            driver.switch_to.default_content()
+            return False
+        
+        debug_print(f"Found {len(grid_elements)} grid elements")
+        
+        # ביצוע קליקות לפי המספרים שחזרו מ-Capsolver
+        for coord in click_coordinates:
+            if isinstance(coord, int) and 1 <= coord <= len(grid_elements):
+                try:
+                    # המרה למספר אינדקס (Capsolver מחזיר 1-9, אבל רשימה מתחילה מ-0)
+                    index = coord - 1
+                    element = grid_elements[index]
+                    
+                    # קליקה על התמונה
+                    driver.execute_script("arguments[0].click();", element)
+                    debug_print(f"Clicked on grid element {coord} (index {index})")
+                    time.sleep(0.5)
+                    
+                except Exception as click_error:
+                    debug_print(f"Error clicking element {coord}: {click_error}")
+                    continue
+        
+        time.sleep(2)
+        
+        # חיפוש כפתור VERIFY
+        verify_selectors = [
+            "#recaptcha-verify-button",
+            ".rc-button-default",
+            "button[id*='verify']"
+        ]
+        
+        verify_button = None
+        for selector in verify_selectors:
+            try:
+                verify_button = driver.find_element(By.CSS_SELECTOR, selector)
+                if verify_button and verify_button.is_displayed():
+                    debug_print(f"Found verify button with selector: {selector}")
+                    break
+            except:
+                continue
+        
+        if verify_button:
+            verify_button.click()
+            debug_print("Clicked VERIFY button")
+            time.sleep(3)
+            
+            # בדיקה אם הCAPTCHA נפתר
+            driver.switch_to.default_content()
+            debug_print("Checking if CAPTCHA was solved successfully...")
+            
+            try:
+                submit_button = driver.find_element(By.ID, "submit")
+                if not submit_button.get_attribute("disabled"):
+                    debug_print("✅ CAPTCHA solved successfully with Capsolver!")
+                    print(f"\n🎉 [SUCCESS] CAPTCHA נפתר בהצלחה עם Capsolver! 🎉\n")
+                    return True
+                else:
+                    debug_print("❌ CAPTCHA verification failed")
+                    return False
+            except Exception as check_error:
+                debug_print(f"Error checking CAPTCHA result: {check_error}")
+                return False
+        else:
+            debug_print("Could not find VERIFY button")
+            driver.switch_to.default_content()
+            return False
+            
+    except Exception as e:
+        debug_print(f"Error performing CAPTCHA clicks: {e}")
+        try:
+            driver.switch_to.default_content()
+        except:
+            pass
+        return False
+
+
 def analyze_and_click_captcha(driver, captcha_iframes, instruction_text, phase="initial"):
     """
     ניתוח ולחיצה על CAPTCHA עם תמיכה בשלבים
@@ -2319,8 +3740,34 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 # ניסיון לפתור CAPTCHA
                 if solve_captcha_challenge(driver, wait_timeout=60):
                     debug_print("CAPTCHA solved successfully")
-                    captcha_solved = True
-                    break
+                    
+                    # בדיקה שהdriver עדיין חי
+                    try:
+                        driver.current_url  # בדיקה פשוטה שהdriver עובד
+                        debug_print("Driver is still active after CAPTCHA solving")
+                        
+                        # בדיקה נוספת - האם כפתור Submit זמין עכשיו?
+                        debug_print("🔍 Checking if Submit button is now enabled...")
+                        try:
+                            submit_button = driver.find_element(By.ID, "submit")
+                            if submit_button.is_enabled():
+                                debug_print("✅ Submit button is enabled - CAPTCHA was processed successfully!")
+                            else:
+                                debug_print("⚠️ Submit button still disabled - may need more processing time")
+                                time.sleep(3)  # זמן נוסף
+                                # בדיקה שוב
+                                if submit_button.is_enabled():
+                                    debug_print("✅ Submit button enabled after additional wait")
+                                else:
+                                    debug_print("⚠️ Submit button still disabled - continuing anyway")
+                        except Exception as submit_check_error:
+                            debug_print(f"Could not check submit button: {submit_check_error}")
+                        
+                        captcha_solved = True
+                        break
+                    except Exception as driver_error:
+                        debug_print(f"Driver died after CAPTCHA solving: {driver_error}")
+                        return None
                 else:
                     debug_print(f"CAPTCHA solving attempt {attempt + 1} failed")
                     if attempt < max_captcha_attempts - 1:
