@@ -351,6 +351,11 @@ class Coupon(db.Model):
     
     # Field for auto-update setting
     auto_update = db.Column(db.Boolean, default=True, nullable=False)
+    
+    # User interaction tracking fields
+    last_detail_view = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_company_view = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_code_view = db.Column(db.DateTime(timezone=True), nullable=True)
 
     @property
     def remaining_value(self):

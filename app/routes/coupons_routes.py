@@ -3467,6 +3467,10 @@ def coupon_detail(id):
         # Use 404 to avoid revealing coupon existence
         from flask import abort
         abort(404)
+    
+    # Update last_detail_view timestamp when user views coupon detail page
+    coupon.last_detail_view = datetime.now(timezone.utc)
+    db.session.commit()
 
     # ------------------------------------------------------------------
     # 2) Initialize WTForms instances used in the template.
@@ -5503,6 +5507,74 @@ def delete_transaction_record(source_table, record_id):
         flash("שגיאה בעת מחיקת הרשומה.", "danger")
 
     return redirect(url_for("coupons.coupon_detail", id=coupon.id))
+
+
+@coupons_bp.route("/update_company_view", methods=["POST"])
+@login_required
+def update_company_view():
+    """Update last_company_view timestamp for all coupons of a specific company."""
+    try:
+        data = request.get_json()
+        company = data.get('company')
+        
+        logger.info(f"update_company_view called for user {current_user.id}, company: {company}")
+        
+        if not company:
+            logger.warning("No company provided in request")
+            return jsonify({'success': False, 'error': 'Company name is required'})
+        
+        # Update all user's coupons from this company
+        user_coupons = Coupon.query.filter_by(
+            user_id=current_user.id,
+            company=company
+        ).all()
+        
+        logger.info(f"Found {len(user_coupons)} coupons for company {company}")
+        
+        current_time = datetime.now(timezone.utc)
+        
+        for coupon in user_coupons:
+            coupon.last_company_view = current_time
+            logger.debug(f"Updated coupon {coupon.id} last_company_view")
+        
+        db.session.commit()
+        logger.info(f"Successfully updated {len(user_coupons)} coupons")
+        
+        return jsonify({'success': True, 'updated_count': len(user_coupons)})
+    except Exception as e:
+        logger.error(f"Error in update_company_view: {str(e)}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@coupons_bp.route("/update_code_view", methods=["POST"])
+@login_required
+def update_code_view():
+    """Update last_code_view timestamp for a specific coupon."""
+    try:
+        data = request.get_json()
+        coupon_id = data.get('coupon_id')
+        
+        if not coupon_id:
+            return jsonify({'success': False, 'error': 'Coupon ID is required'})
+        
+        # Get the coupon and verify ownership
+        coupon = Coupon.query.filter_by(
+            id=coupon_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not coupon:
+            return jsonify({'success': False, 'error': 'Coupon not found or access denied'})
+        
+        # Update last_code_view timestamp
+        coupon.last_code_view = datetime.now(timezone.utc)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @coupons_bp.route("/update_coupon_detail_timestamp", methods=["POST"])

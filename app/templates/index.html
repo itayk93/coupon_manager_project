@@ -2252,6 +2252,20 @@ document.addEventListener("DOMContentLoaded", function() {
       cardBox.appendChild(pEl);
 
       cardBox.addEventListener("click", function() {
+        // Update company view timestamp
+        fetch('{{ url_for("coupons.update_company_view") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+          },
+          body: JSON.stringify({
+            company: company
+          })
+        }).catch(error => {
+          console.error('Error updating company view:', error);
+        });
+        
         openCompanyModal(company, cards);
       });
 
@@ -2317,6 +2331,33 @@ document.addEventListener("DOMContentLoaded", function() {
                   alert("שגיאה בעת סגירת ההודעה");
               }
           });
+      });
+    });
+
+    // # 8) Handle "Show Code" button clicks
+    document.querySelectorAll(".show-code").forEach(button => {
+      button.addEventListener("click", function(event) {
+        // Get the coupon ID from the parent wrapper
+        const couponWrapper = this.closest('.coupon-card-index-wrapper');
+        const couponId = couponWrapper ? couponWrapper.getAttribute('data-coupon-id') : null;
+        
+        if (couponId) {
+          // Update code view timestamp
+          fetch('{{ url_for("coupons.update_code_view") }}', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify({
+              coupon_id: parseInt(couponId)
+            })
+          }).catch(error => {
+            console.error('Error updating code view:', error);
+          });
+        }
+        
+        // Let the existing show code functionality handle the display
       });
     });
 

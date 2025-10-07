@@ -3697,131 +3697,322 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             cleaned_coupon_number = str(coupon_number).replace("-", "")
             debug_print(f"Entering coupon number: {cleaned_coupon_number}")
             card_number_field.send_keys(cleaned_coupon_number)
-
-            # Handle reCAPTCHA - חלק מתוקן עם פותר אוטומטי
-            debug_print("Handling reCAPTCHA with advanced solver")
             
-            # שלב 1: לחיצה על checkbox
-            recaptcha_iframe = wait.until(
-                EC.presence_of_element_located(
-                    (By.XPATH, "//iframe[contains(@src, 'recaptcha')]")
-                )
-            )
-            driver.switch_to.frame(recaptcha_iframe)
-            checkbox = wait.until(
-                EC.element_to_be_clickable(
-                    (By.CSS_SELECTOR, ".recaptcha-checkbox-border")
-                )
-            )
-            checkbox.click()
-            debug_print("reCAPTCHA checkbox clicked")
-            driver.switch_to.default_content()
+            # בדיקה מוקדמת אם Submit button כבר מאופשר (ללא CAPTCHA)
+            time.sleep(2)  # המתנה קצרה לטעינת הדף
+            debug_print("🔍 Checking if Submit button is already enabled (no CAPTCHA needed)...")
             
-            # שלב 2: בדיקה אם יש CAPTCHA תמונות ופתרון אוטומטי
-            time.sleep(3)  # המתנה שה-CAPTCHA יטען
-            
-            # ניסיון לפתור CAPTCHA אם נדרש
-            max_captcha_attempts = 3
-            captcha_solved = False
-            
-            for attempt in range(max_captcha_attempts):
-                debug_print(f"CAPTCHA solving attempt {attempt + 1}/{max_captcha_attempts}")
+            try:
+                early_submit_check = driver.find_element(By.ID, "submit")
+                disabled_attr = early_submit_check.get_attribute("disabled")
+                is_enabled = early_submit_check.is_enabled()
+                debug_print(f"🔍 Button state: disabled='{disabled_attr}', is_enabled={is_enabled}")
                 
-                # בדיקה אם הכפתור כבר מאופשר
-                try:
-                    submit_button = driver.find_element(By.ID, "submit")
-                    if not submit_button.get_attribute("disabled"):
-                        debug_print("Submit button is enabled - no CAPTCHA needed")
-                        captcha_solved = True
-                        break
-                except:
-                    pass
-                
-                # ניסיון לפתור CAPTCHA
-                if solve_captcha_challenge(driver, wait_timeout=60):
-                    debug_print("CAPTCHA solved successfully")
-                    
-                    # בדיקה שהdriver עדיין חי
-                    try:
-                        driver.current_url  # בדיקה פשוטה שהdriver עובד
-                        debug_print("Driver is still active after CAPTCHA solving")
-                        
-                        # בדיקה נוספת - האם כפתור Submit זמין עכשיו?
-                        debug_print("🔍 Checking if Submit button is now enabled...")
-                        try:
-                            submit_button = driver.find_element(By.ID, "submit")
-                            if submit_button.is_enabled():
-                                debug_print("✅ Submit button is enabled - CAPTCHA was processed successfully!")
-                            else:
-                                debug_print("⚠️ Submit button still disabled - may need more processing time")
-                                time.sleep(3)  # זמן נוסף
-                                # בדיקה שוב
-                                if submit_button.is_enabled():
-                                    debug_print("✅ Submit button enabled after additional wait")
-                                else:
-                                    debug_print("⚠️ Submit button still disabled - continuing anyway")
-                        except Exception as submit_check_error:
-                            debug_print(f"Could not check submit button: {submit_check_error}")
-                        
-                        captcha_solved = True
-                        break
-                    except Exception as driver_error:
-                        debug_print(f"Driver died after CAPTCHA solving: {driver_error}")
-                        return None
+                if is_enabled and disabled_attr is None:
+                    debug_print("✅ Submit button already enabled - no CAPTCHA required!")
+                    debug_print("🚀 Clicking enabled submit button...")
+                    early_submit_check.click()
+                    # ממשיכים ישר לטעינת הנתונים ללא CAPTCHA
+                    captcha_solved = True
+                    time.sleep(5)  # המתנה לטעינת התוצאות
+                    debug_print("⏩ Skipping CAPTCHA handling - proceeding to data extraction")
                 else:
-                    debug_print(f"CAPTCHA solving attempt {attempt + 1} failed")
+                    debug_print("⚠️ Submit button disabled - CAPTCHA handling required")
+                    debug_print(f"⚠️ Button details: disabled='{disabled_attr}', is_enabled={is_enabled}")
+                    captcha_solved = False
+            except Exception as early_check_error:
+                debug_print(f"❌ Could not check submit button early: {early_check_error}")
+                captcha_solved = False
+
+            # אם הכפתור כבר מאופשר, נדלג על כל הטיפול בCAPTCHA
+            if captcha_solved:
+                debug_print("✅ Submit button was already enabled, skipping all CAPTCHA handling")
+            else:
+                debug_print("Handling reCAPTCHA with advanced solver")
+                
+                # שלב 1: לחיצה על checkbox
+                recaptcha_iframe = wait.until(
+                    EC.presence_of_element_located(
+                        (By.XPATH, "//iframe[contains(@src, 'recaptcha')]")
+                    )
+                )
+                driver.switch_to.frame(recaptcha_iframe)
+                checkbox = wait.until(
+                    EC.element_to_be_clickable(
+                        (By.CSS_SELECTOR, ".recaptcha-checkbox-border")
+                    )
+                )
+                checkbox.click()
+                debug_print("reCAPTCHA checkbox clicked")
+                driver.switch_to.default_content()
+                
+                # שלב 2: בדיקה אם יש CAPTCHA תמונות ופתרון אוטומטי
+                time.sleep(3)  # המתנה שה-CAPTCHA יטען
+                
+                # ניסיון לפתור CAPTCHA אם נדרש
+                max_captcha_attempts = 3
+                
+                for attempt in range(max_captcha_attempts):
+                    debug_print(f"CAPTCHA solving attempt {attempt + 1}/{max_captcha_attempts}")
+                    
+                    # בדיקה אם הכפתור כבר מאופשר
+                    try:
+                        submit_button = driver.find_element(By.ID, "submit")
+                        if not submit_button.get_attribute("disabled"):
+                            debug_print("Submit button is enabled - no CAPTCHA needed")
+                            captcha_solved = True
+                            break
+                    except:
+                        pass
+                    
+                    # ניסיון לפתור CAPTCHA
+                    try:
+                        captcha_result = solve_captcha_challenge(driver, wait_timeout=60)
+                        if captcha_result:
+                            debug_print("CAPTCHA solved successfully")
+                            
+                            # בדיקה שהdriver עדיין חי
+                            try:
+                                driver.current_url  # בדיקה פשוטה שהdriver עובד
+                                debug_print("Driver is still active after CAPTCHA solving")
+                                
+                                # בדיקה נוספת - האם כפתור Submit זמין עכשיו?
+                                debug_print("🔍 Checking if Submit button is now enabled...")
+                                try:
+                                    submit_button = driver.find_element(By.ID, "submit")
+                                    if submit_button.is_enabled():
+                                        debug_print("✅ Submit button is enabled - CAPTCHA was processed successfully!")
+                                    else:
+                                        debug_print("⚠️ Submit button still disabled - may need more processing time")
+                                        time.sleep(3)  # זמן נוסף
+                                        # בדיקה שוב
+                                        if submit_button.is_enabled():
+                                            debug_print("✅ Submit button enabled after additional wait")
+                                        else:
+                                            debug_print("⚠️ Submit button still disabled - continuing anyway")
+                                except Exception as submit_check_error:
+                                    debug_print(f"Could not check submit button: {submit_check_error}")
+                                
+                                captcha_solved = True
+                                break
+                            except Exception as driver_error:
+                                debug_print(f"Driver died after CAPTCHA solving: {driver_error}")
+                                return None
+                        else:
+                            debug_print(f"CAPTCHA solving attempt {attempt + 1} failed")
+                    except Exception as captcha_error:
+                        debug_print(f"❌ Error during CAPTCHA solving attempt {attempt + 1}: {captcha_error}")
+                        debug_print(f"   Error type: {type(captcha_error).__name__}")
+                        # המשך לניסיון הבא או לטיפול בחירום
+                        
                     if attempt < max_captcha_attempts - 1:
                         time.sleep(5)  # המתנה לפני ניסיון נוסף
             
             if not captcha_solved:
-                debug_print("Failed to solve CAPTCHA after all attempts")
-                return None
+                debug_print("⚠️ CAPTCHA not solved after all attempts")
+                debug_print("🔍 Checking if page loaded anyway without CAPTCHA...")
+                
+                # בדיקה אם יש כבר תוכן בעמוד למרות שלא פתרנו CAPTCHA
+                try:
+                    submit_button = driver.find_element(By.ID, "submit")
+                    if submit_button.get_attribute("disabled"):
+                        debug_print("🔄 Submit button still disabled - forcing click anyway")
+                        # כפיית לחיצה על כפתור disabled
+                        driver.execute_script("""
+                            var submitBtn = document.getElementById('submit');
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.click();
+                            }
+                        """)
+                        debug_print("✅ Forced click on disabled submit button")
+                        captcha_solved = True  # מעדכנים שפתרנו את הבעיה
+                        time.sleep(3)  # זמן לטעינת התוצאות אחרי לחיצה כפויה
+                    else:
+                        debug_print("✅ Submit button already enabled despite no CAPTCHA")
+                        captcha_solved = True
+                except Exception as submit_check_error:
+                    debug_print(f"❌ Could not check/click submit button: {submit_check_error}")
+                    return None
+                
+                if not captcha_solved:
+                    debug_print("❌ Failed to proceed - no CAPTCHA solution and button still disabled")
+                    return None
+            # סיום הטיפול ב-CAPTCHA
+            
+            # בדיקה אם הכפתור כבר נלחץ בכפייה
+            forced_click_done = False
+            try:
+                submit_button = driver.find_element(By.ID, "submit")
+                if submit_button.get_attribute("disabled") is None and captcha_solved:
+                    # אם השיטה הכפויה עבדה, לא צריך ללחוץ שוב
+                    forced_click_done = True
+                    debug_print("✅ Submit button was already clicked via forced method")
+            except:
+                pass
+            
+            if not forced_click_done:
+                try:
+                    check_balance_button = wait.until(
+                        EC.element_to_be_clickable((By.ID, "submit"))
+                    )
+                    if check_balance_button.is_enabled():
+                        debug_print("Submit button is enabled - clicking to get data")
+                        debug_print("🚀 Clicking 'ברור יתרה' button...")
+                        check_balance_button.click()
+                        debug_print("✅ Submit button clicked successfully!")
+                    else:
+                        debug_print(
+                            "Submit button is disabled. CAPTCHA may not be solved properly."
+                        )
+                        driver.quit()
+                        return None
+                except Exception as click_error:
+                    debug_print(f"⚠️ Could not click submit button normally: {click_error}")
+                    debug_print("🔄 Trying forced click as fallback...")
+                    driver.execute_script("""
+                        var submitBtn = document.getElementById('submit');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.click();
+                        }
+                    """)
+                    debug_print("✅ Used forced click as fallback")
+                    time.sleep(3)
 
-            check_balance_button = wait.until(
-                EC.element_to_be_clickable((By.ID, "submit"))
-            )
-            if check_balance_button.is_enabled():
-                debug_print("Clicking submit button")
-                check_balance_button.click()
-            else:
-                debug_print(
-                    "Submit button is disabled. CAPTCHA may not be solved properly."
-                )
-                driver.quit()
-                return None
-
-            wait.until(EC.presence_of_element_located((By.XPATH, "//table")))
-            time.sleep(10)
+            # סגירת CAPTCHA popup אם עדיין פתוח
+            debug_print("🔍 Checking for open CAPTCHA popup to close...")
+            try:
+                # ניסיון למצוא ולסגור את החלון הקופץ של reCAPTCHA
+                driver.execute_script("""
+                    // סגירת כל החלונות הקופצים של reCAPTCHA
+                    var recaptchaFrames = document.querySelectorAll('iframe[src*="recaptcha"]');
+                    recaptchaFrames.forEach(function(frame) {
+                        if (frame.style.visibility !== 'hidden') {
+                            frame.style.display = 'none';
+                            frame.style.visibility = 'hidden';
+                        }
+                    });
+                    
+                    // הסתרת כל האלמנטים של reCAPTCHA
+                    var recaptchaElements = document.querySelectorAll('[class*="recaptcha"], [id*="recaptcha"]');
+                    recaptchaElements.forEach(function(element) {
+                        element.style.display = 'none';
+                    });
+                    
+                    // לחיצה על כפתור סגירה אם קיים
+                    var closeButtons = document.querySelectorAll('.rc-imageselect-close, [aria-label="Close"], .close');
+                    closeButtons.forEach(function(btn) {
+                        if (btn.offsetParent !== null) { // אם הכפתור נראה
+                            btn.click();
+                        }
+                    });
+                """)
+                debug_print("✅ CAPTCHA popup closed/hidden")
+                time.sleep(2)  # זמן קצר לסגירת הpopup
+            except Exception as close_error:
+                debug_print(f"⚠️ Could not close CAPTCHA popup: {close_error}")
+            
+            debug_print("⏳ Waiting for data table to load after CAPTCHA...")
+            # המתנה ארוכה יותר לטעינת הנתונים אחרי קאפצ'ה
+            try:
+                wait_extended = WebDriverWait(driver, 30)  # 30 שניות במקום 10
+                # ניסיון למצוא טבלה עם כמה selectors שונים
+                table_found = False
+                table_selectors = ["//table", ".table", "#dataTable", "table", "[role='table']"]
+                
+                for selector in table_selectors:
+                    try:
+                        if selector.startswith("//"):
+                            wait_extended.until(EC.presence_of_element_located((By.XPATH, selector)))
+                        else:
+                            wait_extended.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+                        debug_print(f"✅ Table found with selector: {selector}")
+                        table_found = True
+                        break
+                    except Exception as selector_error:
+                        debug_print(f"❌ Table not found with selector {selector}: {selector_error}")
+                        continue
+                
+                if table_found:
+                    debug_print("✅ Table element found, waiting additional time for full data load...")
+                    time.sleep(15)  # המתנה נוספת לטעינת הנתונים המלאה
+                else:
+                    debug_print("⚠️ No table found with any selector, but continuing to save page HTML...")
+                    time.sleep(10)  # המתנה קצרה יותר
+                    
+            except Exception as table_wait_error:
+                debug_print(f"⚠️ Error waiting for table: {table_wait_error}, continuing anyway...")
+                time.sleep(10)  # המתנה קצרה יותר אם יש בעיה
+            
+            debug_print("🔍 Checking page content after CAPTCHA and wait...")
 
             page_html = driver.page_source
+            debug_print(f"📄 Page HTML length: {len(page_html)} characters")
+            
+            # בדיקה אם יש נתונים בטבלה
+            if "אין נתונות להצגה" in page_html or "No data" in page_html:
+                debug_print("⚠️ Page shows 'no data' message")
+            else:
+                debug_print("✅ Page appears to contain data")
+            
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"coupon_{coupon_number}_{timestamp}.html"
             file_path = os.path.join(save_directory, filename)
-            debug_print(f"Saving page HTML to {file_path}")
+            
+            debug_print(f"💾 Saving page HTML to {file_path}")
+            debug_print(f"📁 Save directory: {save_directory}")
+            debug_print(f"📝 File name: {filename}")
+            
+            # וידוא שהתיקייה קיימת
+            os.makedirs(save_directory, exist_ok=True)
+            debug_print(f"📁 Directory created/verified: {save_directory}")
+            
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(page_html)
+            debug_print(f"✅ Successfully saved HTML file ({len(page_html)} chars)")
+            debug_print(f"📂 Full path: {os.path.abspath(file_path)}")
+            debug_print("🎯 Selenium operations completed successfully - moving to data extraction")
 
         except Exception as e:
             debug_print(
                 f"An error occurred during Selenium operations (Multipass): {e}"
             )
             if driver:
-                driver.quit()
+                try:
+                    driver.quit()
+                except:
+                    pass
             return None
         finally:
             if driver:
-                driver.quit()
+                try:
+                    driver.quit()
+                except:
+                    pass  # ה-driver כבר נסגר
 
         try:
-            debug_print("Reading tables from saved HTML")
+            debug_print("📊 Reading tables from saved HTML")
             dfs = pd.read_html(file_path)
-            os.remove(file_path)
+            debug_print(f"🔍 Found {len(dfs)} table(s) in HTML")
+            
+            # שמירת קובץ לבדיקה אם אין טבלאות
             if not dfs:
-                debug_print("No tables found in HTML (Multipass)")
+                debug_print("❌ No tables found in HTML (Multipass)")
+                backup_path = file_path.replace('.html', '_no_tables_found.html')
+                import shutil
+                shutil.copy2(file_path, backup_path)
+                debug_print(f"🔍 Saved problematic HTML to: {backup_path}")
+                os.remove(file_path)
                 return None
+            else:
+                debug_print(f"✅ Successfully found {len(dfs)} table(s)")
+                os.remove(file_path)
 
             df = dfs[0]
-            debug_print("Renaming columns for Multipass data")
+            debug_print(f"📊 Table has {len(df)} rows and {len(df.columns)} columns")
+            debug_print(f"📋 Column names: {list(df.columns)}")
+            debug_print("🔄 Renaming columns for Multipass data")
             df = df.rename(
                 columns={
                     "שם בית עסק": "location",
@@ -3846,6 +4037,9 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             numeric_columns = ["recharge_amount", "usage_amount"]
             for col in numeric_columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+            
+            debug_print(f"🎉 Successfully processed Multipass data: {len(df)} rows")
+            debug_print(f"📊 Final DataFrame columns: {list(df.columns)}")
 
         except Exception as e:
             debug_print(f"An error occurred during data parsing (Multipass): {e}")
@@ -4016,7 +4210,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
         except Exception as e:
             debug_print(f"An error occurred during Selenium operations (Max): {e}")
             traceback.print_exc()
-            return None
+            df = None
 
     # -------------------- Handling BuyMe Scenario --------------------
     elif coupon_kind.lower() == "buyme":
@@ -4296,14 +4490,18 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
         except Exception as e:
             debug_print(f"An error occurred during Selenium operations (BuyMe): {e}")
             traceback.print_exc()
-            return None
+            df = None
 
     # -------------------- Unsupported Coupon Type --------------------
     else:
         debug_print(f"Unsupported coupon kind: {coupon_kind}")
-        return None
+        df = None
 
     # -------------------- Common Stage: Database Comparison and Update --------------------
+    if df is None:
+        debug_print("No data to process - df is None")
+        return None
+        
     try:
         debug_print("Retrieving existing transactions from the database")
         existing_data = pd.read_sql_query(
