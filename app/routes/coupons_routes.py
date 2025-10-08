@@ -4336,9 +4336,22 @@ def update_all_active_coupons():
 
     updated_coupons = []
     failed_coupons = []
+    skipped_coupons = []
 
     for cpn in active_coupons:
         try:
+            # Check if coupon needs update based on view timestamps
+            from app.helpers import should_update_coupon
+            
+            if not should_update_coupon(cpn):
+                skipped_coupons.append(cpn.code)
+                current_app.logger.info(f"Skipping coupon {cpn.code} - no update needed")
+                continue
+            
+            # Update last scraped timestamp
+            from datetime import datetime, timezone
+            cpn.last_scraped = datetime.now(timezone.utc)
+            
             df = get_coupon_data(cpn)  # מעבירים קופון שלם
             if df is not None:
                 updated_coupons.append(cpn.code)
@@ -4355,6 +4368,8 @@ def update_all_active_coupons():
         flash(f'הקופונים הבאים עודכנו בהצלחה: {", ".join(updated_coupons)}', "success")
     if failed_coupons:
         flash(f'הקופונים הבאים לא עודכנו: {", ".join(failed_coupons)}', "danger")
+    if skipped_coupons:
+        flash(f'הקופונים הבאים דולגו (לא זקוקים לעדכון): {", ".join(skipped_coupons)}', "info")
 
     return redirect(url_for("profile.index"))
 
@@ -4414,9 +4429,26 @@ def update_selected_coupons():
     # Synchronous processing (for development/testing)
     updated_coupons = []
     failed_coupons = []
+    skipped_coupons = []
 
     for cpn in selected_coupons:
         try:
+            # Check if coupon needs update based on view timestamps
+            from app.helpers import should_update_coupon
+            
+            if not should_update_coupon(cpn):
+                skipped_coupons.append({
+                    'code': cpn.code,
+                    'company': cpn.company,
+                    'reason': 'לא זקוק לעדכון'
+                })
+                current_app.logger.info(f"Skipping coupon {cpn.code} - no update needed")
+                continue
+            
+            # Update last scraped timestamp
+            from datetime import datetime, timezone
+            cpn.last_scraped = datetime.now(timezone.utc)
+            
             df = get_coupon_data(cpn)  
             if df is not None:
                 updated_coupons.append({
@@ -4540,9 +4572,26 @@ def update_all_multipass_coupons_playwright():
         
         updated_coupons = []
         failed_coupons = []
+        skipped_coupons = []
 
         for cpn in updatable_coupons:
             try:
+                # Check if coupon needs update based on view timestamps
+                from app.helpers import should_update_coupon
+                
+                if not should_update_coupon(cpn):
+                    skipped_coupons.append({
+                        'code': cpn.code,
+                        'company': cpn.company,
+                        'reason': 'לא זקוק לעדכון'
+                    })
+                    current_app.logger.info(f"Skipping coupon {cpn.code} - no update needed")
+                    continue
+                
+                # Update last scraped timestamp
+                from datetime import datetime, timezone
+                cpn.last_scraped = datetime.now(timezone.utc)
+                
                 df = get_coupon_data_with_playwright(cpn, max_retries=3)  
                 if df is not None:
                     total_usage = float(df["usage_amount"].sum())
@@ -4581,7 +4630,7 @@ def update_all_multipass_coupons_playwright():
         try:
             db.session.commit()
             current_app.logger.info(f"=== Playwright Update Completed ===")
-            current_app.logger.info(f"Updated: {len(updated_coupons)}, Failed: {len(failed_coupons)}")
+            current_app.logger.info(f"Updated: {len(updated_coupons)}, Failed: {len(failed_coupons)}, Skipped: {len(skipped_coupons)}")
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Database commit failed: {e}")
@@ -4591,9 +4640,11 @@ def update_all_multipass_coupons_playwright():
             'success': True,
             'updated_coupons': updated_coupons,
             'failed_coupons': failed_coupons,
+            'skipped_coupons': skipped_coupons,
             'updated_count': len(updated_coupons),
             'failed_count': len(failed_coupons),
-            'message': f'עודכנו {len(updated_coupons)} קופונים בהצלחה באמצעות Playwright'
+            'skipped_count': len(skipped_coupons),
+            'message': f'עודכנו {len(updated_coupons)} קופונים, דולגו {len(skipped_coupons)} קופונים (Playwright)'
         })
     except Exception as e:
         db.session.rollback()
@@ -4663,9 +4714,26 @@ def update_all_multipass_coupons():
         # Synchronous processing (fallback)
         updated_coupons = []
         failed_coupons = []
+        skipped_coupons = []
 
         for cpn in updatable_coupons:
             try:
+                # Check if coupon needs update based on view timestamps
+                from app.helpers import should_update_coupon
+                
+                if not should_update_coupon(cpn):
+                    skipped_coupons.append({
+                        'code': cpn.code,
+                        'company': cpn.company,
+                        'reason': 'לא זקוק לעדכון'
+                    })
+                    current_app.logger.info(f"Skipping coupon {cpn.code} - no update needed")
+                    continue
+                
+                # Update last scraped timestamp
+                from datetime import datetime, timezone
+                cpn.last_scraped = datetime.now(timezone.utc)
+                
                 df = get_coupon_data(cpn)  
                 if df is not None:
                     updated_coupons.append({
@@ -4695,9 +4763,11 @@ def update_all_multipass_coupons():
                 'background': False,
                 'updated_coupons': updated_coupons,
                 'failed_coupons': failed_coupons,
+                'skipped_coupons': skipped_coupons,
                 'updated_count': len(updated_coupons),
                 'failed_count': len(failed_coupons),
-                'message': f'עודכנו {len(updated_coupons)} קופונים בהצלחה'
+                'skipped_count': len(skipped_coupons),
+                'message': f'עודכנו {len(updated_coupons)} קופונים, דולגו {len(skipped_coupons)} קופונים'
             })
         except Exception as e:
             db.session.rollback()
@@ -4774,6 +4844,18 @@ def update_coupon_transactions():
         return redirect(url_for("coupons.coupon_detail"))
 
     try:
+        # Check if coupon needs update based on view timestamps
+        from app.helpers import should_update_coupon
+        
+        if not should_update_coupon(coupon):
+            current_app.logger.info(f"Skipping coupon {coupon.code} - no update needed (last scraped after latest view)")
+            flash(f"הקופון {coupon.code} לא זקוק לעדכון - הסקרייפ האחרון נעשה אחרי הצפייה האחרונה", "info")
+            return redirect(url_for("coupons.coupon_detail", id=coupon.id))
+        
+        # Update last scraped timestamp regardless of scraping result
+        from datetime import datetime, timezone
+        coupon.last_scraped = datetime.now(timezone.utc)
+        
         df = get_coupon_data(coupon)  # מעבירים את האובייקט
         if df is not None:
             # Always recalculate total usage from ALL transactions in database
@@ -4803,7 +4885,7 @@ def update_coupon_transactions():
             current_app.logger.error(
                 f"Error updating coupon {coupon.code} (no DataFrame returned)."
             )
-            db.session.rollback()
+            flash(f"לא ניתן היה לעדכן את הקופון {coupon.code}, אבל תיעוד הסקרייפ נשמר", "warning")
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error updating coupon {coupon.code}: {e}")

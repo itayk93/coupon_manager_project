@@ -90,6 +90,50 @@ def create_notification(user_id, message, link):
 
 
 # ----------------------------------------------------------------
+#  Helper function for checking if coupon needs update
+# ----------------------------------------------------------------
+def should_update_coupon(coupon):
+    """
+    בודק האם קופון צריך עדכון סקרייפ חדש בהתבסס על מועדי הצפיות האחרונות
+    
+    לוגיקה:
+    - אם מעולם לא נעשה סקרייפ (last_scraped is None) - צריך עדכון
+    - אם יש צפייה כלשהי (detail/company/code) אחרי הסקרייפ האחרון - צריך עדכון
+    - אחרת - לא צריך עדכון
+    
+    Args:
+        coupon: אובייקט קופון
+        
+    Returns:
+        bool: True אם צריך עדכון, False אחרת
+    """
+    # אם מעולם לא נעשה סקרייפ - בהחלט צריך
+    if not coupon.last_scraped:
+        return True
+    
+    # רשימת כל הצפיות האפשריות
+    view_timestamps = [
+        coupon.last_detail_view,
+        coupon.last_company_view, 
+        coupon.last_code_view
+    ]
+    
+    # סינון None values ומציאת הצפייה האחרונה
+    recent_views = [ts for ts in view_timestamps if ts is not None]
+    
+    if not recent_views:
+        # אין צפיות בכלל - לא צריך עדכון
+        return False  
+    
+    latest_view = max(recent_views)
+    
+    # אם הצפייה האחרונה היא אחרי הסקרייפ האחרון - צריך עדכון
+    needs_update = latest_view > coupon.last_scraped
+    
+    return needs_update
+
+
+# ----------------------------------------------------------------
 #  Helper function for updating coupon status
 # ----------------------------------------------------------------
 def update_coupon_status(coupon):
@@ -536,6 +580,23 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     if df is None or df.empty:
         print("No data frame (df) was created or df is empty.")
         return None
+    
+    # Check if the table contains only error messages (empty table scenario)
+    if len(df) == 1:
+        first_row = df.iloc[0]
+        # Check if any field contains the "no records found" message
+        for column in df.columns:
+            cell_value = str(first_row.get(column, ""))
+            if "לא נמצאו רשומות מתאימות" in cell_value:
+                print("Table contains only 'לא נמצאו רשומות מתאימות' - treating as empty table.")
+                return pd.DataFrame()  # Return empty DataFrame
+    
+    # Check if location column contains only error messages
+    if 'location' in df.columns:
+        unique_locations = df['location'].unique()
+        if len(unique_locations) == 1 and any(invalid_text in str(unique_locations[0]) for invalid_text in ["לא נמצאו רשומות מתאימות", "לא נמצאו רשומות", "לא נמצא"]):
+            print(f"Table contains only invalid location data: {unique_locations[0]} - treating as empty table.")
+            return pd.DataFrame()  # Return empty DataFrame
 
     # ----------------------------------------------------------------------
     # Common Stage: Database Comparison and Update
@@ -597,11 +658,11 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             reference_number = row.get("reference_number", "")
             
             # Skip if location or reference contains error messages
-            if any(invalid_text in str(location) for invalid_text in ["לא נמצאו רשומות", "לא נמצא", "שגיאה"]):
+            if any(invalid_text in str(location) for invalid_text in ["לא נמצאו רשומות מתאימות", "לא נמצאו רשומות", "לא נמצא", "שגיאה"]):
                 print(f"Skipping invalid transaction with location: {location}")
                 continue
                 
-            if any(invalid_text in str(reference_number) for invalid_text in ["לא נמצאו רשומות", "לא נמצא", "שגיאה"]):
+            if any(invalid_text in str(reference_number) for invalid_text in ["לא נמצאו רשומות מתאימות", "לא נמצאו רשומות", "לא נמצא", "שגיאה"]):
                 print(f"Skipping invalid transaction with reference: {reference_number}")
                 continue
                 
@@ -627,6 +688,9 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             or 0.0
         )
         coupon.used_value = float(total_used)
+        # Update last scraped timestamp
+        from datetime import datetime, timezone
+        coupon.last_scraped = datetime.now(timezone.utc)
 
         # Check if the coupon is still active
         update_coupon_status(coupon)
@@ -3746,67 +3810,106 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 debug_print("reCAPTCHA checkbox clicked")
                 driver.switch_to.default_content()
                 
-                # שלב 2: בדיקה אם יש CAPTCHA תמונות ופתרון אוטומטי
-                time.sleep(3)  # המתנה שה-CAPTCHA יטען
+                # שלב 2: בדיקה אם ה-CAPTCHA נעלם אחרי הלחיצה
+                time.sleep(3)  # המתנה שה-CAPTCHA יטען או ייעלם
                 
-                # ניסיון לפתור CAPTCHA אם נדרש
-                max_captcha_attempts = 3
+                # בדיקה אם ה-CAPTCHA נעלם לגמרי (כמו בתמונה שלך)
+                debug_print("🔍 Checking if CAPTCHA disappeared after checkbox click...")
+                captcha_disappeared = False
                 
-                for attempt in range(max_captcha_attempts):
-                    debug_print(f"CAPTCHA solving attempt {attempt + 1}/{max_captcha_attempts}")
+                try:
+                    # חיפוש מחדש אחרי iframe של CAPTCHA
+                    captcha_iframes_after = driver.find_elements(By.XPATH, "//iframe[contains(@src, 'recaptcha') and contains(@src, 'bframe')]")
                     
-                    # בדיקה אם הכפתור כבר מאופשר
+                    if not captcha_iframes_after:
+                        debug_print("✅ CAPTCHA iframe completely disappeared - trying direct submit")
+                        captcha_disappeared = True
+                    else:
+                        # אם יש iframe, נבדוק אם יש בו תוכן
+                        try:
+                            driver.switch_to.frame(captcha_iframes_after[0])
+                            
+                            # חיפוש אלמנטים של CAPTCHA תמונות
+                            image_elements = driver.find_elements(By.CSS_SELECTOR, ".rc-imageselect-desc, .rc-imageselect-instructions")
+                            
+                            if not image_elements:
+                                debug_print("✅ CAPTCHA iframe exists but no image challenge found - trying direct submit")
+                                captcha_disappeared = True
+                            
+                            driver.switch_to.default_content()
+                        except Exception as frame_check_error:
+                            debug_print(f"⚠️ Could not check CAPTCHA iframe content: {frame_check_error}")
+                            driver.switch_to.default_content()
+                            
+                except Exception as captcha_check_error:
+                    debug_print(f"⚠️ Error checking CAPTCHA status: {captcha_check_error}")
+                
+                # אם ה-CAPTCHA נעלם, ננסה ללחוץ ישירות על Submit
+                if captcha_disappeared:
+                    debug_print("🚀 CAPTCHA disappeared - attempting direct submit click")
                     try:
                         submit_button = driver.find_element(By.ID, "submit")
-                        if not submit_button.get_attribute("disabled"):
-                            debug_print("Submit button is enabled - no CAPTCHA needed")
+                        
+                        # אם הכפתור מאופשר - נלחץ עליו
+                        if submit_button.is_enabled() and not submit_button.get_attribute("disabled"):
+                            debug_print("✅ Submit button is enabled - clicking directly")
+                            submit_button.click()
                             captcha_solved = True
-                            break
-                    except:
-                        pass
-                    
-                    # ניסיון לפתור CAPTCHA
-                    try:
-                        captcha_result = solve_captcha_challenge(driver, wait_timeout=60)
-                        if captcha_result:
-                            debug_print("CAPTCHA solved successfully")
+                            time.sleep(5)  # המתנה לטעינת התוצאות
+                        else:
+                            debug_print("⚠️ Submit button disabled even though CAPTCHA disappeared - forcing enable")
+                            # כפיית הפעלת הכפתור
+                            driver.execute_script("""
+                                var submitBtn = document.getElementById('submit');
+                                if (submitBtn) {
+                                    submitBtn.disabled = false;
+                                    submitBtn.click();
+                                }
+                            """)
+                            debug_print("✅ Forced submit button click")
+                            captcha_solved = True
+                            time.sleep(5)
                             
-                            # בדיקה שהdriver עדיין חי
-                            try:
-                                driver.current_url  # בדיקה פשוטה שהdriver עובד
-                                debug_print("Driver is still active after CAPTCHA solving")
-                                
-                                # בדיקה נוספת - האם כפתור Submit זמין עכשיו?
-                                debug_print("🔍 Checking if Submit button is now enabled...")
-                                try:
-                                    submit_button = driver.find_element(By.ID, "submit")
-                                    if submit_button.is_enabled():
-                                        debug_print("✅ Submit button is enabled - CAPTCHA was processed successfully!")
-                                    else:
-                                        debug_print("⚠️ Submit button still disabled - may need more processing time")
-                                        time.sleep(3)  # זמן נוסף
-                                        # בדיקה שוב
-                                        if submit_button.is_enabled():
-                                            debug_print("✅ Submit button enabled after additional wait")
-                                        else:
-                                            debug_print("⚠️ Submit button still disabled - continuing anyway")
-                                except Exception as submit_check_error:
-                                    debug_print(f"Could not check submit button: {submit_check_error}")
-                                
+                    except Exception as submit_error:
+                        debug_print(f"❌ Failed to click submit after CAPTCHA disappeared: {submit_error}")
+                        captcha_solved = False
+                else:
+                    debug_print("🔍 CAPTCHA still present - proceeding with normal solving")
+                    captcha_solved = False
+                
+                # ניסיון לפתור CAPTCHA רק אם לא נפתר כבר
+                if not captcha_solved:
+                    max_captcha_attempts = 3
+                    
+                    for attempt in range(max_captcha_attempts):
+                        debug_print(f"CAPTCHA solving attempt {attempt + 1}/{max_captcha_attempts}")
+                        
+                        # בדיקה אם הכפתור כבר מאופשר
+                        try:
+                            submit_button = driver.find_element(By.ID, "submit")
+                            if not submit_button.get_attribute("disabled"):
+                                debug_print("Submit button is enabled - no CAPTCHA needed")
                                 captcha_solved = True
                                 break
-                            except Exception as driver_error:
-                                debug_print(f"Driver died after CAPTCHA solving: {driver_error}")
-                                return None
-                        else:
-                            debug_print(f"CAPTCHA solving attempt {attempt + 1} failed")
-                    except Exception as captcha_error:
-                        debug_print(f"❌ Error during CAPTCHA solving attempt {attempt + 1}: {captcha_error}")
-                        debug_print(f"   Error type: {type(captcha_error).__name__}")
-                        # המשך לניסיון הבא או לטיפול בחירום
+                        except:
+                            pass
                         
-                    if attempt < max_captcha_attempts - 1:
-                        time.sleep(5)  # המתנה לפני ניסיון נוסף
+                        # ניסיון לפתור CAPTCHA
+                        try:
+                            captcha_result = solve_captcha_challenge(driver, wait_timeout=60)
+                            if captcha_result:
+                                debug_print("CAPTCHA solved successfully")
+                                captcha_solved = True
+                                break
+                            else:
+                                debug_print(f"CAPTCHA solving attempt {attempt + 1} failed")
+                        except Exception as captcha_error:
+                            debug_print(f"❌ Error during CAPTCHA solving attempt {attempt + 1}: {captcha_error}")
+                            debug_print(f"   Error type: {type(captcha_error).__name__}")
+                            # המשך לניסיון הבא או לטיפול בחירום
+                        
+                        if attempt < max_captcha_attempts - 1:
+                            time.sleep(5)  # המתנה לפני ניסיון נוסף
             
             if not captcha_solved:
                 debug_print("⚠️ CAPTCHA not solved after all attempts")

@@ -356,6 +356,7 @@ class Coupon(db.Model):
     last_detail_view = db.Column(db.DateTime(timezone=True), nullable=True)
     last_company_view = db.Column(db.DateTime(timezone=True), nullable=True)
     last_code_view = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_scraped = db.Column(db.DateTime(timezone=True), nullable=True)
 
     @property
     def remaining_value(self):
