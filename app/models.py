@@ -10,6 +10,12 @@ from flask_login import UserMixin
 from sqlalchemy.types import TypeDecorator, String
 from sqlalchemy.sql import func
 from cryptography.fernet import Fernet
+try:
+    from Crypto.Cipher import AES
+    from Crypto.Util.Padding import unpad
+    PYCRYPTO_AVAILABLE = True
+except ImportError:
+    PYCRYPTO_AVAILABLE = False
 from itsdangerous import Serializer, URLSafeTimedSerializer
 from flask import current_app
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -26,6 +32,82 @@ if not ENCRYPTION_KEY:
     raise ValueError("No ENCRYPTION_KEY set for encryption")
 
 cipher_suite = Fernet(ENCRYPTION_KEY.encode())
+
+
+def decrypt_with_split_key(encrypted_string):
+    """
+    Alternative decryption method that mimics iOS app behavior:
+    - Split the 32-byte key into two 16-byte parts
+    - Use first 16 bytes for HMAC signing
+    - Use last 16 bytes for AES encryption
+    """
+    if not PYCRYPTO_AVAILABLE:
+        return None
+        
+    import base64
+    import hmac
+    import hashlib
+    
+    try:
+        # Convert URL-safe base64 to standard base64
+        base64_string = encrypted_string
+        base64_string = base64_string.replace('-', '+').replace('_', '/')
+        
+        # Add padding if needed
+        padding_length = 4 - (len(base64_string) % 4)
+        if padding_length < 4:
+            base64_string += '=' * padding_length
+            
+        encrypted_data = base64.b64decode(base64_string)
+        
+        if len(encrypted_data) < 57:  # Minimum Fernet token size
+            return None
+            
+        # Parse Fernet structure
+        version = encrypted_data[0]
+        if version != 0x80:
+            return None
+            
+        timestamp = encrypted_data[1:9]
+        iv = encrypted_data[9:25]
+        hmac_signature = encrypted_data[-32:]
+        ciphertext = encrypted_data[25:-32]
+        
+        # Get the base key and split it like iOS app
+        try:
+            # Try with URL-safe base64 decode first
+            encryption_key_clean = ENCRYPTION_KEY.replace('-', '+').replace('_', '/')
+            # Add padding if needed
+            key_padding = 4 - (len(encryption_key_clean) % 4)
+            if key_padding < 4:
+                encryption_key_clean += '=' * key_padding
+            key_data = base64.b64decode(encryption_key_clean)
+        except Exception as e:
+            return None
+            
+        if len(key_data) != 32:
+            return None
+            
+        # Split key: first 16 bytes for HMAC, last 16 bytes for AES
+        signing_key = key_data[:16]
+        encryption_key = key_data[16:32]
+        
+        # Verify HMAC with signing key only
+        message = encrypted_data[:-32]
+        computed_hmac = hmac.new(signing_key, message, hashlib.sha256).digest()
+        
+        if not hmac.compare_digest(computed_hmac, hmac_signature):
+            return None
+            
+        # Decrypt with AES-128-CBC using encryption key only
+        cipher = AES.new(encryption_key, AES.MODE_CBC, iv)
+        decrypted_padded = cipher.decrypt(ciphertext)
+        decrypted = unpad(decrypted_padded, AES.block_size)
+        
+        return decrypted.decode('utf-8')
+        
+    except Exception as e:
+        return None
 
 
 def generate_unique_coupon_id():
@@ -77,7 +159,18 @@ class EncryptedString(TypeDecorator):
                     decrypted_value = cipher_suite.decrypt(value)
                     return decrypted_value.decode()
             except Exception as e:
-                print(f"Error decrypting value: {value} - {e}")
+                # Try alternative decryption method (iOS app style)
+                try:
+                    # Make sure we pass a string to the alternative function
+                    if isinstance(value, bytes):
+                        value_str = value.decode('utf-8')
+                    else:
+                        value_str = value
+                    decrypted_value = decrypt_with_split_key(value_str)
+                    if decrypted_value:
+                        return decrypted_value
+                except Exception as e2:
+                    pass
         return value
 
 
