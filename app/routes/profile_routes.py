@@ -186,10 +186,10 @@ def load_more_coupons():
         offset = request.args.get('offset', 0, type=int)
         limit = request.args.get('limit', 50, type=int)
         
-        # Load next batch of coupons
+        # Load all remaining coupons (no limit)
         more_coupons = Coupon.query.filter(
             Coupon.user_id == current_user.id
-        ).order_by(Coupon.date_added.desc()).offset(offset).limit(limit).all()
+        ).order_by(Coupon.date_added.desc()).offset(offset).all()
         
         # Convert to JSON format
         coupons_data = []
@@ -268,31 +268,13 @@ def index():
     # OPTIMIZED: Single query with eager loading instead of 6 separate queries
     # --------------------------------------------------------------------------------
 
-    # LAZY LOADING: Initial load with pagination for better performance
-    INITIAL_LOAD_LIMIT = 200  # Load only first 200 coupons initially
-    
-    # Check if user has many coupons and apply lazy loading
-    total_user_coupons_count = Coupon.query.filter(
+    # Load all user coupons (removed pagination limit)
+    all_user_coupons = Coupon.query.filter(
         Coupon.user_id == current_user.id
-    ).count()
+    ).order_by(Coupon.date_added.desc()).all()
     
-    if total_user_coupons_count > INITIAL_LOAD_LIMIT:
-        # Lazy loading: Load only recent coupons initially
-        all_user_coupons = Coupon.query.filter(
-            Coupon.user_id == current_user.id
-        ).order_by(Coupon.date_added.desc()).limit(INITIAL_LOAD_LIMIT).all()
-        
-        # Add flag to indicate more coupons are available
-        has_more_coupons = True
-        remaining_count = total_user_coupons_count - INITIAL_LOAD_LIMIT
-    else:
-        # Load all coupons if count is reasonable
-        all_user_coupons = Coupon.query.filter(
-            Coupon.user_id == current_user.id
-        ).order_by(Coupon.date_added.desc()).all()
-        
-        has_more_coupons = False
-        remaining_count = 0
+    has_more_coupons = False
+    remaining_count = 0
 
     # Filter in memory (much faster than separate DB queries)
     all_coupons = [c for c in all_user_coupons 
@@ -738,7 +720,7 @@ def index():
         # Lazy loading variables
         has_more_coupons=has_more_coupons,
         remaining_count=remaining_count,
-        total_user_coupons_count=total_user_coupons_count,
+        total_user_coupons_count=total_coupons_count,
     )
 
 

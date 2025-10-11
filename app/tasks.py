@@ -61,11 +61,12 @@ def update_coupon_task(coupon_id, max_retries=3):
                 
                 logger.info(f"✅ Background update completed for coupon {coupon.code}")
                 return {
-                    'success': True, 
+                    'success': True,
                     'coupon_code': coupon.code,
                     'company': coupon.company,
                     'old_usage': old_usage,
-                    'new_usage': total_usage
+                    'new_usage': total_usage,
+                    'user_id': coupon.user_id
                 }
             else:
                 logger.error(f"❌ Failed to get data for coupon {coupon.code}")
@@ -130,9 +131,68 @@ def update_multiple_coupons_task(coupon_ids, max_retries=3):
         results['end_time'] = datetime.now().isoformat()
         results['success_count'] = len(results['successful'])
         results['failure_count'] = len(results['failed'])
-        
+
         logger.info(f"Batch update completed: {results['success_count']} successful, {results['failure_count']} failed")
-        
+
+        # Send per-user email summaries for coupons that had increased usage
+        try:
+            from flask import render_template
+            from app.models import User
+            from app.helpers import send_email, SENDER_EMAIL, SENDER_NAME
+
+            # Group successful updates by user and filter only positive deltas
+            user_updates = {}
+            for item in results['successful']:
+                user_id = item.get('user_id')
+                if user_id is None:
+                    continue
+                old_u = float(item.get('old_usage', 0) or 0)
+                new_u = float(item.get('new_usage', 0) or 0)
+                delta = new_u - old_u
+                if delta <= 0:
+                    continue
+                if user_id not in user_updates:
+                    user_updates[user_id] = []
+                user_updates[user_id].append({
+                    'coupon_code': item.get('coupon_code'),
+                    'company': item.get('company'),
+                    'old_usage': old_u,
+                    'new_usage': new_u,
+                    'delta': delta,
+                })
+
+            started = results.get('start_time')
+            ended = results.get('end_time')
+
+            for uid, items in user_updates.items():
+                try:
+                    user = User.query.get(uid)
+                    if not user or not user.email:
+                        continue
+                    html = render_template(
+                        'emails/coupon_updates_summary.html',
+                        user=user,
+                        items=items,
+                        success_count=results['success_count'],
+                        failure_count=results['failure_count'],
+                        started=started,
+                        ended=ended,
+                    )
+                    subject = 'סיכום עדכון קופונים אוטומטי'
+                    send_email(
+                        sender_email=SENDER_EMAIL,
+                        sender_name=SENDER_NAME,
+                        recipient_email=user.email,
+                        recipient_name=user.first_name,
+                        subject=subject,
+                        html_content=html,
+                    )
+                    logger.info(f"Summary email sent to user {uid} ({user.email}) with {len(items)} items")
+                except Exception as e:
+                    logger.error(f"Failed sending summary email to user {uid}: {e}")
+        except Exception as e:
+            logger.error(f"Summary email dispatch failed: {e}")
+
         return results
 
 

@@ -4592,6 +4592,8 @@ def update_all_multipass_coupons_playwright():
                 from datetime import datetime, timezone
                 cpn.last_scraped = datetime.now(timezone.utc)
                 
+                # Save old usage to compute delta
+                old_usage = float(cpn.used_value or 0)
                 df = get_coupon_data_with_playwright(cpn, max_retries=3)  
                 if df is not None:
                     total_usage = float(df["usage_amount"].sum())
@@ -4609,7 +4611,11 @@ def update_all_multipass_coupons_playwright():
                     updated_coupons.append({
                         'code': cpn.code,
                         'company': cpn.company,
-                        'used_value': total_usage
+                        'used_value': total_usage,
+                        'old_usage': old_usage,
+                        'new_usage': total_usage,
+                        'delta': total_usage - old_usage,
+                        'user_id': cpn.user_id,
                     })
                     current_app.logger.info(f"✅ Updated coupon {cpn.code} with Playwright: {total_usage}")
                 else:
@@ -4635,6 +4641,61 @@ def update_all_multipass_coupons_playwright():
             db.session.rollback()
             current_app.logger.error(f"Database commit failed: {e}")
             return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
+
+        # After successful commit, send per-user email summaries for positive deltas
+        try:
+            from flask import render_template
+            from app.helpers import send_email, SENDER_EMAIL, SENDER_NAME
+            from app.models import User
+            from datetime import datetime as dt
+
+            user_updates = {}
+            for item in updated_coupons:
+                delta = float(item.get('delta', 0) or 0)
+                if delta <= 0:
+                    continue
+                uid = item.get('user_id')
+                if not uid:
+                    continue
+                user_updates.setdefault(uid, []).append({
+                    'coupon_code': item.get('code'),
+                    'company': item.get('company'),
+                    'old_usage': float(item.get('old_usage', 0) or 0),
+                    'new_usage': float(item.get('new_usage', 0) or 0),
+                    'delta': delta,
+                })
+
+            started = dt.utcnow().isoformat()
+            ended = dt.utcnow().isoformat()
+
+            for uid, items in user_updates.items():
+                try:
+                    user = User.query.get(uid)
+                    if not user or not user.email:
+                        continue
+                    html = render_template(
+                        'emails/coupon_updates_summary.html',
+                        user=user,
+                        items=items,
+                        success_count=len(updated_coupons),
+                        failure_count=len(failed_coupons),
+                        started=started,
+                        ended=ended,
+                    )
+                    subject = 'סיכום עדכון קופונים אוטומטי'
+                    send_email(
+                        sender_email=SENDER_EMAIL,
+                        sender_name=SENDER_NAME,
+                        recipient_email=user.email,
+                        recipient_name=user.first_name,
+                        subject=subject,
+                        html_content=html,
+                    )
+                    current_app.logger.info(f"Playwright summary email sent to user {uid} with {len(items)} items")
+                except Exception as e:
+                    current_app.logger.error(f"Failed sending Playwright summary email to user {uid}: {e}")
+        except Exception as e:
+            current_app.logger.error(f"Playwright summary email dispatch failed: {e}")
 
         return jsonify({
             'success': True,
@@ -4734,12 +4795,19 @@ def update_all_multipass_coupons():
                 from datetime import datetime, timezone
                 cpn.last_scraped = datetime.now(timezone.utc)
                 
+                # Capture old usage before calling scraper
+                old_usage = float(cpn.used_value or 0)
                 df = get_coupon_data(cpn)  
                 if df is not None:
+                    # After get_coupon_data, the helper updates the coupon and usage in DB
+                    new_usage = float(cpn.used_value or 0)
                     updated_coupons.append({
                         'code': cpn.code,
                         'company': cpn.company,
-                        'usage': 0  # The usage will be calculated by get_coupon_data function
+                        'old_usage': old_usage,
+                        'new_usage': new_usage,
+                        'delta': new_usage - old_usage,
+                        'user_id': cpn.user_id,
                     })
                 else:
                     failed_coupons.append({
@@ -4758,6 +4826,61 @@ def update_all_multipass_coupons():
 
         try:
             db.session.commit()
+            # After commit, send summary emails for positive deltas
+            try:
+                from flask import render_template
+                from app.helpers import send_email, SENDER_EMAIL, SENDER_NAME
+                from app.models import User
+                from datetime import datetime as dt
+
+                user_updates = {}
+                for item in updated_coupons:
+                    delta = float(item.get('delta', 0) or 0)
+                    if delta <= 0:
+                        continue
+                    uid = item.get('user_id')
+                    if not uid:
+                        continue
+                    user_updates.setdefault(uid, []).append({
+                        'coupon_code': item.get('code'),
+                        'company': item.get('company'),
+                        'old_usage': float(item.get('old_usage', 0) or 0),
+                        'new_usage': float(item.get('new_usage', 0) or 0),
+                        'delta': delta,
+                    })
+
+                started = dt.utcnow().isoformat()
+                ended = dt.utcnow().isoformat()
+
+                for uid, items in user_updates.items():
+                    try:
+                        user = User.query.get(uid)
+                        if not user or not user.email:
+                            continue
+                        html = render_template(
+                            'emails/coupon_updates_summary.html',
+                            user=user,
+                            items=items,
+                            success_count=len(updated_coupons),
+                            failure_count=len(failed_coupons),
+                            started=started,
+                            ended=ended,
+                        )
+                        subject = 'סיכום עדכון קופונים אוטומטי'
+                        send_email(
+                            sender_email=SENDER_EMAIL,
+                            sender_name=SENDER_NAME,
+                            recipient_email=user.email,
+                            recipient_name=user.first_name,
+                            subject=subject,
+                            html_content=html,
+                        )
+                        current_app.logger.info(f"Summary email sent to user {uid} with {len(items)} items (sync)")
+                    except Exception as e:
+                        current_app.logger.error(f"Failed sending summary email to user {uid} (sync): {e}")
+            except Exception as e:
+                current_app.logger.error(f"Summary email dispatch failed (sync): {e}")
+
             return jsonify({
                 'success': True,
                 'background': False,

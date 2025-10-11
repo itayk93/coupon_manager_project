@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, current_app
 from flask_login import login_required, current_user
-from app.extensions import db
+from app.extensions import db, csrf
 from app.models import Newsletter, NewsletterSending, User
 import logging
 from datetime import datetime, timezone, timedelta
@@ -272,6 +272,7 @@ def cron_send_pending_emails():
         }), 500
 
 @admin_scheduled_emails_bp.route('/api/cron/send-expiration-reminders', methods=['POST'])
+@csrf.exempt
 @api_token_required
 def cron_send_expiration_reminders():
     """
@@ -314,7 +315,7 @@ def cron_send_expiration_reminders():
                 
                 # קריאת לוגו החברה
                 logo_filepath = os.path.join(
-                    current_app.root_path, "static", "logos", "images", logo_filename
+                    current_app.root_path, "static", logo_filename
                 )
                 
                 try:
@@ -465,6 +466,50 @@ def cron_send_expiration_reminders():
                 failed_count += 1
                 failed_reminders.append({
                     'type': '1_day',
+                    'coupon_id': coupon.id,
+                    'user_email': coupon.user.email,
+                    'error': error
+                })
+        
+        # תזכורות לקופונים שעומדים לפוג בעוד 2-6 ימים (שעדיין לא קיבלו תזכורת)
+        date_2_to_6_days_start = date.today() + timedelta(days=2)
+        date_2_to_6_days_end = date.today() + timedelta(days=6)
+        
+        from sqlalchemy import and_
+        
+        coupons_2_to_6_days = Coupon.query.join(User).filter(
+            and_(
+                Coupon.expiration >= date_2_to_6_days_start.strftime("%Y-%m-%d"),
+                Coupon.expiration <= date_2_to_6_days_end.strftime("%Y-%m-%d")
+            ),
+            Coupon.reminder_sent_7_days == False,
+            Coupon.reminder_sent_1_day == False,
+            Coupon.status == 'פעיל',
+            Coupon.is_for_sale == False
+        ).all()
+        
+        for coupon in coupons_2_to_6_days:
+            # חישוב כמה ימים נשארו
+            exp_date = datetime.strptime(coupon.expiration, '%Y-%m-%d').date()
+            days_left = (exp_date - today).days
+            
+            success, error = send_reminder(coupon, coupon.user, days_left, days_left)
+            if success:
+                sent_count += 1
+                sent_reminders.append({
+                    'type': f'{days_left}_days',
+                    'coupon_id': coupon.id,
+                    'user_email': coupon.user.email,
+                    'company': coupon.company,
+                    'code': coupon.code
+                })
+                # סמן שהתזכורת נשלחה (נשתמש בשדה reminder_sent_7_days)
+                coupon.reminder_sent_7_days = True
+                db.session.commit()
+            else:
+                failed_count += 1
+                failed_reminders.append({
+                    'type': f'{days_left}_days',
                     'coupon_id': coupon.id,
                     'user_email': coupon.user.email,
                     'error': error
