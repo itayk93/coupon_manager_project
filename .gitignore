@@ -79,3 +79,7 @@ ENV/
 # Backup files
 *.bak
 *.backup
+
+# Archive and organized folders
+archive_files/
+backup_files/
