@@ -449,7 +449,7 @@
 
         <!-- Greeting -->
         <div class="greeting">
-            <h2>שלום {{ user.first_name }}! 👋</h2>
+            <h2>שלום איתי! 👋</h2>
             <p>סיימנו לעדכן את הקופונים שלך באופן אוטומטי</p>
         </div>
 
@@ -458,29 +458,26 @@
             <div class="stats-title">📈 סיכום העדכון</div>
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-value success">{{ success_count }}</div>
+                    <div class="stat-value success">9</div>
                     <div class="stat-label">עודכנו בהצלחה</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value warning">{{ failure_count }}</div>
+                    <div class="stat-value warning">1</div>
                     <div class="stat-label">נכשלו</div>
                 </div>
-                {% if items and items|length > 0 %}
                 <div class="stat-card">
-                    <div class="stat-value info">{{ items|length }}</div>
+                    <div class="stat-value info">4</div>
                     <div class="stat-label">עם שימוש חדש</div>
                 </div>
-                {% endif %}
             </div>
             <div class="meta-info">
                 <strong>זמן ביצוע:</strong> 
-                <span class="datetime">{{ started if started else 'לא זמין' }}</span>
+                <span class="datetime">13/10/2025 06:20:45</span>
                 —
-                <span class="datetime">{{ ended if ended else 'לא זמין' }}</span>
+                <span class="datetime">13/10/2025 06:20:45</span>
             </div>
         </div>
 
-        {% if items and items|length > 0 %}
         <!-- Table Section -->
         <div class="table-section">
             <div class="section-title">📋 קופונים עם שימוש חדש</div>
@@ -496,36 +493,45 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {% for item in items %}
                         <tr>
-                            <td class="company-name">{{ item.company }}</td>
-                            <td class="coupon-code">{{ item.coupon_code }}</td>
-                            <td>₪{{ '%.2f' % item.old_usage }}</td>
-                            <td>₪{{ '%.2f' % item.new_usage }}</td>
-                            <td class="{{ 'delta-pos' if item.delta > 0 else 'delta-zero' }}">
-                                {% if item.delta > 0 %}+{% endif %}₪{{ '%.2f' % item.delta }}
-                            </td>
+                            <td class="company-name">BuyMe</td>
+                            <td class="coupon-code">9376-1167-7242-1955</td>
+                            <td>₪12.00</td>
+                            <td>₪24.00</td>
+                            <td class="delta-pos">+₪12.00</td>
                         </tr>
-                    {% endfor %}
+                        <tr>
+                            <td class="company-name">XTRA</td>
+                            <td class="coupon-code">121080866-6578</td>
+                            <td>₪38.00</td>
+                            <td>₪107.00</td>
+                            <td class="delta-pos">+₪69.00</td>
+                        </tr>
+                        <tr>
+                            <td class="company-name">BuyMe</td>
+                            <td class="coupon-code">9376-1191-1065-6985</td>
+                            <td>₪0.00</td>
+                            <td>₪25.00</td>
+                            <td class="delta-pos">+₪25.00</td>
+                        </tr>
+                        <tr>
+                            <td class="company-name">Carrefour</td>
+                            <td class="coupon-code">129320329-1104</td>
+                            <td>₪127.09</td>
+                            <td>₪217.29</td>
+                            <td class="delta-pos">+₪90.20</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-        {% else %}
-        <!-- No Updates Section -->
-        <div class="no-updates">
-            <div class="icon">✨</div>
-            <h3>אין שימוש חדש הפעם</h3>
-            <p>לא נמצאה תוספת שימוש חדשה בקופונים שלך בעדכון הנוכחי</p>
-        </div>
-        {% endif %}
 
         <!-- Footer -->
         <div class="footer">
             <div class="footer-logo">🎯 Coupon Master</div>
             <div class="footer-info">
                 מערכת ניהול קופונים מתקדמת<br>
-                עדכון אוטומטי נוצר בתאריך {{ (ended or started) if (ended or started) else 'לא זמין' }}
+                עדכון אוטומטי נוצר בתאריך 13/10/2025 בשעה 06:20
             </div>
         </div>
     </div>

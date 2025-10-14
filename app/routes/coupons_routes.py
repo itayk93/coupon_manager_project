@@ -5925,3 +5925,203 @@ def process_coupon_text():
             'success': False,
             'error': str(e)
         }), 500
+
+@coupons_bp.route('/api/coupon_detail/<int:coupon_id>', methods=['GET'])
+def api_coupon_detail(coupon_id):
+    """
+    API endpoint that returns coupon detail data with consolidated transaction rows
+    exactly like the web version's coupon_detail route
+    """
+    try:
+        # Get the current user from API authentication
+        # For now, we'll use a basic auth approach - you might want to implement proper JWT
+        user_id = request.headers.get('X-User-ID')
+        if not user_id:
+            return jsonify({'error': 'User authentication required'}), 401
+        
+        user_id = int(user_id)
+        current_user = User.query.get(user_id)
+        if not current_user:
+            return jsonify({'error': 'Invalid user'}), 401
+
+        # Fetch the coupon if the current user is the owner OR has shared access
+        coupon = Coupon.query.get_or_404(coupon_id)
+        
+        # Check if user is owner
+        is_owner = coupon.user_id == current_user.id
+        
+        # Check if user has shared access
+        has_shared_access = False
+        if not is_owner:
+            shared_access = CouponShares.query.filter_by(
+                coupon_id=coupon_id,
+                shared_with_user_id=current_user.id,
+                status="accepted"
+            ).first()
+            has_shared_access = shared_access is not None
+        
+        # User must be owner or have shared access
+        if not (is_owner or has_shared_access):
+            return jsonify({'error': 'Access denied'}), 403
+
+        # Update last_detail_view timestamp
+        coupon.last_detail_view = datetime.now(timezone.utc)
+        db.session.commit()
+
+        # Execute the EXACT same SQL query as the web version
+        sql = text(
+            """
+            WITH CouponFilter AS (
+                SELECT DISTINCT coupon_id
+                FROM coupon_transaction
+                WHERE source = 'Multipass'
+            ),
+            CombinedData AS (
+                SELECT
+                    'coupon_usage' AS source_table,
+                    id,
+                    coupon_id,
+                    -used_amount AS transaction_amount,
+                    timestamp,
+                    action,
+                    details,
+                    NULL  AS location,
+                    0     AS recharge_amount,
+                    NULL  AS reference_number,
+                    NULL  AS source
+                FROM coupon_usage
+                WHERE details NOT LIKE '%Multipass%'
+
+                UNION ALL
+
+                SELECT
+                    'coupon_transaction' AS source_table,
+                    id,
+                    coupon_id,
+                    -usage_amount + recharge_amount AS transaction_amount,
+                    transaction_date AS timestamp,
+                    source AS action,
+                    CASE WHEN location IS NOT NULL AND location <> ''
+                         THEN location ELSE NULL END AS details,
+                    location,
+                    recharge_amount,
+                    reference_number,
+                    source
+                FROM coupon_transaction
+            ),
+            SummedData AS (
+                SELECT
+                    source_table, id, coupon_id, timestamp,
+                    transaction_amount, details, action
+                FROM CombinedData
+                WHERE coupon_id = :coupon_id
+                  AND (
+                      coupon_id NOT IN (SELECT coupon_id FROM CouponFilter)
+                      OR (source_table = 'coupon_transaction' AND action = 'Multipass')
+                  )
+
+                UNION ALL
+
+                SELECT
+                    'sum_row'        AS source_table,
+                    NULL             AS id,
+                    coupon_id,
+                    NULL             AS timestamp,
+                    SUM(transaction_amount) AS transaction_amount,
+                    'יתרה בקופון'   AS details,
+                    NULL             AS action
+                FROM CombinedData
+                WHERE coupon_id = :coupon_id
+                  AND (
+                      coupon_id NOT IN (SELECT coupon_id FROM CouponFilter)
+                      OR (source_table = 'coupon_transaction' AND action = 'Multipass')
+                  )
+                GROUP BY coupon_id
+            )
+            SELECT source_table, id, coupon_id, timestamp,
+                   transaction_amount, details, action
+            FROM   SummedData
+            ORDER  BY CASE WHEN timestamp IS NULL THEN 1 ELSE 0 END,
+                     timestamp ASC;
+        """
+        )
+
+        result = db.session.execute(sql, {"coupon_id": coupon.id})
+        consolidated_rows = result.fetchall()
+
+        # Convert rows to list of dictionaries
+        transaction_rows = []
+        for row in consolidated_rows:
+            transaction_rows.append({
+                'source_table': row.source_table,
+                'id': row.id,
+                'coupon_id': row.coupon_id,
+                'transaction_timestamp': row.timestamp.isoformat() if row.timestamp else None,
+                'transaction_amount': float(row.transaction_amount) if row.transaction_amount else 0,
+                'details': row.details,
+                'action': row.action
+            })
+
+        # Calculate discount percentage
+        discount_percentage = None
+        if coupon.is_for_sale and coupon.value > 0:
+            discount_percentage = round(
+                ((coupon.value - coupon.cost) / coupon.value) * 100, 2
+            )
+
+        # Get company logo
+        companies = Company.query.order_by(Company.name).all()
+        company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
+        company_logo = company_logo_mapping.get(
+            coupon.company.lower(), "images/default_logo.png"
+        )
+
+        # Prepare coupon data
+        coupon_data = {
+            'id': coupon.id,
+            'code': coupon.code,
+            'description': coupon.description,
+            'value': float(coupon.value),
+            'cost': float(coupon.cost),
+            'company': coupon.company,
+            'expiration': coupon.expiration,
+            'source': coupon.source,
+            'buyme_coupon_url': coupon.buyme_coupon_url,
+            'strauss_coupon_url': coupon.strauss_coupon_url,
+            'xgiftcard_coupon_url': coupon.xgiftcard_coupon_url,
+            'xtra_coupon_url': coupon.xtra_coupon_url,
+            'date_added': coupon.date_added.isoformat(),
+            'used_value': float(coupon.used_value) if coupon.used_value else 0,
+            'status': coupon.status,
+            'is_available': coupon.is_available,
+            'is_for_sale': coupon.is_for_sale,
+            'is_one_time': coupon.is_one_time,
+            'purpose': coupon.purpose,
+            'exclude_saving': coupon.exclude_saving,
+            'auto_download_details': coupon.auto_download_details,
+            'user_id': coupon.user_id,
+            'cvv': coupon.cvv,
+            'card_exp': coupon.card_exp,
+            'show_in_widget': getattr(coupon, 'show_in_widget', False)
+        }
+
+        # Return all the data
+        response_data = {
+            'success': True,
+            'coupon': coupon_data,
+            'is_owner': is_owner,
+            'consolidated_rows': transaction_rows,
+            'discount_percentage': discount_percentage,
+            'company_logo': company_logo,
+            'show_multipass_button': coupon.auto_download_details is not None,
+            'can_share': is_owner and coupon.status == "פעיל"
+        }
+
+        return jsonify(response_data)
+
+    except Exception as e:
+        current_app.logger.error(f"Error in api_coupon_detail: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

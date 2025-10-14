@@ -18,6 +18,14 @@
 
 ---
 
+## ⚠️ Important Notice
+
+**🔒 Admin Access Required**: All scraping and data collection features are restricted to administrator accounts only.
+
+**🔬 Research Purpose**: The scraping functionality in this system is implemented solely for research and educational purposes, and is only accessible to authorized administrators.
+
+---
+
 ## 🌟 Overview
 
 **Coupon Master** is a comprehensive digital coupon management system specifically designed for the Israeli market. Built with Flask and modern web technologies, it provides users with an intuitive platform to manage, track, and optimize their digital coupons from various Israeli retailers and services.
