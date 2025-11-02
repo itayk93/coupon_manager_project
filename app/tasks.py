@@ -22,19 +22,19 @@ def update_coupon_task(coupon_id, max_retries=3):
     from app.models import Coupon, CouponUsage
     from app.helpers import get_coupon_data_with_retry, update_coupon_status
     from app.extensions import db
-    from datetime import timezone
+    from datetime import datetime, timezone
     
     app = create_app()
     
     with app.app_context():
         logger = logging.getLogger('multipass_updater')
         
+        coupon = Coupon.query.get(coupon_id)
+        if not coupon:
+            logger.error(f"Coupon with ID {coupon_id} not found")
+            return {'success': False, 'error': f'Coupon {coupon_id} not found'}
+
         try:
-            coupon = Coupon.query.get(coupon_id)
-            if not coupon:
-                logger.error(f"Coupon with ID {coupon_id} not found")
-                return {'success': False, 'error': f'Coupon {coupon_id} not found'}
-            
             logger.info(f"Starting background update for coupon {coupon.code}")
             
             # Get coupon data with retry mechanism
@@ -79,11 +79,21 @@ def update_coupon_task(coupon_id, max_retries=3):
                 
         except Exception as e:
             logger.error(f"💥 Exception in background task for coupon {coupon_id}: {str(e)}")
+            db.session.rollback()
             return {
                 'success': False, 
                 'error': str(e),
                 'coupon_id': coupon_id
             }
+        finally:
+            try:
+                if coupon:
+                    coupon.last_scraped = datetime.now(timezone.utc)
+                    db.session.commit()
+                    logger.info(f"Updated last_scraped for coupon {coupon.id}")
+            except Exception as e:
+                logger.error(f"Failed to update last_scraped for coupon {coupon_id}: {e}")
+                db.session.rollback()
 
 
 def update_multiple_coupons_task(coupon_ids, max_retries=3):

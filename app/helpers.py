@@ -7,7 +7,8 @@ import traceback
 import requests
 import pandas as pd
 from zoneinfo import ZoneInfo
-from datetime import datetime, timezone, date
+from datetime import datetime
+from datetime import datetime as dt, timezone, date
 from dotenv import load_dotenv
 from flask import current_app, render_template, url_for, flash
 from selenium import webdriver
@@ -688,9 +689,6 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
             or 0.0
         )
         coupon.used_value = float(total_used)
-        # Update last scraped timestamp
-        from datetime import datetime, timezone
-        coupon.last_scraped = datetime.now(timezone.utc)
 
         # Check if the coupon is still active
         update_coupon_status(coupon)
@@ -4300,10 +4298,13 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     axis=1,
                 )
 
-                debug_print("Adding reference number column for Max data")
-                df["reference_number"] = df.index.map(
-                    lambda i: f"max_ref_{int(time.time())}_{i}"
-                )
+                debug_print("Adding reference number column for Max data (deterministic)")
+                # Use a deterministic reference based on stable fields to avoid duplicates
+                import hashlib
+                def _stable_ref_max(row):
+                    key = f"{row.get('transaction_date')}|{row.get('location')}|{row.get('recharge_amount',0)}|{row.get('usage_amount',0)}"
+                    return "max_ref_" + hashlib.md5(key.encode("utf-8")).hexdigest()[:16]
+                df["reference_number"] = df.apply(_stable_ref_max, axis=1)
 
                 debug_print("Dropping unnecessary columns for Max data")
                 for col_to_drop in ["action", "notes"]:
@@ -4580,9 +4581,12 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 axis=1,
             )
             df["balance"] = 0.0
-            df["reference_number"] = df.index.map(
-                lambda i: f"max_ref_{int(time.time())}_{i}"
-            )
+            # Deterministic references for BuyMe as well to prevent duplicate inserts
+            import hashlib
+            def _stable_ref_buyme(row):
+                key = f"{row.get('transaction_date')}|{row.get('location')}|{row.get('recharge_amount',0)}|{row.get('usage_amount',0)}"
+                return "buyme_ref_" + hashlib.md5(key.encode("utf-8")).hexdigest()[:16]
+            df["reference_number"] = df.apply(_stable_ref_buyme, axis=1)
 
             # Delete temporary HTML files
             if os.path.exists(before_click_file):
@@ -4648,6 +4652,11 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             )
             return None
 
+        # Check for invalid data before proceeding
+        if 'location' in df_new.columns and df_new['location'].str.contains('לא נמצאו רשומות מתאימות').any():
+            debug_print("Found 'לא נמצאו רשומות מתאימות' in location, treating as no new data.")
+            return None
+
         debug_print(f"Adding {len(df_new)} new transactions to the database")
         for idx, row in df_new.iterrows():
             transaction = CouponTransaction(
@@ -4657,7 +4666,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 recharge_amount=row.get("recharge_amount", 0.0),
                 usage_amount=row.get("usage_amount", 0.0),
                 reference_number=row.get("reference_number", ""),
-                source="Multipass",
+                source=coupon_kind,
             )
             db.session.add(transaction)
 

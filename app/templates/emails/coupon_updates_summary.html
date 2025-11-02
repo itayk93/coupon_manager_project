@@ -472,12 +472,7 @@
                 </div>
                 {% endif %}
             </div>
-            <div class="meta-info">
-                <strong>זמן ביצוע:</strong> 
-                <span class="datetime">{{ started if started else 'לא זמין' }}</span>
-                —
-                <span class="datetime">{{ ended if ended else 'לא זמין' }}</span>
-            </div>
+            
         </div>
 
         {% if items and items|length > 0 %}
@@ -524,8 +519,7 @@
         <div class="footer">
             <div class="footer-logo">🎯 Coupon Master</div>
             <div class="footer-info">
-                מערכת ניהול קופונים מתקדמת<br>
-                עדכון אוטומטי נוצר בתאריך {{ (ended or started) if (ended or started) else 'לא זמין' }}
+                מערכת ניהול קופונים מתקדמת
             </div>
         </div>
     </div>
