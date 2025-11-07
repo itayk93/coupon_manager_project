@@ -4401,13 +4401,39 @@ def update_selected_coupons():
     if not selected_coupons:
         return jsonify({"error": "לא נמצאו קופונים תקינים לעדכון"}), 400
 
+    # Create run log entry for this manual selection run
+    try:
+        from app.models import AutoUpdateRun, db as _db
+        from datetime import datetime as _dt, timezone as _tz
+        run = AutoUpdateRun(
+            triggered_by_user_id=current_user.id,
+            run_type='manual',
+            status='running',
+            started_at=_dt.now(_tz.utc),
+            message='Update selected coupons'
+        )
+        _db.session.add(run)
+        _db.session.flush()
+    except Exception:
+        run = None
+
     # Background processing (for production/Render)
     if use_background:
         try:
             from app.tasks import enqueue_multiple_coupon_updates
             
             valid_coupon_ids = [c.id for c in selected_coupons]
-            job = enqueue_multiple_coupon_updates(valid_coupon_ids, max_retries=3)
+            if run:
+                job = enqueue_multiple_coupon_updates(valid_coupon_ids, max_retries=3, run_id=run.id)
+            else:
+                job = enqueue_multiple_coupon_updates(valid_coupon_ids, max_retries=3)
+            # Mark as queued
+            if run:
+                try:
+                    run.mark_queued(job_id=job.id)
+                    _db.session.commit()
+                except Exception:
+                    _db.session.rollback()
             
             return jsonify({
                 "success": True,
@@ -4422,6 +4448,12 @@ def update_selected_coupons():
             # Fallback to synchronous processing if Redis/RQ not available
             use_background = False
         except Exception as e:
+            if run:
+                try:
+                    run.finish(False, message=f"Background enqueue error: {str(e)}")
+                    _db.session.commit()
+                except Exception:
+                    _db.session.rollback()
             return jsonify({
                 "error": f"שגיאה בהפעלת עדכון רקע: {str(e)}"
             }), 500
@@ -4473,6 +4505,13 @@ def update_selected_coupons():
 
     try:
         db.session.commit()
+        # Mark run finished (sync path)
+        if run:
+            try:
+                run.finish(True, updated=len(updated_coupons), failed=len(failed_coupons), skipped=len(skipped_coupons))
+                _db.session.commit()
+            except Exception:
+                _db.session.rollback()
         return jsonify({
             'success': True,
             'background': False,
@@ -4484,6 +4523,12 @@ def update_selected_coupons():
         })
     except Exception as e:
         db.session.rollback()
+        if run:
+            try:
+                run.finish(False, updated=len(updated_coupons), failed=len(failed_coupons), skipped=len(skipped_coupons), message=str(e))
+                _db.session.commit()
+            except Exception:
+                _db.session.rollback()
         return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
 
 
@@ -4719,6 +4764,17 @@ def update_all_multipass_coupons():
     """
     try:
         current_app.logger.info(f"Starting update_all_multipass_coupons for user {current_user.id}")
+        from app.models import AutoUpdateRun, db as _db
+        from datetime import datetime as _dt, timezone as _tz
+        # Create run log entry (manual trigger)
+        run = AutoUpdateRun(
+            triggered_by_user_id=current_user.id,
+            run_type='manual',
+            status='running',
+            started_at=_dt.now(_tz.utc),
+        )
+        _db.session.add(run)
+        _db.session.flush()  # get run.id before branching
         
         if not current_user.is_admin:
             return jsonify({"error": "אין הרשאה"}), 403
@@ -4752,9 +4808,11 @@ def update_all_multipass_coupons():
         if use_background:
             try:
                 from app.tasks import enqueue_multiple_coupon_updates
-                
-                job = enqueue_multiple_coupon_updates(coupon_ids, max_retries=3)
-                
+                # Enqueue with run_id so background task can update the log
+                job = enqueue_multiple_coupon_updates(coupon_ids, max_retries=3, run_id=run.id)
+                # Mark run as queued with job id
+                run.mark_queued(job_id=job.id)
+                _db.session.commit()
                 return jsonify({
                     "success": True,
                     "background": True,
@@ -4768,6 +4826,12 @@ def update_all_multipass_coupons():
                 # Fallback to synchronous processing if Redis/RQ not available
                 use_background = False
             except Exception as e:
+                # Mark run as failed
+                try:
+                    run.finish(False, updated=0, failed=0, skipped=0, message=f"Background enqueue error: {str(e)}")
+                    _db.session.commit()
+                except Exception:
+                    _db.session.rollback()
                 return jsonify({
                     "error": f"שגיאה בהפעלת עדכון רקע: {str(e)}"
                 }), 500
@@ -4826,6 +4890,12 @@ def update_all_multipass_coupons():
 
         try:
             db.session.commit()
+            # Update run record as success with counts
+            try:
+                run.finish(True, updated=len(updated_coupons), failed=len(failed_coupons), skipped=len(skipped_coupons))
+                _db.session.commit()
+            except Exception:
+                _db.session.rollback()
             # After commit, send summary emails for positive deltas
             try:
                 from flask import render_template
@@ -4894,12 +4964,24 @@ def update_all_multipass_coupons():
             })
         except Exception as e:
             db.session.rollback()
+            try:
+                run.finish(False, updated=len(updated_coupons), failed=len(failed_coupons), skipped=len(skipped_coupons), message=str(e))
+                _db.session.commit()
+            except Exception:
+                _db.session.rollback()
             return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
         
     except Exception as e:
         current_app.logger.error(f"Fatal error in update_all_multipass_coupons: {str(e)}")
         import traceback
         current_app.logger.error(f"Traceback: {traceback.format_exc()}")
+        try:
+            # If we created a run earlier in this request, mark it failed
+            if 'run' in locals() and run and run.id:
+                run.finish(False, message=str(e))
+                _db.session.commit()
+        except Exception:
+            _db.session.rollback()
         return jsonify({
             "error": f"שגיאה כללית: {str(e)}",
             "details": "בדוק את הלוגים לפרטים נוספים"

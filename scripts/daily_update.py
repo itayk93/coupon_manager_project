@@ -45,6 +45,19 @@ def main():
         app = create_app()
         
         with app.app_context():
+            from app.models import AutoUpdateRun
+            from app.extensions import db as _db
+            from datetime import timezone as _tz
+            # Create run log for CRON
+            run = AutoUpdateRun(
+                triggered_by_user_id=None,
+                run_type='cron',
+                status='running',
+                started_at=datetime.now(_tz.utc),
+                message='Daily CRON update started'
+            )
+            _db.session.add(run)
+            _db.session.flush()
             # Get all active coupons that can be updated automatically
             updatable_coupons = Coupon.query.filter(
                 Coupon.status == "פעיל",
@@ -67,7 +80,10 @@ def main():
                 from app.tasks import enqueue_multiple_coupon_updates
                 
                 coupon_ids = [c.id for c in updatable_coupons]
-                job = enqueue_multiple_coupon_updates(coupon_ids, max_retries=3)
+                job = enqueue_multiple_coupon_updates(coupon_ids, max_retries=3, run_id=run.id)
+                run.status = 'queued'
+                run.job_id = job.id
+                _db.session.commit()
                 logger.info(f"Enqueued batch update job: {job.id}")
             except ImportError:
                 logger.warning("Redis/RQ not available, using synchronous processing")
@@ -108,12 +124,28 @@ def main():
                 
                 try:
                     db.session.commit()
+                    # Mark run as finished (sync path)
+                    try:
+                        run.status = 'success'
+                        run.finished_at = datetime.now(timezone.utc)
+                        run.updated_count = updated_count
+                        run.failed_count = failed_count
+                        _db.session.commit()
+                    except Exception:
+                        _db.session.rollback()
                     logger.info(f"=== Daily Update Completed ===")
                     logger.info(f"Updated: {updated_count}, Failed: {failed_count}")
                     return
                 except Exception as e:
                     db.session.rollback()
                     logger.error(f"Database commit failed: {e}")
+                    try:
+                        run.status = 'failed'
+                        run.finished_at = datetime.now(timezone.utc)
+                        run.message = f"Commit failed: {e}"
+                        _db.session.commit()
+                    except Exception:
+                        _db.session.rollback()
                     raise e
             
             # Wait for job completion (with timeout)
@@ -148,9 +180,23 @@ def main():
             elif job.is_failed:
                 logger.error("=== Daily Update Failed ===")
                 logger.error(f"Job failed with error: {job.exc_info}")
+                try:
+                    run.status = 'failed'
+                    run.finished_at = datetime.now(_tz.utc)
+                    run.message = 'Background job failed'
+                    _db.session.commit()
+                except Exception:
+                    _db.session.rollback()
             else:
                 logger.warning("=== Daily Update Timed Out ===")
                 logger.warning("Job did not complete within timeout period")
+                try:
+                    run.status = 'failed'
+                    run.finished_at = datetime.now(_tz.utc)
+                    run.message = 'Background job timed out'
+                    _db.session.commit()
+                except Exception:
+                    _db.session.rollback()
                 
     except Exception as e:
         logger.error(f"Fatal error in daily update: {str(e)}")

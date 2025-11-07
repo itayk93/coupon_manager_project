@@ -96,7 +96,7 @@ def update_coupon_task(coupon_id, max_retries=3):
                 db.session.rollback()
 
 
-def update_multiple_coupons_task(coupon_ids, max_retries=3):
+def update_multiple_coupons_task(coupon_ids, max_retries=3, run_id=None):
     """
     Background task to update multiple coupons
     """
@@ -107,6 +107,21 @@ def update_multiple_coupons_task(coupon_ids, max_retries=3):
     with app.app_context():
         logger = logging.getLogger('multipass_updater')
         logger.info(f"Starting batch update for {len(coupon_ids)} coupons")
+        # If we have a run_id, mark the run as running now
+        run = None
+        if run_id is not None:
+            try:
+                from app.models import AutoUpdateRun, db as _db
+                from datetime import datetime as _dt, timezone as _tz
+                run = AutoUpdateRun.query.get(run_id)
+                if run:
+                    run.status = 'running'
+                    # If not started, set started_at
+                    if not run.started_at:
+                        run.started_at = _dt.now(_tz.utc)
+                    _db.session.commit()
+            except Exception as e:
+                logger.error(f"Failed to mark AutoUpdateRun {run_id} as running: {e}")
         
         results = {
             'total': len(coupon_ids),
@@ -143,6 +158,23 @@ def update_multiple_coupons_task(coupon_ids, max_retries=3):
         results['failure_count'] = len(results['failed'])
 
         logger.info(f"Batch update completed: {results['success_count']} successful, {results['failure_count']} failed")
+
+        # Update run record (if provided)
+        if run_id is not None:
+            try:
+                from app.models import AutoUpdateRun, db as _db
+                run = AutoUpdateRun.query.get(run_id)
+                if run:
+                    run.finish(
+                        success=True,
+                        updated=results['success_count'],
+                        failed=results['failure_count'],
+                        skipped=0,
+                        message='Background batch update completed'
+                    )
+                    _db.session.commit()
+            except Exception as e:
+                logger.error(f"Failed to update AutoUpdateRun {run_id}: {e}")
 
         # Send per-user email summaries for coupons that had increased usage
         try:
@@ -219,16 +251,25 @@ def enqueue_coupon_update(coupon_id, max_retries=3):
     return job
 
 
-def enqueue_multiple_coupon_updates(coupon_ids, max_retries=3):
+def enqueue_multiple_coupon_updates(coupon_ids, max_retries=3, run_id=None):
     """
     Enqueue multiple coupon updates as a single batch job
     """
-    job = task_queue.enqueue(
-        update_multiple_coupons_task,
-        coupon_ids,
-        max_retries,
-        job_timeout='30m'  # 30 minutes timeout for batch
-    )
+    if run_id is None:
+        job = task_queue.enqueue(
+            update_multiple_coupons_task,
+            coupon_ids,
+            max_retries,
+            job_timeout='30m'  # 30 minutes timeout for batch
+        )
+    else:
+        job = task_queue.enqueue(
+            update_multiple_coupons_task,
+            coupon_ids,
+            max_retries,
+            run_id,
+            job_timeout='30m'  # 30 minutes timeout for batch
+        )
     return job
 
 

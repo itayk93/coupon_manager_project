@@ -1386,3 +1386,56 @@ class TaskExecutionLog(db.Model):
         """הגדרת המידע הנוסף מ-dict"""
         import json
         self.additional_data = json.dumps(data)
+
+
+class AutoUpdateRun(db.Model):
+    """
+    יומן ריצות של עדכון קופונים אוטומטי (Run-level log)
+    """
+    __tablename__ = "auto_update_runs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    # זיהוי מי הפעיל (יכול להיות NULL עבור CRON)
+    triggered_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    # סוג הריצה: manual / background / cron
+    run_type = db.Column(db.String(50), nullable=False, default="manual")
+    # סטטוס: queued / running / success / failed
+    status = db.Column(db.String(20), nullable=False, default="running")
+
+    # זמנים
+    started_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    finished_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    # תוצאות
+    updated_count = db.Column(db.Integer, nullable=False, default=0)
+    failed_count = db.Column(db.Integer, nullable=False, default=0)
+    skipped_count = db.Column(db.Integer, nullable=False, default=0)
+
+    # זיהוי ג'וב רקע (אם יש)
+    job_id = db.Column(db.String(100), nullable=True)
+
+    # מידע נוסף/הודעה חופשית
+    message = db.Column(db.Text, nullable=True)
+
+    # קשר אופציונלי למשתמש
+    triggered_by_user = db.relationship("User", backref=db.backref("auto_update_runs", lazy=True), foreign_keys=[triggered_by_user_id])
+
+    def mark_running(self, message: str | None = None):
+        self.status = "running"
+        if message:
+            self.message = message
+
+    def mark_queued(self, job_id: str | None = None):
+        self.status = "queued"
+        if job_id:
+            self.job_id = job_id
+
+    def finish(self, success: bool, updated: int = 0, failed: int = 0, skipped: int = 0, message: str | None = None):
+        from datetime import datetime, timezone
+        self.finished_at = datetime.now(timezone.utc)
+        self.status = "success" if success else "failed"
+        self.updated_count = updated
+        self.failed_count = failed
+        self.skipped_count = skipped
+        if message:
+            self.message = message
