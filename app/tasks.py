@@ -14,6 +14,54 @@ redis_conn = redis.from_url(redis_url)
 # Create queue
 task_queue = Queue('coupon_updates', connection=redis_conn)
 
+
+def enqueue_coupon_status_sync(coupon_ids):
+    """Enqueue a background job to reconcile coupon statuses."""
+    if not coupon_ids:
+        return None
+
+    # Ensure we don't enqueue duplicate IDs in a single job
+    unique_ids = list(dict.fromkeys(coupon_ids))
+    return task_queue.enqueue(sync_coupon_statuses_task, unique_ids, job_timeout=180)
+
+
+def sync_coupon_statuses_task(coupon_ids):
+    """Background task to update coupon statuses without blocking requests."""
+    from app import create_app
+    from app.extensions import db
+    from app.helpers import update_coupon_status
+    from app.models import Coupon
+
+    app = create_app()
+
+    with app.app_context():
+        updated = 0
+        try:
+            coupons = Coupon.query.filter(Coupon.id.in_(coupon_ids)).all()
+            for coupon in coupons:
+                previous_status = coupon.status
+                new_status = update_coupon_status(coupon)
+                if new_status != previous_status:
+                    updated += 1
+
+            if updated:
+                db.session.commit()
+            else:
+                db.session.rollback()
+
+            return {
+                'success': True,
+                'updated': updated,
+                'total': len(coupons)
+            }
+        except Exception as exc:
+            db.session.rollback()
+            return {
+                'success': False,
+                'error': str(exc),
+                'total': 0
+            }
+
 def update_coupon_task(coupon_id, max_retries=3):
     """
     Background task to update a single coupon

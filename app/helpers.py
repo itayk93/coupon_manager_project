@@ -11,24 +11,7 @@ from datetime import datetime
 from datetime import datetime as dt, timezone, date
 from dotenv import load_dotenv
 from flask import current_app, render_template, url_for, flash
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-
-# Import Playwright only if available
-try:
-    from playwright.sync_api import sync_playwright
-    PLAYWRIGHT_AVAILABLE = True
-except ImportError:
-    PLAYWRIGHT_AVAILABLE = False
-    sync_playwright = None
-
-# from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
+from functools import lru_cache
 from pprint import pprint
 from app.extensions import db
 from app.models import (
@@ -48,17 +31,14 @@ from flask import flash  # Import the function for displaying user messages
 
 # app/helpers.py
 from app.models import FeatureAccess
-from flask import render_template  # Import render_template
 from sqlalchemy import func
 from app.models import Tag, Coupon, coupon_tags
-import openai
 import json
 import pandas as pd
 import os
 from datetime import datetime
 from app.models import Company
 import logging
-from flask_mail import Message
 
 load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
@@ -69,6 +49,34 @@ SENDER_NAME = "Coupon Master"
 API_KEY = os.getenv("IPINFO_API_KEY")
 
 logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def _get_sync_playwright():
+    """Lazily import Playwright's sync API."""
+    try:
+        from playwright.sync_api import sync_playwright  # type: ignore
+
+        return sync_playwright
+    except ImportError:
+        return None
+
+
+def is_playwright_available() -> bool:
+    """Return True if Playwright is installed and available."""
+    return _get_sync_playwright() is not None
+
+
+@lru_cache(maxsize=1)
+def _get_brevo_client():
+    """Lazily import the Brevo (SendinBlue) SDK."""
+    try:
+        import sib_api_v3_sdk  # type: ignore
+        from sib_api_v3_sdk.rest import ApiException  # type: ignore
+
+        return sib_api_v3_sdk, ApiException
+    except ImportError:
+        return None, None
 
 # ----------------------------------------------------------------
 #  Helper function for creating notifications
@@ -135,51 +143,62 @@ def should_update_coupon(coupon):
 
 
 # ----------------------------------------------------------------
-#  Helper function for updating coupon status
+#  Helper functions for coupon status evaluation
 # ----------------------------------------------------------------
-def update_coupon_status(coupon):
-    """
-    Updates the coupon status (active/used/expired) based on used_value and expiration date.
-    Also sends a notification to the user if it has just become used or expired.
-    """
+def evaluate_coupon_status(coupon, reference_date=None):
+    """Calculate the status a coupon *should* have without persisting it."""
     try:
-        current_date = datetime.now(timezone.utc).date()
-        old_status = (
-            coupon.status or "פעיל"
-        )  # If there's no status yet, assume 'active'
-        new_status = "פעיל"
+        if reference_date is None:
+            reference_date = datetime.now(timezone.utc).date()
 
-        # Check expiration
-        if coupon.expiration:
-            if isinstance(coupon.expiration, date):
-                expiration_date = coupon.expiration
+        status = "פעיל"
+
+        expiration_value = coupon.expiration
+        expiration_date = None
+        if expiration_value:
+            if isinstance(expiration_value, date):
+                expiration_date = expiration_value
             else:
                 try:
-                    expiration_date = datetime.strptime(
-                        coupon.expiration, "%Y-%m-%d"
-                    ).date()
+                    expiration_date = datetime.strptime(expiration_value, "%Y-%m-%d").date()
                 except ValueError:
                     logger.error(
-                        f"Invalid date format for coupon {coupon.id}: {coupon.expiration}"
+                        "Invalid date format for coupon %s: %s",
+                        coupon.id,
+                        expiration_value,
                     )
-                    expiration_date = None
 
-            if expiration_date and current_date > expiration_date:
-                new_status = "פג תוקף"
+        if expiration_date and reference_date > expiration_date:
+            status = "פג תוקף"
 
-        # Check if fully used
         if coupon.used_value >= coupon.value:
-            new_status = "נוצל"
+            status = "נוצל"
 
-        # Update if there's actually a change
+        return status
+    except Exception as exc:
+        logger.error("Error evaluating status for coupon %s: %s", coupon.id, exc)
+        return coupon.status or "פעיל"
+
+
+def update_coupon_status(coupon, reference_date=None):
+    """Persist the calculated coupon status when it has changed."""
+    try:
+        old_status = coupon.status or "פעיל"
+        new_status = evaluate_coupon_status(coupon, reference_date=reference_date)
+
         if old_status != new_status:
             coupon.status = new_status
             logger.info(
-                f"Coupon {coupon.id} status updated from '{old_status}' to '{new_status}'"
+                "Coupon %s status updated from '%s' to '%s'",
+                coupon.id,
+                old_status,
+                new_status,
             )
 
-    except Exception as e:
-        logger.error(f"Error in update_coupon_status for coupon {coupon.id}: {e}")
+        return new_status
+    except Exception as exc:
+        logger.error("Error in update_coupon_status for coupon %s: %s", coupon.id, exc)
+        return coupon.status
 
 
 # ----------------------------------------------------------------
@@ -4788,6 +4807,10 @@ def send_html_email(
     - dict: API response if successful.
     - None: If an exception occurs.
     """
+    sib_api_v3_sdk, ApiException = _get_brevo_client()
+    if sib_api_v3_sdk is None or ApiException is None:
+        raise ImportError("sib_api_v3_sdk is not installed. Please install the Brevo SDK to send emails.")
+
     # Configure API key authorization
     configuration = sib_api_v3_sdk.Configuration()
     configuration.api_key["api-key"] = api_key
@@ -6304,7 +6327,7 @@ def get_coupon_data_with_playwright(coupon, max_retries=3, save_directory="autom
     """
     Wrapper function for get_coupon_data_playwright with retry mechanism and advanced logging
     """
-    if not PLAYWRIGHT_AVAILABLE:
+    if not is_playwright_available():
         logging.error("Playwright is not available. Please install it with: pip install playwright")
         return None
         
@@ -6380,7 +6403,8 @@ def get_coupon_data_playwright(coupon, save_directory="automatic_coupon_update/i
     """
     Get coupon data using Playwright instead of Selenium
     """
-    if not PLAYWRIGHT_AVAILABLE:
+    sync_playwright = _get_sync_playwright()
+    if not sync_playwright:
         logging.error("Playwright is not available. Please install it with: pip install playwright")
         return None
         
