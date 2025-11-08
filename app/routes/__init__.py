@@ -6,6 +6,7 @@ from .transactions_routes import transactions_bp
 from .uploads_routes import uploads_bp
 from .admin_routes import admin_bp
 from .export_routes import export_bp
+from .coupons_routes import coupons_bp
 from .usage_data_routes import usage_data_bp
 from app.routes.admin_routes.admin_tags_routes import admin_tags_bp
 from app.routes.admin_routes.admin_companies_routes import admin_companies_bp
