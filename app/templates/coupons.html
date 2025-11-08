@@ -16,7 +16,7 @@
             <h3 class="coupon-section-title">קופונים פעילים</h3>
             <div class="coupon-container-index">
                 {% for coupon in active_coupons %}
-                    <div class="coupon-card-index-wrapper" 
+                    <div class="coupon-card-index-wrapper"
                          data-company="{{ coupon.company }}" 
                          data-coupon-code="{{ coupon.code }}" 
                          data-coupon-id="{{ coupon.id }}" 
@@ -89,6 +89,23 @@
                     </div>
                 {% endfor %}
             </div>
+            {% if active_pagination.pages > 1 %}
+                <div class="pagination-controls">
+                    {% if active_pagination.has_prev %}
+                        <a class="pagination-link"
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.prev_num, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page) }}">
+                            הקודם
+                        </a>
+                    {% endif %}
+                    <span class="pagination-info">עמוד {{ active_pagination.page }} מתוך {{ active_pagination.pages }}</span>
+                    {% if active_pagination.has_next %}
+                        <a class="pagination-link"
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.next_num, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page) }}">
+                            הבא
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
         {% else %}
             <p class="no-data-message">אין קופונים פעילים.</p>
         {% endif %}
@@ -98,7 +115,7 @@
             <h3 class="coupon-section-title">קופונים חד פעמיים פעילים</h3>
             <div class="coupon-container-index">
                 {% for coupon in active_one_time_coupons %}
-                    <div class="coupon-card-index-wrapper" 
+                    <div class="coupon-card-index-wrapper"
                          data-company="{{ coupon.company }}" 
                          data-coupon-code="{{ coupon.code }}" 
                          data-coupon-id="{{ coupon.id }}" 
@@ -143,6 +160,23 @@
                     </div>
                 {% endfor %}
             </div>
+            {% if active_one_time_pagination.pages > 1 %}
+                <div class="pagination-controls">
+                    {% if active_one_time_pagination.has_prev %}
+                        <a class="pagination-link"
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.prev_num, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page) }}">
+                            הקודם
+                        </a>
+                    {% endif %}
+                    <span class="pagination-info">עמוד {{ active_one_time_pagination.page }} מתוך {{ active_one_time_pagination.pages }}</span>
+                    {% if active_one_time_pagination.has_next %}
+                        <a class="pagination-link"
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.next_num, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page) }}">
+                            הבא
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
         {% else %}
             <p class="no-data-message">אין קופונים חד פעמיים פעילים.</p>
         {% endif %}
@@ -153,7 +187,7 @@
                 <h3 class="coupon-section-title">קופונים למכירה</h3>
                 <div class="coupon-container-index">
                     {% for coupon in coupons_for_sale %}
-                        <div class="coupon-card-index-wrapper" 
+                        <div class="coupon-card-index-wrapper"
                             data-company="{{ coupon.company }}" 
                             data-coupon-code="{{ coupon.code }}" 
                             data-coupon-id="{{ coupon.id }}" 
@@ -226,6 +260,23 @@
                         </div>
                     {% endfor %}
                 </div>
+                {% if sale_pagination.pages > 1 %}
+                    <div class="pagination-controls">
+                        {% if sale_pagination.has_prev %}
+                            <a class="pagination-link"
+                               href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.prev_num) }}">
+                                הקודם
+                            </a>
+                        {% endif %}
+                        <span class="pagination-info">עמוד {{ sale_pagination.page }} מתוך {{ sale_pagination.pages }}</span>
+                        {% if sale_pagination.has_next %}
+                            <a class="pagination-link"
+                               href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.next_num) }}">
+                                הבא
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
             {% else %}
                 <p class="no-data-message">אין קופונים למכירה.</p>
             {% endif %}
@@ -255,7 +306,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for coupon, latest_usage in inactive_coupons_with_usage %}
+                        {% for item in inactive_coupons_with_usage %}
+                            {% set coupon = item.coupon %}
+                            {% set latest_usage = item.latest_usage %}
                             <tr class="clickable-row" data-href="{{ url_for('coupons.coupon_detail', id=coupon.id) }}">
                                 <td>{{ coupon.company }}</td>
                                 <td>{{ coupon.code }}</td>
@@ -300,7 +353,9 @@
                 
                 <!-- Mobile card view for inactive coupons -->
                 <div class="mobile-cards-view" id="inactive-coupons-mobile">
-                    {% for coupon, latest_usage in inactive_coupons_with_usage %}
+                    {% for item in inactive_coupons_with_usage %}
+                        {% set coupon = item.coupon %}
+                        {% set latest_usage = item.latest_usage %}
                         <div class="inactive-coupon-card" onclick="window.location.href='{{ url_for('coupons.coupon_detail', id=coupon.id) }}'">
                             <div class="inactive-coupon-header">
                                 {% set company_lower = coupon.company.lower() %}
@@ -347,6 +402,25 @@
                     {% endfor %}
                 </div>
             </div>
+            {% if inactive_pagination.pages > 1 %}
+                <div class="pagination-controls">
+                    {% if inactive_pagination.has_prev %}
+                        <a class="pagination-link"
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.prev_num, sale_page=sale_pagination.page) }}">
+                            הקודם
+                        </a>
+                    {% endif %}
+                    <span class="pagination-info">עמוד {{ inactive_pagination.page }} מתוך {{ inactive_pagination.pages }}</span>
+                    {% if inactive_pagination.has_next %}
+                        <a class="pagination-link"
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.next_num, sale_page=sale_pagination.page) }}">
+                            הבא
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <p class="no-data-message">אין קופונים שנוצלו.</p>
         {% endif %}
 
         <!-- Action buttons -->
@@ -855,6 +929,33 @@ function generateQRCode(code) {
     background-color: var(--accent-color);
     margin: 8px auto 0;
     border-radius: 2px;
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0 35px;
+}
+
+.pagination-link {
+    background-color: var(--primary-color);
+    color: var(--white);
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color var(--transition-speed);
+}
+
+.pagination-link:hover {
+    background-color: var(--accent-color);
+}
+
+.pagination-info {
+    font-weight: 600;
+    color: var(--text-color);
 }
 
 /* # Coupon Container & Card Styling - Using Index.html Style */

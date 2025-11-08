@@ -11,8 +11,8 @@ from flask import (
     send_file,
 )
 from flask_login import login_required, current_user
-from sqlalchemy.orm import joinedload
-from sqlalchemy import func
+from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy import func, or_, and_
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import text
@@ -62,6 +62,7 @@ from app.forms import (
     RateUserForm,
 )
 from app.helpers import (
+    evaluate_coupon_status,
     update_coupon_status,
     get_coupon_data,
     process_coupons_excel,
@@ -71,9 +72,11 @@ from app.helpers import (
     get_most_common_tag_for_company,
     get_geo_location,
     get_public_ip,
+    is_playwright_available,
     update_coupon_usage,
 )
 from flask import session
+from app.tasks import enqueue_coupon_status_sync
 
 logger = logging.getLogger(__name__)
 
@@ -543,48 +546,104 @@ def sell_coupon():
 @coupons_bp.route("/coupons")
 @login_required
 def show_coupons():
-    # log_user_activity("show_coupons", None)
+    per_page = current_app.config.get("COUPONS_PER_PAGE", 20)
+    active_page = request.args.get("active_page", 1, type=int)
+    one_time_page = request.args.get("one_time_page", 1, type=int)
+    inactive_page = request.args.get("inactive_page", 1, type=int)
+    sale_page = request.args.get("sale_page", 1, type=int)
 
-    # Get owned coupons
-    owned_coupons = (
-        Coupon.query.options(joinedload(Coupon.tags))
-        .filter_by(user_id=current_user.id, is_for_sale=False)
-        .all()
+    current_date = datetime.now(timezone.utc).date()
+    coupons_to_sync = set()
+
+    def serialize_coupon(coupon):
+        status = evaluate_coupon_status(coupon, reference_date=current_date)
+        if status != (coupon.status or "פעיל"):
+            coupons_to_sync.add(coupon.id)
+
+        return {
+            "id": coupon.id,
+            "company": coupon.company,
+            "code": coupon.code,
+            "status": status,
+            "is_one_time": coupon.is_one_time,
+            "purpose": coupon.purpose,
+            "remaining_value": coupon.remaining_value,
+            "original_value": coupon.original_value,
+            "usage_percentage": coupon.usage_percentage,
+            "cost": coupon.cost,
+            "tags": list(coupon.tags),
+            "user_id": coupon.user_id,
+        }
+
+    def pagination_payload(pagination):
+        return {
+            "page": pagination.page,
+            "pages": pagination.pages or 1,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev,
+            "next_num": pagination.next_num if pagination.has_next else None,
+            "prev_num": pagination.prev_num if pagination.has_prev else None,
+            "total": pagination.total,
+            "per_page": pagination.per_page,
+        }
+
+    accessible_filter = or_(
+        Coupon.user_id == current_user.id,
+        Coupon.shares.any(
+            and_(
+                CouponShares.shared_with_user_id == current_user.id,
+                CouponShares.status == "accepted",
+            )
+        ),
     )
-    
-    # Get shared coupons (accepted shares)
-    shared_coupons = (
-        db.session.query(Coupon)
-        .options(joinedload(Coupon.tags))
-        .join(CouponShares, Coupon.id == CouponShares.coupon_id)
+
+    query_options = (
+        joinedload(Coupon.tags),
+        load_only(
+            Coupon.id,
+            Coupon.company,
+            Coupon.code,
+            Coupon.status,
+            Coupon.is_one_time,
+            Coupon.purpose,
+            Coupon.value,
+            Coupon.used_value,
+            Coupon.cost,
+            Coupon.expiration,
+            Coupon.date_added,
+            Coupon.user_id,
+            Coupon.is_for_sale,
+        ),
+    )
+
+    active_query = (
+        Coupon.query.options(*query_options)
         .filter(
-            CouponShares.shared_with_user_id == current_user.id,
-            CouponShares.status == "accepted",
-            Coupon.is_for_sale == False
+            accessible_filter,
+            Coupon.is_for_sale == False,
+            Coupon.is_one_time == False,
+            Coupon.status == "פעיל",
         )
-        .all()
+        .order_by(Coupon.expiration.asc().nullslast(), Coupon.company.asc())
     )
-    
-    # Combine all accessible coupons
-    all_coupons = owned_coupons + shared_coupons
-    
-    for coupon in all_coupons:
-        update_coupon_status(coupon)
-    db.session.commit()
+    active_pagination = active_query.paginate(page=active_page, per_page=per_page, error_out=False)
+    active_coupons = [serialize_coupon(coupon) for coupon in active_pagination.items]
 
-    companies = Company.query.order_by(Company.name).all()
-    company_logo_mapping = {c.name.lower(): c.image_path for c in companies}
-    for company_name in company_logo_mapping:
-        if not company_logo_mapping[company_name]:
-            company_logo_mapping[company_name] = "images/default.png"
-
-    active_coupons = [
-        coupon
-        for coupon in all_coupons
-        if coupon.status == "פעיל" and not coupon.is_one_time
-    ]
+    active_one_time_query = (
+        Coupon.query.options(*query_options)
+        .filter(
+            accessible_filter,
+            Coupon.is_for_sale == False,
+            Coupon.is_one_time == True,
+            Coupon.status == "פעיל",
+        )
+        .order_by(Coupon.expiration.asc().nullslast(), Coupon.company.asc())
+    )
+    active_one_time_pagination = active_one_time_query.paginate(
+        page=one_time_page, per_page=per_page, error_out=False
+    )
     active_one_time_coupons = [
-        coupon for coupon in all_coupons if coupon.status == "פעיל" and coupon.is_one_time
+        serialize_coupon(coupon) for coupon in active_one_time_pagination.items
     ]
 
     latest_usage_subquery = (
@@ -595,69 +654,87 @@ def show_coupons():
         .subquery()
     )
 
-    # Get inactive owned coupons
-    inactive_owned_query = (
+    inactive_query = (
         db.session.query(Coupon, latest_usage_subquery.c.latest_usage)
+        .options(*query_options)
         .outerjoin(
             latest_usage_subquery, Coupon.id == latest_usage_subquery.c.coupon_id
         )
-        .options(joinedload(Coupon.tags))
+        .filter(
+            accessible_filter,
+            Coupon.status != "פעיל",
+            Coupon.is_for_sale == False,
+        )
+        .order_by(
+            latest_usage_subquery.c.latest_usage.desc().nullslast(),
+            Coupon.company.asc(),
+        )
+    )
+    inactive_pagination = inactive_query.paginate(
+        page=inactive_page, per_page=per_page, error_out=False
+    )
+    inactive_coupons_with_usage = [
+        {"coupon": serialize_coupon(coupon), "latest_usage": latest_usage}
+        for coupon, latest_usage in inactive_pagination.items
+    ]
+
+    sale_query = (
+        Coupon.query.options(*query_options)
         .filter(
             Coupon.user_id == current_user.id,
-            Coupon.status != "פעיל",
-            Coupon.is_for_sale == False,
+            Coupon.is_for_sale == True,
         )
-        .order_by(
-            latest_usage_subquery.c.latest_usage.desc().nullslast(),
-            Coupon.company.asc(),
-        )
-    )
-    
-    # Get inactive shared coupons
-    inactive_shared_query = (
-        db.session.query(Coupon, latest_usage_subquery.c.latest_usage)
-        .outerjoin(
-            latest_usage_subquery, Coupon.id == latest_usage_subquery.c.coupon_id
-        )
-        .options(joinedload(Coupon.tags))
-        .join(CouponShares, Coupon.id == CouponShares.coupon_id)
-        .filter(
-            CouponShares.shared_with_user_id == current_user.id,
-            CouponShares.status == "accepted",
-            Coupon.status != "פעיל",
-            Coupon.is_for_sale == False,
-        )
-        .order_by(
-            latest_usage_subquery.c.latest_usage.desc().nullslast(),
-            Coupon.company.asc(),
-        )
-    )
-
-    inactive_coupons_with_usage = inactive_owned_query.all() + inactive_shared_query.all()
-
-    coupons_for_sale = (
-        Coupon.query.filter_by(user_id=current_user.id, is_for_sale=True)
         .order_by(Coupon.date_added.desc())
+    )
+    sale_pagination = sale_query.paginate(page=sale_page, per_page=per_page, error_out=False)
+    coupons_for_sale = [serialize_coupon(coupon) for coupon in sale_pagination.items]
+
+    companies = (
+        Company.query.with_entities(Company.name, Company.image_path)
+        .order_by(Company.name)
         .all()
     )
-    
-    # Add sharing information for template
+    company_logo_mapping = {}
+    for name, image_path in companies:
+        if not name:
+            continue
+        company_logo_mapping[name.lower()] = image_path or "images/default.png"
+
     sharing_info = {}
-    for coupon in all_coupons:
-        # Check if user is owner
-        is_owner = coupon.user_id == current_user.id
-        sharing_info[coupon.id] = {
-            'is_owner': is_owner,
-            'is_shared': not is_owner,  # If not owner, then it's shared with user
-            'can_share': is_owner and coupon.status == "פעיל"
+
+    def register_sharing(coupon_info):
+        is_owner = coupon_info["user_id"] == current_user.id
+        sharing_info[coupon_info["id"]] = {
+            "is_owner": is_owner,
+            "is_shared": not is_owner,
+            "can_share": is_owner and coupon_info["status"] == "פעיל",
         }
+
+    for coupon_info in active_coupons:
+        register_sharing(coupon_info)
+    for coupon_info in active_one_time_coupons:
+        register_sharing(coupon_info)
+    for item in inactive_coupons_with_usage:
+        register_sharing(item["coupon"])
+    for coupon_info in coupons_for_sale:
+        register_sharing(coupon_info)
+
+    if coupons_to_sync:
+        try:
+            enqueue_coupon_status_sync(list(coupons_to_sync))
+        except Exception as exc:
+            logger.warning("Failed to enqueue coupon status sync: %s", exc)
 
     return render_template(
         "coupons.html",
         active_coupons=active_coupons,
+        active_pagination=pagination_payload(active_pagination),
         active_one_time_coupons=active_one_time_coupons,
+        active_one_time_pagination=pagination_payload(active_one_time_pagination),
         inactive_coupons_with_usage=inactive_coupons_with_usage,
+        inactive_pagination=pagination_payload(inactive_pagination),
         coupons_for_sale=coupons_for_sale,
+        sale_pagination=pagination_payload(sale_pagination),
         company_logo_mapping=company_logo_mapping,
         sharing_info=sharing_info,
     )
@@ -4580,8 +4657,7 @@ def update_all_multipass_coupons_playwright():
             return jsonify({"error": "אין הרשאה"}), 403
 
         # Check if Playwright is available
-        from app.helpers import PLAYWRIGHT_AVAILABLE
-        if not PLAYWRIGHT_AVAILABLE:
+        if not is_playwright_available():
             return jsonify({
                 "error": "Playwright לא זמין. נא להתקין עם: pip install playwright",
                 "success": False
