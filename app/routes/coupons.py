@@ -1,8 +1,8 @@
 from flask import jsonify
 from flask_login import login_required, current_user
 from datetime import datetime
-from app.models.user_tour_progress import UserTourProgress
-from app.models.database import db
+from app.models import UserTourProgress
+from app.extensions import db
 
 @coupons_bp.route('/update_coupon_detail_timestamp', methods=['POST'])
 @login_required
