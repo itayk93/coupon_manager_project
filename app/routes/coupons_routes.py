@@ -4639,6 +4639,7 @@ def update_all_multipass_coupons_playwright():
                 
                 # Save old usage to compute delta
                 old_usage = float(cpn.used_value or 0)
+                coupon_value = float(cpn.value or 0)
                 df = get_coupon_data_with_playwright(cpn, max_retries=3)  
                 if df is not None:
                     total_usage = float(df["usage_amount"].sum())
@@ -4661,6 +4662,8 @@ def update_all_multipass_coupons_playwright():
                         'new_usage': total_usage,
                         'delta': total_usage - old_usage,
                         'user_id': cpn.user_id,
+                        'coupon_value': coupon_value,
+                        'remaining_value': max(coupon_value - total_usage, 0),
                     })
                     current_app.logger.info(f"✅ Updated coupon {cpn.code} with Playwright: {total_usage}")
                 else:
@@ -4702,12 +4705,20 @@ def update_all_multipass_coupons_playwright():
                 uid = item.get('user_id')
                 if not uid:
                     continue
+                old_usage = float(item.get('old_usage', 0) or 0)
+                new_usage = float(item.get('new_usage', 0) or 0)
+                coupon_value = float(item.get('coupon_value', 0) or 0)
+                remaining_value = float(item.get('remaining_value', 0) or 0)
+                if coupon_value:
+                    remaining_value = max(coupon_value - new_usage, 0)
                 user_updates.setdefault(uid, []).append({
                     'coupon_code': item.get('code'),
                     'company': item.get('company'),
-                    'old_usage': float(item.get('old_usage', 0) or 0),
-                    'new_usage': float(item.get('new_usage', 0) or 0),
+                    'old_usage': old_usage,
+                    'new_usage': new_usage,
                     'delta': delta,
+                    'remaining_value': remaining_value,
+                    'coupon_value': coupon_value,
                 })
 
             started = dt.utcnow().isoformat()
@@ -4861,6 +4872,7 @@ def update_all_multipass_coupons():
                 
                 # Capture old usage before calling scraper
                 old_usage = float(cpn.used_value or 0)
+                coupon_value = float(cpn.value or 0)
                 df = get_coupon_data(cpn)  
                 if df is not None:
                     # After get_coupon_data, the helper updates the coupon and usage in DB
@@ -4872,6 +4884,8 @@ def update_all_multipass_coupons():
                         'new_usage': new_usage,
                         'delta': new_usage - old_usage,
                         'user_id': cpn.user_id,
+                        'coupon_value': coupon_value,
+                        'remaining_value': max(coupon_value - new_usage, 0),
                     })
                 else:
                     failed_coupons.append({
@@ -4911,12 +4925,20 @@ def update_all_multipass_coupons():
                     uid = item.get('user_id')
                     if not uid:
                         continue
+                    old_usage = float(item.get('old_usage', 0) or 0)
+                    new_usage = float(item.get('new_usage', 0) or 0)
+                    coupon_value = float(item.get('coupon_value', 0) or 0)
+                    remaining_value = float(item.get('remaining_value', 0) or 0)
+                    if coupon_value:
+                        remaining_value = max(coupon_value - new_usage, 0)
                     user_updates.setdefault(uid, []).append({
                         'coupon_code': item.get('code'),
                         'company': item.get('company'),
-                        'old_usage': float(item.get('old_usage', 0) or 0),
-                        'new_usage': float(item.get('new_usage', 0) or 0),
+                        'old_usage': old_usage,
+                        'new_usage': new_usage,
                         'delta': delta,
+                        'remaining_value': remaining_value,
+                        'coupon_value': coupon_value,
                     })
 
                 started = dt.utcnow().isoformat()

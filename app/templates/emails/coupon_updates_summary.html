@@ -177,9 +177,9 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .stat-card {
@@ -191,6 +191,9 @@
             text-align: center;
             transition: var(--transition);
             box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .stat-card:hover {
@@ -256,6 +259,7 @@
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-soft);
             margin-bottom: 20px;
+            border: 1px solid rgba(74, 85, 104, 0.12);
         }
 
         table {
@@ -263,43 +267,34 @@
             border-collapse: collapse;
             background: var(--bg-card);
             backdrop-filter: blur(20px);
+            border-spacing: 0;
         }
 
         th {
-            background: var(--primary-color);
-            color: white;
+            background: #fff;
+            color: var(--primary-color);
             padding: 16px 12px;
             text-align: right;
             font-weight: 700;
             font-size: 0.9rem;
-            position: relative;
-        }
-
-        th::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: rgba(255, 255, 255, 0.3);
+            border-bottom: 1px solid rgba(74, 85, 104, 0.15);
         }
 
         td {
             padding: 14px 12px;
             text-align: right;
-            border-bottom: 1px solid var(--glass-border);
+            border-bottom: 1px solid rgba(74, 85, 104, 0.08);
             font-weight: 500;
             transition: var(--transition);
         }
 
         tr:hover td {
-            background: var(--glass-bg);
+            background: rgba(66, 153, 225, 0.07);
             transform: scale(1.01);
         }
 
         tr:nth-child(even) {
-            background: rgba(74, 85, 104, 0.03);
+            background: rgba(74, 85, 104, 0.02);
         }
 
         .delta-pos {
@@ -308,6 +303,10 @@
             background: rgba(72, 187, 120, 0.1);
             padding: 4px 8px;
             border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 90px;
         }
 
         .delta-zero {
@@ -326,6 +325,18 @@
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 0.85rem;
+        }
+
+        .balance-chip {
+            font-weight: 700;
+            color: var(--primary-dark);
+            background: rgba(66, 153, 225, 0.12);
+            padding: 6px 10px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 110px;
         }
 
         /* No Updates Section */
@@ -455,24 +466,16 @@
 
         <!-- Stats Section -->
         <div class="stats-section">
-            <div class="stats-title">📈 סיכום העדכון</div>
+            <div class="stats-title">📈 רק מה שחדש מעניין אותנו</div>
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-value success">{{ success_count }}</div>
-                    <div class="stat-label">עודכנו בהצלחה</div>
+                    <div class="stat-label">קופונים עם שימוש חדש</div>
+                    <div class="stat-value info">{{ items|length if items else 0 }}</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value warning">{{ failure_count }}</div>
-                    <div class="stat-label">נכשלו</div>
-                </div>
-                {% if items and items|length > 0 %}
-                <div class="stat-card">
-                    <div class="stat-value info">{{ items|length }}</div>
-                    <div class="stat-label">עם שימוש חדש</div>
-                </div>
-                {% endif %}
             </div>
-            
+            <div class="meta-info">
+                אנחנו מציגים רק קופונים שקיבלו שימוש נוסף בעדכון האחרון.
+            </div>
         </div>
 
         {% if items and items|length > 0 %}
@@ -485,9 +488,9 @@
                         <tr>
                             <th>חברה</th>
                             <th>קוד קופון</th>
-                            <th>שימוש קודם</th>
-                            <th>שימוש חדש</th>
-                            <th>תוספת</th>
+                            <th>יתרה בקופון</th>
+                            <th>כמה השתמשתי</th>
+                            <th>כמה היה קודם</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -495,11 +498,15 @@
                         <tr>
                             <td class="company-name">{{ item.company }}</td>
                             <td class="coupon-code">{{ item.coupon_code }}</td>
-                            <td>₪{{ '%.2f' % item.old_usage }}</td>
-                            <td>₪{{ '%.2f' % item.new_usage }}</td>
-                            <td class="{{ 'delta-pos' if item.delta > 0 else 'delta-zero' }}">
-                                {% if item.delta > 0 %}+{% endif %}₪{{ '%.2f' % item.delta }}
+                            <td>
+                                <span class="balance-chip">₪{{ '%.2f' % item.remaining_value }}</span>
                             </td>
+                            <td>
+                                <span class="{{ 'delta-pos' if item.delta > 0 else 'delta-zero' }}">
+                                    {% if item.delta > 0 %}+{% endif %}₪{{ '%.2f' % item.delta }}
+                                </span>
+                            </td>
+                            <td>₪{{ '%.2f' % item.old_usage }}</td>
                         </tr>
                     {% endfor %}
                     </tbody>

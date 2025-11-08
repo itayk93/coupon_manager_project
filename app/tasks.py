@@ -60,13 +60,16 @@ def update_coupon_task(coupon_id, max_retries=3):
                 db.session.commit()
                 
                 logger.info(f"✅ Background update completed for coupon {coupon.code}")
+                coupon_value = float(coupon.value or 0)
                 return {
                     'success': True,
                     'coupon_code': coupon.code,
                     'company': coupon.company,
                     'old_usage': old_usage,
                     'new_usage': total_usage,
-                    'user_id': coupon.user_id
+                    'user_id': coupon.user_id,
+                    'coupon_value': coupon_value,
+                    'remaining_value': max(coupon_value - total_usage, 0),
                 }
             else:
                 logger.error(f"❌ Failed to get data for coupon {coupon.code}")
@@ -193,6 +196,10 @@ def update_multiple_coupons_task(coupon_ids, max_retries=3, run_id=None):
                 delta = new_u - old_u
                 if delta <= 0:
                     continue
+                coupon_value = float(item.get('coupon_value', 0) or 0)
+                remaining_value = float(item.get('remaining_value', 0) or 0)
+                if coupon_value:
+                    remaining_value = max(coupon_value - new_u, 0)
                 if user_id not in user_updates:
                     user_updates[user_id] = []
                 user_updates[user_id].append({
@@ -201,6 +208,8 @@ def update_multiple_coupons_task(coupon_ids, max_retries=3, run_id=None):
                     'old_usage': old_u,
                     'new_usage': new_u,
                     'delta': delta,
+                    'remaining_value': remaining_value,
+                    'coupon_value': coupon_value,
                 })
 
             started = results.get('start_time')
