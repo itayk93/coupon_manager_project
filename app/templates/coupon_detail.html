@@ -24,9 +24,8 @@
                     <div class="sale-icon"><i class="fas fa-tags"></i></div>
                     <div class="sale-details">
                         <span class="seller-name">{{ coupon.user.first_name }} {{ coupon.user.last_name }}</span>
-                        מוכר קופון על סך <span class="highlight-value">{{ coupon.value|int }} ₪</span> ל{{ coupon.company }}<br>
-                        ב-<span class="highlight-value">{{ coupon.cost|int }} ₪</span>
-                        <span class="discount-badge">{{ discount_percentage }}% הנחה</span>
+                                                <span class="highlight-value" style="direction: ltr;">{{ coupon.value|int }} ₪</span> ל{{ coupon.company }}<br>
+                                                ב-<span class="highlight-value" style="direction: ltr;">{{ coupon.cost|int }} ₪</span>                        <span class="discount-badge">{{ discount_percentage }}% הנחה</span>
                     </div>
                 </div>
 
@@ -168,14 +167,13 @@
                                 <div class="info-icon"><i class="fas fa-shekel-sign"></i></div>
                                 <div class="info-content">
                                     <span class="info-title">ערך הקופון בפועל:</span>
-                                    <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
-                                </div>
+                                                                            <span class="info-value" style="direction: ltr;">{{ '%.2f'|format(coupon.value) }} ש"ח</span>                                </div>
                             </div>
                             <div class="info-box highlight-box">
                                 <div class="info-icon"><i class="fas fa-money-bill-wave"></i></div>
                                 <div class="info-content">
                                     <span class="info-title">מחיר מבוקש:</span>
-                                    <span class="info-value">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
+                                    <span class="info-value" style="direction: ltr;">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
                                 </div>
                             </div>
                         {% endif %}
@@ -207,14 +205,14 @@
                                     <div class="info-icon"><i class="fas fa-tag"></i></div>
                                     <div class="info-content">
                                         <span class="info-title">ערך מקורי:</span>
-                                        <span class="info-value">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
+                                        <span class="info-value" style="direction: ltr;">{{ '%.2f'|format(coupon.value) }} ש"ח</span>
                                     </div>
                                 </div>
                                 <div class="info-box highlight-box">
                                     <div class="info-icon"><i class="fas fa-shopping-cart"></i></div>
                                     <div class="info-content">
                                         <span class="info-title">ערך שהשתמשת בו:</span>
-                                        <span class="info-value">{{ '%.2f'|format(coupon.used_value) }} ש"ח</span>
+                                        <span class="info-value" style="direction: ltr;">{{ '%.2f'|format(coupon.used_value) }} ש"ח</span>
                                     </div>
                                 </div>
                                 {% if not coupon.is_one_time %}
@@ -222,7 +220,7 @@
                                         <div class="info-icon"><i class="fas fa-coins"></i></div>
                                         <div class="info-content">
                                             <span class="info-title">ערך נותר:</span>
-                                            <span class="info-value">{{ '%.2f'|format(coupon.value - coupon.used_value) }} ש"ח</span>
+                                            <span class="info-value" style="direction: ltr;">{{ '%.2f'|format(coupon.value - coupon.used_value) }} ש"ח</span>
                                         </div>
                                     </div>
                                 {% endif %}
@@ -326,7 +324,7 @@
                             <div class="info-icon"><i class="fas fa-money-bill-wave"></i></div>
                             <div class="info-content">
                                 <span class="info-title">כמה שילמת על הקופון:</span>
-                                <span class="info-value">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
+                                <span class="info-value" style="direction: ltr;">{{ '%.2f'|format(coupon.cost) }} ש"ח</span>
                             </div>
                         </div>
 
@@ -400,7 +398,7 @@
                                             -
                                         {% endif %}
                                     </td>
-                                    <td class="amount-cell {% if row.transaction_amount < 0 %}negative{% else %}positive{% endif %}">
+                                    <td class="amount-cell {% if row.transaction_amount < 0 %}negative{% else %}positive{% endif %}" style="direction: ltr;">
                                         {{ row.transaction_amount }}
                                     </td>
                                     <td>{{ row.details or '' }}</td>

@@ -263,6 +263,7 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     from datetime import datetime
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service # Added this line
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
@@ -778,7 +779,6 @@ def get_coupon_data_with_retry(coupon, max_retries=3, save_directory="automatic_
         logger.setLevel(logging.INFO)
     
     start_time = datetime.now()
-    logger.info(f"Starting update process for coupon {coupon.code} ({coupon.company})")
     
     for attempt in range(max_retries):
         attempt_start = datetime.now()
@@ -3706,6 +3706,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     from datetime import datetime
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service # Added this line
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC

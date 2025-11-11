@@ -667,7 +667,8 @@ def show_coupons():
         )
         .order_by(
             latest_usage_subquery.c.latest_usage.desc().nullslast(),
-            Coupon.company.asc(),
+            Coupon.expiration.desc().nullslast(),
+            Coupon.date_added.desc(),
         )
     )
     inactive_pagination = inactive_query.paginate(
