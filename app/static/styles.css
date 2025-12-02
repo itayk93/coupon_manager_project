@@ -726,6 +726,17 @@ select:focus {
     text-align: center !important;
 }
 
+.coupon-buttons-wrapper > form,
+.coupon-buttons-wrapper > button {
+    flex: 0 0 auto;
+}
+
+.coupon-buttons-wrapper form {
+    margin: 0;
+    padding: 0;
+    display: flex;
+}
+
 .coupon-single-button-wrapper {
     flex-direction: column;
 }
