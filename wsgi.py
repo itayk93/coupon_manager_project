@@ -1,10 +1,12 @@
-    # wsgi.py
+# wsgi.py
 import os
 import sys
 import logging
 import threading
 import asyncio
+from telegram.error import Conflict as TelegramConflict
 from dotenv import load_dotenv
+from app.telegram_bot_flag import get_telegram_bot_flag
 
 # טען את קובץ .env קודם
 load_dotenv()
@@ -106,6 +108,17 @@ def start_telegram_bot_thread():
                     stop_signals=None,
                     drop_pending_updates=True
                 )
+            except TelegramConflict as conflict_error:
+                logger.warning(
+                    "Telegram polling aborted because another getUpdates request "
+                    "is already running. Ensure only one bot instance runs at a time.",
+                    exc_info=True
+                )
+                print(
+                    "Telegram polling aborted: another getUpdates request is active. "
+                    "Make sure only one bot instance runs.",
+                    flush=True
+                )
             except Exception as polling_error:
                 logger.error(f"Error in run_polling: {polling_error}", exc_info=True)
                 print(f"Error in run_polling: {polling_error}", flush=True)
@@ -125,9 +138,13 @@ def start_bot_if_enabled():
     logger.info("=== start_bot_if_enabled() called ===")
     print("=== start_bot_if_enabled() called ===", flush=True)
     
-    enable_bot = os.getenv('ENABLE_BOT', 'true').lower() == 'true'
-    logger.info(f"ENABLE_BOT environment variable: {os.getenv('ENABLE_BOT', 'not set')} -> {enable_bot}")
-    print(f"ENABLE_BOT environment variable: {os.getenv('ENABLE_BOT', 'not set')} -> {enable_bot}", flush=True)
+    enable_bot_env = os.getenv('ENABLE_BOT', 'not set')
+    enable_bot, flag_source = get_telegram_bot_flag()
+    logger.info(f"ENABLE_BOT environment variable: {enable_bot_env} -> {enable_bot} (source: {flag_source})")
+    print(
+        f"ENABLE_BOT environment variable: {enable_bot_env} -> {enable_bot} (source: {flag_source})",
+        flush=True
+    )
     
     if enable_bot:
         logger.info("Bot is enabled, starting Telegram bot in background thread...")

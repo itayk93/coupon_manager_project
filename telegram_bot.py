@@ -35,6 +35,7 @@ from fuzzywuzzy import fuzz
 import sys
 sys.path.append('/app')
 from app.helpers import extract_coupon_detail_sms
+from app.telegram_bot_flag import get_telegram_bot_flag
 
 # Load environment variables
 load_dotenv()
@@ -61,7 +62,7 @@ logger.setLevel(logging.INFO)
 API_URL = os.getenv('API_URL', 'https://couponmasteril.com')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME')
-ENABLE_BOT = os.getenv('ENABLE_BOT', 'True').lower() == 'true'
+ENABLE_BOT, ENABLE_BOT_SOURCE = get_telegram_bot_flag()
 
 # Session timeout configuration - configurable via environment variable
 SESSION_TIMEOUT_MINUTES = int(os.getenv('SESSION_TIMEOUT_MINUTES', '10080'))
@@ -78,7 +79,7 @@ MAX_AI_TEXT_LENGTH = 1000  # Maximum text length for AI analysis
 logger.info(f"Bot Configuration:")
 logger.info(f"API_URL: {API_URL}")
 logger.info(f"TELEGRAM_BOT_USERNAME: {TELEGRAM_BOT_USERNAME}")
-logger.info(f"ENABLE_BOT: {ENABLE_BOT}")
+logger.info(f"ENABLE_BOT ({ENABLE_BOT_SOURCE}): {ENABLE_BOT}")
 logger.info(f"SESSION_TIMEOUT_MINUTES: {SESSION_TIMEOUT_MINUTES}")
 logger.info(f"REMINDER_TIME: {REMINDER_HOUR:02d}:{REMINDER_MINUTE:02d} Israel time")
 logger.info(f"DATABASE_URL configured: {'Yes' if os.getenv('DATABASE_URL') else 'No'}")
@@ -4589,8 +4590,8 @@ def create_bot_application():
             return None
         
         # Check if bot is enabled
-        logger.info(f"Checking ENABLE_BOT: {ENABLE_BOT}")
-        print(f"Checking ENABLE_BOT: {ENABLE_BOT}", flush=True)
+        logger.info(f"Checking ENABLE_BOT ({ENABLE_BOT_SOURCE}): {ENABLE_BOT}")
+        print(f"Checking ENABLE_BOT ({ENABLE_BOT_SOURCE}): {ENABLE_BOT}", flush=True)
         if not ENABLE_BOT:
             logger.warning("טלגרם בוט מושבת - מדלג על יצירת האפליקציה")
             print("טלגרם בוט מושבת - מדלג על יצירת האפליקציה", flush=True)
