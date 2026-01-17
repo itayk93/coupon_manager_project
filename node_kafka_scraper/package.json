@@ -1,0 +1,19 @@
+{
+  "name": "coupon-kafka-scraper",
+  "version": "0.1.0",
+  "description": "Kafka-backed Node service that runs Selenium to update Supabase coupon usage records.",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "produce": "node src/producer.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.27.0",
+    "chromedriver": "^114.0.0",
+    "dotenv": "^16.4.5",
+    "kafkajs": "^2.3.0",
+    "pino": "^8.13.0",
+    "selenium-webdriver": "^4.16.0"
+  }
+}

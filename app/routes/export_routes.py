@@ -56,7 +56,13 @@ def log_user_activity(action):
 def export_excel():
     # log_user_activity("export_excel_view")
 
-    coupons = Coupon.query.filter_by(user_id=current_user.id).all()
+    search_query = request.args.get("search", "").strip()
+    query = Coupon.query.filter_by(user_id=current_user.id)
+    
+    if search_query:
+        query = query.filter(Coupon.company.ilike(f"%{search_query}%"))
+        
+    coupons = query.all()
     data = []
     for coupon in coupons:
         data.append(
@@ -100,7 +106,13 @@ def export_pdf():
 
     pdfmetrics.registerFont(TTFont("DejaVuSans", "DejaVuSans.ttf"))
 
-    coupons = Coupon.query.filter_by(user_id=current_user.id).all()
+    search_query = request.args.get("search", "").strip()
+    query = Coupon.query.filter_by(user_id=current_user.id)
+    
+    if search_query:
+        query = query.filter(Coupon.company.ilike(f"%{search_query}%"))
+        
+    coupons = query.all()
     output = BytesIO()
     p = canvas.Canvas(output, pagesize=letter)
     p.setFont("DejaVuSans", 12)

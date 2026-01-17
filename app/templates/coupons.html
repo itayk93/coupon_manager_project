@@ -8,6 +8,14 @@
     <!-- Section Header -->
     <div class="section-header">
         <h2>הקופונים שלך</h2>
+        
+        <!-- Search Box -->
+        <div class="search-container" style="margin-top: 10px;">
+            <input type="text" id="companySearch" 
+                   placeholder="סינון לפי חברה..." 
+                   value="{{ search_query }}"
+                   style="padding: 8px; width: 100%; max-width: 300px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
     </div>
 
     <section class="coupons">
@@ -93,14 +101,14 @@
                 <div class="pagination-controls">
                     {% if active_pagination.has_prev %}
                         <a class="pagination-link"
-                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.prev_num, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page) }}">
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.prev_num, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page, search=search_query) }}">
                             הקודם
                         </a>
                     {% endif %}
                     <span class="pagination-info">עמוד {{ active_pagination.page }} מתוך {{ active_pagination.pages }}</span>
                     {% if active_pagination.has_next %}
                         <a class="pagination-link"
-                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.next_num, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page) }}">
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.next_num, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page, search=search_query) }}">
                             הבא
                         </a>
                     {% endif %}
@@ -164,14 +172,14 @@
                 <div class="pagination-controls">
                     {% if active_one_time_pagination.has_prev %}
                         <a class="pagination-link"
-                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.prev_num, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page) }}">
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.prev_num, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page, search=search_query) }}">
                             הקודם
                         </a>
                     {% endif %}
                     <span class="pagination-info">עמוד {{ active_one_time_pagination.page }} מתוך {{ active_one_time_pagination.pages }}</span>
                     {% if active_one_time_pagination.has_next %}
                         <a class="pagination-link"
-                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.next_num, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page) }}">
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.next_num, inactive_page=inactive_pagination.page, sale_page=sale_pagination.page, search=search_query) }}">
                             הבא
                         </a>
                     {% endif %}
@@ -264,14 +272,14 @@
                     <div class="pagination-controls">
                         {% if sale_pagination.has_prev %}
                             <a class="pagination-link"
-                               href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.prev_num) }}">
+                               href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.prev_num, search=search_query) }}">
                                 הקודם
                             </a>
                         {% endif %}
                         <span class="pagination-info">עמוד {{ sale_pagination.page }} מתוך {{ sale_pagination.pages }}</span>
                         {% if sale_pagination.has_next %}
                             <a class="pagination-link"
-                               href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.next_num) }}">
+                               href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.page, sale_page=sale_pagination.next_num, search=search_query) }}">
                                 הבא
                             </a>
                         {% endif %}
@@ -406,14 +414,14 @@
                 <div class="pagination-controls">
                     {% if inactive_pagination.has_prev %}
                         <a class="pagination-link"
-                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.prev_num, sale_page=sale_pagination.page) }}">
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.prev_num, sale_page=sale_pagination.page, search=search_query) }}">
                             הקודם
                         </a>
                     {% endif %}
                     <span class="pagination-info">עמוד {{ inactive_pagination.page }} מתוך {{ inactive_pagination.pages }}</span>
                     {% if inactive_pagination.has_next %}
                         <a class="pagination-link"
-                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.next_num, sale_page=sale_pagination.page) }}">
+                           href="{{ url_for('coupons.show_coupons', active_page=active_pagination.page, one_time_page=active_one_time_pagination.page, inactive_page=inactive_pagination.next_num, sale_page=sale_pagination.page, search=search_query) }}">
                             הבא
                         </a>
                     {% endif %}
@@ -425,11 +433,11 @@
 
         <!-- Action buttons -->
         <div class="action-buttons">
-            <a href="{{ url_for('export.export_excel') }}" class="export-button">
+            <a href="{{ url_for('export.export_excel', search=search_query) }}" class="export-button">
                 <i class="fas fa-file-excel"></i>
                 <span>ייצוא ל-Excel</span>
             </a>
-            <a href="{{ url_for('export.export_pdf') }}" class="export-button">
+            <a href="{{ url_for('export.export_pdf', search=search_query) }}" class="export-button">
                 <i class="fas fa-file-pdf"></i>
                 <span>ייצוא ל-PDF</span>
             </a>
@@ -535,6 +543,41 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // # Setup coupon card interactions
     setupCouponCardInteractions();
+
+    // # Search debounce logic
+    const searchInput = document.getElementById('companySearch');
+    if (searchInput) {
+        let timeout = null;
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(timeout);
+            timeout = setTimeout(function() {
+                const searchValue = e.target.value;
+                const url = new URL(window.location.href);
+                if (searchValue) {
+                    url.searchParams.set('search', searchValue);
+                } else {
+                    url.searchParams.delete('search');
+                }
+                // Reset to page 1 for all paginations when searching
+                url.searchParams.set('active_page', 1);
+                url.searchParams.set('one_time_page', 1);
+                url.searchParams.set('inactive_page', 1);
+                url.searchParams.set('sale_page', 1);
+                
+                window.location.href = url.toString();
+            }, 500); // 0.5 seconds delay
+        });
+
+        // Focus the input if there is a search query
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('search')) {
+            const val = urlParams.get('search');
+            searchInput.value = val;
+            searchInput.focus();
+            // Put cursor at end of text
+            searchInput.setSelectionRange(val.length, val.length);
+        }
+    }
 });
 
 // # Function to handle coupon card interactions

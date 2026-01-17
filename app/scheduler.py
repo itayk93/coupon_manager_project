@@ -75,6 +75,8 @@ class TaskScheduler:
                     
         except Exception as e:
             logger.error(f"Error checking tasks: {e}")
+            db_session.rollback()
+            db_session.remove()
             
     def _execute_task(self, task: ScheduledTask):
         """ביצוע משימה ספציפית"""

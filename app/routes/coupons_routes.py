@@ -555,6 +555,8 @@ def show_coupons():
     current_date = datetime.now(timezone.utc).date()
     coupons_to_sync = set()
 
+    search_query = request.args.get("search", "").strip()
+
     def serialize_coupon(coupon):
         status = evaluate_coupon_status(coupon, reference_date=current_date)
         if status != (coupon.status or "פעיל"):
@@ -624,7 +626,12 @@ def show_coupons():
             Coupon.is_one_time == False,
             Coupon.status == "פעיל",
         )
-        .order_by(Coupon.expiration.asc().nullslast(), Coupon.company.asc())
+    )
+
+    if search_query:
+        active_query = active_query.filter(Coupon.company.ilike(f"%{search_query}%"))
+
+    active_query = active_query.order_by(Coupon.expiration.asc().nullslast(), Coupon.company.asc())
     )
     active_pagination = active_query.paginate(page=active_page, per_page=per_page, error_out=False)
     active_coupons = [serialize_coupon(coupon) for coupon in active_pagination.items]
@@ -637,7 +644,12 @@ def show_coupons():
             Coupon.is_one_time == True,
             Coupon.status == "פעיל",
         )
-        .order_by(Coupon.expiration.asc().nullslast(), Coupon.company.asc())
+    )
+
+    if search_query:
+        active_one_time_query = active_one_time_query.filter(Coupon.company.ilike(f"%{search_query}%"))
+
+    active_one_time_query = active_one_time_query.order_by(Coupon.expiration.asc().nullslast(), Coupon.company.asc())
     )
     active_one_time_pagination = active_one_time_query.paginate(
         page=one_time_page, per_page=per_page, error_out=False
@@ -665,7 +677,11 @@ def show_coupons():
             Coupon.status != "פעיל",
             Coupon.is_for_sale == False,
         )
-        .order_by(
+
+    if search_query:
+        inactive_query = inactive_query.filter(Coupon.company.ilike(f"%{search_query}%"))
+
+    inactive_query = inactive_query.order_by(
             latest_usage_subquery.c.latest_usage.desc().nullslast(),
             Coupon.expiration.desc().nullslast(),
             Coupon.date_added.desc(),
@@ -685,7 +701,12 @@ def show_coupons():
             Coupon.user_id == current_user.id,
             Coupon.is_for_sale == True,
         )
-        .order_by(Coupon.date_added.desc())
+    )
+
+    if search_query:
+        sale_query = sale_query.filter(Coupon.company.ilike(f"%{search_query}%"))
+
+    sale_query = sale_query.order_by(Coupon.date_added.desc())
     )
     sale_pagination = sale_query.paginate(page=sale_page, per_page=per_page, error_out=False)
     coupons_for_sale = [serialize_coupon(coupon) for coupon in sale_pagination.items]
@@ -738,6 +759,7 @@ def show_coupons():
         sale_pagination=pagination_payload(sale_pagination),
         company_logo_mapping=company_logo_mapping,
         sharing_info=sharing_info,
+        search_query=search_query,
     )
 
 
@@ -4484,8 +4506,7 @@ def update_selected_coupons():
         from app.models import AutoUpdateRun, db as _db
         from datetime import datetime as _dt, timezone as _tz
         run = AutoUpdateRun(
-            triggered_by_user_id=current_user.id,
-            run_type='manual',
+            user_id=current_user.id,
             status='running',
             started_at=_dt.now(_tz.utc),
             message='Update selected coupons'
@@ -4856,8 +4877,7 @@ def update_all_multipass_coupons():
         from datetime import datetime as _dt, timezone as _tz
         # Create run log entry (manual trigger)
         run = AutoUpdateRun(
-            triggered_by_user_id=current_user.id,
-            run_type='manual',
+            user_id=current_user.id,
             status='running',
             started_at=_dt.now(_tz.utc),
         )

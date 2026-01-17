@@ -3697,6 +3697,102 @@ def calculate_captcha_click_coordinates_real_screen(matches, captcha_bounds, win
     
     return coordinates
 
+def normalize_multipass_dataframe(df, coupon_number, debug_print=lambda *_: None):
+    """
+    Normalize Multipass table data into the schema expected downstream.
+    """
+    import pandas as pd
+
+    if df is None or df.empty:
+        debug_print("No Multipass rows provided for normalization")
+        return df
+
+    df = df.copy()
+    df.columns = [str(col).strip() for col in df.columns]
+
+    rename_map = {
+        "תאריך ושעה": "transaction_date",
+        "תאריך": "transaction_date",
+        "סוג פעולה": "operation_type",
+        "בית עסק": "location",
+        "שם בית עסק": "location",
+        "סכום טעינת תקציב": "recharge_amount",
+        "סכום עסקה מקורי": "original_amount",
+        "סכום מימוש תקציב": "usage_amount",
+        "הנחה": "discount",
+        "שם הטבה": "benefit_name",
+        "כמות": "quantity",
+        "אסמכתא": "reference_number",
+        "מספר אסמכתא": "reference_number",
+    }
+
+    df.rename(columns=rename_map, inplace=True)
+
+    def _parse_currency(value):
+        if pd.isna(value):
+            return 0.0
+        text = str(value)
+        text = (
+            text.replace("₪", "")
+            .replace("\u20aa", "")
+            .replace(",", "")
+            .replace("\u200e", "")
+            .replace("\u200f", "")
+            .replace("−", "-")
+        )
+        text = "".join(ch for ch in text if ch.isdigit() or ch in ".-")
+        if not text or text in {"-", ""}:
+            return 0.0
+        try:
+            return float(text)
+        except ValueError:
+            return 0.0
+
+    numeric_columns = ["recharge_amount", "original_amount", "usage_amount", "discount"]
+    for column in numeric_columns:
+        if column in df.columns:
+            df[column] = df[column].apply(_parse_currency)
+        else:
+            df[column] = 0.0
+
+    if "transaction_date" in df.columns:
+        df["transaction_date"] = pd.to_datetime(
+            df["transaction_date"], dayfirst=True, errors="coerce"
+        )
+    else:
+        df["transaction_date"] = pd.NaT
+
+    for text_column in ["location", "operation_type", "benefit_name", "quantity"]:
+        if text_column in df.columns:
+            df[text_column] = df[text_column].astype(str).str.strip()
+        else:
+            df[text_column] = ""
+
+    if "reference_number" not in df.columns:
+        df["reference_number"] = ""
+
+    df["reference_number"] = (
+        df["reference_number"]
+        .astype(str)
+        .fillna("")
+        .str.replace(r"\s+", "", regex=True)
+    )
+
+    def _ensure_reference(row):
+        value = row["reference_number"]
+        if value in {"", "-", "nan", "None"}:
+            return f"{coupon_number}|{int(row.name) + 1}"
+        return value
+
+    df["reference_number"] = df.apply(_ensure_reference, axis=1)
+    df.reset_index(drop=True, inplace=True)
+
+    debug_print(
+        f"Normalized Multipass DataFrame with {len(df)} rows and columns: {list(df.columns)}"
+    )
+    return df
+
+
 def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html"):
     # Import required modules at function level
     import os
@@ -3761,411 +3857,118 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     # -------------------- Handling Multipass Scenario --------------------
     if coupon_kind == "Multipass":
         driver = None
+        parsed_tables = []
+        cleaned_coupon_number = str(coupon_number).replace("-", "")
         try:
             debug_print("Initializing Selenium for Multipass")
             driver = webdriver.Chrome(options=chrome_options)
-            driver.get(
-                "https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/"
-            )
+            driver.get("https://multipass.co.il/GetBalance")
             wait = WebDriverWait(driver, 30)
-            time.sleep(5)
 
-            debug_print("Locating card number input field")
-            card_number_field = driver.find_element(
-                By.XPATH, "//input[@id='newcardid']"
+            card_field = wait.until(
+                EC.element_to_be_clickable((By.ID, "MainContent_CardNumberTxt"))
             )
-            card_number_field.clear()
+            card_field.clear()
+            card_field.send_keys(cleaned_coupon_number)
+            time.sleep(1)
 
-            cleaned_coupon_number = str(coupon_number).replace("-", "")
-            debug_print(f"Entering coupon number: {cleaned_coupon_number}")
-            card_number_field.send_keys(cleaned_coupon_number)
-            
-            # בדיקה מוקדמת אם Submit button כבר מאופשר (ללא CAPTCHA)
-            time.sleep(2)  # המתנה קצרה לטעינת הדף
-            debug_print("🔍 Checking if Submit button is already enabled (no CAPTCHA needed)...")
-            
             try:
-                early_submit_check = driver.find_element(By.ID, "submit")
-                disabled_attr = early_submit_check.get_attribute("disabled")
-                is_enabled = early_submit_check.is_enabled()
-                debug_print(f"🔍 Button state: disabled='{disabled_attr}', is_enabled={is_enabled}")
-                
-                if is_enabled and disabled_attr is None:
-                    debug_print("✅ Submit button already enabled - no CAPTCHA required!")
-                    debug_print("🚀 Clicking enabled submit button...")
-                    early_submit_check.click()
-                    # ממשיכים ישר לטעינת הנתונים ללא CAPTCHA
-                    captcha_solved = True
-                    time.sleep(5)  # המתנה לטעינת התוצאות
-                    debug_print("⏩ Skipping CAPTCHA handling - proceeding to data extraction")
-                else:
-                    debug_print("⚠️ Submit button disabled - CAPTCHA handling required")
-                    debug_print(f"⚠️ Button details: disabled='{disabled_attr}', is_enabled={is_enabled}")
-                    captcha_solved = False
-            except Exception as early_check_error:
-                debug_print(f"❌ Could not check submit button early: {early_check_error}")
-                captcha_solved = False
-
-            # אם הכפתור כבר מאופשר, נדלג על כל הטיפול בCAPTCHA
-            if captcha_solved:
-                debug_print("✅ Submit button was already enabled, skipping all CAPTCHA handling")
-            else:
-                debug_print("Handling reCAPTCHA with advanced solver")
-                
-                # שלב 1: לחיצה על checkbox
-                recaptcha_iframe = wait.until(
+                recaptcha_frame = WebDriverWait(driver, 15).until(
                     EC.presence_of_element_located(
                         (By.XPATH, "//iframe[contains(@src, 'recaptcha')]")
                     )
                 )
-                driver.switch_to.frame(recaptcha_iframe)
-                checkbox = wait.until(
+                driver.switch_to.frame(recaptcha_frame)
+                checkbox = WebDriverWait(driver, 15).until(
                     EC.element_to_be_clickable(
                         (By.CSS_SELECTOR, ".recaptcha-checkbox-border")
                     )
                 )
                 checkbox.click()
-                debug_print("reCAPTCHA checkbox clicked")
+                debug_print("Clicked the reCAPTCHA checkbox")
                 driver.switch_to.default_content()
-                
-                # שלב 2: בדיקה אם ה-CAPTCHA נעלם אחרי הלחיצה
-                time.sleep(3)  # המתנה שה-CAPTCHA יטען או ייעלם
-                
-                # בדיקה אם ה-CAPTCHA נעלם לגמרי (כמו בתמונה שלך)
-                debug_print("🔍 Checking if CAPTCHA disappeared after checkbox click...")
-                captcha_disappeared = False
-                
+            except TimeoutException:
+                debug_print("reCAPTCHA checkbox not found (may already be solved)")
+            except Exception as captcha_error:
+                debug_print(f"Error interacting with reCAPTCHA: {captcha_error}")
                 try:
-                    # חיפוש מחדש אחרי iframe של CAPTCHA
-                    captcha_iframes_after = driver.find_elements(By.XPATH, "//iframe[contains(@src, 'recaptcha') and contains(@src, 'bframe')]")
-                    
-                    if not captcha_iframes_after:
-                        debug_print("✅ CAPTCHA iframe completely disappeared - trying direct submit")
-                        captcha_disappeared = True
-                    else:
-                        # אם יש iframe, נבדוק אם יש בו תוכן
-                        try:
-                            driver.switch_to.frame(captcha_iframes_after[0])
-                            
-                            # חיפוש אלמנטים של CAPTCHA תמונות
-                            image_elements = driver.find_elements(By.CSS_SELECTOR, ".rc-imageselect-desc, .rc-imageselect-instructions")
-                            
-                            if not image_elements:
-                                debug_print("✅ CAPTCHA iframe exists but no image challenge found - trying direct submit")
-                                captcha_disappeared = True
-                            
-                            driver.switch_to.default_content()
-                        except Exception as frame_check_error:
-                            debug_print(f"⚠️ Could not check CAPTCHA iframe content: {frame_check_error}")
-                            driver.switch_to.default_content()
-                            
-                except Exception as captcha_check_error:
-                    debug_print(f"⚠️ Error checking CAPTCHA status: {captcha_check_error}")
-                
-                # אם ה-CAPTCHA נעלם, ננסה ללחוץ ישירות על Submit
-                if captcha_disappeared:
-                    debug_print("🚀 CAPTCHA disappeared - attempting direct submit click")
-                    try:
-                        submit_button = driver.find_element(By.ID, "submit")
-                        
-                        # אם הכפתור מאופשר - נלחץ עליו
-                        if submit_button.is_enabled() and not submit_button.get_attribute("disabled"):
-                            debug_print("✅ Submit button is enabled - clicking directly")
-                            submit_button.click()
-                            captcha_solved = True
-                            time.sleep(5)  # המתנה לטעינת התוצאות
-                        else:
-                            debug_print("⚠️ Submit button disabled even though CAPTCHA disappeared - forcing enable")
-                            # כפיית הפעלת הכפתור
-                            driver.execute_script("""
-                                var submitBtn = document.getElementById('submit');
-                                if (submitBtn) {
-                                    submitBtn.disabled = false;
-                                    submitBtn.click();
-                                }
-                            """)
-                            debug_print("✅ Forced submit button click")
-                            captcha_solved = True
-                            time.sleep(5)
-                            
-                    except Exception as submit_error:
-                        debug_print(f"❌ Failed to click submit after CAPTCHA disappeared: {submit_error}")
-                        captcha_solved = False
-                else:
-                    debug_print("🔍 CAPTCHA still present - proceeding with normal solving")
-                    captcha_solved = False
-                
-                # ניסיון לפתור CAPTCHA רק אם לא נפתר כבר
-                if not captcha_solved:
-                    max_captcha_attempts = 3
-                    
-                    for attempt in range(max_captcha_attempts):
-                        debug_print(f"CAPTCHA solving attempt {attempt + 1}/{max_captcha_attempts}")
-                        
-                        # בדיקה אם הכפתור כבר מאופשר
-                        try:
-                            submit_button = driver.find_element(By.ID, "submit")
-                            if not submit_button.get_attribute("disabled"):
-                                debug_print("Submit button is enabled - no CAPTCHA needed")
-                                captcha_solved = True
-                                break
-                        except:
-                            pass
-                        
-                        # ניסיון לפתור CAPTCHA
-                        try:
-                            captcha_result = solve_captcha_challenge(driver, wait_timeout=60)
-                            if captcha_result:
-                                debug_print("CAPTCHA solved successfully")
-                                captcha_solved = True
-                                break
-                            else:
-                                debug_print(f"CAPTCHA solving attempt {attempt + 1} failed")
-                        except Exception as captcha_error:
-                            debug_print(f"❌ Error during CAPTCHA solving attempt {attempt + 1}: {captcha_error}")
-                            debug_print(f"   Error type: {type(captcha_error).__name__}")
-                            # המשך לניסיון הבא או לטיפול בחירום
-                        
-                        if attempt < max_captcha_attempts - 1:
-                            time.sleep(5)  # המתנה לפני ניסיון נוסף
-            
-            if not captcha_solved:
-                debug_print("⚠️ CAPTCHA not solved after all attempts")
-                debug_print("🔍 Checking if page loaded anyway without CAPTCHA...")
-                
-                # בדיקה אם יש כבר תוכן בעמוד למרות שלא פתרנו CAPTCHA
+                    driver.switch_to.default_content()
+                except:
+                    pass
+
+            submit_button = WebDriverWait(driver, 180).until(
+                EC.element_to_be_clickable((By.ID, "MainContent_GetBalanceBtn"))
+            )
+            driver.execute_script("arguments[0].scrollIntoView(true);", submit_button)
+            submit_button.click()
+
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.ID, "MainContent_GV"))
+            )
+
+            page_index = 0
+            while page_index < 30:
+                page_index += 1
+                table_element = wait.until(
+                    EC.presence_of_element_located((By.ID, "MainContent_GV"))
+                )
+                table_html = table_element.get_attribute("outerHTML")
                 try:
-                    submit_button = driver.find_element(By.ID, "submit")
-                    if submit_button.get_attribute("disabled"):
-                        debug_print("🔄 Submit button still disabled - forcing click anyway")
-                        # כפיית לחיצה על כפתור disabled
-                        driver.execute_script("""
-                            var submitBtn = document.getElementById('submit');
-                            if (submitBtn) {
-                                submitBtn.disabled = false;
-                                submitBtn.click();
-                            }
-                        """)
-                        debug_print("✅ Forced click on disabled submit button")
-                        captcha_solved = True  # מעדכנים שפתרנו את הבעיה
-                        time.sleep(3)  # זמן לטעינת התוצאות אחרי לחיצה כפויה
-                    else:
-                        debug_print("✅ Submit button already enabled despite no CAPTCHA")
-                        captcha_solved = True
-                except Exception as submit_check_error:
-                    debug_print(f"❌ Could not check/click submit button: {submit_check_error}")
-                    return None
-                
-                if not captcha_solved:
-                    debug_print("❌ Failed to proceed - no CAPTCHA solution and button still disabled")
-                    return None
-            # סיום הטיפול ב-CAPTCHA
-            
-            # בדיקה אם הכפתור כבר נלחץ בכפייה
-            forced_click_done = False
-            try:
-                submit_button = driver.find_element(By.ID, "submit")
-                if submit_button.get_attribute("disabled") is None and captcha_solved:
-                    # אם השיטה הכפויה עבדה, לא צריך ללחוץ שוב
-                    forced_click_done = True
-                    debug_print("✅ Submit button was already clicked via forced method")
-            except:
-                pass
-            
-            if not forced_click_done:
-                try:
-                    check_balance_button = wait.until(
-                        EC.element_to_be_clickable((By.ID, "submit"))
+                    page_table = pd.read_html(table_html)[0]
+                except Exception as table_error:
+                    debug_print(
+                        f"Failed to parse Multipass table on page {page_index}: {table_error}"
                     )
-                    if check_balance_button.is_enabled():
-                        debug_print("Submit button is enabled - clicking to get data")
-                        debug_print("🚀 Clicking 'ברור יתרה' button...")
-                        check_balance_button.click()
-                        debug_print("✅ Submit button clicked successfully!")
-                    else:
-                        debug_print(
-                            "Submit button is disabled. CAPTCHA may not be solved properly."
-                        )
-                        driver.quit()
-                        return None
-                except Exception as click_error:
-                    debug_print(f"⚠️ Could not click submit button normally: {click_error}")
-                    debug_print("🔄 Trying forced click as fallback...")
-                    driver.execute_script("""
-                        var submitBtn = document.getElementById('submit');
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.click();
-                        }
-                    """)
-                    debug_print("✅ Used forced click as fallback")
-                    time.sleep(3)
+                    break
+                parsed_tables.append(page_table)
 
-            # סגירת CAPTCHA popup אם עדיין פתוח
-            debug_print("🔍 Checking for open CAPTCHA popup to close...")
-            try:
-                # ניסיון למצוא ולסגור את החלון הקופץ של reCAPTCHA
-                driver.execute_script("""
-                    // סגירת כל החלונות הקופצים של reCAPTCHA
-                    var recaptchaFrames = document.querySelectorAll('iframe[src*="recaptcha"]');
-                    recaptchaFrames.forEach(function(frame) {
-                        if (frame.style.visibility !== 'hidden') {
-                            frame.style.display = 'none';
-                            frame.style.visibility = 'hidden';
-                        }
-                    });
-                    
-                    // הסתרת כל האלמנטים של reCAPTCHA
-                    var recaptchaElements = document.querySelectorAll('[class*="recaptcha"], [id*="recaptcha"]');
-                    recaptchaElements.forEach(function(element) {
-                        element.style.display = 'none';
-                    });
-                    
-                    // לחיצה על כפתור סגירה אם קיים
-                    var closeButtons = document.querySelectorAll('.rc-imageselect-close, [aria-label="Close"], .close');
-                    closeButtons.forEach(function(btn) {
-                        if (btn.offsetParent !== null) { // אם הכפתור נראה
-                            btn.click();
-                        }
-                    });
-                """)
-                debug_print("✅ CAPTCHA popup closed/hidden")
-                time.sleep(2)  # זמן קצר לסגירת הpopup
-            except Exception as close_error:
-                debug_print(f"⚠️ Could not close CAPTCHA popup: {close_error}")
-            
-            debug_print("⏳ Waiting for data table to load after CAPTCHA...")
-            # המתנה ארוכה יותר לטעינת הנתונים אחרי קאפצ'ה
-            try:
-                wait_extended = WebDriverWait(driver, 30)  # 30 שניות במקום 10
-                # ניסיון למצוא טבלה עם כמה selectors שונים
-                table_found = False
-                table_selectors = ["//table", ".table", "#dataTable", "table", "[role='table']"]
-                
-                for selector in table_selectors:
-                    try:
-                        if selector.startswith("//"):
-                            wait_extended.until(EC.presence_of_element_located((By.XPATH, selector)))
-                        else:
-                            wait_extended.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-                        debug_print(f"✅ Table found with selector: {selector}")
-                        table_found = True
-                        break
-                    except Exception as selector_error:
-                        debug_print(f"❌ Table not found with selector {selector}: {selector_error}")
-                        continue
-                
-                if table_found:
-                    debug_print("✅ Table element found, waiting additional time for full data load...")
-                    time.sleep(15)  # המתנה נוספת לטעינת הנתונים המלאה
-                else:
-                    debug_print("⚠️ No table found with any selector, but continuing to save page HTML...")
-                    time.sleep(10)  # המתנה קצרה יותר
-                    
-            except Exception as table_wait_error:
-                debug_print(f"⚠️ Error waiting for table: {table_wait_error}, continuing anyway...")
-                time.sleep(10)  # המתנה קצרה יותר אם יש בעיה
-            
-            debug_print("🔍 Checking page content after CAPTCHA and wait...")
+                next_button = driver.find_element(By.ID, "MainContent_btnNext")
+                disabled_attr = next_button.get_attribute("disabled")
+                next_class = next_button.get_attribute("class") or ""
+                if disabled_attr or "aspNetDisabled" in next_class:
+                    debug_print("Next page disabled; ending pagination.")
+                    break
 
-            page_html = driver.page_source
-            debug_print(f"📄 Page HTML length: {len(page_html)} characters")
-            
-            # בדיקה אם יש נתונים בטבלה
-            if "אין נתונות להצגה" in page_html or "No data" in page_html:
-                debug_print("⚠️ Page shows 'no data' message")
-            else:
-                debug_print("✅ Page appears to contain data")
-            
+                driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
+                next_button.click()
+                try:
+                    WebDriverWait(driver, 30).until(EC.staleness_of(table_element))
+                except Exception:
+                    pass
+                time.sleep(1)
+
+            if not parsed_tables:
+                debug_print("No Multipass tables were collected")
+                return None
+
+            df = pd.concat(parsed_tables, ignore_index=True)
+            df = normalize_multipass_dataframe(df, cleaned_coupon_number, debug_print)
+
+            if df is None or df.empty:
+                debug_print("Multipass DataFrame is empty after normalization")
+                return None
+
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"coupon_{coupon_number}_{timestamp}.html"
-            file_path = os.path.join(save_directory, filename)
-            
-            debug_print(f"💾 Saving page HTML to {file_path}")
-            debug_print(f"📁 Save directory: {save_directory}")
-            debug_print(f"📝 File name: {filename}")
-            
-            # וידוא שהתיקייה קיימת
-            os.makedirs(save_directory, exist_ok=True)
-            debug_print(f"📁 Directory created/verified: {save_directory}")
-            
-            with open(file_path, "w", encoding="utf-8") as file:
-                file.write(page_html)
-            debug_print(f"✅ Successfully saved HTML file ({len(page_html)} chars)")
-            debug_print(f"📂 Full path: {os.path.abspath(file_path)}")
-            debug_print("🎯 Selenium operations completed successfully - moving to data extraction")
+            html_path = os.path.join(
+                save_directory, f"multipass_{coupon_number}_{timestamp}.html"
+            )
+            with open(html_path, "w", encoding="utf-8") as file:
+                file.write(driver.page_source)
+            debug_print(f"Saved Multipass HTML snapshot to {html_path}")
 
         except Exception as e:
             debug_print(
                 f"An error occurred during Selenium operations (Multipass): {e}"
             )
             if driver:
-                try:
-                    driver.quit()
-                except:
-                    pass
+                driver.quit()
             return None
         finally:
             if driver:
                 try:
                     driver.quit()
                 except:
-                    pass  # ה-driver כבר נסגר
-
-        try:
-            debug_print("📊 Reading tables from saved HTML")
-            dfs = pd.read_html(file_path)
-            debug_print(f"🔍 Found {len(dfs)} table(s) in HTML")
-            
-            # שמירת קובץ לבדיקה אם אין טבלאות
-            if not dfs:
-                debug_print("❌ No tables found in HTML (Multipass)")
-                backup_path = file_path.replace('.html', '_no_tables_found.html')
-                import shutil
-                shutil.copy2(file_path, backup_path)
-                debug_print(f"🔍 Saved problematic HTML to: {backup_path}")
-                os.remove(file_path)
-                return None
-            else:
-                debug_print(f"✅ Successfully found {len(dfs)} table(s)")
-                os.remove(file_path)
-
-            df = dfs[0]
-            debug_print(f"📊 Table has {len(df)} rows and {len(df.columns)} columns")
-            debug_print(f"📋 Column names: {list(df.columns)}")
-            debug_print("🔄 Renaming columns for Multipass data")
-            df = df.rename(
-                columns={
-                    "שם בית עסק": "location",
-                    "סכום טעינת תקציב": "recharge_amount",
-                    "סכום מימוש תקציב": "usage_amount",
-                    "תאריך": "transaction_date",
-                    "מספר אסמכתא": "reference_number",
-                }
-            )
-            debug_print("Handling missing numeric columns")
-            if "recharge_amount" not in df.columns:
-                df["recharge_amount"] = 0.0
-            if "usage_amount" not in df.columns:
-                df["usage_amount"] = 0.0
-
-            debug_print("Converting transaction date")
-            df["transaction_date"] = pd.to_datetime(
-                df["transaction_date"], format="%H:%M %d/%m/%Y", errors="coerce"
-            )
-
-            debug_print("Converting numeric columns to proper format")
-            numeric_columns = ["recharge_amount", "usage_amount"]
-            for col in numeric_columns:
-                df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
-            
-            debug_print(f"🎉 Successfully processed Multipass data: {len(df)} rows")
-            debug_print(f"📊 Final DataFrame columns: {list(df.columns)}")
-
-        except Exception as e:
-            debug_print(f"An error occurred during data parsing (Multipass): {e}")
-            traceback.print_exc()
-            return None
+                    pass
 
     # -------------------- Handling Max Scenario --------------------
     elif coupon_kind == "Max":
@@ -6410,6 +6213,7 @@ def get_coupon_data_playwright(coupon, save_directory="automatic_coupon_update/i
         return None
         
     import os
+    import time
     from datetime import datetime
     import pandas as pd
     
@@ -6453,72 +6257,87 @@ def get_coupon_data_playwright(coupon, save_directory="automatic_coupon_update/i
             # -------------------- Handling Multipass Scenario --------------------
             if coupon_kind == "Multipass":
                 debug_print("Processing Multipass coupon")
-                
+
                 try:
-                    # Navigate to Multipass website
-                    page.goto("https://multipass.co.il/%d7%91%d7%a8%d7%95%d7%a8-%d7%99%d7%aa%d7%a8%d7%94/", 
-                             wait_until="domcontentloaded", timeout=120000)
-                    debug_print("Navigated to Multipass website")
-                    
-                    # Wait for the card number input field
-                    page.wait_for_selector("input#newcardid", timeout=120000)
-                    debug_print("Found card number input field")
-                    
-                    # Clear and enter coupon number
+                    page.goto(
+                        "https://multipass.co.il/GetBalance",
+                        wait_until="domcontentloaded",
+                        timeout=120000,
+                    )
+                    debug_print("Navigated to Multipass balance page")
+
+                    page.wait_for_selector("input#MainContent_CardNumberTxt", timeout=60000)
                     cleaned_coupon_number = str(coupon_number).replace("-", "")
-                    page.fill("input#newcardid", cleaned_coupon_number)
+                    page.fill("input#MainContent_CardNumberTxt", cleaned_coupon_number)
                     debug_print(f"Entered coupon number: {cleaned_coupon_number}")
-                    
-                    # Handle reCAPTCHA
-                    debug_print("Handling reCAPTCHA")
-                    # Wait for reCAPTCHA iframe
-                    page.wait_for_selector("iframe[src*='recaptcha']", timeout=120000)
-                    
-                    # Switch to reCAPTCHA frame and click checkbox
-                    recaptcha_frame = page.frame_locator("iframe[src*='recaptcha']")
-                    recaptcha_frame.locator(".recaptcha-checkbox-border").click()
-                    debug_print("Clicked reCAPTCHA checkbox")
-                    
-                    # Wait a moment for reCAPTCHA processing
-                    page.wait_for_timeout(3000)
-                    
-                    # Click the submit button
-                    page.click("input[type='submit'][value='בדוק יתרה']")
-                    debug_print("Clicked submit button")
-                    
-                    # Wait for results
-                    page.wait_for_timeout(5000)
-                    
-                    # Save HTML content
-                    page_html = page.content()
+
+                    try:
+                        captcha_frame = page.frame_locator("iframe[src*=\'recaptcha\']")
+                        captcha_frame.locator(".recaptcha-checkbox-border").click(timeout=15000)
+                        debug_print("Clicked reCAPTCHA checkbox")
+                    except Exception as recaptcha_error:
+                        debug_print(f"Unable to interact with reCAPTCHA checkbox: {recaptcha_error}")
+
+                    submit_locator = page.locator("#MainContent_GetBalanceBtn")
+                    start_time = time.time()
+                    while True:
+                        disabled_attr = submit_locator.get_attribute("disabled")
+                        if disabled_attr is None:
+                            submit_locator.click()
+                            break
+                        if time.time() - start_time > 180:
+                            debug_print("Timeout waiting for submit button to enable")
+                            return None
+                        time.sleep(1)
+
+                    page.wait_for_selector("#MainContent_GV", timeout=180000)
+
+                    parsed_tables = []
+                    for page_index in range(30):
+                        table_html = page.inner_html("#MainContent_GV")
+                        try:
+                            page_table = pd.read_html(table_html)[0]
+                        except Exception as table_error:
+                            debug_print(
+                                f"Failed to parse Multipass table on page {page_index + 1}: {table_error}"
+                            )
+                            break
+                        parsed_tables.append(page_table)
+
+                        next_button = page.locator("#MainContent_btnNext")
+                        next_disabled = next_button.get_attribute("disabled")
+                        next_class = next_button.get_attribute("class") or ""
+                        if next_disabled or "aspNetDisabled" in next_class:
+                            break
+
+                        next_button.scroll_into_view_if_needed()
+                        next_button.click()
+                        page.wait_for_timeout(1000)
+                        page.wait_for_selector("#MainContent_GV", timeout=30000)
+
+                    if not parsed_tables:
+                        debug_print("No Multipass tables were collected")
+                        return None
+
+                    df = pd.concat(parsed_tables, ignore_index=True)
+                    df = normalize_multipass_dataframe(df, cleaned_coupon_number, debug_print)
+
+                    if df is None or df.empty:
+                        debug_print("Multipass DataFrame is empty after normalization")
+                        return None
+
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    filename = f"multipass_{coupon_number}_{timestamp}.html"
-                    file_path = os.path.join(save_directory, filename)
-                    debug_print(f"Saving page HTML to {file_path}")
-                    with open(file_path, "w", encoding="utf-8") as file:
-                        file.write(page_html)
-                    
-                    # Extract balance information
-                    # Look for balance text patterns
-                    balance_text = page.inner_text("body")
-                    debug_print("Extracted page text for balance parsing")
-                    
-                    # Parse balance from text (adapt this based on actual Multipass response)
-                    usage_amount = 0.0
-                    # Add your balance parsing logic here based on the actual HTML structure
-                    
-                    df = pd.DataFrame({
-                        'usage_amount': [usage_amount],
-                        'timestamp': [datetime.now()],
-                        'method': ['Playwright']
-                    })
-                    
-                    debug_print(f"Created DataFrame with usage_amount: {usage_amount}")
-                    
+                    html_path = os.path.join(
+                        save_directory, f"multipass_{coupon_number}_{timestamp}.html"
+                    )
+                    with open(html_path, "w", encoding="utf-8") as file:
+                        file.write(page.content())
+                    debug_print(f"Saved Multipass HTML snapshot to {html_path}")
+
                 except Exception as e:
                     debug_print(f"Error in Multipass processing: {str(e)}")
                     return None
-            
+
             # -------------------- Handling BuyMe Scenario --------------------
             elif coupon_kind == "BuyMe":
                 debug_print("Processing BuyMe coupon")

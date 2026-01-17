@@ -4,7 +4,7 @@ Background tasks for coupon updates using Redis Queue (RQ)
 import os
 import logging
 from datetime import datetime
-from rq import Queue, Worker, Connection
+from rq import Queue, Worker, connections
 import redis
 
 # Configure Redis connection
@@ -263,10 +263,14 @@ def update_multiple_coupons_task(coupon_ids, max_retries=3, run_id=None):
             started = results.get('start_time')
             ended = results.get('end_time')
 
+            logger.debug(f"User updates for email summary: {user_updates}")
+
             for uid, items in user_updates.items():
+                logger.debug(f"Attempting to send summary email for user {uid} with {len(items)} items.")
                 try:
                     user = User.query.get(uid)
                     if not user or not user.email:
+                        logger.debug(f"Skipping email for user {uid}: user not found or email missing.")
                         continue
                     html = render_template(
                         'emails/coupon_updates_summary.html',
@@ -278,6 +282,7 @@ def update_multiple_coupons_task(coupon_ids, max_retries=3, run_id=None):
                         ended=ended,
                     )
                     subject = 'סיכום עדכון קופונים אוטומטי'
+                    logger.debug(f"Calling send_email for user {uid} ({user.email}).")
                     send_email(
                         sender_email=SENDER_EMAIL,
                         sender_name=SENDER_NAME,
