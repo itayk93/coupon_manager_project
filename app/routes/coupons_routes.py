@@ -6466,3 +6466,37 @@ def api_update_multipass():
         "message": f"Triggered update for {len(coupons_to_update)} coupons",
         "codes": coupons_to_update
     }), 200
+
+@coupons_bp.route("/update_single_multipass/<int:id>", methods=["POST"])
+@login_required
+def update_single_multipass(id):
+    """
+    Triggers GitHub Action update for a single Multipass coupon.
+    """
+    coupon = Coupon.query.get_or_404(id)
+    
+    if not (current_user.is_admin or coupon.user_id == current_user.id):
+        flash("אין לך הרשאה לעדכן קופון זה.", "danger")
+        return redirect(url_for("coupons.coupon_detail", id=id))
+        
+    if coupon.auto_download_details != "Multipass":
+        flash("קופון זה אינו מוגדר כ-Multipass.", "warning")
+        return redirect(url_for("coupons.coupon_detail", id=id))
+        
+    # Trigger in background
+    import threading
+    from app.tasks import trigger_multipass_github_action
+    
+    def run_update_thread(codes):
+        try:
+            print(f"=== Starting background thread for single coupon {codes[0]} ===", flush=True)
+            trigger_multipass_github_action(codes)
+        except Exception as e:
+            print(f"=== Error in background thread: {e} ===", flush=True)
+
+    thread = threading.Thread(target=run_update_thread, args=([coupon.code],))
+    thread.daemon = True
+    thread.start()
+    
+    flash("תהליך העדכון האוטומטי (GitHub) החל. תקבל מייל בסיום.", "info")
+    return redirect(url_for("coupons.coupon_detail", id=id))
