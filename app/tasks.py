@@ -533,11 +533,29 @@ def trigger_multipass_github_action(coupon_codes):
             'end_time': None
         }
         
+        # Pre-fetch coupons to handle EncryptedString lookup issue
+        # We cannot use filter_by(code=code) because code is encrypted in DB.
+        potential_coupons = Coupon.query.filter(
+            Coupon.auto_download_details == 'Multipass',
+            Coupon.status == 'פעיל'
+        ).all()
+        
+        # Create a map of decrypted code -> coupon object
+        # Accessing c.code triggers decryption
+        db_coupon_map = {c.code: c for c in potential_coupons}
+
         for code, transactions in transaction_data_map.items():
-            coupon = Coupon.query.filter_by(code=code).first()
+            # coupon = Coupon.query.filter_by(code=code).first() # This fails due to encryption
+            coupon = db_coupon_map.get(code)
             
             if not coupon:
-                logger.warning(f"Coupon with code {code} not found in DB during update.")
+                # Try fuzzy matching or stripping whitespace if direct match fails
+                # e.g. " 123 " vs "123"
+                normalized_code = code.strip()
+                coupon = db_coupon_map.get(normalized_code)
+                
+            if not coupon:
+                logger.warning(f"Coupon with code {code} not found in DB map during update.")
                 continue
                 
             logger.info(f"Updating coupon {code} with {len(transactions)} transactions")
