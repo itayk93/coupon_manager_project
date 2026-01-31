@@ -4,8 +4,15 @@ Background tasks for coupon updates using Redis Queue (RQ)
 import os
 import logging
 from datetime import datetime
-from rq import Queue, Worker, connections
+import time
+import requests
+import zipfile
+import json
+import pandas as pd
+from io import BytesIO
+from rq import Queue, Worker
 import redis
+from datetime import timezone
 
 # Configure Redis connection
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
@@ -13,6 +20,9 @@ redis_conn = redis.from_url(redis_url)
 
 # Create queue
 task_queue = Queue('coupon_updates', connection=redis_conn)
+# ...
+
+
 
 
 def enqueue_coupon_status_sync(coupon_ids):
@@ -372,9 +382,276 @@ def start_worker():
     Start an RQ worker for processing background tasks
     Use this for development or in a separate worker process
     """
-    with Connection(redis_conn):
-        worker = Worker(['coupon_updates'])
-        worker.work()
+    worker = Worker(['coupon_updates'], connection=redis_conn)
+    worker.work()
+
+
+
+def trigger_multipass_github_action(coupon_codes):
+    """
+    Background task to trigger GitHub Action for Multipass scraping.
+    
+    1. Triggers workflow_dispatch
+    2. Polls for completion
+    3. Downloads artifact
+    4. Updates DB
+    """
+    from app import create_app
+    from app.models import Coupon, CouponUsage
+    from app.helpers import process_multipass_json, update_coupon_status
+    from app.extensions import db
+    
+    app = create_app()
+    
+    with app.app_context():
+        logger = logging.getLogger('github_updater')
+        
+        github_token = os.getenv('GITHUB_TOKEN')
+        if not github_token:
+            logger.error("GITHUB_TOKEN not found in environment variables")
+            return {'success': False, 'error': 'Missing GITHUB_TOKEN'}
+            
+        repo_owner = "itayk93"
+        repo_name = "scrape_multipass"
+        workflow_id = "scrape.yml"
+        
+        headers = {
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        
+        # 1. Trigger Workflow
+        trigger_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/workflows/{workflow_id}/dispatches"
+        card_numbers_str = ",".join(coupon_codes)
+        
+        data = {
+            "ref": "main",
+            "inputs": {
+                "card_number": card_numbers_str
+            }
+        }
+        
+        logger.info(f"Triggering GitHub Action for {len(coupon_codes)} coupons: {card_numbers_str}")
+        
+        response = requests.post(trigger_url, headers=headers, json=data)
+        
+        if response.status_code != 204:
+            logger.error(f"Failed to trigger workflow: {response.text}")
+            return {'success': False, 'error': f"GitHub API Error: {response.status_code}"}
+            
+        # 2. Wait for the run to start and complete
+        logger.info("Workflow triggered. Waiting for run to appear...")
+        time.sleep(10) 
+        
+        runs_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/runs"
+        run_id = None
+        
+        # Poll for run ID
+        for i in range(5):
+            r = requests.get(runs_url, headers=headers)
+            if r.status_code == 200:
+                runs = r.json().get("workflow_runs", [])
+                if runs:
+                    latest_run = runs[0]
+                    run_id = latest_run["id"]
+                    logger.info(f"Found Run ID: {run_id} (Status: {latest_run['status']})")
+                    break
+            time.sleep(2)
+            
+        if not run_id:
+            logger.error("Could not find the GitHub Action run.")
+            return {'success': False, 'error': "Could not locate GitHub Action run"}
+            
+        # 3. Poll for completion
+        status = "queued"
+        conclusion = None
+        
+        max_retries = 180 # 30 minutes (180 * 10s) 
+        for i in range(max_retries):
+            run_detail_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/runs/{run_id}"
+            r = requests.get(run_detail_url, headers=headers)
+            if r.status_code == 200:
+                data = r.json()
+                status = data["status"]
+                conclusion = data["conclusion"]
+                logger.info(f"Run {run_id} status: {status}")
+                
+                if status == "completed":
+                    break
+            time.sleep(10)
+            
+        if status != "completed":
+            logger.error(f"Run {run_id} timed out or did not complete.")
+            return {'success': False, 'error': "GitHub Action timed out"}
+            
+        if conclusion != "success":
+            logger.error(f"Run {run_id} failed with conclusion: {conclusion}")
+            return {'success': False, 'error': f"GitHub Action failed: {conclusion}"}
+            
+        # 4. Download Artifacts
+        artifacts_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/runs/{run_id}/artifacts"
+        r = requests.get(artifacts_url, headers=headers)
+        
+        transaction_data_map = {}
+        
+        if r.status_code == 200:
+            artifacts = r.json().get("artifacts", [])
+            target_artifact = next((a for a in artifacts if a["name"] == "transactions-json"), None)
+            
+            if target_artifact:
+                download_url = target_artifact["archive_download_url"]
+                logger.info(f"Downloading artifact from {download_url}")
+                
+                zip_resp = requests.get(download_url, headers=headers)
+                
+                if zip_resp.status_code == 200:
+                    with zipfile.ZipFile(BytesIO(zip_resp.content)) as z:
+                        json_filename = next((name for name in z.namelist() if name.endswith('.json')), None)
+                        if json_filename:
+                            with z.open(json_filename) as f:
+                                all_data = json.load(f)
+                                for item in all_data:
+                                    c_num = item.get("card_number")
+                                    if c_num:
+                                        transaction_data_map[c_num] = item.get("transactions", [])
+                        else:
+                            logger.warning("No JSON file found in artifact zip")
+                else:
+                    logger.error(f"Failed to download artifact: {zip_resp.status_code}")
+            else:
+                logger.error("Artifact 'transactions-json' not found")
+        else:
+            logger.error(f"Failed to list artifacts: {r.status_code}")
+            
+        # 5. Update Database
+        updated_count = 0
+        failed_count = 0
+        results = {
+            'successful': [],
+            'failed': [],
+            'start_time': datetime.now().isoformat(),
+            'end_time': None
+        }
+        
+        for code, transactions in transaction_data_map.items():
+            coupon = Coupon.query.filter_by(code=code).first()
+            
+            if not coupon:
+                logger.warning(f"Coupon with code {code} not found in DB during update.")
+                continue
+                
+            logger.info(f"Updating coupon {code} with {len(transactions)} transactions")
+            
+            old_usage = coupon.used_value or 0
+            
+            try:
+                from app.helpers import process_multipass_json
+                df_new = process_multipass_json(coupon, transactions)
+                
+                if df_new is not None:
+                     updated_count += 1
+                     new_usage_sum = df_new['usage_amount'].sum() if not df_new.empty else 0
+                     
+                     if new_usage_sum > 0:
+                        usage_record = CouponUsage(
+                            coupon_id=coupon.id,
+                            used_amount=new_usage_sum,
+                            timestamp=datetime.now(timezone.utc),
+                            action="Github Action Update",
+                            details="עדכון אוטומטי via GitHub Action",
+                        )
+                        db.session.add(usage_record)
+                        db.session.commit()
+                        
+                     # Capture result for email
+                     new_total_usage = coupon.used_value or 0
+                     coupon_value = float(coupon.value or 0)
+                     
+                     results['successful'].append({
+                        'coupon_code': coupon.code,
+                        'company': coupon.company,
+                        'old_usage': float(old_usage),
+                        'new_usage': float(new_total_usage),
+                        'coupon_value': coupon_value,
+                        'remaining_value': max(coupon_value - new_total_usage, 0),
+                        'user_id': coupon.user_id
+                     })
+                     
+                else:
+                    failed_count += 1
+                    results['failed'].append({'coupon_code': code, 'error': 'Failed to process JSON'})
+
+            except Exception as e:
+                logger.error(f"Error updating coupon {code}: {e}")
+                failed_count += 1
+                db.session.rollback()
+                results['failed'].append({'coupon_code': code, 'error': str(e)})
+
+        results['end_time'] = datetime.now().isoformat()
+        results['success_count'] = updated_count
+        results['failure_count'] = failed_count
+        
+        # Send per-user email summaries
+        try:
+            from flask import render_template
+            from app.models import User
+            from app.helpers import send_email, SENDER_EMAIL, SENDER_NAME
+
+            # Group successful updates by user and filter only positive deltas
+            user_updates = {}
+            for item in results['successful']:
+                user_id = item.get('user_id')
+                if user_id is None:
+                    continue
+                old_u = item.get('old_usage', 0)
+                new_u = item.get('new_usage', 0)
+                delta = new_u - old_u
+                
+                # Only report if there is a change
+                if delta <= 0:
+                    continue
+                    
+                if user_id not in user_updates:
+                    user_updates[user_id] = []
+                    
+                item['delta'] = delta
+                user_updates[user_id].append(item)
+
+            started = results.get('start_time')
+            ended = results.get('end_time')
+
+            for uid, items in user_updates.items():
+                try:
+                    user = User.query.get(uid)
+                    if not user or not user.email:
+                        continue
+                        
+                    html = render_template(
+                        'emails/coupon_updates_summary.html',
+                        user=user,
+                        items=items,
+                        success_count=len(items), # Count only relevant items for this user
+                        failure_count=0, # We don't report failures to user in this context usually
+                        started=started,
+                        ended=ended,
+                    )
+                    subject = 'סיכום עדכון קופונים (GitHub Multipass)'
+                    send_email(
+                        sender_email=SENDER_EMAIL,
+                        sender_name=SENDER_NAME,
+                        recipient_email=user.email,
+                        recipient_name=user.first_name,
+                        subject=subject,
+                        html_content=html,
+                    )
+                    logger.info(f"Summary email sent to user {uid}")
+                except Exception as e:
+                    logger.error(f"Failed sending summary email to user {uid}: {e}")
+                    
+        except Exception as e:
+            logger.error(f"Summary email dispatch failed: {e}")
+                
+        return results
 
 
 if __name__ == '__main__':

@@ -76,7 +76,8 @@ from app.helpers import (
     update_coupon_usage,
 )
 from flask import session
-from app.tasks import enqueue_coupon_status_sync
+from app.tasks import enqueue_coupon_status_sync, trigger_multipass_github_action
+
 
 logger = logging.getLogger(__name__)
 
@@ -632,7 +633,6 @@ def show_coupons():
         active_query = active_query.filter(Coupon.company.ilike(f"%{search_query}%"))
 
     active_query = active_query.order_by(Coupon.expiration.asc().nullslast(), Coupon.company.asc())
-    )
     active_pagination = active_query.paginate(page=active_page, per_page=per_page, error_out=False)
     active_coupons = [serialize_coupon(coupon) for coupon in active_pagination.items]
 
@@ -650,7 +650,6 @@ def show_coupons():
         active_one_time_query = active_one_time_query.filter(Coupon.company.ilike(f"%{search_query}%"))
 
     active_one_time_query = active_one_time_query.order_by(Coupon.expiration.asc().nullslast(), Coupon.company.asc())
-    )
     active_one_time_pagination = active_one_time_query.paginate(
         page=one_time_page, per_page=per_page, error_out=False
     )
@@ -677,6 +676,7 @@ def show_coupons():
             Coupon.status != "פעיל",
             Coupon.is_for_sale == False,
         )
+    )
 
     if search_query:
         inactive_query = inactive_query.filter(Coupon.company.ilike(f"%{search_query}%"))
@@ -686,7 +686,6 @@ def show_coupons():
             Coupon.expiration.desc().nullslast(),
             Coupon.date_added.desc(),
         )
-    )
     inactive_pagination = inactive_query.paginate(
         page=inactive_page, per_page=per_page, error_out=False
     )
@@ -707,7 +706,6 @@ def show_coupons():
         sale_query = sale_query.filter(Coupon.company.ilike(f"%{search_query}%"))
 
     sale_query = sale_query.order_by(Coupon.date_added.desc())
-    )
     sale_pagination = sale_query.paginate(page=sale_page, per_page=per_page, error_out=False)
     coupons_for_sale = [serialize_coupon(coupon) for coupon in sale_pagination.items]
 
@@ -3975,6 +3973,91 @@ def update_all_coupons_route():
     return redirect(url_for("coupons.show_coupons"))
 
 
+@coupons_bp.route("/admin/multipass_update", methods=["GET"])
+@login_required
+def multipass_update_page():
+    if not current_user.is_admin:
+        flash("אין לך הרשאה לצפות בעמוד זה.", "danger")
+        return redirect(url_for("profile.index"))
+    return render_template("multipass_update.html")
+
+
+@coupons_bp.route("/update_multipass_github", methods=["GET", "POST"])
+@login_required
+def update_multipass_github_route():
+    if request.method == "GET":
+        return redirect(url_for("coupons.multipass_update_page"))
+        
+    # POST request logic continues below...
+    """
+    Triggers the GitHub Action to scrape Multipass data for all active Multipass coupons.
+    Only available to admins.
+    """
+    if not current_user.is_admin:
+        flash("אין לך הרשאה לבצע פעולה זו.", "danger")
+        return redirect(url_for("coupons.show_coupons"))
+        
+    # Find all active coupons that are Multipass (based on auto_url or just assume all auto-update ones?)
+    # Based on user request: "הוא מסתכל איזה קופונים יש לי שהם מוגדרים בדאטהבייס multipass"
+    # Previously we used 'auto_download_details' == 'Multipass' or similar. 
+    # Let's filter by auto_download_details="Multipass" AND status="פעיל"
+    
+    active_multipass_coupons = Coupon.query.filter(
+        Coupon.status == "פעיל",
+        Coupon.auto_download_details == "Multipass",
+        Coupon.user_id == current_user.id
+    ).all()
+    
+    if not active_multipass_coupons:
+        flash("לא נמצאו קופונים פעילים של Multipass לעדכון.", "warning")
+        return redirect(url_for("coupons.show_coupons"))
+        
+    # Apply smart filtering logic
+    from app.helpers import should_update_coupon
+    
+    coupons_to_update = []
+    skipped_coupons = []
+    
+    for c in active_multipass_coupons:
+        if should_update_coupon(c):
+            coupons_to_update.append(c.code)
+        else:
+            skipped_coupons.append(c.code)
+            
+    if skipped_coupons:
+        flash(f"דולגו {len(skipped_coupons)} קופונים שלא נצפו לאחרונה.", "info")
+        
+    if not coupons_to_update:
+        flash("כל הקופונים מעודכנים (לא נצפו לאחרונה).", "success")
+        return redirect(url_for("coupons.show_coupons"))
+        
+    coupon_codes = coupons_to_update
+    
+    # Run in background thread (Direct Mode support)
+    try:
+        import threading
+        from app.tasks import trigger_multipass_github_action
+        
+        def run_update_thread(codes):
+            try:
+                print(f"=== Starting background thread for {len(codes)} coupons ===", flush=True)
+                trigger_multipass_github_action(codes)
+            except Exception as e:
+                print(f"=== Error in background thread: {e} ===", flush=True)
+
+        thread = threading.Thread(target=run_update_thread, args=(coupon_codes,))
+        thread.daemon = True
+        thread.start()
+        
+        flash(f"תהליך העדכון הופעל ברקע עבור {len(coupon_codes)} קופונים. עקוב אחרי הלוגים בטרמינל (החלון השחור).", "success")
+        
+    except Exception as e:
+        flash(f"שגיאה בהפעלת התהליך: {str(e)}", "danger")
+
+    return redirect(url_for("coupons.multipass_update_page"))
+
+
+
 @coupons_bp.route("/get_tags")
 @login_required
 def get_tags():
@@ -6326,3 +6409,60 @@ def api_coupon_detail(coupon_id):
             'success': False,
             'error': str(e)
         }), 500
+
+@coupons_bp.route("/api/cron/update_multipass", methods=["POST"])
+def api_update_multipass():
+    """
+    API endpoint for Cron Jobs to trigger Multipass updates.
+    Protected by CRON_SECRET.
+    Forces update for User ID 1.
+    """
+    import os
+    expected_secret = os.getenv("CRON_SECRET")
+    
+    if not expected_secret:
+        return jsonify({"error": "CRON_SECRET not configured on server"}), 500
+        
+    request_secret = request.headers.get("X-Cron-Secret")
+    if request_secret != expected_secret:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    # Logic specifically for User ID 1 as requested
+    target_user_id = 1
+    
+    active_multipass_coupons = Coupon.query.filter(
+        Coupon.status == "פעיל",
+        Coupon.auto_download_details == "Multipass",
+        Coupon.user_id == target_user_id
+    ).all()
+    
+    if not active_multipass_coupons:
+        return jsonify({"message": "No active Multipass coupons found for User ID 1"}), 200
+        
+    # Apply smart filtering
+    from app.helpers import should_update_coupon
+    coupons_to_update = [c.code for c in active_multipass_coupons if should_update_coupon(c)]
+    
+    if not coupons_to_update:
+        return jsonify({"message": "All coupons correspond to recent data (filtered by smart logic)"}), 200
+        
+    # Trigger background task
+    import threading
+    from app.tasks import trigger_multipass_github_action
+    
+    def run_update_thread(codes):
+        try:
+            print(f"=== [CRON] Starting background thread for {len(codes)} coupons ===", flush=True)
+            trigger_multipass_github_action(codes)
+        except Exception as e:
+            print(f"=== [CRON] Error in background thread: {e} ===", flush=True)
+
+    thread = threading.Thread(target=run_update_thread, args=(coupons_to_update,))
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({
+        "status": "success", 
+        "message": f"Triggered update for {len(coupons_to_update)} coupons",
+        "codes": coupons_to_update
+    }), 200

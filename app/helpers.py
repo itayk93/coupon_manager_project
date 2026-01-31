@@ -726,6 +726,147 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
         return None
 
 
+def process_multipass_json(coupon, transactions_data):
+    """
+    Processes JSON data (list of transactions) for a specific coupon.
+    Updates the coupon transactions in the database.
+    
+    Args:
+        coupon: Coupon object
+        transactions_data: List of dictionaries containing transaction details
+        
+    Returns:
+        DataFrame of new transactions or None on error
+    """
+    try:
+        if not transactions_data:
+            print(f"No transactions data for coupon {coupon.code}")
+            return pd.DataFrame()
+            
+        # Convert list of dicts to DataFrame
+        df = pd.DataFrame(transactions_data)
+        
+        # Map JSON keys to DB columns
+        # JSON keys: date_time, operation_type, business, budget_load_sum, original_deal_sum, budget_realization_sum, discount, benefit_name, quantity, reference
+        
+        # Renaissance mapping/cleanup
+        if "business" in df.columns:
+            df.rename(columns={"business": "location"}, inplace=True)
+            
+        if "reference" in df.columns:
+            df.rename(columns={"reference": "reference_number"}, inplace=True)
+            
+        if "date_time" in df.columns:
+            df["transaction_date"] = pd.to_datetime(
+                df["date_time"], format="%d-%m-%Y %H:%M", errors="coerce"
+            )
+            
+        # Handle amounts
+        # budget_load_sum -> recharge
+        # budget_realization_sum -> usage
+        
+        def clean_amount(val):
+            if not val or val == '-':
+                return 0.0
+            if isinstance(val, (int, float)):
+                return float(val)
+            return float(str(val).replace('₪', '').replace(',', '').strip())
+
+        df["recharge_amount"] = df["budget_load_sum"].apply(clean_amount)
+        df["usage_amount"] = df["budget_realization_sum"].apply(clean_amount)
+        
+        # ----------------------------------------------------------------------
+        # Common Stage: Database Comparison and Update
+        # ----------------------------------------------------------------------
+        
+        # Retrieve existing data from the database (only reference_number)
+        existing_data = pd.read_sql_query(
+            """
+            SELECT reference_number
+            FROM coupon_transaction
+            WHERE coupon_id = %(coupon_id)s
+            """,
+            db.engine,
+            params={"coupon_id": coupon.id},
+        )
+        
+        existing_refs = set(existing_data["reference_number"].astype(str))
+        df["reference_number"] = df["reference_number"].astype(str)
+        
+        # Filter out existing transactions
+        df_new = df[~df["reference_number"].isin(existing_refs)]
+        
+        if df_new.empty:
+            print(f"No new transactions to add for coupon {coupon.code}.")
+            # Even if no new transactions, we should update the total used value just in case
+            # But let's follow the pattern of get_coupon_data and return empty df
+        else:
+            # Add new transactions
+            for idx, row in df_new.iterrows():
+                transaction_date = row.get("transaction_date")
+                if pd.isna(transaction_date) or str(transaction_date) in ['NaT', 'NaN', 'nat', 'nan']:
+                   transaction_date = None
+                   
+                try:
+                    transaction = CouponTransaction(
+                        coupon_id=coupon.id,
+                        transaction_date=transaction_date,
+                        location=row.get("location", ""),
+                        recharge_amount=row.get("recharge_amount", 0.0),
+                        usage_amount=row.get("usage_amount", 0.0),
+                        reference_number=row.get("reference_number", ""),
+                    )
+                    db.session.add(transaction)
+                except ValueError as e:
+                    print(f"Skipping invalid transaction: {e}")
+                    continue
+        
+        # Update total usage in the database (re-calculate from all transactions)
+        # However, to be safe and ensure we catching everything, we commit the new transactions first
+        db.session.commit()
+        
+        # Update total usage AND total value (recharge) in the database
+        db.session.commit()
+        
+        # Calculate totals from ALL transactions including the new ones
+        totals = (
+            db.session.query(
+                func.sum(CouponTransaction.usage_amount).label('total_usage'),
+                func.sum(CouponTransaction.recharge_amount).label('total_recharge')
+            )
+            .filter_by(coupon_id=coupon.id)
+            .first()
+        )
+        
+        total_used = totals.total_usage or 0.0
+        total_recharged = totals.total_recharge or 0.0
+        
+        # Update coupon fields
+        # Ideally, value = total_recharged, used_value = total_used
+        # However, we should be careful not to overwrite manual values if no recharge history exists
+        if total_recharged > 0:
+            coupon.value = float(total_recharged)
+            
+        coupon.used_value = float(total_used)
+        
+        # Update last_scraped timestamp
+        coupon.last_scraped = datetime.now(timezone.utc)
+        
+        # Check if the coupon is still active
+        update_coupon_status(coupon)
+        db.session.commit()
+        
+        print(f"Transactions for coupon {coupon.code} (GitHub) have been updated.")
+        return df_new
+
+    except Exception as e:
+        print(f"An error occurred during data parsing (GitHub JSON): {e}")
+        traceback.print_exc()
+        db.session.rollback()
+        return None
+
+
+
 # Global debug flag to control print statements
 DEBUG_MODE = True
 
