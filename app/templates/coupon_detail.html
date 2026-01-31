@@ -1245,10 +1245,8 @@
         // גרף ערכים כספיים משופר
         const ctx = document.getElementById('valueChart');
         if (ctx) {
-            const totalValue = {{ coupon.value }
-        };
-        const usedValue = {{ coupon.used_value }
-    };
+            const totalValue = {{ coupon.value }};
+        const usedValue = {{ coupon.used_value }};
     const remainingValue = totalValue - usedValue;
 
     // Calculate percentages for display
