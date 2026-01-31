@@ -568,7 +568,7 @@ def trigger_multipass_github_action(coupon_codes):
                 
                 if df_new is not None:
                      updated_count += 1
-                     new_usage_sum = df_new['usage_amount'].sum() if not df_new.empty else 0
+                     new_usage_sum = float(df_new['usage_amount'].sum()) if not df_new.empty else 0.0
                      
                      if new_usage_sum > 0:
                         usage_record = CouponUsage(
