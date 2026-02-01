@@ -174,6 +174,24 @@ def create_app():
     from app.template_helpers import register_template_helpers
     register_template_helpers(app)
 
+    # Cron endpoints are machine-to-machine and must not require CSRF tokens.
+    # (They are protected via API tokens / secrets instead.)
+    try:
+        from app.routes.coupons_routes import api_update_multipass
+        csrf.exempt(api_update_multipass)
+    except Exception as e:
+        app.logger.warning(f"Could not CSRF-exempt api_update_multipass: {e}")
+
+    try:
+        from app.routes.admin_routes.admin_scheduled_emails_routes import (
+            cron_send_pending_emails,
+            cron_send_expiration_reminders,
+        )
+        csrf.exempt(cron_send_pending_emails)
+        csrf.exempt(cron_send_expiration_reminders)
+    except Exception as e:
+        app.logger.warning(f"Could not CSRF-exempt scheduled-emails cron endpoints: {e}")
+
     # עקיפת בדיקת CSRF עבור routes של טלגרם רק אם מוגדר
     if not app.config.get('TELEGRAM_CSRF_PROTECTION', False):
         csrf.exempt(telegram_bp)
