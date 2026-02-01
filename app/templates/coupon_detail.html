@@ -423,8 +423,6 @@
                             <td>
                                 {% if row.source_table == 'sum_row' %}
                                 <span class="status-badge sum">סה״כ יתרה</span>
-                                {% elif row.source_table == 'coupon_transaction' and row.action == 'Multipass' %}
-                                <span class="status-badge locked"><i class="fas fa-lock"></i> לא ניתן למחוק</span>
                                 {% else %}
                                 <form method="POST" action="{{ url_for('coupons.delete_transaction_record',
                                                                 source_table=row.source_table,
@@ -1246,134 +1244,134 @@
         const ctx = document.getElementById('valueChart');
         if (ctx) {
             const totalValue = {{ coupon.value }};
-        const usedValue = {{ coupon.used_value }};
-    const remainingValue = totalValue - usedValue;
+            const usedValue = {{ coupon.used_value }};
+            const remainingValue = totalValue - usedValue;
 
-    // Calculate percentages for display
-    const usedPercentage = Math.round((usedValue / totalValue) * 100) || 0;
-    const remainingPercentage = 100 - usedPercentage;
+            // Calculate percentages for display
+            const usedPercentage = Math.round((usedValue / totalValue) * 100) || 0;
+            const remainingPercentage = 100 - usedPercentage;
 
-    // Better color palette - more accessible and visually pleasing
-    const chartColors = {
-        used: {
-            main: 'rgba(231, 76, 60, 0.8)',
-            hover: 'rgba(231, 76, 60, 1)',
-            border: 'rgba(231, 76, 60, 0.2)'
-        },
-        remaining: {
-            main: 'rgba(46, 204, 113, 0.8)',
-            hover: 'rgba(46, 204, 113, 1)',
-            border: 'rgba(46, 204, 113, 0.2)'
-        }
-    };
+            // Better color palette - more accessible and visually pleasing
+            const chartColors = {
+                used: {
+                    main: 'rgba(231, 76, 60, 0.8)',
+                    hover: 'rgba(231, 76, 60, 1)',
+                    border: 'rgba(231, 76, 60, 0.2)'
+                },
+                remaining: {
+                    main: 'rgba(46, 204, 113, 0.8)',
+                    hover: 'rgba(46, 204, 113, 1)',
+                    border: 'rgba(46, 204, 113, 0.2)'
+                }
+            };
 
-    // Create center text plugin for better information visibility
-    const centerTextPlugin = {
-        id: 'centerText',
-        beforeDraw: function (chart) {
-            const width = chart.width;
-            const height = chart.height;
-            const ctx = chart.ctx;
+            // Create center text plugin for better information visibility
+            const centerTextPlugin = {
+                id: 'centerText',
+                beforeDraw: function (chart) {
+                    const width = chart.width;
+                    const height = chart.height;
+                    const ctx = chart.ctx;
 
-            ctx.restore();
-            ctx.font = 'bold 16px Rubik, Assistant, sans-serif';
-            ctx.textBaseline = 'middle';
-            ctx.textAlign = 'center';
+                    ctx.restore();
+                    ctx.font = 'bold 16px Rubik, Assistant, sans-serif';
+                    ctx.textBaseline = 'middle';
+                    ctx.textAlign = 'center';
 
-            const centerX = width / 2;
-            const centerY = height / 2;
+                    const centerX = width / 2;
+                    const centerY = height / 2;
 
-            // Draw total amount
-            ctx.fillStyle = '#2c3e50';
-            ctx.font = 'bold 18px Rubik, Assistant, sans-serif';
-            ctx.fillText(`${totalValue.toFixed(2)} ₪`, centerX, centerY - 10);
+                    // Draw total amount
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.font = 'bold 18px Rubik, Assistant, sans-serif';
+                    ctx.fillText(`${totalValue.toFixed(2)} ₪`, centerX, centerY - 10);
 
-            // Draw label
-            ctx.font = '14px Rubik, Assistant, sans-serif';
-            ctx.fillStyle = '#7f8c8d';
-            ctx.fillText('סה״כ', centerX, centerY + 15);
+                    // Draw label
+                    ctx.font = '14px Rubik, Assistant, sans-serif';
+                    ctx.fillStyle = '#7f8c8d';
+                    ctx.fillText('סה״כ', centerX, centerY + 15);
 
-            ctx.save();
-        }
-    };
+                    ctx.save();
+                }
+            };
 
-    const chart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['ערך שנוצל', 'ערך נותר'],
-            datasets: [{
-                data: [usedValue, remainingValue],
-                backgroundColor: [
-                    chartColors.used.main,
-                    chartColors.remaining.main
-                ],
-                hoverBackgroundColor: [
-                    chartColors.used.hover,
-                    chartColors.remaining.hover
-                ],
-                borderColor: [
-                    chartColors.used.border,
-                    chartColors.remaining.border
-                ],
-                borderWidth: 2,
-                borderRadius: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        font: {
-                            family: 'Rubik, Assistant, sans-serif',
-                            size: 14,
-                            weight: 'bold'
+            const chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ערך שנוצל', 'ערך נותר'],
+                    datasets: [{
+                        data: [usedValue, remainingValue],
+                        backgroundColor: [
+                            chartColors.used.main,
+                            chartColors.remaining.main
+                        ],
+                        hoverBackgroundColor: [
+                            chartColors.used.hover,
+                            chartColors.remaining.hover
+                        ],
+                        borderColor: [
+                            chartColors.used.border,
+                            chartColors.remaining.border
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    family: 'Rubik, Assistant, sans-serif',
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
                         },
-                        padding: 20,
-                        usePointStyle: true,
-                        pointStyle: 'circle'
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleFont: {
+                                family: 'Rubik, Assistant, sans-serif',
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                family: 'Rubik, Assistant, sans-serif',
+                                size: 13
+                            },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.label || '';
+                                    let value = context.parsed || 0;
+                                    let percentage = context.dataIndex === 0 ? usedPercentage : remainingPercentage;
+                                    return [
+                                        `${label}`,
+                                        `${value.toFixed(2)} ₪ (${percentage}%)`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%',
+                    rotation: -90,
+                    circumference: 360,
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 1500,
+                        easing: 'easeOutQuart'
                     }
                 },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleFont: {
-                        family: 'Rubik, Assistant, sans-serif',
-                        size: 14,
-                        weight: 'bold'
-                    },
-                    bodyFont: {
-                        family: 'Rubik, Assistant, sans-serif',
-                        size: 13
-                    },
-                    padding: 12,
-                    cornerRadius: 8,
-                    callbacks: {
-                        label: function (context) {
-                            let label = context.label || '';
-                            let value = context.parsed || 0;
-                            let percentage = context.dataIndex === 0 ? usedPercentage : remainingPercentage;
-                            return [
-                                `${label}`,
-                                `${value.toFixed(2)} ₪ (${percentage}%)`
-                            ];
-                        }
-                    }
-                }
-            },
-            cutout: '70%',
-            rotation: -90,
-            circumference: 360,
-            animation: {
-                animateScale: true,
-                animateRotate: true,
-                duration: 1500,
-                easing: 'easeOutQuart'
-            }
-        },
-        plugins: [centerTextPlugin]
-    });
+                plugins: [centerTextPlugin]
+            });
 
         }
     {% endif %}
