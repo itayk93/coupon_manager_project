@@ -387,6 +387,95 @@ def start_worker():
 
 
 
+def dispatch_multipass_github_workflow(coupon_codes):
+    """
+    Dispatch the Multipass GitHub Actions workflow and return quickly.
+
+    Intended for cron/web triggers that only need the workflow to start.
+    """
+    logger = logging.getLogger("github_updater")
+
+    github_token = os.getenv("GITHUB_TOKEN")
+    if not github_token:
+        logger.error("GITHUB_TOKEN not found in environment variables")
+        return {"success": False, "error": "Missing GITHUB_TOKEN"}
+
+    repo_owner = os.getenv("MULTIPASS_GH_OWNER", "itayk93")
+    repo_name = os.getenv("MULTIPASS_GH_REPO", "scrape_multipass")
+    workflow_id = os.getenv("MULTIPASS_GH_WORKFLOW", "scrape.yml")
+    workflow_ref = os.getenv("MULTIPASS_GH_REF", "main")
+    input_key = os.getenv("MULTIPASS_GH_INPUT_KEY", "card_number")
+    input_separator = os.getenv("MULTIPASS_GH_INPUT_SEPARATOR", ",")
+
+    headers = {
+        "Authorization": f"Bearer {github_token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+    safe_codes = [str(c).strip() for c in (coupon_codes or []) if str(c).strip()]
+    if not safe_codes:
+        return {"success": False, "error": "No coupon codes provided"}
+
+    trigger_url = (
+        f"https://api.github.com/repos/{repo_owner}/{repo_name}"
+        f"/actions/workflows/{workflow_id}/dispatches"
+    )
+    card_numbers_str = input_separator.join(safe_codes)
+    payload = {
+        "ref": workflow_ref,
+        "inputs": {
+            input_key: card_numbers_str,
+        },
+    }
+
+    logger.info(
+        "Dispatching GitHub workflow %s/%s (%s) ref=%s input_key=%s coupons=%d",
+        repo_owner,
+        repo_name,
+        workflow_id,
+        workflow_ref,
+        input_key,
+        len(safe_codes),
+    )
+
+    resp = requests.post(trigger_url, headers=headers, json=payload, timeout=20)
+    if resp.status_code != 204:
+        logger.error("Failed to dispatch workflow (status=%s): %s", resp.status_code, resp.text)
+        return {
+            "success": False,
+            "error": "GitHub workflow dispatch failed",
+            "status_code": resp.status_code,
+            "response": resp.text,
+        }
+
+    # Best-effort: fetch the newest workflow_dispatch run id/url for this workflow.
+    run_id = None
+    run_url = None
+    try:
+        time.sleep(2)
+        runs_url = (
+            f"https://api.github.com/repos/{repo_owner}/{repo_name}"
+            f"/actions/workflows/{workflow_id}/runs?event=workflow_dispatch&per_page=1"
+        )
+        r = requests.get(runs_url, headers=headers, timeout=20)
+        if r.status_code == 200:
+            runs = r.json().get("workflow_runs", [])
+            if runs:
+                run_id = runs[0].get("id")
+                run_url = runs[0].get("html_url")
+    except Exception as exc:
+        logger.warning("Could not fetch dispatched run info: %s", exc)
+
+    return {
+        "success": True,
+        "workflow": workflow_id,
+        "ref": workflow_ref,
+        "run_id": run_id,
+        "run_url": run_url,
+    }
+
+
 def trigger_multipass_github_action(coupon_codes):
     """
     Background task to trigger GitHub Action for Multipass scraping.
@@ -406,44 +495,33 @@ def trigger_multipass_github_action(coupon_codes):
     with app.app_context():
         logger = logging.getLogger('github_updater')
         
-        github_token = os.getenv('GITHUB_TOKEN')
-        if not github_token:
-            logger.error("GITHUB_TOKEN not found in environment variables")
-            return {'success': False, 'error': 'Missing GITHUB_TOKEN'}
-            
-        repo_owner = "itayk93"
-        repo_name = "scrape_multipass"
-        workflow_id = "scrape.yml"
-        
-        headers = {
-            "Authorization": f"token {github_token}",
-            "Accept": "application/vnd.github.v3+json"
-        }
+        repo_owner = os.getenv("MULTIPASS_GH_OWNER", "itayk93")
+        repo_name = os.getenv("MULTIPASS_GH_REPO", "scrape_multipass")
+        workflow_id = os.getenv("MULTIPASS_GH_WORKFLOW", "scrape.yml")
+        workflow_ref = os.getenv("MULTIPASS_GH_REF", "main")
+        input_key = os.getenv("MULTIPASS_GH_INPUT_KEY", "card_number")
+        input_separator = os.getenv("MULTIPASS_GH_INPUT_SEPARATOR", ",")
         
         # 1. Trigger Workflow
-        trigger_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/workflows/{workflow_id}/dispatches"
-        card_numbers_str = ",".join(coupon_codes)
-        
-        data = {
-            "ref": "main",
-            "inputs": {
-                "card_number": card_numbers_str
-            }
+        dispatch_result = dispatch_multipass_github_workflow(coupon_codes)
+        if not dispatch_result.get("success"):
+            return dispatch_result
+
+        github_token = os.getenv("GITHUB_TOKEN")
+        headers = {
+            "Authorization": f"Bearer {github_token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
         }
-        
-        logger.info(f"Triggering GitHub Action for {len(coupon_codes)} coupons: {card_numbers_str}")
-        
-        response = requests.post(trigger_url, headers=headers, json=data)
-        
-        if response.status_code != 204:
-            logger.error(f"Failed to trigger workflow: {response.text}")
-            return {'success': False, 'error': f"GitHub API Error: {response.status_code}"}
             
         # 2. Wait for the run to start and complete
         logger.info("Workflow triggered. Waiting for run to appear...")
         time.sleep(10) 
         
-        runs_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/runs"
+        runs_url = (
+            f"https://api.github.com/repos/{repo_owner}/{repo_name}"
+            f"/actions/workflows/{workflow_id}/runs?event=workflow_dispatch&per_page=1"
+        )
         run_id = None
         
         # Poll for run ID

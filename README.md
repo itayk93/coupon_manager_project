@@ -240,9 +240,16 @@ The `render.yaml` file contains all deployment configurations.
 ## 📡 API Documentation
 
 ### Authentication
-All API endpoints require authentication via Bearer token:
+There are two cron authentication styles in this project:
+
+1) **Admin scheduled-emails cron endpoints** use:
 ```bash
 Authorization: Bearer YOUR_CRON_API_TOKEN
+```
+
+2) **Multipass auto-update cron endpoint** uses:
+```bash
+X-Cron-Secret: YOUR_CRON_API_TOKEN
 ```
 
 ### Endpoints
@@ -306,6 +313,66 @@ Add these to your server's crontab:
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_CRON_API_TOKEN"
 ```
+
+### Multipass Auto-Update (GitHub Actions)
+
+This endpoint is meant to be triggered by an external cron (e.g. cron-job.org). By default it **only dispatches** a
+GitHub Actions workflow and returns quickly.
+
+#### 1) Server environment variables (required)
+
+Set these on the server (Render dashboard / production environment variables):
+
+```env
+CRON_API_TOKEN=your-long-random-token
+GITHUB_TOKEN=your-github-pat-with-actions-permissions
+```
+
+Notes:
+- If you set env vars via a local `.env`, be careful with `#`: many dotenv parsers treat `#` as a comment unless the
+  value is quoted. Prefer setting env vars in the hosting provider dashboard, or quote the value.
+
+#### 2) GitHub token permissions (required)
+
+The `GITHUB_TOKEN` above must be a GitHub Personal Access Token that can dispatch workflows on the `scrape_multipass`
+repo:
+- Needs access to the repo (`itayk93/scrape_multipass` by default).
+- Needs Actions permission to dispatch workflows (and optionally read runs to return `run_url`).
+
+#### 3) Optional overrides (only if you changed the workflow repo/name)
+
+```env
+MULTIPASS_GH_OWNER=itayk93
+MULTIPASS_GH_REPO=scrape_multipass
+MULTIPASS_GH_WORKFLOW=scrape.yml
+MULTIPASS_GH_REF=main
+MULTIPASS_GH_INPUT_KEY=card_number
+MULTIPASS_GH_INPUT_SEPARATOR=,
+```
+
+#### 4) cron-job.org configuration (recommended)
+
+Create a cron job that calls your production server:
+
+- **URL:** `https://YOUR_DOMAIN/api/cron/update_multipass`
+- **Request method:** `POST`
+- **Headers:**
+  - `X-Cron-Secret: YOUR_CRON_API_TOKEN`
+  - (optional) `Content-Type: application/json`
+- **Requires HTTP authentication:** off
+- **Treat redirects (3xx) as success:** off (recommended)
+- **Time zone:** `Asia/Jerusalem` (or whatever you want)
+
+If you want the old “full server-side flow” (poll workflow, download artifacts, update DB), use:
+
+```bash
+curl -X POST "https://YOUR_DOMAIN/api/cron/update_multipass?mode=full" \
+  -H "X-Cron-Secret: YOUR_CRON_API_TOKEN"
+```
+
+#### 5) What you should see
+
+The endpoint response (default mode) includes `run_url` when available. Open it to confirm the workflow started.
 
 ---
 

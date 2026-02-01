@@ -113,3 +113,47 @@ pip freeze > requirements.lock
 - סביבה וירטואלית `.venv`
 - `requirements.txt` כבסיס והנחיה ליצירת `requirements.lock` לטעינה מדויקת
 - `flask db upgrade` ו-`python wsgi.py` לאימות החיבור
+
+## 8. Cron (cron-job.org) + Multipass (GitHub Actions)
+
+### מה המטרה?
+להריץ קריאה חיצונית (cron) לשרת שלך, שהשרת **רק ישגר** (`dispatch`) GitHub Actions ב־`scrape_multipass` — בלי להמתין, בלי polling ובלי הורדת artifacts כברירת מחדל.
+
+### משתני סביבה בשרת (חובה)
+להגדיר בדשבורד של השרת (Render/Production env vars), לא חובה דרך `.env`:
+
+```env
+CRON_API_TOKEN=your-long-random-token
+GITHUB_TOKEN=your-github-pat-with-actions-permissions
+```
+
+הערה חשובה על `.env`: אם הערך מכיל `#` והוא לא במרכאות, הרבה parsers של dotenv יחתכו את הערך (יתייחסו ל־`#` כהערה).
+
+### הרשאות לטוקן GitHub (חובה)
+`GITHUB_TOKEN` צריך להיות Personal Access Token שיש לו הרשאה לשגר workflow ב־repo `itayk93/scrape_multipass` (ברירת מחדל):
+- הרשאת Actions לשגר workflow (ובאופן אופציונלי לקרוא runs כדי להחזיר `run_url`).
+
+### Overrides (אופציונלי)
+רק אם שינית owner/repo/workflow/ref:
+
+```env
+MULTIPASS_GH_OWNER=itayk93
+MULTIPASS_GH_REPO=scrape_multipass
+MULTIPASS_GH_WORKFLOW=scrape.yml
+MULTIPASS_GH_REF=main
+MULTIPASS_GH_INPUT_KEY=card_number
+MULTIPASS_GH_INPUT_SEPARATOR=,
+```
+
+### cron-job.org (מה להגדיר אחד-אחד)
+- URL: `https://YOUR_DOMAIN/api/cron/update_multipass`
+- Request method: `POST`
+- Headers:
+  - Key: `X-Cron-Secret`
+  - Value: `CRON_API_TOKEN`
+- Requires HTTP authentication: כבוי
+- Treat redirects (3xx) as success: כבוי (מומלץ)
+- Time zone: `Asia/Jerusalem`
+
+### בדיקה מהירה
+התגובה תחזיר (בדרך כלל) `run_url`. תפתח אותו כדי לראות שה־workflow התחיל לרוץ.

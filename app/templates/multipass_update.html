@@ -46,10 +46,17 @@
             style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 0.9em; overflow-x: auto;">
             <div><strong>Endpoint:</strong> POST {{ url_for('coupons.api_update_multipass', _external=True) }}</div>
             <div style="margin-top: 5px;"><strong>Headers:</strong> X-Cron-Secret: &lt;YOUR_API_TOKEN&gt;</div>
+            <div style="margin-top: 5px; color: #bbb;"><strong>Mode:</strong> default dispatches GitHub Actions only (fast). Use <code>?mode=full</code> to run the full server-side flow.</div>
 
             <div style="margin-top: 15px; color: #aaa;"># Example CURL command:</div>
             <code style="color: #a6e22e;">curl</code> -X POST <span style="color: #e6db74;">"{{
                 url_for('coupons.api_update_multipass', _external=True) }}"</span> \<br>
+            &nbsp;&nbsp;-H <span style="color: #e6db74;">"X-Cron-Secret: {{ config.get('CRON_API_TOKEN', 'YOUR_TOKEN')
+                }}"</span>
+
+            <div style="margin-top: 12px; color: #aaa;"># Full server-side mode (optional):</div>
+            <code style="color: #a6e22e;">curl</code> -X POST <span style="color: #e6db74;">"{{
+                url_for('coupons.api_update_multipass', _external=True) }}?mode=full"</span> \<br>
             &nbsp;&nbsp;-H <span style="color: #e6db74;">"X-Cron-Secret: {{ config.get('CRON_API_TOKEN', 'YOUR_TOKEN')
                 }}"</span>
 

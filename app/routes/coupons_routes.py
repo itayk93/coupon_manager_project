@@ -6462,26 +6462,53 @@ def api_update_multipass():
     
     if not coupons_to_update:
         return jsonify({"message": "All coupons correspond to recent data (filtered by smart logic)"}), 200
-        
-    # Trigger background task
-    import threading
-    from app.tasks import trigger_multipass_github_action
-    
-    def run_update_thread(codes):
-        try:
-            print(f"=== [CRON] Starting background thread for {len(codes)} coupons ===", flush=True)
-            trigger_multipass_github_action(codes)
-        except Exception as e:
-            print(f"=== [CRON] Error in background thread: {e} ===", flush=True)
 
-    thread = threading.Thread(target=run_update_thread, args=(coupons_to_update,))
-    thread.daemon = True
-    thread.start()
-    
+    # Default behavior: only dispatch the GitHub Actions workflow (fast + reliable for cron).
+    # If you want the server to wait/poll/download artifacts and update DB, call with `?mode=full`.
+    mode = request.args.get("mode", "dispatch").strip().lower()
+
+    if mode == "full":
+        import threading
+        from app.tasks import trigger_multipass_github_action
+
+        def run_update_thread(codes):
+            try:
+                print(f"=== [CRON] Starting background thread for {len(codes)} coupons (full) ===", flush=True)
+                trigger_multipass_github_action(codes)
+            except Exception as e:
+                print(f"=== [CRON] Error in background thread: {e} ===", flush=True)
+
+        thread = threading.Thread(target=run_update_thread, args=(coupons_to_update,))
+        thread.daemon = True
+        thread.start()
+
+        return jsonify({
+            "status": "success",
+            "mode": "full",
+            "message": f"Started full update for {len(coupons_to_update)} coupons",
+            "codes": coupons_to_update,
+        }), 200
+
+    from app.tasks import dispatch_multipass_github_workflow
+    dispatch_result = dispatch_multipass_github_workflow(coupons_to_update)
+
+    if not dispatch_result.get("success"):
+        return jsonify({
+            "status": "error",
+            "mode": "dispatch",
+            "message": "Failed to dispatch GitHub Actions workflow",
+            "details": dispatch_result,
+        }), 502
+
     return jsonify({
-        "status": "success", 
-        "message": f"Triggered update for {len(coupons_to_update)} coupons",
-        "codes": coupons_to_update
+        "status": "success",
+        "mode": "dispatch",
+        "message": f"Dispatched GitHub Actions workflow for {len(coupons_to_update)} coupons",
+        "codes": coupons_to_update,
+        "run_id": dispatch_result.get("run_id"),
+        "run_url": dispatch_result.get("run_url"),
+        "workflow": dispatch_result.get("workflow"),
+        "ref": dispatch_result.get("ref"),
     }), 200
 
 @coupons_bp.route("/update_single_multipass/<int:id>", methods=["POST"])
