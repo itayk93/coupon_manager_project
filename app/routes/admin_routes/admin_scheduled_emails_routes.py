@@ -176,6 +176,7 @@ def send_pending_emails():
         }), 500
 
 @admin_scheduled_emails_bp.route('/api/cron/send-pending-emails', methods=['POST'])
+@csrf.exempt
 @api_token_required
 def cron_send_pending_emails():
     """

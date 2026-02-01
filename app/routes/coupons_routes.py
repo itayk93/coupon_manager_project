@@ -27,7 +27,7 @@ import pytz
 import logging
 from fuzzywuzzy import fuzz
 import numpy as np
-from app.extensions import db
+from app.extensions import db, csrf
 from app.models import (
     Coupon,
     Company,
@@ -6423,6 +6423,7 @@ def api_coupon_detail(coupon_id):
         }), 500
 
 @coupons_bp.route("/api/cron/update_multipass", methods=["POST"])
+@csrf.exempt
 def api_update_multipass():
     """
     API endpoint for Cron Jobs to trigger Multipass updates.
