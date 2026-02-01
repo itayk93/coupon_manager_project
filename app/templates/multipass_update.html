@@ -45,17 +45,23 @@
         <div
             style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 0.9em; overflow-x: auto;">
             <div><strong>Endpoint:</strong> POST {{ url_for('coupons.api_update_multipass', _external=True) }}</div>
-            <div style="margin-top: 5px;"><strong>Headers:</strong> X-Cron-Secret: &lt;YOUR_CRON_SECRET&gt;</div>
+            <div style="margin-top: 5px;"><strong>Headers:</strong> X-Cron-Secret: &lt;YOUR_API_TOKEN&gt;</div>
 
             <div style="margin-top: 15px; color: #aaa;"># Example CURL command:</div>
             <code style="color: #a6e22e;">curl</code> -X POST <span style="color: #e6db74;">"{{
                 url_for('coupons.api_update_multipass', _external=True) }}"</span> \<br>
-            &nbsp;&nbsp;-H <span style="color: #e6db74;">"X-Cron-Secret: {{ config.get('SECRET_KEY') }}"</span>
+            &nbsp;&nbsp;-H <span style="color: #e6db74;">"X-Cron-Secret: {{ config.get('CRON_API_TOKEN', 'YOUR_TOKEN')
+                }}"</span>
+
+            <div style="margin-top: 15px; color: #aaa;"># Crontab Example (Run every hour):</div>
+            <span style="color: #a6e22e;">0 * * * *</span> curl -X POST "{{
+            url_for('coupons.api_update_multipass', _external=True) }}" -H "X-Cron-Secret: {{
+            config.get('CRON_API_TOKEN', 'YOUR_TOKEN') }}" >> /tmp/cron_log.txt 2>&1
         </div>
 
         <p style="margin-top: 15px; font-size: 0.85em; color: #e74c3c;">
-            <strong>Note:</strong> Ensure <code>CRON_SECRET</code> is set in your environment variables.
-            The example above uses your current <code>SECRET_KEY</code> for demonstration purposes.
+            <strong>Note:</strong> Ensure <code>CRON_API_TOKEN</code> is set in your environment variables.
+            The example above uses your current <code>CRON_API_TOKEN</code>.
         </p>
     </div>
 

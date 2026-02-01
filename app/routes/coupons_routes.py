@@ -6429,11 +6429,16 @@ def api_update_multipass():
     Protected by CRON_SECRET.
     Forces update for User ID 1.
     """
-    import os
-    expected_secret = os.getenv("CRON_SECRET")
+    # Use the token defined in config.py (CRON_API_TOKEN)
+    expected_secret = current_app.config.get("CRON_API_TOKEN")
     
+    if not expected_secret or expected_secret == "your-secure-api-token-here":
+        # Fallback to CRON_SECRET if CRON_API_TOKEN is default or not set
+        import os
+        expected_secret = os.getenv("CRON_SECRET")
+        
     if not expected_secret:
-        return jsonify({"error": "CRON_SECRET not configured on server"}), 500
+        return jsonify({"error": "CRON_API_TOKEN not configured on server"}), 500
         
     request_secret = request.headers.get("X-Cron-Secret")
     if request_secret != expected_secret:
