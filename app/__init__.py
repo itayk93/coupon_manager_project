@@ -48,6 +48,14 @@ def create_app():
 
     # Initialize extensions
     db.init_app(app)
+    
+    # Force SQLAlchemy to configure models immediately to avoid race conditions/deadlocks in Gunicorn
+    try:
+        from sqlalchemy.orm import configure_mappers
+        configure_mappers()
+    except Exception as e:
+        app.logger.error(f"Error configuring mappers: {e}")
+
     migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_message = "עליך להתחבר כדי לגשת לעמוד זה"

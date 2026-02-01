@@ -815,6 +815,7 @@ def process_multipass_json(coupon, transactions_data):
                         recharge_amount=row.get("recharge_amount", 0.0),
                         usage_amount=row.get("usage_amount", 0.0),
                         reference_number=row.get("reference_number", ""),
+                        source="Multipass"
                     )
                     db.session.add(transaction)
                 except ValueError as e:
@@ -828,6 +829,28 @@ def process_multipass_json(coupon, transactions_data):
         # Update total usage AND total value (recharge) in the database
         db.session.commit()
         
+        # Self-healing: Ensure ALL transactions for this coupon that match the references 
+        # in the current JSON are marked as 'Multipass'. This fixes issues where
+        # transactions might have been inserted with source='User' (default) and are hidden by the UI.
+        try:
+             all_refs = df["reference_number"].unique().tolist()
+             if all_refs:
+                 from sqlalchemy import text
+                 # Use text() for raw SQL update
+                 update_query = text("""
+                     UPDATE coupon_transaction 
+                     SET source = 'Multipass' 
+                     WHERE coupon_id = :coupon_id 
+                     AND reference_number IN :refs
+                 """)
+                 # For SQLite/PostgreSQL compatibility with IN clause using tuple
+                 db.session.execute(update_query, {"coupon_id": coupon.id, "refs": tuple(all_refs)})
+                 db.session.commit()
+                 if DEBUG_MODE:
+                     print(f"Ensured source='Multipass' for {len(all_refs)} transactions.")
+        except Exception as e:
+            print(f"Error healing transaction sources: {e}")
+
         # Calculate totals from ALL transactions including the new ones
         totals = (
             db.session.query(
@@ -6197,8 +6220,7 @@ def has_feature_access(feature_name, user):
     - If access_mode='Admin' => return True only if user.is_admin
     - Otherwise return False
     """
-    from app.models import FeatureAccess
-
+    
     feature = FeatureAccess.query.filter_by(feature_name=feature_name).first()
     if not feature:
         # If no record exists => closed

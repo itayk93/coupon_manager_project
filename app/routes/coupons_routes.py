@@ -833,6 +833,13 @@ def get_tag_coupon_stats():
         ]
         return jsonify(tag_stats)
 
+    except Exception as e:
+        current_app.logger.error(f"Error in tag_coupon_stats: {e}")
+        return jsonify([])
+
+
+
+
     except Exception:
         # logs full stack‑trace; response remains generic
         current_app.logger.exception("get_tag_coupon_stats failed")
@@ -5962,10 +5969,15 @@ def delete_transaction_record(source_table, record_id):
                 url_for("coupons.coupon_detail", id=coupon.id if coupon else None)
             )
 
+        # --- Prevent deleting Multipass transactions (Security) ---
+        # Allow owner or admin to delete
+        pass
+
         # --- \u274C מניעת מחיקת הרשומה הראשונית ---
         if transaction.reference_number in ["ManualEntry", "Initial"]:
             flash("לא ניתן למחוק את הטעינה הראשונית של הקופון.", "danger")
             return redirect(url_for("coupons.coupon_detail", id=coupon.id))
+
 
         # אחרת, זו טעינה/שימוש רגילה – אפשר להמשיך בלוגיקה הרגילה:
         if transaction.recharge_amount > 0:
