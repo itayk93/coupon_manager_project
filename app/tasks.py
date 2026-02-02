@@ -584,14 +584,29 @@ def trigger_multipass_github_action(coupon_codes):
                 
                 if zip_resp.status_code == 200:
                     with zipfile.ZipFile(BytesIO(zip_resp.content)) as z:
-                        json_filename = next((name for name in z.namelist() if name.endswith('.json')), None)
+                        logger.info(f"Zip file content: {z.namelist()}")
+                        
+                        # STRICT: Look for exact 'transactions.json'
+                        json_filename = "transactions.json"
+                        if json_filename not in z.namelist():
+                             # Fallback: look for any json
+                             json_filename = next((name for name in z.namelist() if name.endswith('.json')), None)
+                        
                         if json_filename:
+                            logger.info(f"Processing JSON file: {json_filename}")
                             with z.open(json_filename) as f:
                                 all_data = json.load(f)
+                                logger.info(f"Loaded {len(all_data)} items from JSON")
+                                if len(all_data) > 0:
+                                    logger.info(f"Sample item keys: {list(all_data[0].keys())}")
+                                    logger.info(f"Sample item content: {json.dumps(all_data[0], ensure_ascii=False)}")
+                                
                                 for item in all_data:
                                     c_num = item.get("card_number")
                                     if c_num:
-                                        transaction_data_map[c_num] = item.get("transactions", [])
+                                        ts = item.get("transactions", [])
+                                        transaction_data_map[c_num] = ts
+                                        logger.info(f"Card {c_num}: Found {len(ts)} transactions in JSON")
                         else:
                             logger.warning("No JSON file found in artifact zip")
                 else:
