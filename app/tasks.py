@@ -544,7 +544,7 @@ def trigger_multipass_github_action(coupon_codes):
         status = "queued"
         conclusion = None
         
-        max_retries = 180 # 30 minutes (180 * 10s) 
+        max_retries = 360 # 60 minutes (360 * 10s) 
         for i in range(max_retries):
             run_detail_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/runs/{run_id}"
             r = requests.get(run_detail_url, headers=headers)
