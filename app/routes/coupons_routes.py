@@ -6464,9 +6464,9 @@ def api_update_multipass():
     if not coupons_to_update:
         return jsonify({"message": "All coupons correspond to recent data (filtered by smart logic)"}), 200
 
-    # Default behavior: only dispatch the GitHub Actions workflow (fast + reliable for cron).
-    # If you want the server to wait/poll/download artifacts and update DB, call with `?mode=full`.
-    mode = request.args.get("mode", "dispatch").strip().lower()
+    # Default behavior: run full update (spawn thread to wait/poll/download artifacts).
+    # This ensures the DB is actually updated after the scraping is done.
+    mode = request.args.get("mode", "full").strip().lower()
 
     if mode == "full":
         import threading
