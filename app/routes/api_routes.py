@@ -8,6 +8,8 @@ from app.extensions import db
 from datetime import datetime
 import logging
 
+from app.activity_logging import log_activity
+
 api_bp = Blueprint('api', __name__)
 
 # Configure logging
@@ -50,6 +52,7 @@ def api_login():
         
         # Login successful
         login_user(user, remember=True)
+        log_activity(action="login_success", user_id=user.id)
         logger.info(f"Successful login for user: {email}")
         
         # Return user data

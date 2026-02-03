@@ -35,6 +35,8 @@ from datetime import datetime
 from app.extensions import db
 from app.helpers import get_geo_location, get_public_ip
 
+from app.activity_logging import log_activity
+
 
 auth_bp = Blueprint("auth", __name__)
 logger = logging.getLogger(__name__)
@@ -110,6 +112,7 @@ def google_callback():
 
         # התחברות למערכת
         login_user(user)
+        log_activity(action="login_success", user_id=user.id)
         flash(f"ברוך הבא, {user.first_name}!", "success")
         
         # 🔹 בדיקה אם יש בקשות עומדות לביטול הרשמה או עדכון העדפות בסשן 🔹
@@ -274,6 +277,7 @@ def login():
         # בדיקה אם הסיסמה תואמת
         if check_password_hash(user.password, form.password.data):
             login_user(user, remember=form.remember.data)
+            log_activity(action="login_success", user_id=user.id)
             # log_user_activity(ip_address, "login_success")
 
             # 🔹 שדרוג חשוב: קישור ההסכמה למשתמש לאחר התחברות 🔹

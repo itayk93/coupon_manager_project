@@ -17,7 +17,8 @@ import random, string
 
 # הרחבות מהאפליקציה שלך
 from app.extensions import db
-from app.models import User
+from app.models import User, UserActivity
+from sqlalchemy import func
 
 # במקום Flask-Mail, נשתמש בפונקציה שלך מ-helpers.py
 from app.helpers import (
@@ -42,6 +43,58 @@ def manage_users():
 
     users = User.query.order_by(User.id.asc()).all()
     return render_template("admin/admin_manage_users.html", users=users)
+
+
+@admin_users_bp.route("/recent-logins", methods=["GET"])
+@login_required
+def recent_logins():
+    """מסך אדמין: משתמשים אחרונים שנכנסו והשתמשו באתר."""
+    if not current_user.is_admin:
+        flash("אין לך הרשאה לצפות בעמוד זה.", "danger")
+        return redirect(url_for("profile.index"))
+
+    limit = request.args.get("limit", default=50, type=int)
+    limit = max(1, min(limit, 200))
+
+    last_login_sq = (
+        db.session.query(
+            UserActivity.user_id.label("user_id"),
+            func.max(UserActivity.timestamp).label("last_login_at"),
+        )
+        .filter(UserActivity.action == "login_success")
+        .group_by(UserActivity.user_id)
+        .subquery()
+    )
+
+    last_activity_sq = (
+        db.session.query(
+            UserActivity.user_id.label("user_id"),
+            func.max(UserActivity.timestamp).label("last_activity_at"),
+        )
+        .group_by(UserActivity.user_id)
+        .subquery()
+    )
+
+    rows = (
+        db.session.query(User, last_login_sq.c.last_login_at, last_activity_sq.c.last_activity_at)
+        .outerjoin(last_login_sq, last_login_sq.c.user_id == User.id)
+        .outerjoin(last_activity_sq, last_activity_sq.c.user_id == User.id)
+        .filter(User.is_deleted.is_(False))
+        .order_by(
+            last_login_sq.c.last_login_at.desc().nullslast(),
+            last_activity_sq.c.last_activity_at.desc().nullslast(),
+            User.id.desc(),
+        )
+        .limit(limit)
+        .all()
+    )
+
+    return render_template(
+        "admin/admin_recent_logins.html",
+        rows=rows,
+        limit=limit,
+        now=datetime.now(),
+    )
 
 
 @admin_users_bp.route("/reset_password", methods=["POST"])

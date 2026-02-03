@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}משתמשים אחרונים שנכנסו{% endblock %}
+
+{% block content %}
+<section class="admin-recent-logins">
+  <div class="header">
+    <h1>משתמשים אחרונים שנכנסו והשתמשו באתר</h1>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('admin_bp.admin_dashboard') }}">חזרה ללוח הניהול</a>
+      <a class="btn btn-secondary" href="{{ url_for('admin_bp.admin_users_bp.manage_users') }}">ניהול משתמשים</a>
+    </div>
+    <p class="hint">
+      הנתונים מתבססים על טבלת <code>user_activities</code> ואירוע <code>login_success</code>.
+      (זמנים נשמרים ב-UTC)
+    </p>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>מזהה</th>
+          <th>שם</th>
+          <th>אימייל</th>
+          <th>כניסה אחרונה</th>
+          <th>פעילות אחרונה</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user, last_login_at, last_activity_at in rows %}
+          <tr>
+            <td>{{ user.id }}</td>
+            <td>{{ user.first_name }} {{ user.last_name }}</td>
+            <td style="direction:ltr">{{ user.email }}</td>
+            <td>
+              {% if last_login_at %}
+                {{ last_login_at.strftime('%Y-%m-%d %H:%M:%S') }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if last_activity_at %}
+                {{ last_activity_at.strftime('%Y-%m-%d %H:%M:%S') }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<style>
+  .admin-recent-logins{
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 1.5rem;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+    direction: rtl;
+  }
+  .header h1{ margin: 0 0 0.5rem; }
+  .actions{ display:flex; gap: 0.75rem; margin: 0.75rem 0 0.5rem; flex-wrap: wrap; }
+  .btn{
+    display:inline-block;
+    padding: 0.6rem 1rem;
+    background: #4361ee;
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .btn.btn-secondary{ background:#2b2d42; }
+  .hint{ color:#555; margin: 0.5rem 0 0; }
+  .table-wrap{ overflow-x:auto; margin-top: 1rem; }
+  .table{
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+  }
+  .table th, .table td{
+    border: 1px solid #e5e7eb;
+    padding: 10px 12px;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .table th{ background: #f8fafc; font-weight: 700; }
+  .table tr:nth-child(even) td{ background: rgba(0,0,0,0.02); }
+</style>
+{% endblock %}
+
