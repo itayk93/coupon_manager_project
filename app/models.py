@@ -738,6 +738,10 @@ class CouponTransaction(db.Model):
     reference_number = db.Column(db.String(100), nullable=True)
     source = db.Column(db.String(50), nullable=False, default="User")
 
+    __table_args__ = (
+        db.UniqueConstraint('coupon_id', 'reference_number', name='uq_coupon_transaction_ref'),
+    )
+
     coupon = db.relationship("Coupon", back_populates="multipass_transactions")
 
     def __init__(self, **kwargs):

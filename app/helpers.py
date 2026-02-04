@@ -687,19 +687,31 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
                 print(f"Skipping invalid transaction with reference: {reference_number}")
                 continue
                 
-            try:
-                transaction = CouponTransaction(
-                    coupon_id=coupon.id,
-                    transaction_date=transaction_date,
-                    location=location,
-                    recharge_amount=row.get("recharge_amount", 0.0),
-                    usage_amount=row.get("usage_amount", 0.0),
-                    reference_number=reference_number,
-                )
-                db.session.add(transaction)
-            except ValueError as e:
-                print(f"Skipping invalid transaction: {e}")
-                continue
+                try:
+                    transaction = CouponTransaction(
+                        coupon_id=coupon.id,
+                        transaction_date=transaction_date,
+                        location=location,
+                        recharge_amount=row.get("recharge_amount", 0.0),
+                        usage_amount=row.get("usage_amount", 0.0),
+                        reference_number=reference_number,
+                    )
+                    db.session.add(transaction)
+                    db.session.commit()
+                except ValueError as e:
+                    print(f"Skipping invalid transaction: {e}")
+                    db.session.rollback()
+                    continue
+                except Exception as e:
+                    # Check for IntegrityError or other DB errors
+                    if "IntegrityError" in str(type(e).__name__) or "unique constraint" in str(e).lower():
+                        print(f"Duplicate transaction ignored (Reference: {reference_number})")
+                        db.session.rollback()
+                        continue
+                    else:
+                        print(f"Error adding transaction: {e}")
+                        db.session.rollback()
+                        continue
 
         # Update total usage in the database
         total_used = (
