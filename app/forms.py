@@ -442,10 +442,10 @@ class EditCouponForm(FlaskForm):
 
 class RegisterForm(FlaskForm):
     first_name = StringField(
-        "שם פרטי", validators=[DataRequired(), Length(min=2, max=150)]
+        "שם פרטי", validators=[DataRequired(), Length(min=2, max=60)]
     )
     last_name = StringField(
-        "שם משפחה", validators=[DataRequired(), Length(min=2, max=150)]
+        "שם משפחה", validators=[DataRequired(), Length(min=2, max=60)]
     )
     email = StringField(
         "Email",
@@ -466,6 +466,9 @@ class RegisterForm(FlaskForm):
         choices=[("male", "זכר"), ("female", "נקבה"), ("other", "אחר")],
         validators=[DataRequired(message="יש לבחור מין")],
     )
+
+    # Honeypot trap for bots. Must stay empty.
+    website = StringField("Website", validators=[Optional(), Length(max=0)])
 
     submit = SubmitField("הרשמה")
 

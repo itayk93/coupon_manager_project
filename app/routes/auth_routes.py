@@ -36,6 +36,15 @@ from app.extensions import db
 from app.helpers import get_geo_location, get_public_ip
 
 from app.activity_logging import log_activity
+from app.registration_guard import (
+    check_registration_rate_limits,
+    get_client_ip,
+    is_honeypot_triggered,
+    is_public_registration_enabled,
+    is_register_submission_too_fast,
+    is_registration_payload_suspicious,
+    mark_register_form_rendered,
+)
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -320,8 +329,70 @@ def register():
     # log_user_activity(ip_address,"register_view")
 
     form = RegisterForm()
+    ip_address = get_client_ip()
+
+    if not is_public_registration_enabled():
+        if request.method == "POST":
+            logger.warning(
+                "Blocked registration: public registration disabled. ip=%s",
+                ip_address,
+            )
+        flash("ההרשמה מושבתת זמנית. נסה שוב מאוחר יותר.", "error")
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+
+        if is_honeypot_triggered(form.website.data):
+            logger.warning(
+                "Blocked registration by honeypot. ip=%s email=%s",
+                ip_address,
+                (form.email.data or "").strip().lower(),
+            )
+            flash("לא ניתן להשלים הרשמה כרגע.", "error")
+            return redirect(url_for("auth.register"))
+
+        rate_limited, rate_limit_message = check_registration_rate_limits(
+            ip_address=ip_address,
+            email=form.email.data,
+        )
+        if rate_limited:
+            logger.warning(
+                "Blocked registration by rate limit. ip=%s email=%s",
+                ip_address,
+                (form.email.data or "").strip().lower(),
+            )
+            flash(rate_limit_message, "error")
+            return redirect(url_for("auth.register"))
+
+        if is_register_submission_too_fast():
+            logger.warning(
+                "Blocked registration: form submitted too fast. ip=%s email=%s",
+                ip_address,
+                (form.email.data or "").strip().lower(),
+            )
+            flash("זוהתה הרשמה אוטומטית. אנא נסה שוב בעוד כמה שניות.", "error")
+            return redirect(url_for("auth.register"))
+
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
+        first_name = form.first_name.data.strip()
+        last_name = form.last_name.data.strip()
+
+        suspicious_payload, suspicious_reason = is_registration_payload_suspicious(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+        )
+        if suspicious_payload:
+            logger.warning(
+                "Blocked suspicious registration payload. ip=%s email=%s reason=%s",
+                ip_address,
+                email,
+                suspicious_reason,
+            )
+            flash("לא ניתן להשלים הרשמה כרגע. בדוק את הפרטים ונסה שוב.", "error")
+            return redirect(url_for("auth.register"))
+
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
             flash("אימייל זה כבר רשום במערכת.", "error")
@@ -333,8 +404,8 @@ def register():
         new_user = User(
             email=email,
             password=generate_password_hash(form.password.data),
-            first_name=form.first_name.data.strip(),
-            last_name=form.last_name.data.strip(),
+            first_name=first_name,
+            last_name=last_name,
             gender=form.gender.data,
             is_confirmed=False,
             show_whatsapp_banner=default_whatsapp_banner,
@@ -342,6 +413,7 @@ def register():
         try:
             db.session.add(new_user)
             db.session.commit()
+            log_activity(action="register_success", user_id=new_user.id)
             # log_user_activity(ip_address,"register_user_created")
         except Exception as e:
             db.session.rollback()
@@ -391,6 +463,7 @@ def register():
             # log_user_activity(ip_address,"register_form_validation_failed")
             logger.warning(f"Form errors: {form.errors}")
 
+    mark_register_form_rendered()
     return render_template("register.html", form=form)
 
 

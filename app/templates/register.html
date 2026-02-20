@@ -289,6 +289,14 @@
         display: block;
     }
 
+    .hp-field {
+        position: absolute;
+        left: -10000px;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+    }
+
     /* ###### RESPONSIVE DESIGN ###### */
     @media (max-width: 768px) {
         .auth-form {
@@ -323,6 +331,10 @@
     <h2>הרשמה</h2>
     <form method="POST" action="">
         {{ form.hidden_tag() }}
+        <div class="hp-field" aria-hidden="true">
+            {{ form.website.label(for="website") }}
+            {{ form.website(id="website", autocomplete="off", tabindex="-1") }}
+        </div>
         <!-- שדה שם פרטי -->
         <div class="form-group">
             {{ form.first_name.label(class="form-label") }}

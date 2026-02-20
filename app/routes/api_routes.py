@@ -2,13 +2,19 @@
 
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from werkzeug.security import check_password_hash
 from app.models import User, Coupon, Company, CouponRequest, Transaction
 from app.extensions import db
 from datetime import datetime
 import logging
 
 from app.activity_logging import log_activity
+from app.registration_guard import (
+    check_registration_rate_limits,
+    get_client_ip,
+    is_api_registration_token_valid,
+    is_public_registration_enabled,
+    is_registration_payload_suspicious,
+)
 
 api_bp = Blueprint('api', __name__)
 
@@ -90,17 +96,48 @@ def api_login():
 def api_register():
     """API endpoint for user registration"""
     try:
+        if not is_public_registration_enabled():
+            return jsonify({'error': 'Registration is temporarily disabled'}), 503
+
+        provided_registration_token = request.headers.get('X-Registration-Token')
+        if not is_api_registration_token_valid(provided_registration_token):
+            logger.warning("Blocked API registration with invalid token. ip=%s", get_client_ip())
+            return jsonify({'error': 'Unauthorized registration request'}), 403
+
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
         
-        email = data.get('email')
+        ip_address = get_client_ip()
+        rate_limited, rate_limit_message = check_registration_rate_limits(
+            ip_address=ip_address,
+            email=data.get('email'),
+        )
+        if rate_limited:
+            logger.warning("Blocked API registration by rate limit. ip=%s", ip_address)
+            return jsonify({'error': rate_limit_message}), 429
+
+        email = (data.get('email') or '').strip().lower()
         password = data.get('password')
-        first_name = data.get('first_name')
-        last_name = data.get('last_name')
+        first_name = (data.get('first_name') or '').strip()
+        last_name = (data.get('last_name') or '').strip()
         
         if not all([email, password, first_name, last_name]):
             return jsonify({'error': 'All fields are required'}), 400
+
+        suspicious_payload, suspicious_reason = is_registration_payload_suspicious(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+        )
+        if suspicious_payload:
+            logger.warning(
+                "Blocked suspicious API registration payload. ip=%s email=%s reason=%s",
+                ip_address,
+                email,
+                suspicious_reason,
+            )
+            return jsonify({'error': 'Registration payload rejected'}), 400
         
         # Check if user already exists
         existing_user = User.query.filter_by(email=email).first()
