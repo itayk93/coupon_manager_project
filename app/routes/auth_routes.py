@@ -12,6 +12,7 @@ from flask import (
 )
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
+from urllib.parse import urlparse
 from datetime import datetime
 from itsdangerous import SignatureExpired, BadTimeSignature
 from app.extensions import db
@@ -57,6 +58,7 @@ from flask_login import current_user
 from flask_dance.contrib.google import google
 from flask import session
 from app.extensions import google_bp
+from app.extensions import cache
 
 
 @auth_bp.route("/login/google")
@@ -260,14 +262,74 @@ def confirm_email(token):
 def login():
     ip_address = request.remote_addr  # קבלת כתובת ה-IP של המשתמש
     # log_user_activity(ip_address, "login_view")
+    next_url = request.args.get("next", "").strip()
+    if request.method == "POST":
+        next_url = (request.form.get("next") or next_url).strip()
+
+    def _is_safe_next(target):
+        if not target:
+            return False
+        parsed = urlparse(target)
+        if parsed.scheme or parsed.netloc:
+            return False
+        if not target.startswith("/"):
+            return False
+        if target.startswith("//"):
+            return False
+        return True
+
+    def _login_attempt_keys(email_value):
+        safe_email = (email_value or "").strip().lower() or "unknown"
+        safe_ip = (ip_address or "unknown").replace(":", "_")
+        return (
+            f"login_attempts:ip:{safe_ip}",
+            f"login_attempts:email:{safe_email}",
+            f"login_lock:ip:{safe_ip}",
+            f"login_lock:email:{safe_email}",
+        )
+
+    def _apply_login_attempt(email_value):
+        attempts_ip_key, attempts_email_key, lock_ip_key, lock_email_key = _login_attempt_keys(
+            email_value
+        )
+        max_attempts = max(1, int(current_app.config.get("LOGIN_MAX_ATTEMPTS", 6)))
+        window_seconds = max(60, int(current_app.config.get("LOGIN_WINDOW_SECONDS", 600)))
+        lock_seconds = max(60, int(current_app.config.get("LOGIN_LOCK_SECONDS", 900)))
+
+        ip_attempts = int(cache.get(attempts_ip_key) or 0) + 1
+        email_attempts = int(cache.get(attempts_email_key) or 0) + 1
+        cache.set(attempts_ip_key, ip_attempts, timeout=window_seconds)
+        cache.set(attempts_email_key, email_attempts, timeout=window_seconds)
+
+        if ip_attempts >= max_attempts:
+            cache.set(lock_ip_key, "1", timeout=lock_seconds)
+        if email_attempts >= max_attempts:
+            cache.set(lock_email_key, "1", timeout=lock_seconds)
+
+    def _is_login_locked(email_value):
+        _, _, lock_ip_key, lock_email_key = _login_attempt_keys(email_value)
+        return bool(cache.get(lock_ip_key) or cache.get(lock_email_key))
+
+    def _clear_login_attempts(email_value):
+        attempts_ip_key, attempts_email_key, lock_ip_key, lock_email_key = _login_attempt_keys(
+            email_value
+        )
+        for key in (attempts_ip_key, attempts_email_key, lock_ip_key, lock_email_key):
+            cache.delete(key)
 
     form = LoginForm()
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
+
+        if _is_login_locked(email):
+            flash("יותר מדי ניסיונות התחברות. נסה שוב מאוחר יותר.", "error")
+            return redirect(url_for("auth.login"))
+
         user = User.query.filter_by(email=email).first()
 
         if not user:
             flash("משתמש לא קיים.", "danger")
+            _apply_login_attempt(email)
             # log_user_activity(ip_address, "login_nonexistent_user")
             return redirect(url_for("auth.login"))
 
@@ -285,6 +347,7 @@ def login():
 
         # בדיקה אם הסיסמה תואמת
         if check_password_hash(user.password, form.password.data):
+            _clear_login_attempts(email)
             login_user(user, remember=form.remember.data)
             log_activity(action="login_success", user_id=user.id)
             # log_user_activity(ip_address, "login_success")
@@ -311,9 +374,12 @@ def login():
                     session.pop('preferences_token', None)
                     flash("לא ניתן לעדכן העדפות עבור משתמש אחר.", "error")
 
+            if _is_safe_next(next_url):
+                return redirect(next_url)
             return redirect(url_for("profile.index"))
         else:
             flash("אימייל או סיסמה שגויים.", "error")
+            _apply_login_attempt(email)
             # log_user_activity(ip_address, "login_failed_credentials")
 
     else:
@@ -321,7 +387,7 @@ def login():
             pass
             # log_user_activity(ip_address, "login_form_validation_failed")
 
-    return render_template("login.html", form=form)
+    return render_template("login.html", form=form, next=next_url if _is_safe_next(next_url) else "")
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -533,7 +599,13 @@ def save_consent():
             jsonify({"message": "Consent saved successfully", "consent_id": consent_id})
         )
         response.set_cookie(
-            "consent_id", str(consent_id), max_age=365 * 24 * 60 * 60, path="/"
+            "consent_id",
+            str(consent_id),
+            max_age=365 * 24 * 60 * 60,
+            path="/",
+            secure=current_app.config.get("SESSION_COOKIE_SECURE", True),
+            httponly=True,
+            samesite=current_app.config.get("SESSION_COOKIE_SAMESITE", "Lax"),
         )
 
         return response

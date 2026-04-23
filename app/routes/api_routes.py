@@ -3,7 +3,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User, Coupon, Company, CouponRequest, Transaction
-from app.extensions import db
+from app.extensions import db, cache
 from datetime import datetime
 import logging
 
@@ -22,6 +22,55 @@ api_bp = Blueprint('api', __name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+def _api_login_keys(email, client_ip):
+    safe_email = (email or "").strip().lower() or "unknown"
+    safe_ip = (client_ip or "unknown").replace(":", "_")
+    return (
+        f"api_login_attempts:ip:{safe_ip}",
+        f"api_login_attempts:email:{safe_email}",
+        f"api_login_lock:ip:{safe_ip}",
+        f"api_login_lock:email:{safe_email}",
+    )
+
+
+def _api_login_locked(email, client_ip):
+    _, _, lock_ip_key, lock_email_key = _api_login_keys(email, client_ip)
+    return bool(cache.get(lock_ip_key) or cache.get(lock_email_key))
+
+
+def _register_api_login_failure(email, client_ip):
+    attempts_ip_key, attempts_email_key, lock_ip_key, lock_email_key = _api_login_keys(
+        email, client_ip
+    )
+    max_attempts = 6
+    try:
+        from flask import current_app
+        max_attempts = max(1, int(current_app.config.get("LOGIN_MAX_ATTEMPTS", 6)))
+        window_seconds = max(60, int(current_app.config.get("LOGIN_WINDOW_SECONDS", 600)))
+        lock_seconds = max(60, int(current_app.config.get("LOGIN_LOCK_SECONDS", 900)))
+    except Exception:
+        window_seconds = 600
+        lock_seconds = 900
+
+    ip_attempts = int(cache.get(attempts_ip_key) or 0) + 1
+    email_attempts = int(cache.get(attempts_email_key) or 0) + 1
+    cache.set(attempts_ip_key, ip_attempts, timeout=window_seconds)
+    cache.set(attempts_email_key, email_attempts, timeout=window_seconds)
+
+    if ip_attempts >= max_attempts:
+        cache.set(lock_ip_key, "1", timeout=lock_seconds)
+    if email_attempts >= max_attempts:
+        cache.set(lock_email_key, "1", timeout=lock_seconds)
+
+
+def _clear_api_login_attempts(email, client_ip):
+    attempts_ip_key, attempts_email_key, lock_ip_key, lock_email_key = _api_login_keys(
+        email, client_ip
+    )
+    for key in (attempts_ip_key, attempts_email_key, lock_ip_key, lock_email_key):
+        cache.delete(key)
+
 @api_bp.route('/api/auth/login', methods=['POST'])
 def api_login():
     """API endpoint for user authentication"""
@@ -36,16 +85,22 @@ def api_login():
         if not email or not password:
             return jsonify({'error': 'Email and password are required'}), 400
         
+        client_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        if _api_login_locked(email, client_ip):
+            return jsonify({'error': 'Too many login attempts. Try again later.'}), 429
+
         # Find user by email
         user = User.query.filter_by(email=email).first()
-        
+
         if not user:
             logger.warning(f"Login attempt for non-existent user: {email}")
+            _register_api_login_failure(email, client_ip)
             return jsonify({'error': 'Invalid credentials'}), 401
         
         # Check password
         if not user.check_password(password):
             logger.warning(f"Failed login attempt for user: {email}")
+            _register_api_login_failure(email, client_ip)
             return jsonify({'error': 'Invalid credentials'}), 401
         
         # Check if user is confirmed
@@ -57,6 +112,7 @@ def api_login():
             return jsonify({'error': 'Account has been deleted'}), 401
         
         # Login successful
+        _clear_api_login_attempts(email, client_ip)
         login_user(user, remember=True)
         log_activity(action="login_success", user_id=user.id)
         logger.info(f"Successful login for user: {email}")
@@ -436,14 +492,17 @@ def api_get_user_statistics(user_id):
         return jsonify({'error': 'Internal server error'}), 500
 
 @api_bp.route('/api/debug/user/<int:user_id>', methods=['GET'])
+@login_required
 def api_debug_user(user_id):
     """Debug endpoint to check user data"""
     try:
+        if not current_user.is_admin:
+            return jsonify({'error': 'Unauthorized'}), 403
+
         user = User.query.get(user_id)
         if not user:
             return jsonify({
                 'debug': f'User with id {user_id} not found',
-                'all_users_count': User.query.count(),
                 'error': 'User not found'
             }), 404
         
@@ -455,7 +514,6 @@ def api_debug_user(user_id):
             'is_confirmed': user.is_confirmed,
             'is_deleted': user.is_deleted,
             'created_at': user.created_at.isoformat() if user.created_at else None,
-            'password_hash': user.password[:50] + '...' if user.password else None  # First 50 chars only for security
         }
         
         return jsonify({

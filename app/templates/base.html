@@ -8,9 +8,9 @@
     {% block meta_description %}
     <meta name="description" content="💰 נהלו את כל הקופונים הדיגיטליים במקום אחד! Coupon Master - אפליקציית ניהול קופונים חכמה. ✅ מעקב אחר יתרות ✅ התראות תפוגה ✅ סטטיסטיקות חסכון. הירשמו בחינם!" />
     <meta property="og:title" content="אפליקציית ניהול קופונים דיגיטליים - Coupon Master">
-    <meta property="og:description" content="נהלו את כל הקופונים הדיגיטליים שלכם במקום אחד עם Coupon Master. מעקב יתרות, התראות תפוגה, וסטטיסטיקות חסכון מפורטות."
+    <meta property="og:description" content="נהלו את כל הקופונים הדיגיטליים שלכם במקום אחד עם Coupon Master. מעקב יתרות, התראות תפוגה, וסטטיסטיקות חסכון מפורטות.">
     <meta property="og:image" content="{{ url_for('static', filename='images/coupons-banner.jpg', _external=True) }}">
-    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:url" content="{{ request.base_url }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="אפליקציית ניהול קופונים דיגיטליים - Coupon Master">
     <meta name="twitter:description" content="נהלו את כל הקופונים הדיגיטליים שלכם במקום אחד. מעקב יתרות, התראות תפוגה וסטטיסטיקות חסכון.">
@@ -28,7 +28,7 @@
     {% endblock %}
 
     <!-- Canonical URL למניעת תוכן כפול -->
-    <link rel="canonical" href="{{ request.url }}">
+    <link rel="canonical" href="{{ request.base_url }}">
 
     <!-- hreflang לתמיכה בשפות (כאן עברית) -->
     <link rel="alternate" hreflang="he" href="{{ url_for('profile.index', _external=True) }}">
@@ -87,26 +87,6 @@
     <!-- הוספת Font Awesome לסמלים -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              'heebo': ['Heebo', 'sans-serif'],
-              'rubik': ['Rubik', 'sans-serif'],
-            },
-            colors: {
-              'primary': '#2c3e50',
-              'secondary': '#A9CCE3',
-              'accent': '#F5B041',
-            }
-          }
-        }
-      }
-    </script>
-
     <!-- סגנונות מובנים -->
     <style>
         /* # Reset and Base Styles */
@@ -683,7 +663,7 @@
     <div id="cookie-consent" style="display: none; position: fixed; bottom: 0; width: 100%; background-color: #f8f9fa; padding: 15px; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); text-align: center; z-index: 1000;">
         <p style="margin: 0; font-size: 14px; color: #333;">
             אנו משתמשים בעוגיות כדי לשפר את חוויית הגלישה שלך. על ידי המשך השימוש באתר, אתה מסכים לשימוש בעוגיות.
-            <a href="/privacy-policy" style="color: #007bff; text-decoration: none;">למידע נוסף</a>.
+            <a href="{{ url_for('auth.privacy_policy') }}" style="color: #007bff; text-decoration: none;">למידע נוסף</a>.
         </p>
         <button id="accept-cookies" style="margin-top: 10px; padding: 10px 20px; background-color: #28a745; color: #fff; border: none; border-radius: 5px; cursor: pointer;">
             אני מסכים
@@ -843,6 +823,8 @@
     </script>
 
     {% block scripts %}{% endblock %}
+    {% if config.ENABLE_EXTERNAL_WIDGET %}
     <script src="https://website-widgets.pages.dev/dist/sienna.min.js" defer></script>
+    {% endif %}
 </body>
 </html>

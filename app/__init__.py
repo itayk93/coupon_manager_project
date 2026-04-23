@@ -3,7 +3,7 @@
 import os
 import logging
 from datetime import datetime, timedelta
-from flask import Flask, render_template, url_for, request
+from flask import Flask, render_template, url_for, request, Response
 from dotenv import load_dotenv
 from app.routes.coupons_routes import to_israel_time_filter  # Import the function
 from app.helpers import has_feature_access
@@ -24,10 +24,6 @@ def create_app():
     # Load environment variables (for extra safety, can also be in wsgi.py)
     load_dotenv()
 
-    import os
-
-    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-
     app = Flask(__name__, static_folder="static", template_folder="templates")
 
     app.config["GA_TRACKING_ID"] = os.getenv("GA_TRACKING_ID", "")
@@ -42,6 +38,10 @@ def create_app():
 
     # Load configuration (Config) from config.py
     app.config.from_object(Config)
+
+    # Never allow insecure OAuth transport in production unless explicitly enabled.
+    if app.config.get("ALLOW_INSECURE_OAUTH_TRANSPORT"):
+        os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
     # Set log level (debug etc.)
     app.logger.setLevel(logging.DEBUG)
@@ -66,9 +66,9 @@ def create_app():
     csrf.init_app(app)
     cache.init_app(app)
 
-    # Configure browser cache headers for static files
+    # Configure browser cache headers and baseline security headers
     @app.after_request
-    def add_cache_headers(response):
+    def add_cache_and_security_headers(response):
         # Cache static files for 1 year
         if request.endpoint == 'static':
             response.cache_control.max_age = 31536000  # 1 year
@@ -76,7 +76,63 @@ def create_app():
         # Cache API responses for 5 minutes
         elif request.path.startswith('/api/'):
             response.cache_control.max_age = 300  # 5 minutes
+
+        if app.config.get("ENABLE_SECURITY_HEADERS", True):
+            response.headers.setdefault("X-Frame-Options", "DENY")
+            response.headers.setdefault("X-Content-Type-Options", "nosniff")
+            response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+            response.headers.setdefault(
+                "Permissions-Policy",
+                "geolocation=(), microphone=(), camera=(), payment=()",
+            )
+            response.headers.setdefault(
+                "Content-Security-Policy",
+                "default-src 'self'; "
+                "img-src 'self' data: https:; "
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+                "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+                "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms; "
+                "connect-src 'self' https://www.google-analytics.com https://www.clarity.ms; "
+                "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+            )
+            if request.is_secure or request.headers.get("X-Forwarded-Proto") == "https":
+                response.headers.setdefault(
+                    "Strict-Transport-Security",
+                    "max-age=31536000; includeSubDomains; preload",
+                )
         return response
+
+    @app.route("/robots.txt")
+    def robots_txt():
+        return app.send_static_file("robots.txt")
+
+    @app.route("/sitemap.xml")
+    def sitemap_xml():
+        pages = [
+            url_for("auth.login", _external=True),
+            url_for("auth.register", _external=True),
+            url_for("auth.forgot_password", _external=True),
+            url_for("auth.privacy_policy", _external=True),
+            url_for("profile.faq", _external=True),
+        ]
+        xml = ['<?xml version="1.0" encoding="UTF-8"?>']
+        xml.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+        for page in pages:
+            xml.append(f"<url><loc>{page}</loc></url>")
+        xml.append("</urlset>")
+        return Response("\n".join(xml), mimetype="application/xml")
+
+    @app.route("/privacy-policy")
+    def privacy_policy_root():
+        return render_template("privacy_policy.html")
+
+    @app.route("/favicon.ico")
+    def favicon_ico():
+        return app.send_static_file("icons/favicon-32x32.png")
+
+    @app.route("/apple-touch-icon.png")
+    def apple_touch_icon():
+        return app.send_static_file("icons/apple-touch-icon.png")
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -197,12 +253,13 @@ def create_app():
         csrf.exempt(telegram_bp)
 
     # הפעלת מערכת התזמון
-    try:
-        from app.scheduler import TaskScheduler
-        scheduler = TaskScheduler(app)
-        scheduler.start()
-        print("✅ Task scheduler started successfully")
-    except Exception as e:
-        print(f"❌ Failed to start task scheduler: {e}")
+    if app.config.get("ENABLE_SCHEDULER", True) and not app.config.get("TESTING"):
+        try:
+            from app.scheduler import TaskScheduler
+            scheduler = TaskScheduler(app)
+            scheduler.start()
+            print("✅ Task scheduler started successfully")
+        except Exception as e:
+            print(f"❌ Failed to start task scheduler: {e}")
 
     return app
