@@ -18,6 +18,23 @@ from app.helpers import send_email
 sharing_bp = Blueprint("sharing", __name__)
 
 
+def _can_access_coupon(coupon_id, user_id):
+    """Return (allowed, coupon) where allowed means owner or accepted shared access."""
+    coupon = Coupon.query.get(coupon_id)
+    if not coupon:
+        return False, None
+
+    if coupon.user_id == user_id:
+        return True, coupon
+
+    shared_access = CouponShares.query.filter_by(
+        coupon_id=coupon_id,
+        shared_with_user_id=user_id,
+        status="accepted",
+    ).first()
+    return shared_access is not None, coupon
+
+
 @sharing_bp.route("/generate_share_link/<int:coupon_id>", methods=["POST"])
 @login_required
 def generate_share_link(coupon_id):
@@ -376,6 +393,10 @@ def quick_revoke(token):
 def track_coupon_viewer(coupon_id):
     """Track user viewing coupon details"""
     try:
+        allowed, _ = _can_access_coupon(coupon_id, current_user.id)
+        if not allowed:
+            return jsonify({"success": False, "error": "Unauthorized"}), 403
+
         # Generate or get session ID
         session_id = request.json.get('session_id') or str(uuid.uuid4())
         
@@ -437,6 +458,10 @@ def track_coupon_viewer(coupon_id):
 def get_active_viewers(coupon_id):
     """Get list of users currently viewing coupon"""
     try:
+        allowed, _ = _can_access_coupon(coupon_id, current_user.id)
+        if not allowed:
+            return jsonify({"success": False, "error": "Unauthorized"}), 403
+
         # Clean up old records
         old_threshold = datetime.now(timezone.utc) - timedelta(minutes=5)
         CouponActiveViewers.query.filter(

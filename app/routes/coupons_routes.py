@@ -4187,9 +4187,9 @@ def delete_coupon_request(id):
     # -- activity log snippet --
     # log_user_activity("delete_coupon_request_attempt", None)
 
-    if coupon_request.user_id != current_user.id:
+    if coupon_request.user_id != current_user.id and not current_user.is_admin:
         flash("אין לך הרשאה למחוק בקשה זו.", "danger")
-        return redirect(url_for("coupons.marketplace"))
+        return redirect(url_for("marketplace.marketplace"))
 
     try:
         db.session.delete(coupon_request)

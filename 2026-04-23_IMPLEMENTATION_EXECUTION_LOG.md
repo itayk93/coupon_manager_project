@@ -96,3 +96,11 @@ Verified in automated tests:
 - Debug endpoint cannot be used by non-admin users.
 
 Status: **PASS**
+
+
+---
+
+## Phase 2 Authorization Audit
+- Added route-level authorization fixes in `requests_routes`, `coupons_routes`, `sharing_routes`, and `admin_email_routes`.
+- Added `tests/test_authorization_matrix.py` for A/B/Admin matrix checks.
+- Validation: `10 passed` across security + authorization suites.

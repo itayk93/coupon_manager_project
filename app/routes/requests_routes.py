@@ -62,6 +62,10 @@ def coupon_request_detail(id):
 
     coupon_request = CouponRequest.query.get_or_404(id)
 
+    if coupon_request.user_id != current_user.id and not current_user.is_admin:
+        flash("אין לך הרשאה לצפות בבקשה זו.", "danger")
+        return redirect(url_for("marketplace.marketplace"))
+
     if coupon_request.fulfilled:
         flash("בקשת הקופון כבר טופלה.", "danger")
         return redirect(url_for("marketplace.marketplace"))
@@ -100,7 +104,7 @@ def delete_coupon_request(id):
     # log_user_activity("delete_coupon_request_attempt")
 
     coupon_request = CouponRequest.query.get_or_404(id)
-    if coupon_request.user_id != current_user.id:
+    if coupon_request.user_id != current_user.id and not current_user.is_admin:
         flash("אין לך הרשאה למחוק בקשה זו.", "danger")
         return redirect(url_for("marketplace.marketplace"))
 

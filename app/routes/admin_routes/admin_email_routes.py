@@ -14,7 +14,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.is_admin:
             flash('אין לך הרשאה לצפות בעמוד זה.', 'danger')
-            return redirect(url_for('index'))
+            return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -210,6 +210,8 @@ def reset_email_status():
 
 
 @admin_email_bp.route('/view-full-report', methods=['GET'])
+@login_required
+@admin_required
 def view_full_report():
     """
     צפייה בדוח המלא כ-HTML מעוצב
