@@ -47,11 +47,6 @@
         return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     }
 
-    function isAuthenticatedUser() {
-        const authAttr = document.body && document.body.getAttribute('data-authenticated');
-        return authAttr === 'true';
-    }
-
     function hasDismissCooldown() {
         const untilRaw = localStorage.getItem(STORAGE_KEYS.dismissUntil);
         if (!untilRaw) return false;
@@ -277,7 +272,6 @@
     }
 
     function shouldShowPrompt() {
-        if (!isAuthenticatedUser()) return false;
         if (isInstalled) return false;
         if (isPermanentlyDismissed()) return false;
         if (hasDismissCooldown()) return false;
@@ -340,8 +334,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        if (!isAuthenticatedUser()) return;
-
         isInstalled = isStandalone() || localStorage.getItem(STORAGE_KEYS.iosMarkedInstalled) === '1';
 
         const ua = navigator.userAgent || '';

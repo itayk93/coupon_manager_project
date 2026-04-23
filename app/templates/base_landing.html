@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="{{ current_language if current_language is defined else 'he' }}">
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}Coupon Master{% endblock %}</title>
@@ -28,6 +28,7 @@
 
     <!-- הוספת Font Awesome לסמלים (אם תרצה להשתמש באייקונים כלשהם) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pwa_install_prompt.css') }}">
 
     <!-- מטא טאג ל-CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -72,7 +73,8 @@
 
     {% block head %}{% endblock %}
 </head>
-<body>
+<body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}"
+      data-ui-lang="{{ current_language if current_language is defined else '' }}">
 
     <!-- כפתור סגירת כל ההתראות (אם תרצה) -->
     <button id="close-all-notifications" style="display: none;">סגור את כל ההתראות</button>
@@ -179,5 +181,6 @@
     </script>
 
     {% block scripts %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/pwa_install_prompt.js') }}" defer></script>
 </body>
 </html>
