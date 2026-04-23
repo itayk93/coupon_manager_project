@@ -30,3 +30,9 @@ Security hardening and data isolation controls requested for this phase were imp
 - Extended authorization hardening completed on additional endpoints.
 - Added matrix tests for cross-user isolation and admin-only access controls.
 - Combined suite result: **10 passed**.
+
+
+## Phase 3 Addendum
+- Fixed API identity spoofing vector in `/api/coupon_detail/<coupon_id>` by removing header-based user identity and enforcing session auth only.
+- Added `tests/test_authorization_extended.py`.
+- Full suite result: **15 passed**.

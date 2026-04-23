@@ -6223,23 +6223,13 @@ def process_coupon_text():
         }), 500
 
 @coupons_bp.route('/api/coupon_detail/<int:coupon_id>', methods=['GET'])
+@login_required
 def api_coupon_detail(coupon_id):
     """
     API endpoint that returns coupon detail data with consolidated transaction rows
     exactly like the web version's coupon_detail route
     """
     try:
-        # Get the current user from API authentication
-        # For now, we'll use a basic auth approach - you might want to implement proper JWT
-        user_id = request.headers.get('X-User-ID')
-        if not user_id:
-            return jsonify({'error': 'User authentication required'}), 401
-        
-        user_id = int(user_id)
-        current_user = User.query.get(user_id)
-        if not current_user:
-            return jsonify({'error': 'Invalid user'}), 401
-
         # Fetch the coupon if the current user is the owner OR has shared access
         coupon = Coupon.query.get_or_404(coupon_id)
         

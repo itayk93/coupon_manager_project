@@ -1,0 +1,10 @@
+HTTP/2 301 
+date: Thu, 23 Apr 2026 19:55:37 GMT
+content-type: text/html; charset=utf-8
+content-length: 76
+location: https://www.couponmasteril.com/robots.txt
+cf-ray: 9f0f6d487a447d98-TLV
+cf-cache-status: DYNAMIC
+server: cloudflare
+alt-svc: h3=":443"; ma=86400
+

@@ -104,3 +104,9 @@ Status: **PASS**
 - Added route-level authorization fixes in `requests_routes`, `coupons_routes`, `sharing_routes`, and `admin_email_routes`.
 - Added `tests/test_authorization_matrix.py` for A/B/Admin matrix checks.
 - Validation: `10 passed` across security + authorization suites.
+
+
+## Phase 3 Addendum
+- Fixed API identity spoofing vector in `/api/coupon_detail/<coupon_id>` by removing header-based user identity and enforcing session auth only.
+- Added `tests/test_authorization_extended.py`.
+- Full suite result: **15 passed**.

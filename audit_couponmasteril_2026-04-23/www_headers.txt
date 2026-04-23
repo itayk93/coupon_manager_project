@@ -1,0 +1,13 @@
+HTTP/2 302 
+date: Thu, 23 Apr 2026 19:55:37 GMT
+content-type: text/html; charset=utf-8
+cf-ray: 9f0f6d46cd6ec21d-TLV
+location: /auth/login
+rndr-id: 9d163ce7-a8d7-4f8b
+vary: Cookie
+vary: Accept-Encoding
+x-render-origin-server: gunicorn
+cf-cache-status: DYNAMIC
+server: cloudflare
+alt-svc: h3=":443"; ma=86400
+

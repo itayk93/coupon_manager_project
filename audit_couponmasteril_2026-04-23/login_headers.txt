@@ -1,0 +1,13 @@
+HTTP/2 200 
+date: Thu, 23 Apr 2026 19:55:51 GMT
+content-type: text/html; charset=utf-8
+cf-ray: 9f0f6d99ae2a7d94-TLV
+rndr-id: ec721e0e-350a-4a17
+set-cookie: session=eyJfZnJlc2giOmZhbHNlLCJjc3JmX3Rva2VuIjoiYzgwMzNhN2Q3MzhkODgwZGU1ODg1MWNiYjk1YzNiZTRiOWU2YWJjNCJ9.aep5Rg.axEUi_khcFLHaowS17ozsElNKPQ; HttpOnly; Path=/
+vary: Cookie
+vary: Accept-Encoding
+x-render-origin-server: gunicorn
+cf-cache-status: DYNAMIC
+server: cloudflare
+alt-svc: h3=":443"; ma=86400
+
