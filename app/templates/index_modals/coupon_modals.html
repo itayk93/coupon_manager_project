@@ -344,10 +344,6 @@
 <script>
 // # Modal functionality script
 (function() {
-  // Make functions available globally
-  window.openCompanyModal = openCompanyModal;
-  window.updateUIAfterUsage = updateUIAfterUsage;
-  
   // Initialize variables
   let usageUpdated = false;
   let qrCode = null;
@@ -701,7 +697,11 @@
       document.getElementById("usage-modal-logo").src = logoSrc;
       usageModal.classList.add("active");
       }
-    } 
+    }
   });
+
+  // Export functions to global scope AFTER they're defined
+  window.openCompanyModal = openCompanyModal;
+  window.updateUIAfterUsage = updateUIAfterUsage;
 })();
 </script>
