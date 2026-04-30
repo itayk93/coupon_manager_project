@@ -96,6 +96,28 @@ def _cache_delete_safe(key):
         _warn_cache_backend_unavailable(f"cache.delete({key})", exc)
 
 
+def _send_confirmation_email(user):
+    """Send the account confirmation email for a user."""
+    token = generate_confirmation_token(user.email)
+    confirm_url = request.host_url.rstrip("/") + url_for(
+        "auth.confirm_email", token=token
+    )
+    html = render_template(
+        "emails/account_confirmation.html",
+        user=user,
+        confirmation_link=confirm_url,
+    )
+
+    send_email(
+        sender_email="noreply@couponmasteril.com",
+        sender_name="Coupon Master",
+        recipient_email=user.email,
+        recipient_name=user.first_name,
+        subject="אישור חשבון ב-Coupon Master",
+        html_content=html,
+    )
+
+
 @auth_bp.route("/login/google")
 def login_google():
     flash("התחברות באמצעות Google כרגע בטיפול. אפשר להתחבר עם אימייל וסיסמה.", "info")
@@ -525,7 +547,25 @@ def register():
 
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
-            flash("אימייל זה כבר רשום במערכת.", "error")
+            if existing_user.is_confirmed:
+                flash("אימייל זה כבר רשום ומאושר במערכת. אפשר להתחבר.", "error")
+            else:
+                try:
+                    _send_confirmation_email(existing_user)
+                    flash(
+                        "החשבון כבר קיים אבל עדיין לא אושר. שלחנו שוב מייל אישור.",
+                        "info",
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Error resending confirmation email for existing user %s: %s",
+                        email,
+                        e,
+                    )
+                    flash(
+                        "החשבון כבר קיים אבל עדיין לא אושר. לא הצלחנו לשלוח מייל אישור מחדש.",
+                        "error",
+                    )
             # log_user_activity(ip_address,"register_email_already_exists")
             return redirect(url_for("auth.register"))
 
@@ -552,32 +592,8 @@ def register():
             # log_user_activity(ip_address,"register_user_creation_failed")
             return redirect(url_for("auth.register"))
 
-        token = generate_confirmation_token(new_user.email)
-        # יצירת קישור דינמי עם הדומיין הנוכחי (לוקאלי או פרודקשן)
-        confirm_url = request.host_url.rstrip("/") + url_for(
-            "auth.confirm_email", token=token
-        )
-        html = render_template(
-            "emails/account_confirmation.html",
-            user=new_user,
-            confirmation_link=confirm_url,
-        )
-
-        sender_email = "noreply@couponmasteril.com"
-        sender_name = "Coupon Master"
-        recipient_email = new_user.email
-        recipient_name = new_user.first_name
-        subject = "אישור חשבון ב-Coupon Master"
-
         try:
-            send_email(
-                sender_email=sender_email,
-                sender_name=sender_name,
-                recipient_email=recipient_email,
-                recipient_name=recipient_name,
-                subject=subject,
-                html_content=html,
-            )
+            _send_confirmation_email(new_user)
             flash(
                 "נשלח אליך מייל לאישור החשבון. אנא בדוק את תיבת הדואר שלך.", "success"
             )
