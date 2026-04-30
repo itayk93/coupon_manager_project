@@ -346,7 +346,23 @@ def login():
             return redirect(url_for("auth.login"))
 
         # בדיקה אם הסיסמה תואמת
-        if check_password_hash(user.password, form.password.data):
+        if not user.password:
+            flash("לחשבון הזה אין סיסמה מקומית. נסה להתחבר עם Google.", "error")
+            return redirect(url_for("auth.login"))
+
+        try:
+            password_matches = check_password_hash(user.password, form.password.data)
+        except Exception as exc:
+            current_app.logger.error(
+                "Password verification failed for user_id=%s email=%s: %s",
+                user.id,
+                email,
+                exc,
+            )
+            flash("אירעה שגיאה בבדיקת הסיסמה. נסה שוב.", "danger")
+            return redirect(url_for("auth.login"))
+
+        if password_matches:
             _clear_login_attempts(email)
             login_user(user, remember=form.remember.data)
             log_activity(action="login_success", user_id=user.id)
