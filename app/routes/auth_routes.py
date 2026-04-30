@@ -318,90 +318,100 @@ def login():
             cache.delete(key)
 
     form = LoginForm()
-    if form.validate_on_submit():
-        email = form.email.data.strip().lower()
+    try:
+        if form.validate_on_submit():
+            email = form.email.data.strip().lower()
 
-        if _is_login_locked(email):
-            flash("יותר מדי ניסיונות התחברות. נסה שוב מאוחר יותר.", "error")
-            return redirect(url_for("auth.login"))
+            if _is_login_locked(email):
+                flash("יותר מדי ניסיונות התחברות. נסה שוב מאוחר יותר.", "error")
+                return redirect(url_for("auth.login"))
 
-        user = User.query.filter_by(email=email).first()
+            user = User.query.filter_by(email=email).first()
 
-        if not user:
-            flash("משתמש לא קיים.", "danger")
-            _apply_login_attempt(email)
-            # log_user_activity(ip_address, "login_nonexistent_user")
-            return redirect(url_for("auth.login"))
+            if not user:
+                flash("משתמש לא קיים.", "danger")
+                _apply_login_attempt(email)
+                # log_user_activity(ip_address, "login_nonexistent_user")
+                return redirect(url_for("auth.login"))
 
-        # בדיקה אם המשתמש נמחק לוגית
-        if user.is_deleted:
-            flash("משתמש זה כבר לא קיים במערכת.", "warning")
-            # log_user_activity(ip_address, "login_deleted_user_attempt")
-            return redirect(url_for("auth.login"))
+            # בדיקה אם המשתמש נמחק לוגית
+            if user.is_deleted:
+                flash("משתמש זה כבר לא קיים במערכת.", "warning")
+                # log_user_activity(ip_address, "login_deleted_user_attempt")
+                return redirect(url_for("auth.login"))
 
-        # בדיקה האם המשתמש אישר את חשבונו
-        if not user.is_confirmed:
-            flash("עליך לאשר את חשבונך לפני התחברות.", "error")
-            # log_user_activity(ip_address, "login_unconfirmed_user")
-            return redirect(url_for("auth.login"))
+            # בדיקה האם המשתמש אישר את חשבונו
+            if not user.is_confirmed:
+                flash("עליך לאשר את חשבונך לפני התחברות.", "error")
+                # log_user_activity(ip_address, "login_unconfirmed_user")
+                return redirect(url_for("auth.login"))
 
-        # בדיקה אם הסיסמה תואמת
-        if not user.password:
-            flash("לחשבון הזה אין סיסמה מקומית. נסה להתחבר עם Google.", "error")
-            return redirect(url_for("auth.login"))
+            # בדיקה אם הסיסמה תואמת
+            if not user.password:
+                flash("לחשבון הזה אין סיסמה מקומית. נסה להתחבר עם Google.", "error")
+                return redirect(url_for("auth.login"))
 
-        try:
-            password_matches = check_password_hash(user.password, form.password.data)
-        except Exception as exc:
-            current_app.logger.error(
-                "Password verification failed for user_id=%s email=%s: %s",
-                user.id,
-                email,
-                exc,
-            )
-            flash("אירעה שגיאה בבדיקת הסיסמה. נסה שוב.", "danger")
-            return redirect(url_for("auth.login"))
+            try:
+                password_matches = check_password_hash(user.password, form.password.data)
+            except Exception as exc:
+                current_app.logger.error(
+                    "Password verification failed for user_id=%s email=%s: %s",
+                    user.id,
+                    email,
+                    exc,
+                )
+                flash("אירעה שגיאה בבדיקת הסיסמה. נסה שוב.", "danger")
+                return redirect(url_for("auth.login"))
 
-        if password_matches:
-            _clear_login_attempts(email)
-            login_user(user, remember=form.remember.data)
-            log_activity(action="login_success", user_id=user.id)
-            # log_user_activity(ip_address, "login_success")
+            if password_matches:
+                _clear_login_attempts(email)
+                login_user(user, remember=form.remember.data)
+                log_activity(action="login_success", user_id=user.id)
+                # log_user_activity(ip_address, "login_success")
 
-            # 🔹 שדרוג חשוב: קישור ההסכמה למשתמש לאחר התחברות 🔹
-            update_consent_after_login(user.id)
+                # 🔹 שדרוג חשוב: קישור ההסכמה למשתמש לאחר התחברות 🔹
+                update_consent_after_login(user.id)
 
-            # 🔹 בדיקה אם יש בקשות עומדות לביטול הרשמה או עדכון העדפות בסשן 🔹
-            if 'unsubscribe_user_id' in session and 'unsubscribe_token' in session:
-                if user.id == session['unsubscribe_user_id']:
-                    return redirect(url_for("profile.complete_unsubscribe"))
-                else:
-                    # אם המשתמש שהתחבר שונה מהמשתמש שביקש לבטל הרשמה
-                    session.pop('unsubscribe_user_id', None)
-                    session.pop('unsubscribe_token', None)
-                    flash("לא ניתן לבטל הרשמה עבור משתמש אחר.", "error")
-            
-            if 'preferences_user_id' in session and 'preferences_token' in session:
-                if user.id == session['preferences_user_id']:
-                    return redirect(url_for("profile.complete_preferences"))
-                else:
-                    # אם המשתמש שהתחבר שונה מהמשתמש שביקש לעדכן העדפות
-                    session.pop('preferences_user_id', None)
-                    session.pop('preferences_token', None)
-                    flash("לא ניתן לעדכן העדפות עבור משתמש אחר.", "error")
+                # 🔹 בדיקה אם יש בקשות עומדות לביטול הרשמה או עדכון העדפות בסשן 🔹
+                if 'unsubscribe_user_id' in session and 'unsubscribe_token' in session:
+                    if user.id == session['unsubscribe_user_id']:
+                        return redirect(url_for("profile.complete_unsubscribe"))
+                    else:
+                        # אם המשתמש שהתחבר שונה מהמשתמש שביקש לבטל הרשמה
+                        session.pop('unsubscribe_user_id', None)
+                        session.pop('unsubscribe_token', None)
+                        flash("לא ניתן לבטל הרשמה עבור משתמש אחר.", "error")
+                
+                if 'preferences_user_id' in session and 'preferences_token' in session:
+                    if user.id == session['preferences_user_id']:
+                        return redirect(url_for("profile.complete_preferences"))
+                    else:
+                        # אם המשתמש שהתחבר שונה מהמשתמש שביקש לעדכן העדפות
+                        session.pop('preferences_user_id', None)
+                        session.pop('preferences_token', None)
+                        flash("לא ניתן לעדכן העדפות עבור משתמש אחר.", "error")
 
-            if _is_safe_next(next_url):
-                return redirect(next_url)
-            return redirect(url_for("profile.index"))
+                if _is_safe_next(next_url):
+                    return redirect(next_url)
+                return redirect(url_for("profile.index"))
+            else:
+                flash("אימייל או סיסמה שגויים.", "error")
+                _apply_login_attempt(email)
+                # log_user_activity(ip_address, "login_failed_credentials")
+
         else:
-            flash("אימייל או סיסמה שגויים.", "error")
-            _apply_login_attempt(email)
-            # log_user_activity(ip_address, "login_failed_credentials")
-
-    else:
-        if request.method == "POST":
-            pass
-            # log_user_activity(ip_address, "login_form_validation_failed")
+            if request.method == "POST":
+                pass
+                # log_user_activity(ip_address, "login_form_validation_failed")
+    except Exception as exc:
+        current_app.logger.error(
+            "Unexpected error in login route (ip=%s): %s",
+            ip_address,
+            exc,
+            exc_info=True,
+        )
+        flash("אירעה שגיאה בהתחברות. נסה שוב מאוחר יותר.", "danger")
+        return redirect(url_for("auth.login"))
 
     return render_template("login.html", form=form, next=next_url if _is_safe_next(next_url) else "")
 
