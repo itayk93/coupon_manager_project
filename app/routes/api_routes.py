@@ -22,6 +22,41 @@ api_bp = Blueprint('api', __name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+_cache_backend_warning_logged = False
+
+
+def _warn_cache_backend_unavailable(operation, exc):
+    global _cache_backend_warning_logged
+    if not _cache_backend_warning_logged:
+        logger.warning(
+            "Cache backend unavailable during %s; API login rate limiting falls back to no-op: %s",
+            operation,
+            exc,
+        )
+        _cache_backend_warning_logged = True
+
+
+def _cache_get_safe(key):
+    try:
+        return cache.get(key)
+    except Exception as exc:
+        _warn_cache_backend_unavailable(f"cache.get({key})", exc)
+        return None
+
+
+def _cache_set_safe(key, value, timeout=None):
+    try:
+        cache.set(key, value, timeout=timeout)
+    except Exception as exc:
+        _warn_cache_backend_unavailable(f"cache.set({key})", exc)
+
+
+def _cache_delete_safe(key):
+    try:
+        cache.delete(key)
+    except Exception as exc:
+        _warn_cache_backend_unavailable(f"cache.delete({key})", exc)
+
 
 def _api_login_keys(email, client_ip):
     safe_email = (email or "").strip().lower() or "unknown"
@@ -36,7 +71,7 @@ def _api_login_keys(email, client_ip):
 
 def _api_login_locked(email, client_ip):
     _, _, lock_ip_key, lock_email_key = _api_login_keys(email, client_ip)
-    return bool(cache.get(lock_ip_key) or cache.get(lock_email_key))
+    return bool(_cache_get_safe(lock_ip_key) or _cache_get_safe(lock_email_key))
 
 
 def _register_api_login_failure(email, client_ip):
@@ -53,15 +88,15 @@ def _register_api_login_failure(email, client_ip):
         window_seconds = 600
         lock_seconds = 900
 
-    ip_attempts = int(cache.get(attempts_ip_key) or 0) + 1
-    email_attempts = int(cache.get(attempts_email_key) or 0) + 1
-    cache.set(attempts_ip_key, ip_attempts, timeout=window_seconds)
-    cache.set(attempts_email_key, email_attempts, timeout=window_seconds)
+    ip_attempts = int(_cache_get_safe(attempts_ip_key) or 0) + 1
+    email_attempts = int(_cache_get_safe(attempts_email_key) or 0) + 1
+    _cache_set_safe(attempts_ip_key, ip_attempts, timeout=window_seconds)
+    _cache_set_safe(attempts_email_key, email_attempts, timeout=window_seconds)
 
     if ip_attempts >= max_attempts:
-        cache.set(lock_ip_key, "1", timeout=lock_seconds)
+        _cache_set_safe(lock_ip_key, "1", timeout=lock_seconds)
     if email_attempts >= max_attempts:
-        cache.set(lock_email_key, "1", timeout=lock_seconds)
+        _cache_set_safe(lock_email_key, "1", timeout=lock_seconds)
 
 
 def _clear_api_login_attempts(email, client_ip):
@@ -69,7 +104,7 @@ def _clear_api_login_attempts(email, client_ip):
         email, client_ip
     )
     for key in (attempts_ip_key, attempts_email_key, lock_ip_key, lock_email_key):
-        cache.delete(key)
+        _cache_delete_safe(key)
 
 @api_bp.route('/api/auth/login', methods=['POST'])
 def api_login():

@@ -27,7 +27,13 @@ Observed flow:
 
 ## Likely Root Cause
 
-The most likely explanation was an environment or deployment mismatch on production rather than bad credentials:
+The root cause in production was Redis cache unavailability during login rate-limit checks:
+
+- `cache.get()` tried to connect to `localhost:6379`
+- Redis was not running there in production
+- The login route treated the cache failure as an exception and the request surfaced as a server error
+
+This looked like an environment or deployment mismatch rather than bad credentials:
 
 - local app + same DB worked
 - production still served `500` until redeploy / runtime refresh
@@ -49,3 +55,9 @@ In other words, this did not look like a password encoding problem.
 ## Outcome
 
 The login flow now succeeds locally for the reported account and redirects to the dashboard.
+
+## Remediation
+
+- Login rate-limit cache access now fails open when Redis is unavailable.
+- API login uses the same safe cache behavior.
+- Registration helpers already had cache fallbacks, so the login path now matches that resilience pattern.

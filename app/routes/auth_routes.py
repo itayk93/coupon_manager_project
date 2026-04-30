@@ -60,6 +60,41 @@ from flask import session
 from app.extensions import google_bp
 from app.extensions import cache
 
+_cache_backend_warning_logged = False
+
+
+def _warn_cache_backend_unavailable(operation, exc):
+    global _cache_backend_warning_logged
+    if not _cache_backend_warning_logged:
+        current_app.logger.warning(
+            "Cache backend unavailable during %s; login rate limiting falls back to no-op: %s",
+            operation,
+            exc,
+        )
+        _cache_backend_warning_logged = True
+
+
+def _cache_get_safe(key):
+    try:
+        return cache.get(key)
+    except Exception as exc:
+        _warn_cache_backend_unavailable(f"cache.get({key})", exc)
+        return None
+
+
+def _cache_set_safe(key, value, timeout=None):
+    try:
+        cache.set(key, value, timeout=timeout)
+    except Exception as exc:
+        _warn_cache_backend_unavailable(f"cache.set({key})", exc)
+
+
+def _cache_delete_safe(key):
+    try:
+        cache.delete(key)
+    except Exception as exc:
+        _warn_cache_backend_unavailable(f"cache.delete({key})", exc)
+
 
 @auth_bp.route("/login/google")
 def login_google():
@@ -297,26 +332,26 @@ def login():
         window_seconds = max(60, int(current_app.config.get("LOGIN_WINDOW_SECONDS", 600)))
         lock_seconds = max(60, int(current_app.config.get("LOGIN_LOCK_SECONDS", 900)))
 
-        ip_attempts = int(cache.get(attempts_ip_key) or 0) + 1
-        email_attempts = int(cache.get(attempts_email_key) or 0) + 1
-        cache.set(attempts_ip_key, ip_attempts, timeout=window_seconds)
-        cache.set(attempts_email_key, email_attempts, timeout=window_seconds)
+        ip_attempts = int(_cache_get_safe(attempts_ip_key) or 0) + 1
+        email_attempts = int(_cache_get_safe(attempts_email_key) or 0) + 1
+        _cache_set_safe(attempts_ip_key, ip_attempts, timeout=window_seconds)
+        _cache_set_safe(attempts_email_key, email_attempts, timeout=window_seconds)
 
         if ip_attempts >= max_attempts:
-            cache.set(lock_ip_key, "1", timeout=lock_seconds)
+            _cache_set_safe(lock_ip_key, "1", timeout=lock_seconds)
         if email_attempts >= max_attempts:
-            cache.set(lock_email_key, "1", timeout=lock_seconds)
+            _cache_set_safe(lock_email_key, "1", timeout=lock_seconds)
 
     def _is_login_locked(email_value):
         _, _, lock_ip_key, lock_email_key = _login_attempt_keys(email_value)
-        return bool(cache.get(lock_ip_key) or cache.get(lock_email_key))
+        return bool(_cache_get_safe(lock_ip_key) or _cache_get_safe(lock_email_key))
 
     def _clear_login_attempts(email_value):
         attempts_ip_key, attempts_email_key, lock_ip_key, lock_email_key = _login_attempt_keys(
             email_value
         )
         for key in (attempts_ip_key, attempts_email_key, lock_ip_key, lock_email_key):
-            cache.delete(key)
+            _cache_delete_safe(key)
 
     form = LoginForm()
     try:
