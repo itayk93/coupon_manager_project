@@ -262,6 +262,7 @@ def confirm_email(token):
 def login():
     ip_address = request.remote_addr  # קבלת כתובת ה-IP של המשתמש
     # log_user_activity(ip_address, "login_view")
+    current_app.logger.info("Login route entered from ip=%s", ip_address)
     next_url = request.args.get("next", "").strip()
     if request.method == "POST":
         next_url = (request.form.get("next") or next_url).strip()
