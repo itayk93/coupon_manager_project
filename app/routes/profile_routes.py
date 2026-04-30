@@ -236,6 +236,17 @@ def index():
     ip_address = get_ip_address()
     # log_user_activity(ip_address, "index")
 
+    def _num(value, default=0.0):
+        try:
+            if value is None:
+                return default
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _company_key(value):
+        return (value or "").strip().lower()
+
     # Profile edit form
     profile_form = ProfileForm()
 
@@ -277,8 +288,10 @@ def index():
     remaining_count = 0
 
     # Filter in memory (much faster than separate DB queries)
-    all_coupons = [c for c in all_user_coupons 
-                   if not c.is_for_sale and c.exclude_saving != True]
+    all_coupons = [
+        c for c in all_user_coupons
+        if not c.is_for_sale and c.exclude_saving != True
+    ]
     
     coupons_for_sale = [c for c in all_user_coupons if c.is_for_sale]
     
@@ -296,13 +309,16 @@ def index():
     # --------------------------------------------------------------------------------
 
     # Calculate total remaining value, savings, and total value
-    total_remaining = sum(coupon.value - coupon.used_value for coupon in all_coupons)
-    total_savings = sum(
-        (coupon.value - coupon.cost)
+    total_remaining = sum(
+        max(_num(coupon.value) - _num(coupon.used_value), 0)
         for coupon in all_coupons
-        if coupon.value > coupon.cost
     )
-    total_coupons_value = sum(coupon.value for coupon in all_coupons)
+    total_savings = sum(
+        max(_num(coupon.value) - _num(coupon.cost), 0)
+        for coupon in all_coupons
+        if _num(coupon.value) > _num(coupon.cost)
+    )
+    total_coupons_value = sum(_num(coupon.value) for coupon in all_coupons)
     percentage_savings = (
         (total_savings / total_coupons_value) * 100 if total_coupons_value > 0 else 0
     )
@@ -372,9 +388,12 @@ def index():
     # 5. Companies mapping - using traditional query (company is a string field, not FK)
     # --------------------------------------------------------------------------------
     companies = Company.query.all()
-    company_logo_mapping = {
-        company.name.lower(): company.image_path for company in companies
-    }
+    company_logo_mapping = {}
+    for company in companies:
+        name = _company_key(company.name)
+        if not name:
+            continue
+        company_logo_mapping[name] = company.image_path
 
     # Add check and set default logo if missing
     for company_name in company_logo_mapping:
@@ -409,19 +428,19 @@ def index():
     company_coupon_types = {}
     
     for stat in company_stats_query:
-        company = stat.company
+        company = stat.company or ""
         companies_stats[company] = {
-            "total_value": float(stat.total_value or 0),
-            "used_value": float(stat.used_value or 0),
-            "remaining_value": float(stat.remaining_value or 0),
-            "savings": float(stat.savings or 0),
+            "total_value": _num(stat.total_value),
+            "used_value": _num(stat.used_value),
+            "remaining_value": _num(stat.remaining_value),
+            "savings": _num(stat.savings),
             "count": stat.count,
-            "one_time_count": stat.one_time_count,
-            "non_one_time_count": stat.non_one_time_count,
+            "one_time_count": int(stat.one_time_count or 0),
+            "non_one_time_count": int(stat.non_one_time_count or 0),
         }
         company_coupon_types[company] = {
-            "one_time": stat.one_time_count,
-            "non_one_time": stat.non_one_time_count
+            "one_time": int(stat.one_time_count or 0),
+            "non_one_time": int(stat.non_one_time_count or 0)
         }
         
         # Track earliest expiration
@@ -473,13 +492,15 @@ def index():
                 }
 
             # Add coupon data to the month
-            monthly_data[month_key]["savings"] += max(0, coupon.value - coupon.cost)
-            monthly_data[month_key]["count"] += 1
-            monthly_data[month_key]["original_value"] += coupon.value
-            monthly_data[month_key]["remaining_value"] += (
-                coupon.value - coupon.used_value
+            monthly_data[month_key]["savings"] += max(
+                0, _num(coupon.value) - _num(coupon.cost)
             )
-            monthly_data[month_key]["companies"].add(coupon.company)
+            monthly_data[month_key]["count"] += 1
+            monthly_data[month_key]["original_value"] += _num(coupon.value)
+            monthly_data[month_key]["remaining_value"] += (
+                _num(coupon.value) - _num(coupon.used_value)
+            )
+            monthly_data[month_key]["companies"].add(coupon.company or "")
 
             # Track coupon type
             if coupon.is_one_time:
@@ -549,11 +570,13 @@ def index():
     # Calculate average usage percentage using existing totals
     average_usage_percentage = 0
     if total_coupons_value > 0:
-        total_used_value = sum(coupon.used_value for coupon in all_coupons)
+        total_used_value = sum(_num(coupon.used_value) for coupon in all_coupons)
         average_usage_percentage = (total_used_value / total_coupons_value) * 100
 
     # Use memory filtering instead of loops for counts
-    one_time_count = len(active_one_time_coupons) + len([c for c in used_coupons if c.is_one_time])
+    one_time_count = len(active_one_time_coupons) + len(
+        [c for c in used_coupons if c.is_one_time]
+    )
     non_one_time_count = total_coupons_count - one_time_count
 
     # --------------------------------------------------------------------------------
@@ -578,7 +601,7 @@ def index():
     # Pre-calculate active coupons per company to avoid repeated loops
     active_coupons_by_company = {}
     for coupon in active_coupons + active_one_time_coupons:
-        company = coupon.company
+        company = coupon.company or ""
         active_coupons_by_company[company] = active_coupons_by_company.get(company, 0) + 1
     
     sorted_company_data = []
@@ -716,7 +739,7 @@ def index():
         # Add tour progress flag
         show_tour=show_tour,
         # Add WhatsApp banner flag
-        show_whatsapp_banner=current_user.show_whatsapp_banner,
+        show_whatsapp_banner=bool(current_user.show_whatsapp_banner),
         # Lazy loading variables
         has_more_coupons=has_more_coupons,
         remaining_count=remaining_count,

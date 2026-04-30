@@ -454,7 +454,9 @@ class Coupon(db.Model):
 
     @property
     def remaining_value(self):
-        return max(self.value - self.used_value, 0)
+        value = self.value or 0
+        used_value = self.used_value or 0
+        return max(value - used_value, 0)
 
     @property
     def original_value(self):
@@ -464,27 +466,36 @@ class Coupon(db.Model):
     @property
     def computed_discount_percentage(self):
         """Calculate the discount percentage based on cost and value."""
-        if self.value == 0:
+        value = self.value or 0
+        cost = self.cost or 0
+        if value == 0:
             return 0
-        return ((self.value - self.cost) / self.value) * 100
+        return ((value - cost) / value) * 100
 
     @property
     def usage_percentage(self):
         """Calculate the usage percentage of the coupon."""
-        if self.value > 0:
-            return round((self.used_value / self.value) * 100, 2)
+        value = self.value or 0
+        used_value = self.used_value or 0
+        if value > 0:
+            return round((used_value / value) * 100, 2)
         return 0.0
 
     @property
     def savings_percentage(self):
-        if self.value > 0:
-            return round(((self.value - self.cost) / self.value) * 100, 2)
+        value = self.value or 0
+        cost = self.cost or 0
+        if value > 0:
+            return round(((value - cost) / value) * 100, 2)
         return 0.0
 
     @property
     def amount_paid_so_far(self):
-        if self.value > 0:
-            return round((self.used_value / self.value) * self.cost, 2)
+        value = self.value or 0
+        used_value = self.used_value or 0
+        cost = self.cost or 0
+        if value > 0:
+            return round((used_value / value) * cost, 2)
         return 0.0
 
     @classmethod

@@ -125,7 +125,7 @@
 <!-- Coupon list section -->
 <section class="coupon-list">
     {% macro get_company_logo(coupon) %}
-        {% set company_lower = coupon.company.lower() %}
+        {% set company_lower = (coupon.company or '')|lower %}
         <img src="{{ url_for('static', filename=company_logo_mapping.get(company_lower, 'images/default.png')) }}"
              alt="{{ coupon.company }} Logo" class="company-logo">
     {% endmacro %}
@@ -145,8 +145,8 @@
                      data-company="{{ coupon.company }}"
                      data-coupon-code="{{ coupon.code }}"
                      data-coupon-id="{{ coupon.id }}"
-                     data-remaining="{{ '%.2f'|format(coupon.remaining_value) }}"
-                     data-logo-src="{{ url_for('static', filename=company_logo_mapping.get(coupon.company|lower, 'images/default.png')) }}"
+                     data-remaining="{{ '%.2f'|format(coupon.remaining_value or 0) }}"
+                     data-logo-src="{{ url_for('static', filename=company_logo_mapping.get((coupon.company or '')|lower, 'images/default.png')) }}"
                      {% if coupon.is_one_time %}
                          data-is-one-time="true" data-purpose="{{ coupon.purpose }}"
                      {% else %}
@@ -160,7 +160,7 @@
                      {% endif %}>
                     <div class="coupon-card-index">
                         <div class="coupon-header">
-                            <img src="{{ url_for('static', filename=company_logo_mapping.get(coupon.company|lower, 'images/default.png')) }}" 
+                            <img src="{{ url_for('static', filename=company_logo_mapping.get((coupon.company or '')|lower, 'images/default.png')) }}" 
                                  alt="{{ coupon.company }} Logo" class="company-logo">
                             <h4>{{ coupon.company }}</h4>
                         </div>
@@ -177,21 +177,23 @@
                                 <span class="value">{{ coupon.purpose }}</span>
                             </div>
                             {% else %}
+                            {% set coupon_value = coupon.value or 0 %}
+                            {% set coupon_used_value = coupon.used_value or 0 %}
                             <div class="coupon-value">
                                 <span class="label">יתרה:</span>
-                                <span class="value">{{ '%.2f'|format(coupon.remaining_value) }} ₪</span>
+                                <span class="value">{{ '%.2f'|format(coupon.remaining_value or 0) }} ₪</span>
                             </div>
                             
                             <div class="usage-progress">
                                 <div class="progress-text">
-                                    {% if coupon.value > 0 %}
-                                      שימוש: {{ (coupon.used_value / coupon.value * 100)|round(0)|int }}%
+                                    {% if coupon_value > 0 %}
+                                      שימוש: {{ (coupon_used_value / coupon_value * 100)|round(0)|int }}%
                                     {% else %}
                                       שימוש: 0%
                                     {% endif %}
                                 </div>
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: {% if coupon.value > 0 %}{{ (coupon.used_value / coupon.value * 100)|round(2) }}{% else %}0.0{% endif %}%"></div>
+                                    <div class="progress-fill" style="width: {% if coupon_value > 0 %}{{ (coupon_used_value / coupon_value * 100)|round(2) }}{% else %}0.0{% endif %}%"></div>
                                 </div>
                             </div>
                             {% endif %}
@@ -199,7 +201,7 @@
                             {% if title == "קופונים למכירה" %}
                             <div class="sale-price">
                                 <span class="label">מחיר מכירה:</span>
-                                <span class="value" style="color: var(--accent-color);">{{ '%.2f'|format(coupon.cost) }} ₪</span>
+                                <span class="value" style="color: var(--accent-color);">{{ '%.2f'|format(coupon.cost or 0) }} ₪</span>
                             </div>
                             {% endif %}
                         </div>
