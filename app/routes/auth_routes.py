@@ -98,12 +98,14 @@ def _cache_delete_safe(key):
 
 @auth_bp.route("/login/google")
 def login_google():
-    return redirect(url_for("google.login"))
+    flash("התחברות באמצעות Google כרגע בטיפול. אפשר להתחבר עם אימייל וסיסמה.", "info")
+    return redirect(url_for("auth.login"))
 
 
 @auth_bp.route("/register/google")
 def register_google():
-    return redirect(url_for("google.login"))  # ניתן להוסיף לוגיקה לרישום נפרד אם צריך
+    flash("הרשמה באמצעות Google כרגע בטיפול. אפשר להירשם עם אימייל וסיסמה.", "info")
+    return redirect(url_for("auth.register"))  # ניתן להוסיף לוגיקה לרישום נפרד אם צריך
 
 
 @auth_bp.route("/login/google/authorized")  # שונה מ-callback ל-authorized

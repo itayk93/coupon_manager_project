@@ -389,6 +389,13 @@
         margin-left: 5px; /* מוסיף מרווח נוסף מצד שמאל של הלוגו */
     }
 
+    .google-status-note {
+        margin-top: 0.75rem;
+        margin-bottom: 0;
+        color: var(--text-light);
+        font-size: 0.92rem;
+    }
+
     /* ###### FEATURES SECTION ###### */
     .features-section {
         margin-top: 4rem;
@@ -671,10 +678,11 @@
 
             <div class="social-login">
                 <p class="or-divider"><span>או</span></p>
-                <a href="{{ url_for('auth.login_google') }}" class="google-button">
+                <div class="google-button" aria-disabled="true" role="note" style="cursor: not-allowed; opacity: 0.75;">
                     <img src="{{ url_for('static', filename='images/google-logo.png') }}" alt="Google Logo">
-                    <span>התחברות עם Google</span>
-                </a>
+                    <span>התחברות עם Google בטיפול</span>
+                </div>
+                <p class="google-status-note">האפשרות זמנית אינה זמינה. אפשר להתחבר עם אימייל וסיסמה.</p>
             </div>
         </div>
     </div>
@@ -728,7 +736,7 @@
         });
 
         // Add ripple effect to buttons
-        const buttons = document.querySelectorAll('.primary-button, .google-button');
+        const buttons = document.querySelectorAll('.primary-button, a.google-button');
 
         buttons.forEach(button => {
             button.addEventListener('click', function(e) {
