@@ -89,13 +89,13 @@
     
     <!-- Statistics and Quick Add buttons -->
     <div style="display: flex; justify-content: center; gap: 15px;">
-        <button id="open-stats-modal" class="stats-button">
+        <button type="button" id="open-stats-modal" class="stats-button">
             <i class="fas fa-chart-bar"></i> על מה חסכת?
         </button>
-        <button id="openUsageModalBtn" class="stats-button report-usage-button">
+        <button type="button" id="openUsageModalBtn" class="stats-button report-usage-button">
             <i class="fas fa-plus-circle"></i> דיווח מהיר על שימוש
         </button>
-        <button id="quick-add-coupon-btn" class="stats-button quick-add-button">
+        <button type="button" id="quick-add-coupon-btn" class="stats-button quick-add-button">
             <i class="fas fa-plus"></i> הוספת קופון מהירה
         </button>
     </div>
@@ -1884,17 +1884,29 @@ document.addEventListener("DOMContentLoaded", function() {
     document.body.appendChild(reopenButton);
 
     // Initialize Shepherd tour
-    const tour = new Shepherd.Tour({
-        defaultStepOptions: {
-            classes: 'shepherd-theme-custom',
-            scrollTo: true,
-            cancelIcon: {
-                enabled: true
+    const tour = window.Shepherd
+        ? new Shepherd.Tour({
+            defaultStepOptions: {
+                classes: 'shepherd-theme-custom',
+                scrollTo: true,
+                cancelIcon: {
+                    enabled: true
+                },
+                useModalOverlay: true
             },
             useModalOverlay: true
-        },
-        useModalOverlay: true
-    });
+        })
+        : {
+            addStep() {},
+            on() {},
+            start() {},
+            complete() {},
+            next() {}
+        };
+
+    if (!window.Shepherd) {
+        console.warn('Shepherd.js is not available, skipping guided tour initialization.');
+    }
 
     // Add steps to the tour
     tour.addStep({
@@ -2418,6 +2430,11 @@ document.addEventListener("DOMContentLoaded", function() {
           setTimeout(() => {
             // # Get the stats data from the hidden div
             const statsData = document.getElementById('stats-data');
+            if (!statsData) {
+              console.error('Error: stats-data element not found');
+              alert('שגיאה בטעינת נתוני הסטטיסטיקות. אנא רענן את הדף ונסה שוב.');
+              return;
+            }
             const companiesStats = JSON.parse(statsData.getAttribute('data-companies-stats'));
             const timelineData = JSON.parse(statsData.getAttribute('data-timeline-data'));
             const totalSavings = parseFloat(statsData.getAttribute('data-total-savings'));
