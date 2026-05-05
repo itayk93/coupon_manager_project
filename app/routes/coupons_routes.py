@@ -74,6 +74,7 @@ from app.helpers import (
     get_public_ip,
     is_playwright_available,
     update_coupon_usage,
+    _create_chrome_driver,
 )
 from flask import session
 from app.tasks import enqueue_coupon_status_sync, trigger_multipass_github_action
@@ -1269,10 +1270,7 @@ import time
 import re
 import pandas as pd
 import os
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
 
 from app.models import Company  # Adjust the import according to your project structure
 
@@ -1293,14 +1291,14 @@ def submit_buyme_coupon_urls():
 
     coupons = []
     driver = None
+    cleanup_chrome_profile = None
 
     try:
         # Setup WebDriver
         chrome_options = Options()
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+        driver, cleanup_chrome_profile = _create_chrome_driver(chrome_options)
 
         for url in urls:
             try:
@@ -1362,6 +1360,8 @@ def submit_buyme_coupon_urls():
     finally:
         if driver:
             driver.quit()
+        if cleanup_chrome_profile:
+            cleanup_chrome_profile()
 
     form = AddCouponsBulkForm()
 
@@ -1463,14 +1463,14 @@ def submit_xgiftcard_coupon_urls():
 
     coupons = []
     driver = None
+    cleanup_chrome_profile = None
 
     try:
         # Setup WebDriver
         chrome_options = Options()
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+        driver, cleanup_chrome_profile = _create_chrome_driver(chrome_options)
 
         for url in urls:
             try:
@@ -1555,6 +1555,8 @@ def submit_xgiftcard_coupon_urls():
     finally:
         if driver:
             driver.quit()
+        if cleanup_chrome_profile:
+            cleanup_chrome_profile()
 
     form = AddCouponsBulkForm()
 

@@ -67,6 +67,70 @@ def is_playwright_available() -> bool:
     return _get_sync_playwright() is not None
 
 
+def _find_chrome_binary(debug_print=None):
+    possible_chrome_paths = [
+        os.getenv("CHROME_BIN"),
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/chromium",
+        "/opt/google/chrome/chrome",
+    ]
+
+    for path in possible_chrome_paths:
+        if path and os.path.isfile(path):
+            if debug_print:
+                debug_print(f"Found Chrome at: {path}")
+            return path
+
+    if debug_print:
+        debug_print("Chrome binary was not found in the known locations")
+    return None
+
+
+def _create_chrome_driver(chrome_options, debug_print=None):
+    """
+    Create a ChromeDriver instance with a clean temporary profile.
+
+    Selenium Manager is preferred over webdriver-manager here because it detects
+    the installed browser/OS combination directly and avoids stale cached drivers.
+    """
+    import shutil
+    import tempfile
+    from selenium import webdriver
+
+    chrome_bin = _find_chrome_binary(debug_print)
+    if chrome_bin:
+        chrome_options.binary_location = chrome_bin
+
+    existing_args = list(getattr(chrome_options, "arguments", []))
+    if not any(arg.startswith("--remote-debugging-port=") for arg in existing_args):
+        chrome_options.add_argument("--remote-debugging-port=0")
+    if not any(arg.startswith("--user-data-dir=") for arg in existing_args):
+        profile_dir = tempfile.mkdtemp(prefix="coupon-manager-chrome-")
+        chrome_options.add_argument(f"--user-data-dir={profile_dir}")
+    else:
+        profile_dir = None
+
+    chrome_options.add_argument("--no-first-run")
+    chrome_options.add_argument("--no-default-browser-check")
+
+    try:
+        driver = webdriver.Chrome(options=chrome_options)
+    except Exception:
+        if profile_dir:
+            shutil.rmtree(profile_dir, ignore_errors=True)
+        raise
+
+    def cleanup_profile():
+        if profile_dir:
+            shutil.rmtree(profile_dir, ignore_errors=True)
+
+    return driver, cleanup_profile
+
+
 @lru_cache(maxsize=1)
 def _get_brevo_client():
     """Lazily import the Brevo (SendinBlue) SDK."""
@@ -4317,58 +4381,20 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
 
     # -------------------- Handling BuyMe Scenario --------------------
     elif coupon_kind.lower() == "buyme":
+        driver = None
+        cleanup_chrome_profile = None
         try:
             debug_print("Initializing Selenium for BuyMe")
-            # Import webdriver_manager to manage the Chrome driver
-            from webdriver_manager.chrome import ChromeDriverManager
 
             # Only run headless in production environment or if explicitly set
             if os.getenv('FLASK_ENV') == 'production' or os.getenv('SELENIUM_HEADLESS', 'false').lower() == 'true':
-                chrome_options.add_argument("--headless")  # Run in headless mode for production
+                chrome_options.add_argument("--headless=new")  # Run in headless mode for production
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-            chrome_options.add_argument("--remote-debugging-port=9222")
-            
-            # Set Chrome binary path - try multiple possible locations
-            possible_chrome_paths = [
-                os.getenv('CHROME_BIN'),
-                '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-                '/usr/bin/google-chrome-stable',
-                '/usr/bin/google-chrome',
-                '/usr/bin/chromium-browser',
-                '/usr/bin/chromium',
-                '/opt/google/chrome/chrome'
-            ]
-            
-            # Debug: Check what Chrome binaries exist
-            debug_print("=== DEBUGGING CHROME INSTALLATION ===")
-            debug_print(f"CHROME_BIN env var: {os.getenv('CHROME_BIN')}")
-            
-            # Check what's actually in /usr/bin/
-            import glob
-            chrome_files = glob.glob('/usr/bin/*chrome*')
-            debug_print(f"Chrome-related files in /usr/bin/: {chrome_files}")
-            
-            chrome_bin = None
-            for path in possible_chrome_paths:
-                if path and os.path.isfile(path):
-                    chrome_bin = path
-                    debug_print(f"✅ Found Chrome at: {chrome_bin}")
-                    break
-                elif path:
-                    debug_print(f"❌ Chrome NOT found at: {path}")
-            
-            if not chrome_bin:
-                chrome_bin = possible_chrome_paths[2]  # Default to google-chrome-stable
-                debug_print(f"⚠️ No Chrome found, using default: {chrome_bin}")
-                
-            chrome_options.binary_location = chrome_bin
-            debug_print(f"Final Chrome binary setting: {chrome_bin}")
-            debug_print("=== END CHROME DEBUG ===")
-            
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=chrome_options)
+            driver, cleanup_chrome_profile = _create_chrome_driver(
+                chrome_options, debug_print
+            )
 
             # Instead of a hardcoded URL, use the value from the coupon's buyme_coupon_url column
             if hasattr(coupon, "buyme_coupon_url") and coupon.buyme_coupon_url:
@@ -4458,6 +4484,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 f.write(driver.page_source)
             debug_print(f"Saved after-click HTML to {after_click_file}")
             driver.quit()
+            driver = None
 
             # Extract load details from the before-click HTML
             with open(before_click_file, "r", encoding="utf-8") as f:
@@ -4597,6 +4624,14 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             debug_print(f"An error occurred during Selenium operations (BuyMe): {e}")
             traceback.print_exc()
             df = None
+        finally:
+            if driver:
+                try:
+                    driver.quit()
+                except Exception:
+                    pass
+            if cleanup_chrome_profile:
+                cleanup_chrome_profile()
 
     # -------------------- Unsupported Coupon Type --------------------
     else:
