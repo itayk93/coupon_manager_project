@@ -51,20 +51,7 @@ API_KEY = os.getenv("IPINFO_API_KEY")
 logger = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=1)
-def _get_sync_playwright():
-    """Lazily import Playwright's sync API."""
-    try:
-        from playwright.sync_api import sync_playwright  # type: ignore
 
-        return sync_playwright
-    except ImportError:
-        return None
-
-
-def is_playwright_available() -> bool:
-    """Return True if Playwright is installed and available."""
-    return _get_sync_playwright() is not None
 
 
 def _find_chrome_binary(debug_print=None):
@@ -129,6 +116,38 @@ def _create_chrome_driver(chrome_options, debug_print=None):
             shutil.rmtree(profile_dir, ignore_errors=True)
 
     return driver, cleanup_profile
+
+
+def _apply_buyme_cf_clearance(driver, debug_print=None):
+    clearance = os.getenv("BUYME_CF_CLEARANCE")
+    if not clearance:
+        if debug_print:
+            debug_print("BUYME_CF_CLEARANCE is not set; opening BuyMe without a clearance cookie")
+        return False
+
+    try:
+        driver.execute_cdp_cmd("Network.enable", {})
+        result = driver.execute_cdp_cmd(
+            "Network.setCookie",
+            {
+                "name": "cf_clearance",
+                "value": clearance,
+                "domain": ".buyme.co.il",
+                "path": "/",
+                "secure": True,
+                "httpOnly": True,
+                "sameSite": "None",
+            },
+        )
+        success = bool(result.get("success", True))
+        if debug_print:
+            status = "applied" if success else "was not accepted by Chrome"
+            debug_print(f"BuyMe cf_clearance cookie {status}")
+        return success
+    except Exception as exc:
+        if debug_print:
+            debug_print(f"Could not apply BuyMe cf_clearance cookie: {exc}")
+        return False
 
 
 @lru_cache(maxsize=1)
@@ -347,8 +366,8 @@ def get_coupon_data_old(coupon, save_directory="automatic_coupon_update/input_ht
     # Basic Selenium options setup
     chrome_options = Options()
     # Only run headless in production environment or if explicitly set
-    if os.getenv('FLASK_ENV') == 'production' or os.getenv('SELENIUM_HEADLESS', 'false').lower() == 'true':
-        chrome_options.add_argument("--headless")  # Run in headless mode for production
+    # if os.getenv('FLASK_ENV') == 'production' or os.getenv('SELENIUM_HEADLESS', 'false').lower() == 'true':
+    #     chrome_options.add_argument("--headless")  # Run in headless mode for production
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--no-sandbox")
@@ -4395,6 +4414,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             driver, cleanup_chrome_profile = _create_chrome_driver(
                 chrome_options, debug_print
             )
+            _apply_buyme_cf_clearance(driver, debug_print)
 
             # Instead of a hardcoded URL, use the value from the coupon's buyme_coupon_url column
             if hasattr(coupon, "buyme_coupon_url") and coupon.buyme_coupon_url:
@@ -4412,7 +4432,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             time.sleep(10)  # Increased initial wait time
 
             # Check for Cloudflare challenge and wait for it to complete
-            max_cloudflare_wait = 120  # seconds - increased for manual CAPTCHA solving
+            max_cloudflare_wait = 300  # seconds - increased for manual CAPTCHA solving
             cloudflare_wait_time = 0
             debug_print(f"🔍 Checking for Cloudflare challenges (max wait: {max_cloudflare_wait}s)")
             while cloudflare_wait_time < max_cloudflare_wait:
@@ -4449,7 +4469,9 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     "//button[contains(text(), 'פרטי המימוש')]",
                     "//button[contains(text(), 'היכן מומש')]",
                     "//a[contains(text(), 'איפה מימשתי')]",
-                    "//a[contains(text(), 'איפה המימוש')]"
+                    "//a[contains(text(), 'איפה המימוש')]",
+                    "//button[@aria-label='מימושים קודמים']",
+                    "//span[text()='מימושים קודמים']/ancestor::button"
                 ]
                 
                 # Create a combined XPath expression to find any of these buttons
@@ -4526,6 +4548,9 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 r'<div class="voucher-card__content__amount">₪<span>(\d+(?:\.\d+)?)</span></div>',
                 before_html,
             )
+            if not load_amount_match:
+                # Try new partial redemption format: ₪25/<b>₪10</b>
+                load_amount_match = re.search(r'₪(\d+(?:\.\d+)?)/<b>₪', before_html)
             load_amount_str = (
                 load_amount_match.group(1).strip() if load_amount_match else ""
             )
@@ -6332,299 +6357,3 @@ def get_current_month_year_hebrew():
     month_name = months[now.month - 1]
     return f"{month_name} {now.year}"
 
-
-# ----------------------------------------------------------------
-# Playwright-based coupon data retrieval
-# ----------------------------------------------------------------
-
-def get_coupon_data_with_playwright(coupon, max_retries=3, save_directory="automatic_coupon_update/input_html"):
-    """
-    Wrapper function for get_coupon_data_playwright with retry mechanism and advanced logging
-    """
-    if not is_playwright_available():
-        logging.error("Playwright is not available. Please install it with: pip install playwright")
-        return None
-        
-    import time
-    import logging
-    import os
-    from datetime import datetime
-    
-    # Configure logger for multipass updates
-    logger = logging.getLogger('playwright_updater')
-    if not logger.handlers:
-        # Create logs directory if it doesn't exist
-        log_dir = 'logs'
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        
-        handler = logging.FileHandler('logs/playwright_update.log')
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-    
-    total_start_time = datetime.now()
-    logger.info(f"Starting update process for coupon {coupon.code} ({coupon.auto_download_details})")
-    
-    for attempt in range(max_retries):
-        attempt_start = datetime.now()
-        
-        try:
-            logger.info(f"Attempt {attempt + 1}/{max_retries} for coupon {coupon.code}")
-            
-            result = get_coupon_data_playwright(coupon, save_directory)
-            
-            if result is not None:
-                attempt_duration = (datetime.now() - attempt_start).total_seconds()
-                total_duration = (datetime.now() - total_start_time).total_seconds()
-                
-                # Check if DataFrame is empty (no new data) vs has data
-                records_count = len(result) if hasattr(result, '__len__') else 0
-                if records_count > 0:
-                    logger.info(f"✅ SUCCESS: Coupon {coupon.code} updated successfully (attempt duration: {attempt_duration:.2f}s, total: {total_duration:.2f}s)")
-                    logger.info(f"   - Records found: {records_count}")
-                else:
-                    logger.info(f"✅ SUCCESS: Coupon {coupon.code} processed successfully (no new data, attempt duration: {attempt_duration:.2f}s, total: {total_duration:.2f}s)")
-                    logger.info(f"   - No new transactions found (all data already exists)")
-                
-                return result
-            else:
-                attempt_duration = (datetime.now() - attempt_start).total_seconds()
-                logger.warning(f"❌ No data returned for coupon {coupon.code} on attempt {attempt + 1} (duration: {attempt_duration:.2f}s)")
-                
-                if attempt < max_retries - 1:
-                    wait_time = 5 * (attempt + 1)  # Progressive backoff: 5s, 10s, 15s
-                    logger.info(f"   - Waiting {wait_time} seconds before retry...")
-                    time.sleep(wait_time)
-                    
-        except Exception as e:
-            attempt_duration = (datetime.now() - attempt_start).total_seconds()
-            logger.error(f"💥 Error on attempt {attempt + 1} for coupon {coupon.code}: {str(e)} (duration: {attempt_duration:.2f}s)")
-            
-            if attempt < max_retries - 1:
-                wait_time = 5 * (attempt + 1)
-                logger.info(f"   - Waiting {wait_time} seconds before retry...")
-                time.sleep(wait_time)
-    
-    # All attempts failed
-    total_duration = (datetime.now() - total_start_time).total_seconds()
-    logger.error(f"🚫 FINAL FAILURE: All {max_retries} attempts failed for coupon {coupon.code} (total duration: {total_duration:.2f}s)")
-    return None
-
-
-def get_coupon_data_playwright(coupon, save_directory="automatic_coupon_update/input_html"):
-    """
-    Get coupon data using Playwright instead of Selenium
-    """
-    sync_playwright = _get_sync_playwright()
-    if not sync_playwright:
-        logging.error("Playwright is not available. Please install it with: pip install playwright")
-        return None
-        
-    import os
-    import time
-    from datetime import datetime
-    import pandas as pd
-    
-    # Helper function to print debug messages when DEBUG_MODE is enabled
-    def debug_print(message):
-        if DEBUG_MODE:
-            print(f"[PLAYWRIGHT DEBUG] {message}")
-    
-    debug_print(f"Starting coupon data retrieval with Playwright for coupon: {coupon.code}")
-    
-    # Ensure that the save directory exists
-    os.makedirs(save_directory, exist_ok=True)
-    
-    coupon_number = coupon.code
-    coupon_kind = coupon.auto_download_details or "Unknown"
-    
-    debug_print(f"Coupon kind detected: {coupon_kind}")
-    
-    with sync_playwright() as p:
-        # Launch browser - headless only in production or if explicitly set
-        is_headless = os.getenv('FLASK_ENV') == 'production' or os.getenv('SELENIUM_HEADLESS', 'false').lower() == 'true'
-        browser = p.chromium.launch(
-            headless=is_headless,
-            args=[
-                '--no-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-features=VizDisplayCompositor'
-            ]
-        )
-        
-        try:
-            page = browser.new_page()
-            
-            # Set viewport size
-            page.set_viewport_size({"width": 1920, "height": 1080})
-            
-            debug_print("Playwright browser launched successfully")
-            
-            df = None  # DataFrame to hold the scraped data
-            
-            # -------------------- Handling Multipass Scenario --------------------
-            if coupon_kind == "Multipass":
-                debug_print("Processing Multipass coupon")
-
-                try:
-                    page.goto(
-                        "https://multipass.co.il/GetBalance",
-                        wait_until="domcontentloaded",
-                        timeout=120000,
-                    )
-                    debug_print("Navigated to Multipass balance page")
-
-                    page.wait_for_selector("input#MainContent_CardNumberTxt", timeout=60000)
-                    cleaned_coupon_number = str(coupon_number).replace("-", "")
-                    page.fill("input#MainContent_CardNumberTxt", cleaned_coupon_number)
-                    debug_print(f"Entered coupon number: {cleaned_coupon_number}")
-
-                    try:
-                        captcha_frame = page.frame_locator("iframe[src*=\'recaptcha\']")
-                        captcha_frame.locator(".recaptcha-checkbox-border").click(timeout=15000)
-                        debug_print("Clicked reCAPTCHA checkbox")
-                    except Exception as recaptcha_error:
-                        debug_print(f"Unable to interact with reCAPTCHA checkbox: {recaptcha_error}")
-
-                    submit_locator = page.locator("#MainContent_GetBalanceBtn")
-                    start_time = time.time()
-                    while True:
-                        disabled_attr = submit_locator.get_attribute("disabled")
-                        if disabled_attr is None:
-                            submit_locator.click()
-                            break
-                        if time.time() - start_time > 180:
-                            debug_print("Timeout waiting for submit button to enable")
-                            return None
-                        time.sleep(1)
-
-                    page.wait_for_selector("#MainContent_GV", timeout=180000)
-
-                    parsed_tables = []
-                    for page_index in range(30):
-                        table_html = page.inner_html("#MainContent_GV")
-                        try:
-                            page_table = pd.read_html(table_html)[0]
-                        except Exception as table_error:
-                            debug_print(
-                                f"Failed to parse Multipass table on page {page_index + 1}: {table_error}"
-                            )
-                            break
-                        parsed_tables.append(page_table)
-
-                        next_button = page.locator("#MainContent_btnNext")
-                        next_disabled = next_button.get_attribute("disabled")
-                        next_class = next_button.get_attribute("class") or ""
-                        if next_disabled or "aspNetDisabled" in next_class:
-                            break
-
-                        next_button.scroll_into_view_if_needed()
-                        next_button.click()
-                        page.wait_for_timeout(1000)
-                        page.wait_for_selector("#MainContent_GV", timeout=30000)
-
-                    if not parsed_tables:
-                        debug_print("No Multipass tables were collected")
-                        return None
-
-                    df = pd.concat(parsed_tables, ignore_index=True)
-                    df = normalize_multipass_dataframe(df, cleaned_coupon_number, debug_print)
-
-                    if df is None or df.empty:
-                        debug_print("Multipass DataFrame is empty after normalization")
-                        return None
-
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    html_path = os.path.join(
-                        save_directory, f"multipass_{coupon_number}_{timestamp}.html"
-                    )
-                    with open(html_path, "w", encoding="utf-8") as file:
-                        file.write(page.content())
-                    debug_print(f"Saved Multipass HTML snapshot to {html_path}")
-
-                except Exception as e:
-                    debug_print(f"Error in Multipass processing: {str(e)}")
-                    return None
-
-            # -------------------- Handling BuyMe Scenario --------------------
-            elif coupon_kind == "BuyMe":
-                debug_print("Processing BuyMe coupon")
-                
-                try:
-                    # Navigate to BuyMe balance check page
-                    page.goto("https://www.buyme.co.il/YitratKartis/CheckBalance", 
-                             wait_until="domcontentloaded", timeout=15000)
-                    debug_print("Navigated to BuyMe website")
-                    
-                    # Wait for and fill the card number input
-                    page.wait_for_selector("input[name='GiftCardNumber']", timeout=15000)
-                    page.fill("input[name='GiftCardNumber']", coupon_number)
-                    debug_print(f"Entered coupon number: {coupon_number}")
-                    
-                    # Submit the form
-                    page.click("input[type='submit']")
-                    debug_print("Clicked submit button")
-                    
-                    # Wait for results
-                    page.wait_for_timeout(5000)
-                    
-                    # Save HTML before processing
-                    before_html = page.content()
-                    before_file = os.path.join(save_directory, f"buyme_before_{coupon_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html")
-                    with open(before_file, "w", encoding="utf-8") as f:
-                        f.write(before_html)
-                    
-                    # Look for "Show Details" or similar button and click it
-                    try:
-                        page.click("text=הצג פרטי שימוש", timeout=15000)
-                        debug_print("Clicked show details button")
-                        page.wait_for_timeout(3000)
-                        
-                        # Save HTML after showing details
-                        after_html = page.content()
-                        after_file = os.path.join(save_directory, f"buyme_after_{coupon_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html")
-                        with open(after_file, "w", encoding="utf-8") as f:
-                            f.write(after_html)
-                            
-                    except Exception:
-                        debug_print("No show details button found or failed to click")
-                    
-                    # Extract usage information from the page
-                    page_text = page.inner_text("body")
-                    debug_print("Extracted page text for usage parsing")
-                    
-                    # Parse usage data (adapt based on actual BuyMe structure)
-                    usage_amount = 0.0
-                    # Add your usage parsing logic here
-                    
-                    df = pd.DataFrame({
-                        'usage_amount': [usage_amount],
-                        'timestamp': [datetime.now()],
-                        'method': ['Playwright']
-                    })
-                    
-                    debug_print(f"Created DataFrame with usage_amount: {usage_amount}")
-                    
-                except Exception as e:
-                    debug_print(f"Error in BuyMe processing: {str(e)}")
-                    return None
-            
-            # -------------------- Handling Max Scenario --------------------
-            elif coupon_kind == "Max":
-                debug_print("Max coupon type not yet implemented with Playwright")
-                return None
-            
-            else:
-                debug_print(f"Unknown coupon type: {coupon_kind}")
-                return None
-                
-        except Exception as e:
-            debug_print(f"General error in Playwright processing: {str(e)}")
-            return None
-        finally:
-            browser.close()
-            debug_print("Browser closed")
-    
-    return df

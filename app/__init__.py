@@ -89,9 +89,9 @@ def create_app():
                 "Content-Security-Policy",
                 "default-src 'self'; "
                 "img-src 'self' data: https:; "
-                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
-                "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
-                "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms; "
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+                "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+                "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
                 "connect-src 'self' https://www.google-analytics.com https://www.clarity.ms; "
                 "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
             )

@@ -399,6 +399,11 @@ class EditCouponForm(FlaskForm):
     description = TextAreaField("תיאור הקופון:", validators=[Optional()])
     is_one_time = BooleanField("קוד לשימוש חד פעמי")
     purpose = StringField("מטרת הקופון:", validators=[Optional()])
+    auto_download_details = SelectField(
+        "סוג הורדה מהירה",
+        choices=[("", "ללא"), ("BuyMe", "BuyMe"), ("Multipass", "Multipass")],
+        validators=[Optional()]
+    )
 
     # Relevant for specific coupons
     cvv = StringField(

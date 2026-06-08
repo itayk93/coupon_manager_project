@@ -129,6 +129,15 @@
             {% endfor %}
         </div>
 
+        <!-- Auto Download Details Field -->
+        <div class="form-group">
+            {{ form.auto_download_details.label(class="form-label") }}
+            {{ form.auto_download_details(class="input-field", id="edit_coupon_auto_download_details") }}
+            {% for error in form.auto_download_details.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
         <!-- Include Card Info Checkbox -->
         <div class="form-group checkbox-container">
             <input type="checkbox" id="edit_coupon_include_card_info" name="include_card_info" class="checkbox-input">

@@ -72,9 +72,9 @@ from app.helpers import (
     get_most_common_tag_for_company,
     get_geo_location,
     get_public_ip,
-    is_playwright_available,
     update_coupon_usage,
     _create_chrome_driver,
+    _apply_buyme_cf_clearance,
 )
 from flask import session
 from app.tasks import enqueue_coupon_status_sync, trigger_multipass_github_action
@@ -1299,6 +1299,7 @@ def submit_buyme_coupon_urls():
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         driver, cleanup_chrome_profile = _create_chrome_driver(chrome_options)
+        _apply_buyme_cf_clearance(driver, print)
 
         for url in urls:
             try:
@@ -3335,6 +3336,11 @@ def edit_coupon(id):
                 if form.xtra_coupon_url.data
                 else None
             )
+            coupon.auto_download_details = (
+                form.auto_download_details.data.strip()
+                if form.auto_download_details.data
+                else None
+            )
 
             if form.tags.data:
                 if isinstance(form.tags.data, str) and form.tags.data:
@@ -3453,6 +3459,7 @@ def edit_coupon(id):
                         coupon.expiration = None
         form.expiration.data = coupon.expiration
         form.tags.data = ", ".join([tag.name for tag in coupon.tags])
+        form.auto_download_details.data = coupon.auto_download_details if coupon.auto_download_details else ""
 
     existing_tags = ", ".join([tag.name for tag in coupon.tags])
     top_tags = Tag.query.order_by(Tag.count.desc()).limit(3).all()
@@ -4758,204 +4765,6 @@ def debug_chrome():
     
     return jsonify(debug_info)
 
-@coupons_bp.route("/update_all_multipass_coupons_playwright", methods=["POST"])
-@login_required
-def update_all_multipass_coupons_playwright():
-    """
-    עדכון אוטומטי של כל הקופונים שיש להם auto_download_details באמצעות Playwright
-    """
-    try:
-        current_app.logger.info(f"Starting update_all_multipass_coupons_playwright for user {current_user.id}")
-        
-        if not current_user.is_admin:
-            return jsonify({"error": "אין הרשאה"}), 403
-
-        # Check if Playwright is available
-        if not is_playwright_available():
-            return jsonify({
-                "error": "Playwright לא זמין. נא להתקין עם: pip install playwright",
-                "success": False
-            }), 500
-
-        # Handle both JSON and form data
-        if request.is_json:
-            data = request.json or {}
-            use_background = data.get('use_background', True)
-        else:
-            # Form data from fetch with FormData
-            use_background = request.form.get('use_background', 'true').lower() == 'true'
-        
-        # Get all coupons that can be updated automatically
-        updatable_coupons = Coupon.query.filter(
-            Coupon.status == "פעיל",
-            Coupon.is_one_time == False,
-            Coupon.auto_download_details.isnot(None)
-        ).all()
-        
-        if not updatable_coupons:
-            return jsonify({
-                'success': True,
-                'message': 'לא נמצאו קופונים לעדכון',
-                'updated_count': 0,
-                'failed_count': 0
-            })
-        
-        # Always use synchronous processing with Playwright for now
-        from app.helpers import get_coupon_data_with_playwright, update_coupon_status
-        from app.models import CouponUsage
-        from datetime import timezone
-        
-        updated_coupons = []
-        failed_coupons = []
-        skipped_coupons = []
-
-        for cpn in updatable_coupons:
-            try:
-                # Check if coupon needs update based on view timestamps
-                from app.helpers import should_update_coupon
-                
-                if not should_update_coupon(cpn):
-                    skipped_coupons.append({
-                        'code': cpn.code,
-                        'company': cpn.company,
-                        'reason': 'לא זקוק לעדכון'
-                    })
-                    current_app.logger.info(f"Skipping coupon {cpn.code} - no update needed")
-                    continue
-                
-                # Update last scraped timestamp
-                from datetime import datetime, timezone
-                cpn.last_scraped = datetime.now(timezone.utc)
-                
-                # Save old usage to compute delta
-                old_usage = float(cpn.used_value or 0)
-                coupon_value = float(cpn.value or 0)
-                df = get_coupon_data_with_playwright(cpn, max_retries=3)  
-                if df is not None:
-                    total_usage = float(df["usage_amount"].sum())
-                    cpn.used_value = total_usage
-                    update_coupon_status(cpn)
-
-                    usage = CouponUsage(
-                        coupon_id=cpn.id,
-                        used_amount=total_usage,
-                        timestamp=datetime.now(timezone.utc),
-                        action="עדכון יומי Playwright",
-                        details="עדכון אוטומטי באמצעות Playwright",
-                    )
-                    db.session.add(usage)
-                    updated_coupons.append({
-                        'code': cpn.code,
-                        'company': cpn.company,
-                        'used_value': total_usage,
-                        'old_usage': old_usage,
-                        'new_usage': total_usage,
-                        'delta': total_usage - old_usage,
-                        'user_id': cpn.user_id,
-                        'coupon_value': coupon_value,
-                        'remaining_value': max(coupon_value - total_usage, 0),
-                    })
-                    current_app.logger.info(f"✅ Updated coupon {cpn.code} with Playwright: {total_usage}")
-                else:
-                    failed_coupons.append({
-                        'code': cpn.code,
-                        'company': cpn.company,
-                        'error': 'לא הוחזר מידע מהאתר'
-                    })
-                    current_app.logger.warning(f"❌ Failed to update coupon {cpn.code} with Playwright: No data")
-            except Exception as e:
-                failed_coupons.append({
-                    'code': cpn.code,
-                    'company': cpn.company,
-                    'error': str(e)
-                })
-                current_app.logger.error(f"💥 Error updating coupon {cpn.code} with Playwright: {e}")
-
-        try:
-            db.session.commit()
-            current_app.logger.info(f"=== Playwright Update Completed ===")
-            current_app.logger.info(f"Updated: {len(updated_coupons)}, Failed: {len(failed_coupons)}, Skipped: {len(skipped_coupons)}")
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Database commit failed: {e}")
-            return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
-
-        # After successful commit, send per-user email summaries for positive deltas
-        try:
-            from flask import render_template
-            from app.helpers import send_email, SENDER_EMAIL, SENDER_NAME
-            from app.models import User
-            from datetime import datetime as dt
-
-            user_updates = {}
-            for item in updated_coupons:
-                delta = float(item.get('delta', 0) or 0)
-                if delta <= 0:
-                    continue
-                uid = item.get('user_id')
-                if not uid:
-                    continue
-                old_usage = float(item.get('old_usage', 0) or 0)
-                new_usage = float(item.get('new_usage', 0) or 0)
-                coupon_value = float(item.get('coupon_value', 0) or 0)
-                remaining_value = float(item.get('remaining_value', 0) or 0)
-                if coupon_value:
-                    remaining_value = max(coupon_value - new_usage, 0)
-                user_updates.setdefault(uid, []).append({
-                    'coupon_code': item.get('code'),
-                    'company': item.get('company'),
-                    'old_usage': old_usage,
-                    'new_usage': new_usage,
-                    'delta': delta,
-                    'remaining_value': remaining_value,
-                    'coupon_value': coupon_value,
-                })
-
-            started = dt.utcnow().isoformat()
-            ended = dt.utcnow().isoformat()
-
-            for uid, items in user_updates.items():
-                try:
-                    user = User.query.get(uid)
-                    if not user or not user.email:
-                        continue
-                    html = render_template(
-                        'emails/coupon_updates_summary.html',
-                        user=user,
-                        items=items,
-                        success_count=len(updated_coupons),
-                        failure_count=len(failed_coupons),
-                        started=started,
-                        ended=ended,
-                    )
-                    subject = 'סיכום עדכון קופונים אוטומטי'
-                    send_email(
-                        sender_email=SENDER_EMAIL,
-                        sender_name=SENDER_NAME,
-                        recipient_email=user.email,
-                        recipient_name=user.first_name,
-                        subject=subject,
-                        html_content=html,
-                    )
-                    current_app.logger.info(f"Playwright summary email sent to user {uid} with {len(items)} items")
-                except Exception as e:
-                    current_app.logger.error(f"Failed sending Playwright summary email to user {uid}: {e}")
-        except Exception as e:
-            current_app.logger.error(f"Playwright summary email dispatch failed: {e}")
-
-        return jsonify({
-            'success': True,
-            'updated_coupons': updated_coupons,
-            'failed_coupons': failed_coupons,
-            'skipped_coupons': skipped_coupons,
-            'updated_count': len(updated_coupons),
-            'failed_count': len(failed_coupons),
-            'skipped_count': len(skipped_coupons),
-            'message': f'עודכנו {len(updated_coupons)} קופונים, דולגו {len(skipped_coupons)} קופונים (Playwright)'
-        })
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"שגיאה בשמירה: {str(e)}"}), 500
 
 @coupons_bp.route("/update_all_multipass_coupons", methods=["POST"])
 @login_required

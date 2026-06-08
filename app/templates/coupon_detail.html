@@ -811,22 +811,29 @@
         const tabContents = document.querySelectorAll('.tab-content');
 
         tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const tabId = button.getAttribute('data-tab');
-
-                // הסרת האקטיב מכל הטאבים
+            button.addEventListener('click', function() {
+                // Remove active class from all tabs
                 tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    content.classList.add('fade-out');
+                });
 
-                // הוספת אקטיב לטאב הנבחר
-                button.classList.add('active');
-                document.getElementById(tabId).classList.add('active');
+                // Add active class to clicked tab
+                this.classList.add('active');
+                const tabId = this.getAttribute('data-tab');
+                const activeTab = document.getElementById(tabId);
 
-                // אנימציה לכניסת התוכן
-                document.getElementById(tabId).classList.add('fade-in');
+                // Fade in the active tab
                 setTimeout(() => {
-                    document.getElementById(tabId).classList.remove('fade-in');
-                }, 500);
+                    activeTab.classList.remove('fade-out');
+                    activeTab.classList.add('active', 'fade-in');
+                }, 150);
+
+                // Remove animation classes after transition
+                setTimeout(() => {
+                    activeTab.classList.remove('fade-in');
+                }, 300);
             });
         });
 
@@ -1576,15 +1583,6 @@
         padding: 10px;
     }
 
-    .tab-content {
-        display: none;
-        animation: fadeIn 0.5s ease forwards;
-    }
-
-    .tab-content.active {
-        display: block;
-    }
-
     /* ===== מידע ===== */
     .info-grid {
         display: grid;
@@ -1829,14 +1827,10 @@
         padding: 20px;
         border: 1px solid var(--light-gray);
         border-radius: 15px;
-        /* Increase this value for more rounded corners */
         margin: -1px auto;
-        /* מרכז את האלמנט אופקית */
         text-align: center;
         width: 90%;
-        /* Set a wider width (adjust as needed) */
         max-width: 800px;
-        /* Optional: limit the maximum width */
     }
 
     .tab-content.active {
@@ -1844,6 +1838,15 @@
         opacity: 1;
         pointer-events: auto;
         transform: translateY(0);
+    }
+
+    .tab-content.fade-in {
+        animation: fadeIn 0.3s forwards;
+    }
+
+    .tab-content.fade-out {
+        opacity: 0;
+        transform: translateY(20px);
     }
 
     .usage-history-title {

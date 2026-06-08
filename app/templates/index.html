@@ -509,9 +509,6 @@
     <button type="button" class="action-button small-button multipass-update-button" onclick="startMultipassUpdate()">
       <i class="fa fa-refresh"></i> עדכן קופונים (Selenium)
     </button>
-    <button type="button" class="action-button small-button playwright-update-button" onclick="startPlaywrightUpdate()">
-      <i class="fa fa-magic"></i> עדכן קופונים (Playwright)
-    </button>
 </div>
 {% endif %}
 
@@ -2934,110 +2931,7 @@ function startMultipassUpdate() {
     }
 }
 
-// Playwright Update Functions
-function startPlaywrightUpdate() {
-    const modal = document.getElementById('multipassProgressModal');
-    if (modal) {
-        // Update modal title to indicate Playwright
-        const modalTitle = modal.querySelector('h3');
-        if (modalTitle) {
-            modalTitle.textContent = 'עדכון קופונים באמצעות Playwright';
-        }
-        
-        modal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-        
-        // Start the Playwright update process
-        updateAllPlaywrightCoupons();
-    }
-}
-
-async function updateAllPlaywrightCoupons() {
-    try {
-        // Use the correct modal elements
-        const progressTitle = document.getElementById('progressTitle');
-        const currentCouponDisplay = document.getElementById('currentCouponDisplay');
-        const progressStats = document.getElementById('progressStats');
-        const successCount = document.getElementById('successCount');
-        const failureCount = document.getElementById('failureCount');
-        const updateResults = document.getElementById('updateResults');
-        const closeButtonContainer = document.getElementById('closeButtonContainer');
-        
-        if (!progressTitle) {
-            console.error('Modal elements not found. Modal might not be open.');
-            alert('שגיאה: לא נמצאו אלמנטי המודל. אנא נסה שוב.');
-            return;
-        }
-        
-        // Initialize display
-        progressTitle.textContent = 'מתחיל עדכון באמצעות Playwright...';
-        if (currentCouponDisplay) currentCouponDisplay.textContent = 'מכין נתונים...';
-        if (updateResults) updateResults.style.display = 'none';
-        if (closeButtonContainer) closeButtonContainer.style.display = 'none';
-        
-        // Create FormData for CSRF protection
-        const formData = new FormData();
-        formData.append('csrf_token', '{{ csrf_token() }}');
-        formData.append('use_background', 'false'); // Use sync for now to avoid errors
-
-        const response = await fetch('/update_all_multipass_coupons_playwright', {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            // Update progress title
-            progressTitle.textContent = 'עדכון הושלם בהצלחה!';
-            if (currentCouponDisplay) currentCouponDisplay.textContent = `${data.updated_count} עודכנו, ${data.failed_count} נכשלו`;
-            
-            // Show results
-            if (updateResults) updateResults.style.display = 'block';
-            if (successCount) successCount.textContent = data.updated_count;
-            if (failureCount) failureCount.textContent = data.failed_count;
-            
-            // Update progress stats
-            if (progressStats) {
-                const total = data.updated_count + data.failed_count;
-                progressStats.textContent = `${total} מתוך ${total} קופונים`;
-            }
-            
-            // Show close button
-            if (closeButtonContainer) closeButtonContainer.style.display = 'block';
-            
-            // Log detailed results to console
-            if (data.updated_coupons && data.updated_coupons.length > 0) {
-                console.log('קופונים שעודכנו:', data.updated_coupons);
-            }
-            if (data.failed_coupons && data.failed_coupons.length > 0) {
-                console.log('קופונים שנכשלו:', data.failed_coupons);
-            }
-            
-        } else {
-            progressTitle.textContent = `שגיאה: ${data.error}`;
-            if (currentCouponDisplay) currentCouponDisplay.textContent = 'העדכון נכשל';
-            if (closeButtonContainer) closeButtonContainer.style.display = 'block';
-        }
-    } catch (error) {
-        const progressTitle = document.getElementById('progressTitle');
-        const currentCouponDisplay = document.getElementById('currentCouponDisplay');
-        const closeButtonContainer = document.getElementById('closeButtonContainer');
-        
-        if (progressTitle) {
-            progressTitle.textContent = `שגיאה בתקשורת: ${error.message}`;
-        }
-        if (currentCouponDisplay) {
-            currentCouponDisplay.textContent = 'שגיאה בתקשורת';
-        }
-        if (closeButtonContainer) {
-            closeButtonContainer.style.display = 'block';
-        }
-        
-        console.error('Error updating coupons with Playwright:', error);
-        alert(`שגיאה בתקשורת: ${error.message}`);
-    }
-}
+// Playwright Update Functions removed
 
 function closeMultipassProgressModal() {
     const modal = document.getElementById('multipassProgressModal');
