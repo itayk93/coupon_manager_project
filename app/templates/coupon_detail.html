@@ -1046,12 +1046,12 @@
                             }
                         }, 150);
                     } else {
-                        alert('שגיאה ביצירת קישור השיתוף');
+                        window.showRtlModalAlert('שגיאה ביצירת קישור השיתוף');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('שגיאה ביצירת קישור השיתוף');
+                    window.showRtlModalAlert('שגיאה ביצירת קישור השיתוף');
                 });
         };
 
@@ -1083,15 +1083,15 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('השיתוף בוטל בהצלחה');
+                            window.showRtlModalAlert('השיתוף בוטל בהצלחה');
                             location.reload(); // Refresh to update the sharing display
                         } else {
-                            alert('שגיאה בביטול השיתוף');
+                            window.showRtlModalAlert('שגיאה בביטול השיתוף');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('שגיאה בביטול השיתוף');
+                        window.showRtlModalAlert('שגיאה בביטול השיתוף');
                     });
             }
         };
@@ -1175,10 +1175,10 @@
 
                 } catch (error) {
                     console.error('Error downloading QR code:', error);
-                    alert('שגיאה בהורדת QR Code');
+                    window.showRtlModalAlert('שגיאה בהורדת QR Code');
                 }
             } else {
-                alert('QR Code לא זמין להורדה');
+                window.showRtlModalAlert('QR Code לא זמין להורדה');
             }
         };
 

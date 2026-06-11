@@ -320,14 +320,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         document.querySelectorAll('.notification-card').forEach(function(card) {
                             card.remove();
                         });
-                        alert(`ההתראות הוסתרו בהצלחה (${data.deleted} התראות).`);
+                        window.showRtlModalAlert(`ההתראות הוסתרו בהצלחה (${data.deleted} התראות).`);
                     } else {
-                        alert('אירעה שגיאה בהסתרת ההתראות: ' + data.message);
+                        window.showRtlModalAlert('אירעה שגיאה בהסתרת ההתראות: ' + data.message);
                     }
                 })
                 .catch(error => {
                     console.error('Error hiding all notifications:', error);
-                    alert('אירעה שגיאה בהסתרת ההתראות.');
+                    window.showRtlModalAlert('אירעה שגיאה בהסתרת ההתראות.');
                 });
             });
         }

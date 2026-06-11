@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const phoneValue = phoneField.value.trim();
         const phonePattern = /^0\d{2}-\d{7}$/;
         if (!phonePattern.test(phoneValue)) {
-            alert('מספר הטלפון חייב להיות בפורמט 0xx-xxxxxxx');
+            window.showRtlModalAlert('מספר הטלפון חייב להיות בפורמט 0xx-xxxxxxx');
             event.preventDefault();
         }
     });

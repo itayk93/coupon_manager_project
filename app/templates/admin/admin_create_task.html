@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!taskName || !taskType || !scheduleType) {
             e.preventDefault();
-            alert('נא למלא את כל השדות הנדרשים');
+            window.showRtlModalAlert('נא למלא את כל השדות הנדרשים');
             return;
         }
         
@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const specificDate = document.getElementById('specific_date').value;
             if (!specificDate) {
                 e.preventDefault();
-                alert('נא לבחור תאריך עבור המשימה');
+                window.showRtlModalAlert('נא לבחור תאריך עבור המשימה');
                 return;
             }
             
@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (selectedDate < today) {
                 e.preventDefault();
-                alert('לא ניתן לבחור תאריך בעבר');
+                window.showRtlModalAlert('לא ניתן לבחור תאריך בעבר');
                 return;
             }
         }

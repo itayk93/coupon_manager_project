@@ -910,14 +910,14 @@
       // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
       if (!validTypes.includes(file.type)) {
-        alert('אנא בחר קובץ תמונה תקין (PNG, JPG, JPEG, WebP)');
+        window.showRtlModalAlert('אנא בחר קובץ תמונה תקין (PNG, JPG, JPEG, WebP)');
         input.value = '';
         return;
       }
 
       // Validate file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('גודל הקובץ חייב להיות פחות מ-5MB');
+        window.showRtlModalAlert('גודל הקובץ חייב להיות פחות מ-5MB');
         input.value = '';
         return;
       }
@@ -942,7 +942,7 @@
     const fileInput = document.getElementById('logoFile');
     if (!fileInput.files[0]) {
       e.preventDefault();
-      alert('אנא בחר קובץ תמונה');
+      window.showRtlModalAlert('אנא בחר קובץ תמונה');
       return;
     }
 

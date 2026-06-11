@@ -243,7 +243,7 @@ document.getElementById('bulkUpdateForm').addEventListener('submit', function(e)
     
     if (selectedCount === 0) {
         e.preventDefault();
-        alert('נא לבחור לפחות קופון אחד');
+        window.showRtlModalAlert('נא לבחור לפחות קופון אחד');
         return;
     }
     

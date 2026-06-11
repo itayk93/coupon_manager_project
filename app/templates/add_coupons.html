@@ -631,7 +631,7 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    alert('🔥 DEBUG: השינויים של Claude נטענו בהצלחה! 🔥');
+    window.showRtlModalAlert('🔥 DEBUG: השינויים של Claude נטענו בהצלחה! 🔥');
     console.log('✅ DOMContentLoaded event fired - JavaScript is running!');
     
     // Toggle instructions panel
@@ -1320,7 +1320,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const fieldsets = document.querySelectorAll('.coupon-fieldset');
             if (fieldsets.length === 0) {
                 e.preventDefault();
-                alert('אין קופונים להוספה. אנא הוסף לפחות קופון אחד.');
+                window.showRtlModalAlert('אין קופונים להוספה. אנא הוסף לפחות קופון אחד.');
                 return;
             }
             
@@ -1372,7 +1372,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (hasErrors) {
                 e.preventDefault();
-                alert('חלק מהשדות הנדרשים חסרים. אנא ודא שכל הקופונים מכילים: חברה, קוד קופון, ערך קופון ועלות.');
+                window.showRtlModalAlert('חלק מהשדות הנדרשים חסרים. אנא ודא שכל הקופונים מכילים: חברה, קוד קופון, ערך קופון ועלות.');
                 return;
             }
 
@@ -1432,7 +1432,7 @@ if (submitUrlsButton) {
         const rawText = textarea.value.trim();
     
         if (!rawText) {
-            alert("לא הוזנו קישורים.");
+            window.showRtlModalAlert("לא הוזנו קישורים.");
             return;
         }
     
@@ -1444,7 +1444,7 @@ if (submitUrlsButton) {
         // Get CSRF Token from <meta>
         const csrfTokenElement = document.querySelector('meta[name="csrf-token"]');
         if (!csrfTokenElement) {
-            alert("CSRF token לא נמצא בעמוד.");
+            window.showRtlModalAlert("CSRF token לא נמצא בעמוד.");
             return;
         }
         const csrfToken = csrfTokenElement.getAttribute('content');
@@ -1577,14 +1577,14 @@ if (submitUrlsButton) {
                         successMsg += `\n(${data.failed_coupons.length} קופונים נכשלו בהוספה)`;
                     }
                     
-                    alert(successMsg);
+                    window.showRtlModalAlert(successMsg);
                     // Redirect to show coupons page
                     window.location.href = '/show_coupons';
                 } else if (data.failed_coupons && data.failed_coupons.length > 0) {
-                    alert(`לא נוספו קופונים. ${data.failed_coupons.length} קופונים נכשלו בהוספה.`);
+                    window.showRtlModalAlert(`לא נוספו קופונים. ${data.failed_coupons.length} קופונים נכשלו בהוספה.`);
                     console.error("Failed coupons:", data.failed_coupons);
                 } else {
-                    alert("לא נוספו קופונים. נא לבדוק את הקישורים ולנסות שוב.");
+                    window.showRtlModalAlert("לא נוספו קופונים. נא לבדוק את הקישורים ולנסות שוב.");
                 }
             } else {
                 // Handle error response
@@ -1595,11 +1595,11 @@ if (submitUrlsButton) {
                 } else if (contentType && contentType.includes("text/html")) {
                     errorMsg = "שגיאת שרת. נא לבדוק את הלוגים.";
                 }
-                alert(errorMsg);
+                window.showRtlModalAlert(errorMsg);
             }
         } catch (error) {
             console.error("Error:", error);
-            alert("שגיאה בעיבוד הקישורים: " + error.message);
+            window.showRtlModalAlert("שגיאה בעיבוד הקישורים: " + error.message);
         } finally {
             // Restore button
             submitButton.textContent = originalText;
@@ -1616,7 +1616,7 @@ if (submitXgiftcardUrlsButton) {
         const rawText = textarea.value.trim();
     
         if (!rawText) {
-            alert('אנא הזן לפחות URL אחד.');
+            window.showRtlModalAlert('אנא הזן לפחות URL אחד.');
             return;
         }
     
@@ -1626,7 +1626,7 @@ if (submitXgiftcardUrlsButton) {
             .filter(url => url.length > 0);
     
         if (urls.length === 0) {
-            alert('לא נמצאו URLs תקינים.');
+            window.showRtlModalAlert('לא נמצאו URLs תקינים.');
             return;
         }
     
@@ -1680,10 +1680,10 @@ if (submitXgiftcardUrlsButton) {
                     if (data.failed_coupons && data.failed_coupons.length > 0) {
                         successMsg += `\n(${data.failed_coupons.length} קופונים נכשלו בהוספה)`;
                     }
-                    alert(successMsg);
+                    window.showRtlModalAlert(successMsg);
                     location.reload(); // Refresh to show the new coupons
                 } else if (data.message) {
-                    alert(data.message);
+                    window.showRtlModalAlert(data.message);
                 }
             } else {
                 // Handle error response
@@ -1694,11 +1694,11 @@ if (submitXgiftcardUrlsButton) {
                 } else if (contentType && contentType.includes("text/html")) {
                     errorMsg = "שגיאת שרת. נא לבדוק את הלוגים.";
                 }
-                alert(errorMsg);
+                window.showRtlModalAlert(errorMsg);
             }
         } catch (error) {
             console.error("Error:", error);
-            alert("שגיאה בעיבוד קישורי Xgiftcard: " + error.message);
+            window.showRtlModalAlert("שגיאה בעיבוד קישורי Xgiftcard: " + error.message);
         } finally {
             // Restore button
             submitButton.textContent = originalText;

@@ -994,7 +994,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (response.ok) {
                 form.closest(".admin-flash-message").remove();
             } else {
-                alert("שגיאה בעת סגירת ההודעה");
+                window.showRtlModalAlert("שגיאה בעת סגירת ההודעה");
             }
         });
     });

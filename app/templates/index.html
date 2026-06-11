@@ -2339,7 +2339,7 @@ document.addEventListener("DOMContentLoaded", function() {
               if (response.ok) {
                   form.closest(".admin-flash-message").remove();
               } else {
-                  alert("שגיאה בעת סגירת ההודעה");
+                  window.showRtlModalAlert("שגיאה בעת סגירת ההודעה");
               }
           });
       });
@@ -2429,7 +2429,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const statsData = document.getElementById('stats-data');
             if (!statsData) {
               console.error('Error: stats-data element not found');
-              alert('שגיאה בטעינת נתוני הסטטיסטיקות. אנא רענן את הדף ונסה שוב.');
+              window.showRtlModalAlert('שגיאה בטעינת נתוני הסטטיסטיקות. אנא רענן את הדף ונסה שוב.');
               return;
             }
             const companiesStats = JSON.parse(statsData.getAttribute('data-companies-stats'));
@@ -2455,13 +2455,13 @@ document.addEventListener("DOMContentLoaded", function() {
               });
             } else {
               console.error('Error: renderSavingsCharts function not found after script execution');
-              alert('שגיאה באתחול נתוני הסטטיסטיקות. אנא רענן את הדף ונסה שוב.');
+              window.showRtlModalAlert('שגיאה באתחול נתוני הסטטיסטיקות. אנא רענן את הדף ונסה שוב.');
             }
           }, 50);  // # Short delay to ensure scripts are loaded
         })
         .catch(error => {
           console.error('Error loading stats modal:', error);
-          alert('שגיאה בטעינת חלון הסטטיסטיקות. אנא נסה שוב מאוחר יותר.');
+          window.showRtlModalAlert('שגיאה בטעינת חלון הסטטיסטיקות. אנא נסה שוב מאוחר יותר.');
         });
     }
     

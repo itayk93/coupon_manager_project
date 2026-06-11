@@ -672,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 modal.style.display = 'none';
                 urlTextArea.value = '';
             } else {
-                alert("אנא הזן לפחות URL אחד.");
+                window.showRtlModalAlert("אנא הזן לפחות URL אחד.");
             }
         });
     }
@@ -733,7 +733,7 @@ document.getElementById('submitUrls').addEventListener('click', async function (
     const rawText = textarea.value.trim();
 
     if (!rawText) {
-        alert("לא הוזנו קישורים.");
+        window.showRtlModalAlert("לא הוזנו קישורים.");
         return;
     }
 
@@ -745,7 +745,7 @@ document.getElementById('submitUrls').addEventListener('click', async function (
     // קבלת ה־CSRF Token מה־<meta>
     const csrfTokenElement = document.querySelector('meta[name="csrf-token"]');
     if (!csrfTokenElement) {
-        alert("CSRF token לא נמצא בעמוד.");
+        window.showRtlModalAlert("CSRF token לא נמצא בעמוד.");
         return;
     }
     const csrfToken = csrfTokenElement.getAttribute('content');
@@ -784,11 +784,11 @@ document.getElementById('submitUrls').addEventListener('click', async function (
                 errorText = await response.text();
             }
 
-            alert("שגיאה מהשרת:\n" + errorText);
+            window.showRtlModalAlert("שגיאה מהשרת:\n" + errorText);
         }
     } catch (error) {
         console.error("שגיאה כללית:", error);
-        alert("שגיאה כללית בעת שליחת הקישורים.");
+        window.showRtlModalAlert("שגיאה כללית בעת שליחת הקישורים.");
     }
 });
 

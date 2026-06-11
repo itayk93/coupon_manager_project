@@ -37,6 +37,7 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Coupon Master">
 
+    <script src="{{ url_for('static', filename='js/rtl_modal_alert.js') }}"></script>
     {% if ga_tracking_id %}
     <script>
         // בודק אם המשתמש אישר עוגיות
@@ -698,13 +699,13 @@
                     document.getElementById('cookie-consent').style.display = 'none';
                 } else {
                     response.json().then(data => {
-                        alert(data.error || "שגיאה בשליחת ההעדפה לשרת");
+                        window.showRtlModalAlert(data.error || "שגיאה בשליחת ההעדפה לשרת");
                     });
                 }
             })
             .catch(error => {
                 console.error("Fetch error:", error);
-                alert("שגיאה בלתי צפויה בעת שליחת ההעדפה לשרת");
+                window.showRtlModalAlert("שגיאה בלתי צפויה בעת שליחת ההעדפה לשרת");
             });
         }
 

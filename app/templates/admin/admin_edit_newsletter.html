@@ -706,14 +706,14 @@ function previewNewsletterImage(input) {
     if (file) {
         // בדיקת סוג הקובץ
         if (!file.type.startsWith('image/')) {
-            alert('יש לבחור קובץ תמונה בלבד');
+            window.showRtlModalAlert('יש לבחור קובץ תמונה בלבד');
             input.value = '';
             return;
         }
         
         // בדיקת גודל הקובץ (מקסימום 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('גודל הקובץ חייב להיות קטן מ-5MB');
+            window.showRtlModalAlert('גודל הקובץ חייב להיות קטן מ-5MB');
             input.value = '';
             return;
         }
@@ -746,14 +746,14 @@ function previewCustomNewsletterImage(input) {
     if (file) {
         // בדיקת סוג הקובץ
         if (!file.type.startsWith('image/')) {
-            alert('יש לבחור קובץ תמונה בלבד');
+            window.showRtlModalAlert('יש לבחור קובץ תמונה בלבד');
             input.value = '';
             return;
         }
         
         // בדיקת גודל הקובץ (מקסימום 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('גודל הקובץ חייב להיות קטן מ-5MB');
+            window.showRtlModalAlert('גודל הקובץ חייב להיות קטן מ-5MB');
             input.value = '';
             return;
         }

@@ -461,13 +461,13 @@
                         if (typeof showFlashMessage === 'function') {
                             showFlashMessage(data.message, 'success');
                         } else {
-                            alert(data.message);
+                            window.showRtlModalAlert(data.message);
                         }
                     } else {
                         if (typeof showFlashMessage === 'function') {
                             showFlashMessage(data.message || 'Error occurred while updating usages', 'error');
                         } else {
-                            alert(data.message || 'Error occurred while updating usages');
+                            window.showRtlModalAlert(data.message || 'Error occurred while updating usages');
                         }
                     }
                 })
@@ -476,7 +476,7 @@
                     if (typeof showFlashMessage === 'function') {
                         showFlashMessage('Error occurred while submitting the form', 'error');
                     } else {
-                        alert('Error occurred while submitting the form');
+                        window.showRtlModalAlert('Error occurred while submitting the form');
                     }
                 });
             });

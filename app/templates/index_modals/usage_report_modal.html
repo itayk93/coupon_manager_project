@@ -809,7 +809,7 @@
                                 if (typeof showFlashMessage === 'function') {
                                     showFlashMessage(data.message || 'הדיווח נשלח בהצלחה', 'success');
                                 } else {
-                                    alert(data.message || 'הדיווח נשלח בהצלחה');
+                                    window.showRtlModalAlert(data.message || 'הדיווח נשלח בהצלחה');
                                 }
                                 
                                 // Reset the form
@@ -820,7 +820,7 @@
                             if (typeof showFlashMessage === 'function') {
                                 showFlashMessage(data.message || 'אירעה שגיאה בשליחת הדיווח', 'error');
                             } else {
-                                alert(data.message || 'אירעה שגיאה בשליחת הדיווח');
+                                window.showRtlModalAlert(data.message || 'אירעה שגיאה בשליחת הדיווח');
                             }
                         }
                     })
@@ -834,7 +834,7 @@
                         if (typeof showFlashMessage === 'function') {
                             showFlashMessage('אירעה שגיאה בשליחת הדיווח', 'error');
                         } else {
-                            alert('אירעה שגיאה בשליחת הדיווח');
+                            window.showRtlModalAlert('אירעה שגיאה בשליחת הדיווח');
                         }
                     });
                 });
@@ -883,7 +883,7 @@
                 if (typeof showFlashMessage === 'function') {
                     showFlashMessage('אירעה שגיאה בטעינת המודל', 'error');
                 } else {
-                    alert('אירעה שגיאה בטעינת המודל');
+                    window.showRtlModalAlert('אירעה שגיאה בטעינת המודל');
                 }
             });
     }
@@ -914,7 +914,7 @@
             })
             .catch(error => {
                 console.error('Error loading review content:', error);
-                alert('אירעה שגיאה בטעינת תוכן הסקירה');
+                window.showRtlModalAlert('אירעה שגיאה בטעינת תוכן הסקירה');
             });
     }
     

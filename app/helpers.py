@@ -4962,6 +4962,35 @@ def confirm_token(token, expiration=3600):
     return email
 
 
+def _text_has_explicit_expiration(coupon_text):
+    if not coupon_text:
+        return False
+
+    normalized_text = str(coupon_text).lower()
+    expiration_terms = (
+        "תוקף",
+        "תפוג",
+        "יפוג",
+        "בתוקף",
+        "עד לתאריך",
+        "valid",
+        "expires",
+        "expiration",
+        "expiry",
+    )
+    if not any(term in normalized_text for term in expiration_terms):
+        return False
+
+    explicit_date_patterns = (
+        r"\b(?:0?[1-9]|[12]\d|3[01])[./-](?:0?[1-9]|1[0-2])[./-](?:\d{2}|\d{4})\b",
+        r"\b(?:20\d{2})[./-](?:0?[1-9]|1[0-2])[./-](?:0?[1-9]|[12]\d|3[01])\b",
+        r"\b(?:0?[1-9]|1[0-2])/[0-9]{2}\b",
+        r"\b20\d{2}\b",
+        r"\b(?:ינואר|פברואר|מרץ|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)\b",
+    )
+    return any(re.search(pattern, normalized_text) for pattern in explicit_date_patterns)
+
+
 def extract_coupon_detail_sms(coupon_text, companies_list):
     import openai
     import os
@@ -5002,7 +5031,12 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
                         "עלות": {"type": "number"},
                         "חברה": {"type": "string"},
                         "תיאור": {"type": "string"},
-                        "תאריך תפוגה": {"type": "string", "format": "date"},
+                        "תאריך תפוגה": {
+                            "anyOf": [
+                                {"type": "string", "format": "date"},
+                                {"type": "null"},
+                            ]
+                        },
                         "תגיות": {"type": "string"},
                         "סטטוס": {"type": "string", "enum": ["פעיל", "נוצל"]},
                     },
@@ -5048,6 +5082,7 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
     - 'חברה' היא הרשת או הארגון המספק את ההטבה, תוך שימוש בהנחיה שלעיל לגבי רשימת החברות.
     - 'תגיות' כוללות רק מילה אחת רלוונטית, כגון 'מבצע' או 'הנחה'.
     - אם לא מצויין בפועל מילים שאומרות בכמה הקופון נקנה. אז הערך של ״עלות״ צריך להיות 0. אם כתוב לדוגמא: ״קניתי ב88 שקל״, אז הערך של עלות יהיה 88.
+    - 'תאריך תפוגה' חייב להתבסס רק על תאריך או תוקף שמופיעים במפורש בטקסט. אם אין תאריך תפוגה מפורש בטקסט, החזר null. אסור להמציא תאריך ברירת מחדל כמו 31/12/2023 או סוף שנה.
     """
 
     # Call the OpenAI API
@@ -5071,6 +5106,9 @@ def extract_coupon_detail_sms(coupon_text, companies_list):
             coupon_data = json.loads(response_data)
         except json.JSONDecodeError:
             raise ValueError("השגיאה: הפלט שהתקבל אינו בפורמט JSON תקין.")
+
+        if not _text_has_explicit_expiration(coupon_text):
+            coupon_data["תאריך תפוגה"] = None
 
         # Convert the output to DataFrame
         coupon_df = pd.DataFrame([coupon_data])
@@ -6356,4 +6394,3 @@ def get_current_month_year_hebrew():
     now = datetime.datetime.now()
     month_name = months[now.month - 1]
     return f"{month_name} {now.year}"
-

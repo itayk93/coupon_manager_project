@@ -127,13 +127,13 @@ document.addEventListener("DOMContentLoaded", function() {
                         });
                     }
                 } else {
-                    alert(data.message);
+                    window.showRtlModalAlert(data.message);
                 }
             } else {
                 if (typeof showFlashMessage === 'function') {
                     showFlashMessage(data.message || 'אירעה שגיאה בעת עדכון השימושים', 'error');
                 } else {
-                    alert(data.message || 'אירעה שגיאה בעת עדכון השימושים');
+                    window.showRtlModalAlert(data.message || 'אירעה שגיאה בעת עדכון השימושים');
                 }
             }
         })
@@ -142,7 +142,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (typeof showFlashMessage === 'function') {
                 showFlashMessage('אירעה שגיאה בעת שליחת הטופס', 'error');
             } else {
-                alert('אירעה שגיאה בעת שליחת הטופס');
+                window.showRtlModalAlert('אירעה שגיאה בעת שליחת הטופס');
             }
         });
     });

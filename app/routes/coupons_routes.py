@@ -1851,6 +1851,10 @@ def debug_print(message, level="INFO"):
         print(f"[DEBUG-{level}] {message}")
 
 
+def _form_checkbox_is_checked(form_data, field_name):
+    return str(form_data.get(field_name, "")).lower() in {"true", "on", "1", "yes"}
+
+
 @coupons_bp.route("/add_coupon", methods=["GET", "POST"])
 @login_required
 def add_coupon():
@@ -2057,7 +2061,7 @@ def add_coupon():
                 cost = float(request.form.get("cost", 0))
                 description = (request.form.get("description", "") or "").strip()
                 expiration = request.form.get("expiration")
-                is_one_time = request.form.get("is_one_time") == "true"
+                is_one_time = _form_checkbox_is_checked(request.form, "is_one_time")
                 purpose = (
                     request.form.get("purpose", "").strip() if is_one_time else ""
                 ) or None

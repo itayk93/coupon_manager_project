@@ -309,6 +309,24 @@
   </div>
 </div>
 
+<!-- # Feedback Modal -->
+<div class="feedback-modal" id="quickFeedbackModal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="feedback-modal-backdrop" data-feedback-close></div>
+  <div class="feedback-modal-panel" dir="rtl" role="document">
+    <button type="button" class="feedback-modal-close" id="quickFeedbackClose" aria-label="סגור הודעה">×</button>
+    <div class="feedback-modal-content">
+      <div class="feedback-modal-icon" id="quickFeedbackIcon" aria-hidden="true"></div>
+      <div class="feedback-modal-text">
+        <h4 id="quickFeedbackTitle">הודעה</h4>
+        <p id="quickFeedbackMessage"></p>
+      </div>
+    </div>
+    <div class="feedback-modal-actions">
+      <button type="button" class="feedback-modal-button" id="quickFeedbackButton">אישור</button>
+    </div>
+  </div>
+</div>
+
 <style>
   /* # === Base styles and resets === */
   * {
@@ -513,6 +531,135 @@
   
   #quickAddModal .close-modal:active {
     transform: translateY(-50%) scale(0.95);
+  }
+
+  /* # Feedback modal */
+  .feedback-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    direction: rtl;
+  }
+
+  .feedback-modal.open {
+    display: flex;
+  }
+
+  .feedback-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .feedback-modal-panel {
+    position: relative;
+    z-index: 1;
+    width: min(92vw, 520px);
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    padding: 22px 22px 18px;
+    text-align: right;
+  }
+
+  .feedback-modal-close {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .feedback-modal-content {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding-top: 18px;
+  }
+
+  .feedback-modal-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    flex: 0 0 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .feedback-modal-icon.success {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  .feedback-modal-icon.error {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .feedback-modal-icon.info {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .feedback-modal-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .feedback-modal-text h4 {
+    margin: 0 0 8px;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .feedback-modal-text p {
+    margin: 0;
+    color: #374151;
+    font-size: 16px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .feedback-modal-actions {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 20px;
+  }
+
+  .feedback-modal-button {
+    min-width: 110px;
+    height: 44px;
+    border: 0;
+    border-radius: 999px;
+    background: #1d4ed8;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0 18px;
+  }
+
+  .feedback-modal-button:hover {
+    background: #1e40af;
   }
   
   #quickAddModal .modal-body {
@@ -1495,6 +1642,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const straussUrlInput = document.getElementById('strauss_url');
   const submitStraussButton = document.getElementById('submit_strauss_url');
   const straussUrlGroup = document.getElementById('strauss_url_group');
+  const feedbackModal = document.getElementById('quickFeedbackModal');
+  const feedbackCloseButton = document.getElementById('quickFeedbackClose');
+  const feedbackButton = document.getElementById('quickFeedbackButton');
+  const feedbackIcon = document.getElementById('quickFeedbackIcon');
+  const feedbackTitle = document.getElementById('quickFeedbackTitle');
+  const feedbackMessage = document.getElementById('quickFeedbackMessage');
+  let feedbackCloseTimer = null;
+  let feedbackOnClose = null;
   
   // # Navigation buttons
   const prevButtons = document.querySelectorAll('#quickAddModal .prev-button');
@@ -1502,6 +1657,66 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // # Current step tracking
   let currentStep = 1;
+
+  function hideFeedbackModal() {
+    if (!feedbackModal) return;
+    feedbackModal.classList.remove('open');
+    feedbackModal.setAttribute('aria-hidden', 'true');
+    if (feedbackCloseTimer) {
+      clearTimeout(feedbackCloseTimer);
+      feedbackCloseTimer = null;
+    }
+    const onClose = feedbackOnClose;
+    feedbackOnClose = null;
+    if (typeof onClose === 'function') {
+      onClose();
+    }
+  }
+
+  function showFeedbackModal(message, options = {}) {
+    if (!feedbackModal || !feedbackMessage || !feedbackTitle || !feedbackButton || !feedbackIcon) {
+      return;
+    }
+
+    const type = options.type || 'info';
+    const title = options.title || (type === 'success' ? 'הצלחה' : type === 'error' ? 'שגיאה' : 'הודעה');
+    const buttonLabel = options.buttonLabel || 'אישור';
+
+    feedbackTitle.textContent = title;
+    feedbackMessage.textContent = message || '';
+    feedbackButton.textContent = buttonLabel;
+    feedbackIcon.className = `feedback-modal-icon ${type}`;
+    feedbackIcon.textContent = type === 'success' ? '✓' : type === 'error' ? '!' : 'i';
+    feedbackOnClose = typeof options.onClose === 'function' ? options.onClose : null;
+
+    feedbackModal.classList.add('open');
+    feedbackModal.setAttribute('aria-hidden', 'false');
+
+    if (feedbackCloseTimer) {
+      clearTimeout(feedbackCloseTimer);
+      feedbackCloseTimer = null;
+    }
+
+    if (options.autoCloseMs) {
+      feedbackCloseTimer = setTimeout(() => {
+        hideFeedbackModal();
+      }, options.autoCloseMs);
+    }
+  }
+
+  if (feedbackCloseButton) {
+    feedbackCloseButton.addEventListener('click', hideFeedbackModal);
+  }
+  if (feedbackButton) {
+    feedbackButton.addEventListener('click', hideFeedbackModal);
+  }
+  if (feedbackModal) {
+    feedbackModal.addEventListener('click', function(event) {
+      if (event.target && event.target.matches('[data-feedback-close]')) {
+        hideFeedbackModal();
+      }
+    });
+  }
   
   // # Function to navigate to a specific step
   function goToStep(step) {
@@ -1572,11 +1787,11 @@ document.addEventListener('DOMContentLoaded', function() {
       case 1:
         // # Company selection validation
         if (!companySelect || companySelect.value === '') {
-          alert('יש לבחור חברה');
+          showFeedbackModal('יש לבחור חברה', { type: 'error' });
           return false;
         }
         if (companySelect.value === 'other' && (!otherCompanyInput || otherCompanyInput.value.trim() === '')) {
-          alert('יש להזין שם חברה חדשה');
+          showFeedbackModal('יש להזין שם חברה חדשה', { type: 'error' });
           return false;
         }
         if (companySelect.value === '54' && buymeCouponLinkInput && buymeCouponLinkInput.value.trim() === '') {
@@ -1590,7 +1805,7 @@ document.addEventListener('DOMContentLoaded', function() {
       case 2:
         // # Coupon code, cost, value and discount validation
         if (!codeInput || codeInput.value.trim() === '') {
-          alert('יש להזין קוד קופון');
+          showFeedbackModal('יש להזין קוד קופון', { type: 'error' });
           return false;
         }
         
@@ -1605,7 +1820,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (discount !== null && discount > 0 && discount <= 100) filledCount++;
         
         if (filledCount < 2) {
-          alert('יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה');
+          showFeedbackModal('יש למלא לפחות שניים מהשדות: מחיר קופון, ערך קופון, אחוז הנחה', { type: 'error' });
           return false;
         }
         return true;
@@ -1629,7 +1844,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // # Card info validation
         if (includeCardInfoCheckbox && includeCardInfoCheckbox.checked && cardExpInput && cardExpInput.value) {
           if (!/^\d{2}\/\d{2}$/.test(cardExpInput.value)) {
-            alert('יש להזין תוקף כרטיס בפורמט MM/YY');
+            showFeedbackModal('יש להזין תוקף כרטיס בפורמט MM/YY', { type: 'error' });
             return false;
           }
         }
@@ -2318,7 +2533,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Get the SMS text value
       const smsText = smsTextArea?.value || '';
       if (!smsText.trim()) {
-        alert('יש להזין תוכן להודעה');
+        showFeedbackModal('יש להזין תוכן להודעה', { type: 'error' });
         console.error('DEBUG: No SMS text provided');
         return;
       }
@@ -2376,7 +2591,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (data.success) {
           debug(`Coupon detected successfully: ${data.message}`);
-          alert('הקופון זוהה בהצלחה!');
+          showFeedbackModal('הקופון זוהה בהצלחה!', { type: 'success', autoCloseMs: 1100 });
           
           // Populate form fields with the detected data
           if (data.data) {
@@ -2396,7 +2611,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         } else {
           debug(`Error from server: ${data.message || 'Unknown error'}`);
-          alert(data.message || 'שגיאה בזיהוי הקופון. אנא נסה שנית.');
+          showFeedbackModal(data.message || 'שגיאה בזיהוי הקופון. אנא נסה שנית.', { type: 'error' });
         }
       })
       .catch(error => {
@@ -2406,7 +2621,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         debug(`AJAX error: ${error}`);
         console.error('DEBUG: Error during fetch:', error);
-        alert('שגיאה בתקשורת עם השרת. אנא ודא שהשרת פעיל ונסה שנית.');
+        showFeedbackModal('שגיאה בתקשורת עם השרת. אנא ודא שהשרת פעיל ונסה שנית.', { type: 'error' });
       });
     });
     
@@ -2437,14 +2652,14 @@ document.addEventListener('DOMContentLoaded', function() {
           const straussUrl = straussUrlInput.value.trim();
           
           if (!straussUrl) {
-            alert('יש להזין קישור לקופון שטראוס');
+            showFeedbackModal('יש להזין קישור לקופון שטראוס', { type: 'error' });
             straussUrlInput.focus();
             return;
           }
           
           // Validate URL format
           if (!straussUrl.startsWith('https://cc.strauss-group.com/Vouchers/VoucherInfo/')) {
-            alert('קישור לא תקין. יש להזין קישור של קופון שטראוס');
+            showFeedbackModal('קישור לא תקין. יש להזין קישור של קופון שטראוס', { type: 'error' });
             straussUrlInput.focus();
             return;
           }
@@ -2500,7 +2715,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (data.success) {
               debug(`Strauss coupon detected successfully: ${data.message}`);
-              alert('קופון שטראוס זוהה בהצלחה!');
+              showFeedbackModal('קופון שטראוס זוהה בהצלחה!', { type: 'success', autoCloseMs: 1100 });
               
               // Hide URL input field
               straussUrlGroup.style.display = 'none';
@@ -2524,7 +2739,7 @@ document.addEventListener('DOMContentLoaded', function() {
               }
             } else {
               debug(`Error from server: ${data.message || 'Unknown error'}`);
-              alert(data.message || 'שגיאה בזיהוי קופון שטראוס. אנא נסה שנית.');
+              showFeedbackModal(data.message || 'שגיאה בזיהוי קופון שטראוס. אנא נסה שנית.', { type: 'error' });
             }
           })
           .catch(error => {
@@ -2534,7 +2749,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             debug(`AJAX error: ${error}`);
             console.error('DEBUG: Error during Strauss fetch:', error);
-            alert('שגיאה בתקשורת עם השרת. אנא ודא שהשרת פעיל ונסה שנית.');
+            showFeedbackModal('שגיאה בתקשורת עם השרת. אנא ודא שהשרת פעיל ונסה שנית.', { type: 'error' });
             
             // Hide URL input field on error
             straussUrlGroup.style.display = 'none';
@@ -2577,7 +2792,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Validate the form if it's not an SMS submission
       if (!isSmsSubmission && !validateCurrentStep()) {
         console.error('DEBUG: Form validation failed');
-        alert('Please ensure all required fields are filled');
+        showFeedbackModal('יש למלא את כל השדות הנדרשים', { type: 'error' });
         return false;
       }
       
@@ -2673,43 +2888,43 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           } else {
             // Regular coupon submission
-            alert('הקופון נוסף בהצלחה!');
-            
-            // Close modal in parent window
-            closeQuickAddModal();
-            
-            // Dispatch custom event for flash message
-            const flashEvent = new CustomEvent('showFlashMessage', {
-              detail: { message: data.message, type: 'success' }
-            });
-            window.dispatchEvent(flashEvent);
-            
-            // If we're in an iframe, notify the parent
-            if (window.parent && window.parent !== window) {
-              try {
-                window.parent.postMessage({
-                  action: 'couponAdded',
-                  message: data.message
-                }, '*');
-                
-                // Reload the parent page
+            showFeedbackModal('הקופון נוסף בהצלחה!', { type: 'success', autoCloseMs: 1200, onClose: () => {
+              // Close modal in parent window
+              closeQuickAddModal();
+
+              // Dispatch custom event for flash message
+              const flashEvent = new CustomEvent('showFlashMessage', {
+                detail: { message: data.message, type: 'success' }
+              });
+              window.dispatchEvent(flashEvent);
+
+              // If we're in an iframe, notify the parent
+              if (window.parent && window.parent !== window) {
+                try {
+                  window.parent.postMessage({
+                    action: 'couponAdded',
+                    message: data.message
+                  }, '*');
+
+                  // Reload the parent page
+                  setTimeout(() => {
+                    window.parent.location.reload();
+                  }, 1000);
+                } catch (e) {
+                  console.error(`DEBUG: Error posting message to parent: ${e}`);
+                }
+              } else {
+                // If not in iframe, redirect to coupons page
                 setTimeout(() => {
-                  window.parent.location.reload();
+                  window.location.href = '/coupons';
                 }, 1000);
-              } catch (e) {
-                console.error(`DEBUG: Error posting message to parent: ${e}`);
               }
-            } else {
-              // If not in iframe, redirect to coupons page
-              setTimeout(() => {
-                window.location.href = '/coupons';
-              }, 1000);
-            }
+            }});
           }
         } else {
           // Handle submission failure
           console.error(`DEBUG: Server returned error: ${data.message || 'Unknown error'}`);
-          alert(data.message || 'Error adding coupon. Please try again.');
+          showFeedbackModal(data.message || 'שגיאה בהוספת הקופון. נסה שוב.', { type: 'error' });
         }
       })
       .catch(error => {
@@ -2723,7 +2938,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // User-friendly error message
-        alert('An unexpected error occurred. Please check your internet connection and try again.');
+        showFeedbackModal('אירעה שגיאה לא צפויה. בדוק את החיבור לאינטרנט ונסה שוב.', { type: 'error' });
 
         // Optional: Log error details to console
         if (error.response) {
@@ -2738,6 +2953,10 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('keydown', function(event) {
     // # Check if the key is Escape (key='Escape')
     if (event.key === 'Escape') {
+      if (feedbackModal && feedbackModal.classList.contains('open')) {
+        hideFeedbackModal();
+        return;
+      }
       // # Close the modal if it's open
       if (quickAddModal && quickAddModal.classList.contains('active')) {
         closeQuickAddModal();
