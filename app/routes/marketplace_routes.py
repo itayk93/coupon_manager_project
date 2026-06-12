@@ -364,7 +364,7 @@ def review_seller(seller_id):
         # ולידציה בסיסית
         try:
             rating = int(rating_str)
-        except:
+        except Exception:
             flash("עליך לבחור דירוג תקין בין 1 ל-5.", "danger")
             return redirect(request.url)
 

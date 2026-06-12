@@ -11,29 +11,29 @@ itsdangerous==2.2.0
 Jinja2==3.1.4
 MarkupSafe==2.1.5
 Flask-Login==0.6.3
-gunicorn
-email-validator
-openpyxl
+gunicorn==23.0.0
+email-validator==2.2.0
+openpyxl==3.1.2
 psycopg2-binary>=2.9.10
-python-dotenv
+python-dotenv==1.0.1
 sib-api-v3-sdk==7.6.0
 # apscheduler - removed (using external cron jobs)
-cryptography
+cryptography==43.0.3
 pycryptodome>=3.20.0
 fuzzywuzzy==0.18.0
 python-Levenshtein>=0.25.0
 reportlab==4.2.5
 openai==0.28.1
-xlsxwriter
-thefuzz
-plotly
+xlsxwriter==3.2.0
+thefuzz==0.22.1
+plotly==5.20.0
 requests-oauthlib==1.3.1
 Flask==3.0.3
 Werkzeug==3.0.4
 Flask-SQLAlchemy==3.1.1
 flask-dance==7.1.0
-webdriver-manager
-flask_mail
+webdriver-manager==4.0.2
+Flask-Mail==0.10.0
 python-telegram-bot==20.7
 asyncpg>=0.30.0
 pytz==2024.1
@@ -47,3 +47,5 @@ Flask-Caching==2.1.0
 
 # Additional logging and monitoring
 colorlog==6.7.0
+# Local CAPTCHA scraping only (requires a display; not needed on the server):
+# pyautogui

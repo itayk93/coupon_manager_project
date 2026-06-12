@@ -379,7 +379,7 @@ def create_daily_newsletter():
                             else:
                                 continue
                             break
-                        except:
+                        except Exception:
                             continue
                     else:
                         # אם כל התאריכים עברו, נקבע לתאריך הבא

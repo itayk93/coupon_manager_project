@@ -23,9 +23,25 @@ def _get_int_env(name, default):
         return default
 
 
+_IS_PRODUCTION = os.getenv("FLASK_ENV", "").lower() == "production"
+
+
+def _get_required_secret(name, dev_default):
+    """In production a missing secret must fail startup, not fall back silently."""
+    value = os.getenv(name)
+    if value:
+        return value
+    if _IS_PRODUCTION:
+        raise RuntimeError(
+            f"Required environment variable {name} is not set. "
+            "Refusing to start in production with a default secret."
+        )
+    return dev_default
+
+
 class Config:
     TESTING = _get_bool_env("TESTING", False)
-    SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
+    SECRET_KEY = _get_required_secret("SECRET_KEY", "dev_only_secret_key")
     # Modify the database URI to handle SSL properly
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///default.db")
     if DATABASE_URL.startswith('postgresql://'):
@@ -33,15 +49,23 @@ class Config:
         if '?' not in DATABASE_URL:
             DATABASE_URL += '?sslmode=require'
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,
-        "pool_recycle": 280,
-        "pool_size": 10,
-        "max_overflow": 20,
-    }
+    # Pool sizing options are not valid for SQLite's NullPool/StaticPool
+    if DATABASE_URL.startswith("sqlite"):
+        SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_pre_ping": True,
+            "pool_recycle": 280,
+            "pool_size": 10,
+            "max_overflow": 20,
+        }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_ENABLED = True
-    SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "default_salt")
+    # If no explicit salt is configured, derive one from SECRET_KEY (which is
+    # required in production) instead of using a publicly-known default.
+    SECURITY_PASSWORD_SALT = (
+        os.getenv("SECURITY_PASSWORD_SALT") or f"{SECRET_KEY}::password_salt"
+    )
     UPLOAD_FOLDER = "uploads"
     # ALLOWED_EXTENSIONS = {'xlsx'}  # אם תרצה
     # Telegram Bot Configuration
@@ -50,7 +74,8 @@ class Config:
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
     
     # API Configuration
-    CRON_API_TOKEN = os.getenv("CRON_API_TOKEN", "your-secure-api-token-here")
+    # No insecure default: endpoints check for a missing token and reject requests.
+    CRON_API_TOKEN = os.getenv("CRON_API_TOKEN")
     
     # Cache Configuration
     CACHE_TYPE = "SimpleCache" if TESTING else os.getenv("CACHE_TYPE", "RedisCache")
@@ -69,7 +94,10 @@ class Config:
     # Security headers and feature flags
     ENABLE_SECURITY_HEADERS = _get_bool_env("ENABLE_SECURITY_HEADERS", True)
     ENABLE_EXTERNAL_WIDGET = _get_bool_env("ENABLE_EXTERNAL_WIDGET", False)
-    ENABLE_SCHEDULER = _get_bool_env("ENABLE_SCHEDULER", True)
+    # Scheduled tasks moved to external cron jobs; the in-app scheduler is
+    # opt-in only (and guarded by a cross-process lock so it runs in a single
+    # gunicorn worker).
+    ENABLE_SCHEDULER = _get_bool_env("ENABLE_SCHEDULER", False)
     ALLOW_INSECURE_OAUTH_TRANSPORT = _get_bool_env(
         "ALLOW_INSECURE_OAUTH_TRANSPORT", False
     )

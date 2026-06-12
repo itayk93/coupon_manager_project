@@ -280,7 +280,9 @@ class User(UserMixin, db.Model):
         """
         if not self.created_at:
             return 0
-        now_naive = datetime.now().replace(tzinfo=None)
+        # created_at is stored in UTC, so "now" must be UTC too — local server
+        # time would skew the comparison by the timezone offset.
+        now_naive = datetime.utcnow()
         created_at_naive = (
             self.created_at.replace(tzinfo=None)
             if self.created_at.tzinfo

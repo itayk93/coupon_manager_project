@@ -173,13 +173,13 @@ def calculate_monthly_statistics(user_id, month, year):
                 if isinstance(exp_date, str):
                     try:
                         exp_date = datetime.strptime(exp_date, '%Y-%m-%d').date()
-                    except:
+                    except Exception:
                         continue
                 
                 if exp_date.month == next_month and exp_date.year == next_year:
                     expiring_coupons += 1
                     expiring_companies.append(coupon.company)
-    except:
+    except Exception:
         expiring_coupons = 0
         expiring_companies = []
     
@@ -351,13 +351,13 @@ def calculate_all_time_statistics(user_id, year):
                 if isinstance(exp_date, str):
                     try:
                         exp_date = datetime.strptime(exp_date, '%Y-%m-%d').date()
-                    except:
+                    except Exception:
                         continue
                 
                 if exp_date <= next_month_date:
                     expiring_coupons += 1
                     expiring_companies.append(coupon.company)
-    except:
+    except Exception:
         expiring_coupons = 0
         expiring_companies = []
     

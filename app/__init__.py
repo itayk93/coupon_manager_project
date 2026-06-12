@@ -5,9 +5,6 @@ import logging
 from datetime import datetime, timedelta
 from flask import Flask, render_template, url_for, request, Response
 from dotenv import load_dotenv
-from app.routes.coupons_routes import to_israel_time_filter  # Import the function
-from app.helpers import has_feature_access
-
 
 # Import configurations and "extensions"
 from app.config import Config
@@ -15,6 +12,10 @@ from app.extensions import db, login_manager, csrf, migrate, cache
 
 # Example models
 from app.models import User, Coupon
+
+# NOTE: route modules (coupons_routes, helpers) are intentionally imported
+# inside create_app() — importing them at module level creates circular-import
+# fragility because they import from this package in turn.
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -65,6 +66,17 @@ def create_app():
     login_manager.login_view = "auth.login"
     csrf.init_app(app)
     cache.init_app(app)
+
+    # Safety net: a request that died mid-transaction must not leave the
+    # session in a failed state for the next request on the same worker
+    # (PendingRollbackError).
+    @app.teardown_request
+    def rollback_failed_session(exc):
+        if exc is not None:
+            try:
+                db.session.rollback()
+            except Exception:
+                logger.exception("Rollback after failed request raised")
 
     # Configure browser cache headers and baseline security headers
     @app.after_request
@@ -199,7 +211,12 @@ def create_app():
 
     # Run operations with context
     with app.app_context():
-        db.create_all()
+        # Schema is managed by Flask-Migrate (flask db upgrade) in production.
+        # create_all() is kept only for local SQLite development and tests,
+        # where there is no migration step; running it against Postgres would
+        # bypass migrations and cause schema drift.
+        if app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):
+            db.create_all()
 
         # Create uploads folder
         try:
@@ -212,14 +229,12 @@ def create_app():
 
     @app.context_processor
     def utility_processor():
-        def generate_unsubscribe_token(user):
-            """יצירת טוקן לביטול הרשמה"""
-            return str(abs(hash(f"{user.email}{user.id}")))[:10]
+        from app.helpers import has_feature_access
+        from app.utils.tokens import (
+            generate_unsubscribe_token,
+            generate_preferences_token,
+        )
 
-        def generate_preferences_token(user):
-            """יצירת טוקן לעדכון העדפות"""
-            return str(abs(hash(f"{user.email}{user.id}preferences")))[:10]
-            
         return dict(
             has_feature_access=has_feature_access,
             generate_unsubscribe_token=generate_unsubscribe_token,
@@ -232,34 +247,37 @@ def create_app():
 
     # Cron endpoints are machine-to-machine and must not require CSRF tokens.
     # (They are protected via API tokens / secrets instead.)
-    try:
-        from app.routes.coupons_routes import api_update_multipass
-        csrf.exempt(api_update_multipass)
-    except Exception as e:
-        app.logger.warning(f"Could not CSRF-exempt api_update_multipass: {e}")
+    # A failure here must abort startup: silently keeping CSRF on these
+    # endpoints would break the external cron jobs without any visible error.
+    from app.routes.coupons_routes import api_update_multipass
+    csrf.exempt(api_update_multipass)
 
-    try:
-        from app.routes.admin_routes.admin_scheduled_emails_routes import (
-            cron_send_pending_emails,
-            cron_send_expiration_reminders,
-        )
-        csrf.exempt(cron_send_pending_emails)
-        csrf.exempt(cron_send_expiration_reminders)
-    except Exception as e:
-        app.logger.warning(f"Could not CSRF-exempt scheduled-emails cron endpoints: {e}")
+    from app.routes.admin_routes.admin_scheduled_emails_routes import (
+        cron_send_pending_emails,
+        cron_send_expiration_reminders,
+    )
+    csrf.exempt(cron_send_pending_emails)
+    csrf.exempt(cron_send_expiration_reminders)
 
     # עקיפת בדיקת CSRF עבור routes של טלגרם רק אם מוגדר
     if not app.config.get('TELEGRAM_CSRF_PROTECTION', False):
         csrf.exempt(telegram_bp)
 
-    # הפעלת מערכת התזמון
-    if app.config.get("ENABLE_SCHEDULER", True) and not app.config.get("TESTING"):
+    # הפעלת מערכת התזמון (opt-in בלבד; ברירת המחדל היא cron חיצוני).
+    # נעילה בין-תהליכית מבטיחה שרק worker אחד של gunicorn מריץ את ה-scheduler,
+    # אחרת כל משימה הייתה רצה פעם אחת לכל worker (מיילים כפולים וכו').
+    if app.config.get("ENABLE_SCHEDULER", False) and not app.config.get("TESTING"):
         try:
-            from app.scheduler import TaskScheduler
-            scheduler = TaskScheduler(app)
-            scheduler.start()
-            print("✅ Task scheduler started successfully")
+            from app.utils.process_lock import acquire_singleton_lock
+
+            if acquire_singleton_lock("task_scheduler"):
+                from app.scheduler import TaskScheduler
+                scheduler = TaskScheduler(app)
+                scheduler.start()
+                app.logger.info("✅ Task scheduler started successfully")
+            else:
+                app.logger.info("Task scheduler already running in another worker")
         except Exception as e:
-            print(f"❌ Failed to start task scheduler: {e}")
+            app.logger.error(f"❌ Failed to start task scheduler: {e}")
 
     return app

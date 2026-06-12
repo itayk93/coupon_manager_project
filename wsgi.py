@@ -147,12 +147,23 @@ def start_bot_if_enabled():
     )
     
     if enable_bot:
+        # Telegram allows a single getUpdates poller per token. gunicorn runs
+        # several workers that all import this module, so without a
+        # cross-process lock every worker would start its own poller and they
+        # would knock each other out with Conflict errors.
+        from app.utils.process_lock import acquire_singleton_lock
+
+        if not acquire_singleton_lock("telegram_bot"):
+            logger.info("Telegram bot already running in another worker; not starting a second poller")
+            print("Telegram bot already running in another worker; skipping", flush=True)
+            return
+
         logger.info("Bot is enabled, starting Telegram bot in background thread...")
         print("Bot is enabled, starting Telegram bot in background thread...", flush=True)
-        
+
         bot_thread = threading.Thread(target=start_telegram_bot_thread, daemon=True)
         bot_thread.start()
-        
+
         logger.info("Telegram bot thread started successfully")
         print("Telegram bot thread started successfully", flush=True)
     else:

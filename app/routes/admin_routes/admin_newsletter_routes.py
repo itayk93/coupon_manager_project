@@ -10,13 +10,9 @@ import logging
 from datetime import datetime
 
 
-def generate_unsubscribe_token(user):
-    """יצירת טוקן לביטול הרשמה"""
-    return str(abs(hash(f"{user.email}{user.id}")))[:10]
-
-def generate_preferences_token(user):
-    """יצירת טוקן לעדכון העדפות"""
-    return str(abs(hash(f"{user.email}{user.id}preferences")))[:10]
+# Canonical implementations live in app/utils/tokens.py (HMAC-based, stable
+# across processes and restarts). Re-exported here so existing imports keep working.
+from app.utils.tokens import generate_unsubscribe_token, generate_preferences_token
 
 def generate_unsubscribe_link(user):
     """יצירת קישור ביטול הרשמה עבור משתמש"""

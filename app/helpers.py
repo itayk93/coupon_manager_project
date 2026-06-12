@@ -54,6 +54,16 @@ logger = logging.getLogger(__name__)
 
 
 
+
+def _debug_artifact_path(filename):
+    """Directory for CAPTCHA debug artifacts (screenshots/audio).
+    Overridable via CAPTCHA_DEBUG_DIR; defaults to the system temp dir so the
+    code works on any machine, not just the original developer's Mac."""
+    import os, tempfile
+    base = os.getenv("CAPTCHA_DEBUG_DIR") or tempfile.gettempdir()
+    os.makedirs(base, exist_ok=True)
+    return os.path.join(base, filename)
+
 def _find_chrome_binary(debug_print=None):
     possible_chrome_paths = [
         os.getenv("CHROME_BIN"),
@@ -1383,7 +1393,7 @@ def solve_captcha_smart_detection(driver, wait_timeout=120):
                         is_image_captcha = True
                         debug_print(f"Detected IMAGE CAPTCHA with instruction: '{instruction_text}'")
                         break
-            except:
+            except Exception:
                 continue
         
         # חזרה ל-frame הראשי
@@ -1429,7 +1439,7 @@ def solve_captcha_smart_detection(driver, wait_timeout=120):
         debug_print("🔊 Using audio as final fallback")
         try:
             return solve_captcha_with_audio(driver, wait_timeout)
-        except:
+        except Exception:
             return False
 
 
@@ -1507,7 +1517,7 @@ def solve_captcha_challenge_with_image(driver, wait_timeout=120):
             
             # צילום מסך מלא עם הפקודה המובנית של macOS
             debug_print("Taking FULL screen screenshot with macOS screencapture...")
-            real_screenshot_path = f"/Users/itaykarkason/Desktop/captcha_fullscreen_{timestamp}.png"
+            real_screenshot_path = _debug_artifact_path(f"captcha_fullscreen_{timestamp}.png")
             try:
                 # שימוש בפקודת screencapture של macOS - הרבה יותר אמין
                 import subprocess
@@ -1552,7 +1562,7 @@ def solve_captcha_challenge_with_image(driver, wait_timeout=120):
                     instruction_text = instruction_element.text.strip()
                     if instruction_text:
                         break
-                except:
+                except Exception:
                     continue
             
             debug_print(f"CAPTCHA instruction: {instruction_text}")
@@ -1597,7 +1607,7 @@ def solve_captcha_challenge_with_image(driver, wait_timeout=120):
                                     if not submit_button.get_attribute("disabled"):
                                         debug_print("Submit button enabled after SKIP")
                                         return True
-                                except:
+                                except Exception:
                                     pass
                         except Exception as skip_error:
                             debug_print(f"Failed to click SKIP button: {skip_error}")
@@ -1645,7 +1655,7 @@ def solve_captcha_challenge_with_image(driver, wait_timeout=120):
                                 if verify_button and verify_button.is_displayed():
                                     debug_print(f"Found VERIFY button with selector: {selector}")
                                     break
-                            except:
+                            except Exception:
                                 continue
                         
                         if verify_button:
@@ -1674,7 +1684,7 @@ def solve_captcha_challenge_with_image(driver, wait_timeout=120):
                         debug_print(f"VERIFY button click failed: {verify_error}")
                         try:
                             driver.switch_to.default_content()
-                        except:
+                        except Exception:
                             pass
                         return False
                 
@@ -1707,7 +1717,7 @@ def solve_captcha_challenge_with_image(driver, wait_timeout=120):
             debug_print(f"Error handling CAPTCHA iframe: {iframe_error}")
             try:
                 driver.switch_to.default_content()
-            except:
+            except Exception:
                 pass
             return False
             
@@ -1779,7 +1789,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
                     if audio_button and audio_button.is_displayed():
                         debug_print(f"Found audio button with selector: {selector}")
                         break
-                except:
+                except Exception:
                     continue
             
             if not audio_button:
@@ -1809,7 +1819,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
                     if play_button and play_button.is_displayed() and ("PLAY" in play_button.text or play_button.get_attribute("title") == ""):
                         debug_print(f"Found PLAY button with selector: {selector}")
                         break
-                except:
+                except Exception:
                     continue
             
             if not play_button:
@@ -1822,7 +1832,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
             
             # הכנת קובץ להקלטה
             timestamp = int(time.time())
-            audio_file_path = f"/Users/itaykarkason/Desktop/captcha_audio_{timestamp}.wav"
+            audio_file_path = _debug_artifact_path(f"captcha_audio_{timestamp}.wav")
             
             # לחיצה על PLAY
             play_button.click()
@@ -1949,7 +1959,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
                     if input_field and input_field.is_displayed():
                         debug_print(f"Found input field with selector: {selector}")
                         break
-                except:
+                except Exception:
                     continue
             
             if not input_field:
@@ -1978,7 +1988,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
                     if verify_button and verify_button.is_displayed():
                         debug_print(f"Found VERIFY button with selector: {selector}")
                         break
-                except:
+                except Exception:
                     continue
             
             if not verify_button:
@@ -2036,7 +2046,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
                                     if play_button and play_button.is_displayed():
                                         debug_print(f"Found new PLAY button with selector: {selector}")
                                         break
-                                except:
+                                except Exception:
                                     continue
                             
                             if not play_button:
@@ -2046,7 +2056,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
                             
                             # חזרה לתהליך ההקלטה והתמלול
                             timestamp = int(time.time())
-                            audio_file_path = f"/Users/itaykarkason/Desktop/captcha_audio_{timestamp}.wav"
+                            audio_file_path = _debug_artifact_path(f"captcha_audio_{timestamp}.wav")
                             
                             # לחיצה על PLAY החדש
                             play_button.click()
@@ -2132,7 +2142,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
                                                     input_field.send_keys(transcribed_text)
                                                     debug_print(f"Entered additional text: '{transcribed_text}'")
                                                     break
-                                            except:
+                                            except Exception:
                                                 continue
                                         
                                         time.sleep(1)
@@ -2146,7 +2156,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
                                                     verify_button.click()
                                                     debug_print(f"VERIFY button clicked again successfully!")
                                                     break
-                                            except:
+                                            except Exception:
                                                 continue
                                         
                                         time.sleep(3)
@@ -2182,7 +2192,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
                     debug_print(f"Error checking CAPTCHA result: {check_error}")
                     try:
                         driver.switch_to.default_content()
-                    except:
+                    except Exception:
                         pass
                     debug_print("Audio CAPTCHA verification completed (unable to verify)")
                     return True
@@ -2191,7 +2201,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
             debug_print(f"Maximum attempts ({max_attempts}) reached for multiple solutions")
             try:
                 driver.switch_to.default_content()
-            except:
+            except Exception:
                 pass
             return False
         
@@ -2199,7 +2209,7 @@ def solve_captcha_with_audio(driver, wait_timeout=120):
             debug_print(f"Error handling CAPTCHA iframe: {iframe_error}")
             try:
                 driver.switch_to.default_content()
-            except:
+            except Exception:
                 pass
             return False
             
@@ -2262,7 +2272,7 @@ def solve_captcha_with_capsolver(driver, wait_timeout=120, instruction_text=""):
             
             # צילום מסך מלא של הדפדפן
             timestamp = int(time.time())
-            screenshot_path = f"/Users/itaykarkason/Desktop/truecaptcha_screenshot_{timestamp}.png"
+            screenshot_path = _debug_artifact_path(f"truecaptcha_screenshot_{timestamp}.png")
             
             debug_print("Taking CAPTCHA screenshot for TrueCaptcha API...")
             try:
@@ -2349,7 +2359,7 @@ def solve_captcha_with_capsolver(driver, wait_timeout=120, instruction_text=""):
                     with open(screenshot_path, "rb") as image_file:
                         base64_image = base64.b64encode(image_file.read()).decode('utf-8')
                     debug_print(f"Using original image (size: {len(base64_image)} chars)")
-                except:
+                except Exception:
                     debug_print("Failed to read original image")
                     return False
             
@@ -2399,7 +2409,7 @@ def solve_captcha_with_capsolver(driver, wait_timeout=120, instruction_text=""):
                                 if input_field and input_field.is_displayed():
                                     debug_print(f"Found input field with selector: {selector}")
                                     break
-                            except:
+                            except Exception:
                                 continue
                         
                         if input_field:
@@ -2424,7 +2434,7 @@ def solve_captcha_with_capsolver(driver, wait_timeout=120, instruction_text=""):
                                     if verify_button and verify_button.is_displayed():
                                         debug_print(f"Found verify button with selector: {selector}")
                                         break
-                                except:
+                                except Exception:
                                     continue
                             
                             if verify_button:
@@ -2476,7 +2486,7 @@ def solve_captcha_with_capsolver(driver, wait_timeout=120, instruction_text=""):
             debug_print(f"Error handling CAPTCHA iframe: {iframe_error}")
             try:
                 driver.switch_to.default_content()
-            except:
+            except Exception:
                 pass
             return False
             
@@ -2612,7 +2622,7 @@ def solve_captcha_with_capsolver_new(driver, wait_timeout=120, instruction_text=
             screenshot_bytes = captcha_element.screenshot_as_png
             
             # שמירת התמונה המקורית לבדיקה
-            screenshot_path = f"/Users/itaykarkason/Desktop/capsolver_screenshot_{timestamp}.png"
+            screenshot_path = _debug_artifact_path(f"capsolver_screenshot_{timestamp}.png")
             with open(screenshot_path, "wb") as f:
                 f.write(screenshot_bytes)
             debug_print(f"Direct CAPTCHA screenshot saved to: {screenshot_path}")
@@ -2631,7 +2641,7 @@ def solve_captcha_with_capsolver_new(driver, wait_timeout=120, instruction_text=
             img.save(buffer, format='JPEG', quality=90, optimize=True)
             
             # שמירת התמונה העובדת לבדיקה
-            processed_debug_path = f"/Users/itaykarkason/Desktop/capsolver_processed_debug_{timestamp}.png"
+            processed_debug_path = _debug_artifact_path(f"capsolver_processed_debug_{timestamp}.png")
             img.save(processed_debug_path)
             debug_print(f"Processed image saved for debugging: {processed_debug_path}")
             
@@ -2906,7 +2916,7 @@ Return ONLY the code (e.g., /m/0k4j). If unsure, return /m/0k4j.
                 driver.execute_script("arguments[0].value = arguments[1];", textarea_id, g_recaptcha_response)
                 textareas_updated += 1
                 debug_print("✅ Updated textarea by ID")
-            except:
+            except Exception:
                 debug_print("❌ No textarea found by ID")
             
             # חיפוש לפי NAME
@@ -2918,7 +2928,7 @@ Return ONLY the code (e.g., /m/0k4j). If unsure, return /m/0k4j.
                     driver.execute_script("arguments[0].value = arguments[1];", textarea, g_recaptcha_response)
                     textareas_updated += 1
                     debug_print("✅ Updated textarea by NAME")
-                except:
+                except Exception:
                     pass
             
             debug_print(f"📝 Updated {textareas_updated} textarea(s)")
@@ -3012,7 +3022,7 @@ Return ONLY the code (e.g., /m/0k4j). If unsure, return /m/0k4j.
                         button.click()
                         verify_button_clicked = True
                         break
-                except:
+                except Exception:
                     continue
             
             # אם לא נמצא בדף הראשי, חפש בתוך iframe של reCAPTCHA
@@ -3046,7 +3056,7 @@ Return ONLY the code (e.g., /m/0k4j). If unsure, return /m/0k4j.
                                         debug_print("🎯 Verify button clicked successfully!")
                                         verify_button_clicked = True
                                         break
-                                except:
+                                except Exception:
                                     continue
                             
                             # חזרה לדף הראשי
@@ -3059,7 +3069,7 @@ Return ONLY the code (e.g., /m/0k4j). If unsure, return /m/0k4j.
                             debug_print(f"Error checking iframe {i+1}: {str(iframe_error)[:50]}...")
                             try:
                                 driver.switch_to.default_content()
-                            except:
+                            except Exception:
                                 pass
                             continue
                 
@@ -3067,7 +3077,7 @@ Return ONLY the code (e.g., /m/0k4j). If unsure, return /m/0k4j.
                     debug_print(f"Error searching in iframes: {str(e)[:50]}...")
                     try:
                         driver.switch_to.default_content()
-                    except:
+                    except Exception:
                         pass
             
             if verify_button_clicked:
@@ -3085,7 +3095,7 @@ Return ONLY the code (e.g., /m/0k4j). If unsure, return /m/0k4j.
             try:
                 driver.switch_to.default_content()
                 debug_print("✅ Switched back to main page content")
-            except:
+            except Exception:
                 pass
             
             # המתנה עד שכפתור Submit נהיה זמין ולחיצה עליו
@@ -3255,7 +3265,7 @@ Return ONLY the code (e.g., /m/0k4j). If unsure, return /m/0k4j.
                         selected_approach = approach["name"]
                         debug_print(f"Screenshot taken using: {selected_approach}")
                         break
-                except:
+                except Exception:
                     continue
             
             if not screenshot_bytes:
@@ -3263,7 +3273,7 @@ Return ONLY the code (e.g., /m/0k4j). If unsure, return /m/0k4j.
                 return False
             
             # שמירת התמונה המקורית
-            original_path = f"/Users/itaykarkason/Desktop/capsolver_improved_{timestamp}.png"
+            original_path = _debug_artifact_path(f"capsolver_improved_{timestamp}.png")
             with open(original_path, "wb") as f:
                 f.write(screenshot_bytes)
             debug_print(f"Original screenshot saved: {original_path}")
@@ -3482,7 +3492,7 @@ def perform_captcha_clicks(driver, captcha_iframes, click_coordinates):
                 if verify_button and verify_button.is_displayed():
                     debug_print(f"Found verify button with selector: {selector}")
                     break
-            except:
+            except Exception:
                 continue
         
         if verify_button:
@@ -3515,7 +3525,7 @@ def perform_captcha_clicks(driver, captcha_iframes, click_coordinates):
         debug_print(f"Error performing CAPTCHA clicks: {e}")
         try:
             driver.switch_to.default_content()
-        except:
+        except Exception:
             pass
         return False
 
@@ -3836,7 +3846,7 @@ def click_verify_button_smart(driver, captcha_iframes):
                 verify_button = driver.find_element(By.CSS_SELECTOR, selector)
                 if verify_button and verify_button.is_displayed():
                     break
-            except:
+            except Exception:
                 continue
         
         if verify_button:
@@ -3866,7 +3876,7 @@ def click_verify_button_smart(driver, captcha_iframes):
         debug_print(f"Error clicking VERIFY: {e}")
         try:
             driver.switch_to.default_content()
-        except:
+        except Exception:
             pass
 
 def click_on_captcha_coordinates_with_pyautogui(coordinates):
@@ -4152,7 +4162,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                 debug_print(f"Error interacting with reCAPTCHA: {captcha_error}")
                 try:
                     driver.switch_to.default_content()
-                except:
+                except Exception:
                     pass
 
             submit_button = WebDriverWait(driver, 180).until(
@@ -4226,7 +4236,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             if driver:
                 try:
                     driver.quit()
-                except:
+                except Exception:
                     pass
 
     # -------------------- Handling Max Scenario --------------------
@@ -4483,7 +4493,7 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
                     wait = WebDriverWait(driver, 15)
                     where_used_button = wait.until(EC.element_to_be_clickable((By.XPATH, combined_xpath)))
                     debug_print("Found 'Where did I redeem' button")
-                except:
+                except Exception:
                     pass  # Button not found within timeout
                 
                 if where_used_button:

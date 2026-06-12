@@ -32,4 +32,5 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
 # --- Default command ---
-CMD ["python", "main.py"]
+# Matches the render.yaml startCommand so the image also runs standalone.
+CMD ["gunicorn", "--bind", "0.0.0.0:10000", "--workers", "4", "--timeout", "120", "wsgi:app"]

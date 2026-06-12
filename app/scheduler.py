@@ -123,8 +123,11 @@ class TaskScheduler:
                 log_entry.error_message = str(e)
                 try:
                     db_session.commit()
-                except:
-                    pass
+                except Exception as commit_error:
+                    logger.error(
+                        f"Failed to persist failure log for task {task.task_name}: {commit_error}"
+                    )
+                    db_session.rollback()
 
 
 def run_scheduled_task(task: ScheduledTask) -> Dict[str, Any]:

@@ -389,12 +389,12 @@ def sell_coupon():
         # Convert input from the form
         try:
             face_value = float(form.cost.data)  # כמה הקופון שווה בפועל
-        except:
+        except Exception:
             face_value = 0.0
 
         try:
             asked_price = float(form.value.data)  # כמה המשתמש רוצה לקבל
-        except:
+        except Exception:
             asked_price = 0.0
 
         # Calculate discount percentage
@@ -1708,7 +1708,7 @@ def add_coupon_with_image_html():
                     form.expiration.data = pd.to_datetime(
                         coupon_df.loc[0, "תאריך תפוגה"]
                     ).date()
-                except:
+                except Exception:
                     form.expiration.data = None
 
                 form.description.data = coupon_df.loc[0, "תיאור"]
@@ -3842,7 +3842,7 @@ def delete_coupon(id):
 
                 flash(f'קופון "{coupon.code}" נמחק בהצלחה!', "success")
                 return redirect(url_for("coupons.show_coupons"))
-            except:
+            except Exception:
                 db.session.rollback()
                 flash("שגיאה בעת מחיקת הקופון.", "danger")
                 return redirect(url_for("coupons.show_coupons"))
@@ -4280,7 +4280,7 @@ def complete_transaction(transaction):
             activity,
         )
         db.session.commit()
-    except:
+    except Exception:
         db.session.rollback()
     # -- end snippet --
 
