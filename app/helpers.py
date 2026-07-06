@@ -4121,6 +4121,43 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
     if coupon_kind == "Max":
         chrome_options.add_argument("--blink-settings=imagesEnabled=false")
 
+    def solve_capsolver_recaptcha(api_key, website_url, website_key):
+        import requests
+        import time
+        debug_print("Requesting Capsolver to solve reCAPTCHA...")
+        payload = {
+            "clientKey": api_key,
+            "task": {
+                "type": "ReCaptchaV2TaskProxyless",
+                "websiteURL": website_url,
+                "websiteKey": website_key
+            }
+        }
+        try:
+            res = requests.post("https://api.capsolver.com/createTask", json=payload).json()
+            if res.get("errorId") != 0:
+                debug_print(f"Capsolver createTask error: {res.get('errorDescription')}")
+                return None
+            
+            task_id = res.get("taskId")
+            while True:
+                time.sleep(3)
+                res = requests.post("https://api.capsolver.com/getTaskResult", json={
+                    "clientKey": api_key,
+                    "taskId": task_id
+                }).json()
+                
+                status = res.get("status")
+                if status == "ready":
+                    debug_print("Capsolver solved reCAPTCHA successfully.")
+                    return res.get("solution", {}).get("gRecaptchaResponse")
+                elif status == "failed" or res.get("errorId") != 0:
+                    debug_print(f"Capsolver getTaskResult error: {res.get('errorDescription')}")
+                    return None
+        except Exception as ex:
+            debug_print(f"Capsolver exception: {ex}")
+            return None
+
     df = None  # DataFrame to hold the scraped data
 
     # -------------------- Handling Multipass Scenario --------------------
@@ -4141,34 +4178,54 @@ def get_coupon_data(coupon, save_directory="automatic_coupon_update/input_html")
             card_field.send_keys(cleaned_coupon_number)
             time.sleep(1)
 
-            try:
-                recaptcha_frame = WebDriverWait(driver, 15).until(
-                    EC.presence_of_element_located(
-                        (By.XPATH, "//iframe[contains(@src, 'recaptcha')]")
-                    )
+            capsolver_key = os.getenv("CAPSOLVER_API_KEY")
+            if capsolver_key:
+                debug_print("CAPSOLVER_API_KEY found, attempting to solve reCAPTCHA automatically.")
+                token = solve_capsolver_recaptcha(
+                    capsolver_key, 
+                    "https://multipass.co.il/GetBalance", 
+                    "6LeqFAgsAAAAAALL04uUwCrtSk-jibWHfzjFr0af"
                 )
-                driver.switch_to.frame(recaptcha_frame)
-                checkbox = WebDriverWait(driver, 15).until(
-                    EC.element_to_be_clickable(
-                        (By.CSS_SELECTOR, ".recaptcha-checkbox-border")
-                    )
-                )
-                checkbox.click()
-                debug_print("Clicked the reCAPTCHA checkbox")
-                driver.switch_to.default_content()
-            except TimeoutException:
-                debug_print("reCAPTCHA checkbox not found (may already be solved)")
-            except Exception as captcha_error:
-                debug_print(f"Error interacting with reCAPTCHA: {captcha_error}")
+                if token:
+                    driver.execute_script(f'document.getElementById("g-recaptcha-response").innerHTML="{token}";')
+                    driver.execute_script("try { mainReCaptchaChecked(); } catch(e) {}")
+                    debug_print("Injected Capsolver token into page.")
+            else:
                 try:
+                    recaptcha_frame = WebDriverWait(driver, 15).until(
+                        EC.presence_of_element_located(
+                            (By.XPATH, "//iframe[contains(@src, 'recaptcha')]")
+                        )
+                    )
+                    driver.switch_to.frame(recaptcha_frame)
+                    checkbox = WebDriverWait(driver, 15).until(
+                        EC.element_to_be_clickable(
+                            (By.CSS_SELECTOR, ".recaptcha-checkbox-border")
+                        )
+                    )
+                    checkbox.click()
+                    debug_print("Clicked the reCAPTCHA checkbox")
                     driver.switch_to.default_content()
-                except Exception:
-                    pass
+                except TimeoutException:
+                    debug_print("reCAPTCHA checkbox not found (may already be solved)")
+                except Exception as captcha_error:
+                    debug_print(f"Error interacting with reCAPTCHA: {captcha_error}")
+                    try:
+                        driver.switch_to.default_content()
+                    except Exception:
+                        pass
 
             submit_button = WebDriverWait(driver, 180).until(
                 EC.element_to_be_clickable((By.ID, "MainContent_GetBalanceBtn"))
             )
+            # Only scroll after we have given time for the captcha to be solved or we are ready to submit
+            if not capsolver_key:
+                debug_print("Waiting for manual CAPTCHA solving before clicking submit...")
+                # In manual mode, we wait a bit before scrolling so the user can see the captcha
+                time.sleep(3)
+                
             driver.execute_script("arguments[0].scrollIntoView(true);", submit_button)
+            time.sleep(0.5)
             submit_button.click()
 
             WebDriverWait(driver, 30).until(
