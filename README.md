@@ -326,6 +326,7 @@ Set these on the server (Render dashboard / production environment variables):
 ```env
 CRON_API_TOKEN=your-long-random-token
 GITHUB_TOKEN=your-github-pat-with-actions-permissions
+MULTIPASS_ALERT_EMAILS=admin@example.com,ops@example.com
 ```
 
 Notes:
@@ -352,7 +353,21 @@ MULTIPASS_GH_INPUT_SEPARATOR=,
 
 #### 4) cron-job.org configuration (recommended)
 
-Create a cron job that calls your production server:
+Production can also be scheduled from Supabase. Store these Edge Function secrets:
+
+```env
+APP_BASE_URL=https://www.couponmasteril.com
+CRON_API_TOKEN=your-long-random-token
+```
+
+Store these Supabase Vault secrets for the hourly `pg_cron` job:
+
+```text
+multipass_update_function_url=https://YOUR_PROJECT_REF.supabase.co/functions/v1/trigger-multipass-update
+supabase_service_role_key=your-supabase-service-role-key
+```
+
+If using an external cron provider instead, create a cron job that calls your production server:
 
 - **URL:** `https://YOUR_DOMAIN/api/cron/update_multipass`
 - **Request method:** `POST`

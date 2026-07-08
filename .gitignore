@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.supabase.local
+supabase/.temp/
 .env.development.local
 .env.test.local
 .env.production.local

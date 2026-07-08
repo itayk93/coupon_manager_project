@@ -848,37 +848,20 @@ def process_multipass_json(coupon, transactions_data):
             print(f"No transactions data for coupon {coupon.code}")
             return pd.DataFrame()
             
-        # Convert list of dicts to DataFrame
+        # Convert list of dicts to DataFrame and support both legacy and current
+        # GitHub artifact schemas before continuing with DB comparison logic.
         df = pd.DataFrame(transactions_data)
-        
-        # Map JSON keys to DB columns
-        # JSON keys: date_time, operation_type, business, budget_load_sum, original_deal_sum, budget_realization_sum, discount, benefit_name, quantity, reference
-        
-        # Renaissance mapping/cleanup
-        if "business" in df.columns:
-            df.rename(columns={"business": "location"}, inplace=True)
-            
-        if "reference" in df.columns:
-            df.rename(columns={"reference": "reference_number"}, inplace=True)
-            
-        if "date_time" in df.columns:
-            df["transaction_date"] = pd.to_datetime(
-                df["date_time"], format="%d-%m-%Y %H:%M", errors="coerce"
-            )
-            
-        # Handle amounts
-        # budget_load_sum -> recharge
-        # budget_realization_sum -> usage
-        
-        def clean_amount(val):
-            if not val or val == '-':
-                return 0.0
-            if isinstance(val, (int, float)):
-                return float(val)
-            return float(str(val).replace('₪', '').replace(',', '').strip())
 
-        df["recharge_amount"] = df["budget_load_sum"].apply(clean_amount)
-        df["usage_amount"] = df["budget_realization_sum"].apply(clean_amount)
+        legacy_rename_map = {
+            "business": "location",
+            "reference": "reference_number",
+            "date_time": "transaction_date",
+            "budget_load_sum": "recharge_amount",
+            "original_deal_sum": "original_amount",
+            "budget_realization_sum": "usage_amount",
+        }
+        df.rename(columns=legacy_rename_map, inplace=True)
+        df = normalize_multipass_dataframe(df, coupon.code)
         
         # ----------------------------------------------------------------------
         # Common Stage: Database Comparison and Update

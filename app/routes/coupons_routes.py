@@ -6276,6 +6276,7 @@ def api_update_multipass():
     if mode == "full":
         import threading
         from app.tasks import trigger_multipass_github_action
+        app_obj = current_app._get_current_object()
 
         def run_update_thread(codes):
             try:
@@ -6283,6 +6284,13 @@ def api_update_multipass():
                 trigger_multipass_github_action(codes)
             except Exception as e:
                 print(f"=== [CRON] Error in background thread: {e} ===", flush=True)
+                with app_obj.app_context():
+                    from app.tasks import send_multipass_failure_alert
+
+                    send_multipass_failure_alert(
+                        "background thread failure",
+                        f"Multipass background update crashed: {e}",
+                    )
 
         thread = threading.Thread(target=run_update_thread, args=(coupons_to_update,))
         thread.daemon = True

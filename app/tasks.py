@@ -8,6 +8,7 @@ import time
 import requests
 import zipfile
 import json
+import html
 import pandas as pd
 from io import BytesIO
 from rq import Queue, Worker
@@ -21,6 +22,71 @@ redis_conn = redis.from_url(redis_url)
 # Create queue
 task_queue = Queue('coupon_updates', connection=redis_conn)
 # ...
+
+
+def _get_multipass_alert_recipients():
+    raw_recipients = os.getenv("MULTIPASS_ALERT_EMAILS", "")
+    return [
+        recipient.strip()
+        for recipient in raw_recipients.split(",")
+        if recipient.strip()
+    ]
+
+
+def send_multipass_failure_alert(alert_type, message, *, run_url=None, failures=None, details=None):
+    """Send an admin alert for Multipass automation failures."""
+    recipients = _get_multipass_alert_recipients()
+    if not recipients:
+        logging.getLogger("github_updater").warning(
+            "MULTIPASS_ALERT_EMAILS is not configured; skipping alert: %s", alert_type
+        )
+        return False
+
+    from app.helpers import send_email, SENDER_EMAIL, SENDER_NAME
+
+    failure_items = failures or []
+    html_parts = [
+        "<h2>Multipass automation failure</h2>",
+        f"<p><strong>Type:</strong> {html.escape(str(alert_type))}</p>",
+        f"<p><strong>Message:</strong> {html.escape(str(message))}</p>",
+    ]
+    if run_url:
+        safe_run_url = html.escape(str(run_url), quote=True)
+        html_parts.append(f'<p><strong>GitHub run:</strong> <a href="{safe_run_url}">{safe_run_url}</a></p>')
+    if details:
+        html_parts.append("<h3>Details</h3>")
+        html_parts.append(f"<pre>{html.escape(json.dumps(details, ensure_ascii=False, indent=2))}</pre>")
+    if failure_items:
+        html_parts.append("<h3>Failed coupons</h3><ul>")
+        for failure in failure_items:
+            coupon_code = failure.get("coupon_code") or failure.get("card_number") or "unknown"
+            error = failure.get("error") or failure.get("message") or "unknown error"
+            html_parts.append(
+                f"<li><strong>{html.escape(str(coupon_code))}</strong>: {html.escape(str(error))}</li>"
+            )
+        html_parts.append("</ul>")
+
+    html_content = "\n".join(html_parts)
+    subject = f"Multipass update alert: {alert_type}"
+
+    sent_any = False
+    for recipient in recipients:
+        try:
+            send_email(
+                sender_email=SENDER_EMAIL,
+                sender_name=SENDER_NAME,
+                recipient_email=recipient,
+                recipient_name="Admin",
+                subject=subject,
+                html_content=html_content,
+            )
+            sent_any = True
+        except Exception as exc:
+            logging.getLogger("github_updater").error(
+                "Failed sending Multipass alert to %s: %s", recipient, exc
+            )
+
+    return sent_any
 
 
 
@@ -505,6 +571,11 @@ def trigger_multipass_github_action(coupon_codes):
         # 1. Trigger Workflow
         dispatch_result = dispatch_multipass_github_workflow(coupon_codes)
         if not dispatch_result.get("success"):
+            send_multipass_failure_alert(
+                "dispatch failure",
+                dispatch_result.get("error", "Failed to dispatch GitHub workflow"),
+                details=dispatch_result,
+            )
             return dispatch_result
 
         github_token = os.getenv("GITHUB_TOKEN")
@@ -538,7 +609,14 @@ def trigger_multipass_github_action(coupon_codes):
             
         if not run_id:
             logger.error("Could not find the GitHub Action run.")
+            send_multipass_failure_alert(
+                "run lookup failure",
+                "Could not locate GitHub Action run after dispatch",
+                details={"workflow": workflow_id, "ref": workflow_ref},
+            )
             return {'success': False, 'error': "Could not locate GitHub Action run"}
+
+        run_url = f"https://github.com/{repo_owner}/{repo_name}/actions/runs/{run_id}"
             
         # 3. Poll for completion
         status = "queued"
@@ -560,17 +638,25 @@ def trigger_multipass_github_action(coupon_codes):
             
         if status != "completed":
             logger.error(f"Run {run_id} timed out or did not complete.")
+            send_multipass_failure_alert(
+                "github timeout",
+                "GitHub Action timed out before completion",
+                run_url=run_url,
+                details={"run_id": run_id, "status": status, "conclusion": conclusion},
+            )
             return {'success': False, 'error': "GitHub Action timed out"}
-            
+
+        workflow_failure_error = None
         if conclusion != "success":
+            workflow_failure_error = f"GitHub Action failed: {conclusion}"
             logger.error(f"Run {run_id} failed with conclusion: {conclusion}")
-            return {'success': False, 'error': f"GitHub Action failed: {conclusion}"}
             
         # 4. Download Artifacts
         artifacts_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/runs/{run_id}/artifacts"
         r = requests.get(artifacts_url, headers=headers)
         
         transaction_data_map = {}
+        github_failures = []
         
         if r.status_code == 200:
             artifacts = r.json().get("artifacts", [])
@@ -586,35 +672,65 @@ def trigger_multipass_github_action(coupon_codes):
                     with zipfile.ZipFile(BytesIO(zip_resp.content)) as z:
                         logger.info(f"Zip file content: {z.namelist()}")
                         
-                        # STRICT: Look for exact 'transactions.json'
+                        zip_names = z.namelist()
                         json_filename = "transactions.json"
-                        if json_filename not in z.namelist():
-                             # Fallback: look for any json
-                             json_filename = next((name for name in z.namelist() if name.endswith('.json')), None)
-                        
-                        if json_filename:
-                            logger.info(f"Processing JSON file: {json_filename}")
-                            with z.open(json_filename) as f:
-                                all_data = json.load(f)
-                                logger.info(f"Loaded {len(all_data)} items from JSON")
-                                if len(all_data) > 0:
-                                    logger.info(f"Sample item keys: {list(all_data[0].keys())}")
-                                    logger.info(f"Sample item content: {json.dumps(all_data[0], ensure_ascii=False)}")
-                                
-                                for item in all_data:
-                                    c_num = item.get("card_number")
-                                    if c_num:
-                                        ts = item.get("transactions", [])
-                                        transaction_data_map[c_num] = ts
-                                        logger.info(f"Card {c_num}: Found {len(ts)} transactions in JSON")
+                        if json_filename in zip_names:
+                            try:
+                                logger.info(f"Processing JSON file: {json_filename}")
+                                with z.open(json_filename) as f:
+                                    all_data = json.load(f)
+                                    logger.info(f"Loaded {len(all_data)} items from JSON")
+                                    if len(all_data) > 0:
+                                        logger.info(f"Sample item keys: {list(all_data[0].keys())}")
+                                        logger.info(f"Sample item content: {json.dumps(all_data[0], ensure_ascii=False)}")
+
+                                    for item in all_data:
+                                        c_num = item.get("card_number")
+                                        if c_num:
+                                            ts = item.get("transactions", [])
+                                            transaction_data_map[c_num] = ts
+                                            logger.info(f"Card {c_num}: Found {len(ts)} transactions in JSON")
+                            except Exception as exc:
+                                logger.error(f"Failed parsing transactions.json: {exc}")
+                                send_multipass_failure_alert(
+                                    "invalid artifact json",
+                                    f"Failed parsing transactions.json: {exc}",
+                                    run_url=run_url,
+                                )
                         else:
-                            logger.warning("No JSON file found in artifact zip")
+                            logger.warning("transactions.json not found in artifact zip")
+
+                        if "failures.json" in zip_names:
+                            try:
+                                with z.open("failures.json") as f:
+                                    loaded_failures = json.load(f)
+                                    if isinstance(loaded_failures, list):
+                                        github_failures = loaded_failures
+                                        logger.info("Loaded %d GitHub scraper failures", len(github_failures))
+                            except Exception as exc:
+                                logger.error(f"Failed parsing failures.json: {exc}")
                 else:
                     logger.error(f"Failed to download artifact: {zip_resp.status_code}")
+                    send_multipass_failure_alert(
+                        "artifact download failure",
+                        f"Failed to download GitHub artifact: {zip_resp.status_code}",
+                        run_url=run_url,
+                    )
             else:
                 logger.error("Artifact 'transactions-json' not found")
+                send_multipass_failure_alert(
+                    "missing artifact",
+                    "Artifact 'transactions-json' was not found",
+                    run_url=run_url,
+                    details={"run_id": run_id, "conclusion": conclusion},
+                )
         else:
             logger.error(f"Failed to list artifacts: {r.status_code}")
+            send_multipass_failure_alert(
+                "artifact list failure",
+                f"Failed to list GitHub artifacts: {r.status_code}",
+                run_url=run_url,
+            )
             
         # 5. Update Database
         updated_count = 0
@@ -637,6 +753,12 @@ def trigger_multipass_github_action(coupon_codes):
         # Accessing c.code triggers decryption
         db_coupon_map = {c.code: c for c in potential_coupons}
 
+        for failure in github_failures:
+            code = failure.get("card_number") or failure.get("coupon_code") or "unknown"
+            error = failure.get("error") or "GitHub scraper failed for coupon"
+            results['failed'].append({'coupon_code': code, 'error': error})
+            failed_count += 1
+
         for code, transactions in transaction_data_map.items():
             # coupon = Coupon.query.filter_by(code=code).first() # This fails due to encryption
             coupon = db_coupon_map.get(code)
@@ -649,6 +771,8 @@ def trigger_multipass_github_action(coupon_codes):
                 
             if not coupon:
                 logger.warning(f"Coupon with code {code} not found in DB map during update.")
+                failed_count += 1
+                results['failed'].append({'coupon_code': code, 'error': 'Coupon not found in DB'})
                 continue
                 
             logger.info(f"Updating coupon {code} with {len(transactions)} transactions")
@@ -701,6 +825,35 @@ def trigger_multipass_github_action(coupon_codes):
         results['end_time'] = datetime.now().isoformat()
         results['success_count'] = updated_count
         results['failure_count'] = failed_count
+        results['run_id'] = run_id
+        results['run_url'] = run_url
+        results['success'] = workflow_failure_error is None and failed_count == 0
+
+        if workflow_failure_error:
+            send_multipass_failure_alert(
+                "github action failure",
+                workflow_failure_error,
+                run_url=run_url,
+                failures=results['failed'],
+                details={
+                    "run_id": run_id,
+                    "status": status,
+                    "conclusion": conclusion,
+                    "success_count": updated_count,
+                    "failure_count": failed_count,
+                },
+            )
+        elif results['failed']:
+            send_multipass_failure_alert(
+                "partial update failure",
+                "Multipass update completed with failed coupons",
+                run_url=run_url,
+                failures=results['failed'],
+                details={
+                    "success_count": updated_count,
+                    "failure_count": failed_count,
+                },
+            )
         
         # Send per-user email summaries
         try:
@@ -758,9 +911,19 @@ def trigger_multipass_github_action(coupon_codes):
                     logger.info(f"Summary email sent to user {uid}")
                 except Exception as e:
                     logger.error(f"Failed sending summary email to user {uid}: {e}")
+                    send_multipass_failure_alert(
+                        "summary email failure",
+                        f"Failed sending summary email to user {uid}: {e}",
+                        run_url=run_url,
+                    )
                     
         except Exception as e:
             logger.error(f"Summary email dispatch failed: {e}")
+            send_multipass_failure_alert(
+                "summary email failure",
+                f"Summary email dispatch failed: {e}",
+                run_url=run_url,
+            )
                 
         return results
 

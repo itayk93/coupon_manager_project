@@ -1423,3 +1423,18 @@ class AutoUpdateRun(db.Model):
     skipped_count = db.Column(db.Integer, default=0)
     message = db.Column(db.Text, nullable=True)
     job_id = db.Column(db.String(255), nullable=True) # RQ job ID
+
+    def mark_queued(self, job_id=None):
+        self.status = 'queued'
+        self.job_id = job_id
+        return self
+
+    def finish(self, success, updated=0, failed=0, skipped=0, message=None):
+        self.status = 'success' if success else 'failed'
+        self.finished_at = datetime.now(timezone.utc)
+        self.updated_count = updated
+        self.failed_count = failed
+        self.skipped_count = skipped
+        if message is not None:
+            self.message = message
+        return self
