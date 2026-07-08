@@ -2,7 +2,7 @@
 --
 -- Required Vault secrets:
 --   multipass_update_function_url = https://<project-ref>.supabase.co/functions/v1/trigger-multipass-update
---   supabase_service_role_key     = <project service role key>
+--   supabase_anon_key             = <project anon key>
 --
 -- Required Edge Function secrets:
 --   APP_BASE_URL=https://www.couponmasteril.com
@@ -20,7 +20,7 @@ set search_path = public, extensions, vault
 as $$
 declare
   function_url text;
-  service_role_key text;
+  anon_key text;
 begin
   select decrypted_secret
     into function_url
@@ -29,23 +29,24 @@ begin
    limit 1;
 
   select decrypted_secret
-    into service_role_key
+    into anon_key
     from vault.decrypted_secrets
-   where name = 'supabase_service_role_key'
+   where name = 'supabase_anon_key'
    limit 1;
 
   if function_url is null or function_url = '' then
     raise exception 'Missing Vault secret: multipass_update_function_url';
   end if;
 
-  if service_role_key is null or service_role_key = '' then
-    raise exception 'Missing Vault secret: supabase_service_role_key';
+  if anon_key is null or anon_key = '' then
+    raise exception 'Missing Vault secret: supabase_anon_key';
   end if;
 
   perform net.http_post(
     url := function_url,
     headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || service_role_key,
+      'Authorization', 'Bearer ' || anon_key,
+      'apikey', anon_key,
       'Content-Type', 'application/json'
     ),
     body := '{}'::jsonb,

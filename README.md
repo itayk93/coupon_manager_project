@@ -364,7 +364,7 @@ Store these Supabase Vault secrets for the hourly `pg_cron` job:
 
 ```text
 multipass_update_function_url=https://YOUR_PROJECT_REF.supabase.co/functions/v1/trigger-multipass-update
-supabase_service_role_key=your-supabase-service-role-key
+supabase_anon_key=your-supabase-anon-key
 ```
 
 If using an external cron provider instead, create a cron job that calls your production server:
